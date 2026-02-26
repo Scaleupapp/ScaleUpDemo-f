@@ -1,0 +1,4 @@
+module GoogleUtilities_Logger {
+umbrella "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/GoogleUtilities/GoogleUtilities/Logger/Public"
+export *
+}

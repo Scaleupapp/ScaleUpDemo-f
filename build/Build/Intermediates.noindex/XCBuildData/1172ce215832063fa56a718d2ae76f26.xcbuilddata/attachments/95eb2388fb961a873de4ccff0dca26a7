@@ -1,0 +1,4 @@
+module AppAuth {
+umbrella "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/AppAuth-iOS/Sources/AppAuth"
+export *
+}

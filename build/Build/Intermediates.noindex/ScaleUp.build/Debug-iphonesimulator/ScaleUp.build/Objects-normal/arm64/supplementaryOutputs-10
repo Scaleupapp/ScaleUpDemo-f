@@ -1,0 +1,170 @@
+{
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Core/Auth/AuthManager.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthManager.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthManager.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthManager.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthManager.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthManager.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Core/Networking/Endpoints/AuthEndpoints.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthEndpoints.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthEndpoints.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthEndpoints.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthEndpoints.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthEndpoints.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Core/Networking/Endpoints/ContentEndpoints.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentEndpoints.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentEndpoints.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentEndpoints.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentEndpoints.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentEndpoints.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Core/Performance/CacheManager.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CacheManager.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CacheManager.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CacheManager.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CacheManager.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CacheManager.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Core/Utilities/Extensions/Color+Hex.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Color+Hex.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Color+Hex.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Color+Hex.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Color+Hex.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Color+Hex.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Components/AvatarGroup.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AvatarGroup.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AvatarGroup.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AvatarGroup.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AvatarGroup.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AvatarGroup.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Components/ConfirmationDialog.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConfirmationDialog.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConfirmationDialog.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConfirmationDialog.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConfirmationDialog.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConfirmationDialog.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Components/ContentCard.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCard.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCard.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCard.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCard.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCard.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Components/ContentCardWide.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCardWide.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCardWide.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCardWide.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCardWide.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentCardWide.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Modifiers/CardStyle.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CardStyle.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CardStyle.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CardStyle.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CardStyle.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CardStyle.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Modifiers/ConditionalModifier.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConditionalModifier.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConditionalModifier.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConditionalModifier.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConditionalModifier.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ConditionalModifier.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/DesignSystem/Theme/ColorTokens.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ColorTokens.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ColorTokens.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ColorTokens.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ColorTokens.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ColorTokens.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Admin/Views/ContentModerationView.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentModerationView.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentModerationView.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentModerationView.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentModerationView.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentModerationView.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Auth/AuthCoordinator.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthCoordinator.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthCoordinator.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthCoordinator.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthCoordinator.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthCoordinator.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Auth/AuthService.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthService.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthService.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthService.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthService.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/AuthService.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Discover/ContentRepository.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentRepository.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentRepository.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentRepository.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentRepository.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentRepository.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Discover/ContentService.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentService.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentService.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentService.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentService.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentService.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Discover/ViewModels/ContentDetailViewModel.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailViewModel.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailViewModel.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailViewModel.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailViewModel.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailViewModel.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Discover/Views/ContentDetailView.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailView.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailView.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailView.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailView.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentDetailView.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Home/Views/ContentListView.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentListView.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentListView.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentListView.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentListView.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentListView.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Onboarding/Views/BackgroundView.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/BackgroundView.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/BackgroundView.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/BackgroundView.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/BackgroundView.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/BackgroundView.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Features/Player/Views/CommentsSection.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CommentsSection.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CommentsSection.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CommentsSection.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CommentsSection.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/CommentsSection.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Models/Content.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Content.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Content.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Content.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Content.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/Content.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/ScaleUp/Models/Enums/ContentStatus.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentStatus.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentStatus.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentStatus.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentStatus.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/ScaleUp.build/Debug-iphonesimulator/ScaleUp.build/Objects-normal/arm64/ContentStatus.swiftdeps"
+  }
+}

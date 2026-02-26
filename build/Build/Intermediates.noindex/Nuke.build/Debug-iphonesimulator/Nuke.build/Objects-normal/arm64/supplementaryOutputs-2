@@ -1,0 +1,51 @@
+{
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Decoding/ImageDecoders+Default.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Default.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Default.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Default.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Default.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Default.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Decoding/ImageDecoders+Empty.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Empty.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Empty.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Empty.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Empty.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoders+Empty.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Decoding/ImageDecoding.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoding.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoding.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoding.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoding.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageDecoding.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Encoding/ImageEncoders+Default.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+Default.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+Default.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+Default.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+Default.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+Default.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Encoding/ImageEncoders+ImageIO.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+ImageIO.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+ImageIO.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+ImageIO.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+ImageIO.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders+ImageIO.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Encoding/ImageEncoders.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoders.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Encoding/ImageEncoding.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoding.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoding.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoding.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoding.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/ImageEncoding.swiftdeps"
+  }
+}

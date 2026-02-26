@@ -1,0 +1,44 @@
+{
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Tasks/AsyncTask.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/AsyncTask.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/AsyncTask.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/AsyncTask.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/AsyncTask.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/AsyncTask.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Tasks/TaskFetchOriginalData.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalData.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalData.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalData.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalData.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalData.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Tasks/TaskFetchOriginalImage.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalImage.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalImage.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalImage.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalImage.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchOriginalImage.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Tasks/TaskFetchWithPublisher.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchWithPublisher.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchWithPublisher.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchWithPublisher.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchWithPublisher.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskFetchWithPublisher.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Tasks/TaskLoadData.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadData.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadData.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadData.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadData.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadData.swiftdeps"
+  },
+  "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/Nuke/Sources/Nuke/Tasks/TaskLoadImage.swift" : {
+    "const-values" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadImage.swiftconstvalues",
+    "dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadImage.d",
+    "diagnostics" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadImage.dia",
+    "object" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadImage.o",
+    "swift-dependencies" : "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/Build/Intermediates.noindex/Nuke.build/Debug-iphonesimulator/Nuke.build/Objects-normal/arm64/TaskLoadImage.swiftdeps"
+  }
+}
