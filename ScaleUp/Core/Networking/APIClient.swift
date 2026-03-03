@@ -1,330 +1,325 @@
 import Foundation
-import OSLog
+
+// MARK: - API Response Wrapper
+
+struct APIResponse<T: Decodable & Sendable>: Decodable, Sendable {
+    let success: Bool
+    let message: String?
+    let data: T?
+    let pagination: Pagination?
+}
+
+struct Pagination: Decodable, Sendable {
+    let total: Int
+    let page: Int
+    let limit: Int
+    let totalPages: Int
+    let hasNextPage: Bool
+    let hasPrevPage: Bool
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        total = try Self.decodeFlexibleInt(container, key: .total)
+        page = try Self.decodeFlexibleInt(container, key: .page)
+        limit = try Self.decodeFlexibleInt(container, key: .limit)
+        totalPages = try Self.decodeFlexibleInt(container, key: .totalPages)
+        hasNextPage = try container.decode(Bool.self, forKey: .hasNextPage)
+        hasPrevPage = try container.decode(Bool.self, forKey: .hasPrevPage)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case total, page, limit, totalPages, hasNextPage, hasPrevPage
+    }
+
+    private static func decodeFlexibleInt(_ container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) throws -> Int {
+        if let intVal = try? container.decode(Int.self, forKey: key) {
+            return intVal
+        }
+        let stringVal = try container.decode(String.self, forKey: key)
+        guard let parsed = Int(stringVal) else {
+            throw DecodingError.dataCorruptedError(forKey: key, in: container, debugDescription: "Cannot parse '\(stringVal)' as Int")
+        }
+        return parsed
+    }
+}
 
 // MARK: - API Client
 
-/// The main HTTP client for communicating with the ScaleUp backend.
-///
-/// Features:
-/// - async/await based on `URLSession`
-/// - Automatic `Bearer` token injection via `TokenProviding`
-/// - 401 interception with actor-based token refresh & request retry
-/// - Typed error mapping to `APIError`
-/// - Debug logging of requests and responses
-final class APIClient: Sendable {
-
-    // MARK: - Configuration
-
-    static let baseURL = URL(string: "http://localhost:5001/api/v1")!
-
-    // MARK: - Properties
-
-    private let session: URLSession
-    private let encoder: JSONEncoder
-    private let decoder: JSONDecoder
-    private let tokenProvider: TokenProviding?
-    private let tokenInterceptor: TokenInterceptor?
-    private let logger = Logger(subsystem: "com.scaleup.app", category: "APIClient")
-
-    // MARK: - Singleton
-
-    /// Shared instance. Configure with `APIClient.configure(tokenProvider:)` at launch.
+actor APIClient {
     static let shared = APIClient()
 
-    /// Configurable token provider set once at app launch.
-    nonisolated(unsafe) private static var _configuredTokenProvider: (any TokenProviding)?
+    private let baseURL = "http://localhost:5001/api/v1"
+    private let session: URLSession
+    private let decoder: JSONDecoder
 
-    /// Call once during app startup to wire the token provider.
-    static func configure(tokenProvider: TokenProviding) {
-        _configuredTokenProvider = tokenProvider
-    }
+    private var isRefreshing = false
+    private var pendingRequests: [CheckedContinuation<Data, Error>] = []
 
-    // MARK: - Init
+    init() {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 120
+        config.timeoutIntervalForResource = 180
+        self.session = URLSession(configuration: config)
 
-    init(tokenProvider: TokenProviding? = nil) {
-        let resolvedProvider = tokenProvider ?? APIClient._configuredTokenProvider
+        self.decoder = JSONDecoder()
+        self.decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
 
-        let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 60
-        configuration.urlCache = URLCache(
-            memoryCapacity: 10_485_760,  // 10 MB
-            diskCapacity: 52_428_800     // 50 MB
-        )
-        configuration.requestCachePolicy = .useProtocolCachePolicy
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = iso.date(from: dateString) { return date }
 
-        self.session = URLSession(configuration: configuration)
+            iso.formatOptions = [.withInternetDateTime]
+            if let date = iso.date(from: dateString) { return date }
 
-        let enc = JSONEncoder()
-        // Backend uses camelCase — no key strategy conversion needed.
-        enc.dateEncodingStrategy = .iso8601
-        self.encoder = enc
-
-        let dec = JSONDecoder()
-        dec.dateDecodingStrategy = .iso8601
-        self.decoder = dec
-
-        self.tokenProvider = resolvedProvider
-        self.tokenInterceptor = resolvedProvider.map { TokenInterceptor(tokenProvider: $0) }
-    }
-
-    // MARK: - Public: Typed Response
-
-    /// Performs the request and decodes `APIResponse<T>.data` into `T`.
-    /// - Throws: `APIError` on failure.
-    func request<T: Decodable>(_ endpoint: Endpoint) async throws -> T {
-        let data = try await performRequest(endpoint, allowRetry: true)
-
-        do {
-            let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
-
-            guard apiResponse.success, let payload = apiResponse.data else {
-                let detail = apiResponse.error
-                throw APIError.badRequest(detail?.details ?? apiResponse.message)
-            }
-
-            return payload
-        } catch let error as APIError {
-            throw error
-        } catch {
-            let responseStr = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("‼️ DECODE ERROR for \(endpoint.path): \(error)")
-            print("‼️ RAW RESPONSE: \(String(responseStr.prefix(3000)))")
-            logger.error("Decoding error for \(endpoint.path): \(error) — Raw: \(responseStr.prefix(2000))")
-            throw APIError.decodingError(error)
-        }
-    }
-
-    // MARK: - Public: Optional Response
-
-    /// Performs the request and decodes `APIResponse<T>.data` into `T?`.
-    /// Returns `nil` when the backend sends `success: true` with `data: null`
-    /// (e.g. GET /journey when no journey exists yet).
-    func requestOptional<T: Decodable>(_ endpoint: Endpoint) async throws -> T? {
-        let data = try await performRequest(endpoint, allowRetry: true)
-
-        do {
-            let apiResponse = try decoder.decode(APIResponse<T>.self, from: data)
-
-            guard apiResponse.success else {
-                let detail = apiResponse.error
-                throw APIError.badRequest(detail?.details ?? apiResponse.message)
-            }
-
-            return apiResponse.data
-        } catch let error as APIError {
-            throw error
-        } catch {
-            let responseStr = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("‼️ DECODE ERROR for \(endpoint.path): \(error)")
-            print("‼️ RAW RESPONSE: \(String(responseStr.prefix(3000)))")
-            logger.error("Decoding error for \(endpoint.path): \(error) — Raw: \(responseStr.prefix(2000))")
-            throw APIError.decodingError(error)
-        }
-    }
-
-    // MARK: - Public: Flat Paginated Response
-
-    /// Performs the request and decodes a flat paginated response where `data` is an array
-    /// and `pagination` sits at the top level alongside `data`.
-    /// Returns a `PaginatedData<T>` for uniform consumption.
-    func requestFlatPaginated<T: Decodable>(_ endpoint: Endpoint) async throws -> PaginatedData<T> {
-        let data = try await performRequest(endpoint, allowRetry: true)
-
-        do {
-            let apiResponse = try decoder.decode(APIFlatPaginatedResponse<T>.self, from: data)
-
-            guard apiResponse.success else {
-                let detail = apiResponse.error
-                throw APIError.badRequest(detail?.details ?? apiResponse.message)
-            }
-
-            return PaginatedData(
-                items: apiResponse.data ?? [],
-                pagination: apiResponse.pagination
+            throw DecodingError.dataCorruptedError(
+                in: container, debugDescription: "Cannot decode date: \(dateString)"
             )
-        } catch let error as APIError {
-            throw error
-        } catch {
-            let responseStr = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("‼️ FLAT PAGINATED DECODE ERROR for \(endpoint.path): \(error)")
-            print("‼️ RAW RESPONSE: \(String(responseStr.prefix(3000)))")
-            logger.error("Flat paginated decoding error for \(endpoint.path): \(error) — Raw: \(responseStr.prefix(2000))")
-            throw APIError.decodingError(error)
         }
     }
 
-    // MARK: - Public: Paginated Response
+    // MARK: - Public API
 
-    /// Performs the request and decodes paginated `APIResponse<PaginatedData<T>>.data.items` into `[T]`.
-    /// Use this when the backend wraps the array in `{ items: [...], pagination: {...} }`.
-    func requestPaginated<T: Decodable>(_ endpoint: Endpoint) async throws -> [T] {
-        let data = try await performRequest(endpoint, allowRetry: true)
+    func request<T: Decodable & Sendable>(
+        _ endpoint: Endpoint,
+        body: (any Encodable & Sendable)? = nil
+    ) async throws -> T {
+        let data = try await performRequest(endpoint, body: body)
+        let response = try decoder.decode(APIResponse<T>.self, from: data)
 
-        do {
-            let apiResponse = try decoder.decode(APIResponse<PaginatedData<T>>.self, from: data)
-
-            guard apiResponse.success, let payload = apiResponse.data else {
-                let detail = apiResponse.error
-                throw APIError.badRequest(detail?.details ?? apiResponse.message)
-            }
-
-            return payload.items
-        } catch let error as APIError {
-            throw error
-        } catch {
-            let responseStr = String(data: data, encoding: .utf8) ?? "<binary>"
-            print("‼️ PAGINATED DECODE ERROR for \(endpoint.path): \(error)")
-            print("‼️ RAW RESPONSE: \(String(responseStr.prefix(3000)))")
-            logger.error("Paginated decoding error for \(endpoint.path): \(error) — Raw: \(responseStr.prefix(2000))")
-            throw APIError.decodingError(error)
+        guard response.success, let result = response.data else {
+            throw APIError.badRequest(response.message ?? "Request failed")
         }
+        return result
     }
 
-    // MARK: - Public: Void Response
-
-    /// Performs the request expecting no data payload (only `success` / `message`).
-    /// - Throws: `APIError` on failure.
-    func requestVoid(_ endpoint: Endpoint) async throws {
-        let data = try await performRequest(endpoint, allowRetry: true)
-
-        do {
-            let apiResponse = try decoder.decode(APIVoidResponse.self, from: data)
-
-            guard apiResponse.success else {
-                let detail = apiResponse.error
-                throw APIError.badRequest(detail?.details ?? apiResponse.message)
-            }
-        } catch let error as APIError {
-            throw error
-        } catch {
-            // If decoding the void wrapper itself fails, treat as decoding error.
-            logger.error("Void response decoding error: \(error.localizedDescription)")
-            throw APIError.decodingError(error)
-        }
+    func requestRaw(_ endpoint: Endpoint, body: (any Encodable & Sendable)? = nil) async throws -> APIResponse<EmptyData> {
+        let data = try await performRequest(endpoint, body: body)
+        return try decoder.decode(APIResponse<EmptyData>.self, from: data)
     }
 
-    // MARK: - Internal: Perform Request
-
-    /// Builds, executes, and validates the URL request. Handles 401 retry logic.
-    private func performRequest(_ endpoint: Endpoint, allowRetry: Bool) async throws -> Data {
-        var urlRequest = try buildURLRequest(for: endpoint)
-
-        // Inject Bearer token if needed.
-        if endpoint.requiresAuth, let token = await tokenProvider?.accessToken {
-            urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        }
-
-        logRequest(urlRequest)
-
-        let data: Data
-        let response: URLResponse
-
-        do {
-            (data, response) = try await session.data(for: urlRequest)
-        } catch {
-            logger.error("Network error: \(error.localizedDescription)")
-            throw APIError.networkError(error)
-        }
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw APIError.unknown(0, "Invalid response type")
-        }
-
-        logResponse(httpResponse, data: data)
-
-        // Happy path
-        if (200...299).contains(httpResponse.statusCode) {
-            return data
-        }
-
-        // 304 Not Modified — URLSession with URLCache should return cached data transparently,
-        // but if the body is empty, return a minimal valid JSON object to avoid decode crashes.
-        if httpResponse.statusCode == 304 {
-            return data.isEmpty ? Data("{}".utf8) : data
-        }
-
-        // 401 — attempt token refresh and retry once.
-        if httpResponse.statusCode == 401, allowRetry, let interceptor = tokenInterceptor {
-            logger.info("Received 401 — attempting token refresh")
-            do {
-                _ = try await interceptor.validAccessToken()
-                // Retry the original request with the new token.
-                return try await performRequest(endpoint, allowRetry: false)
-            } catch {
-                logger.error("Token refresh failed: \(error.localizedDescription)")
-                throw APIError.unauthorized
-            }
-        }
-
-        // Map status code to typed error.
-        let errorDetail = try? decoder.decode(APIResponse<EmptyBody>.self, from: data).error
-        throw APIError.from(statusCode: httpResponse.statusCode, detail: errorDetail)
+    func requestRawData(_ endpoint: Endpoint, body: (any Encodable & Sendable)? = nil) async throws -> Data {
+        try await performRequest(endpoint, body: body)
     }
 
-    // MARK: - URL Request Builder
+    func uploadMultipart<T: Decodable & Sendable>(
+        _ endpoint: Endpoint,
+        fileData: Data,
+        fieldName: String,
+        fileName: String,
+        mimeType: String
+    ) async throws -> T {
+        let data = try await performMultipartRequest(
+            endpoint, fileData: fileData, fieldName: fieldName,
+            fileName: fileName, mimeType: mimeType
+        )
+        let response = try decoder.decode(APIResponse<T>.self, from: data)
+        guard response.success, let result = response.data else {
+            throw APIError.badRequest(response.message ?? "Upload failed")
+        }
+        return result
+    }
 
-    private func buildURLRequest(for endpoint: Endpoint) throws -> URLRequest {
-        var components = URLComponents(url: Self.baseURL.appendingPathComponent(endpoint.path), resolvingAgainstBaseURL: false)
-        components?.queryItems = endpoint.queryItems?.isEmpty == false ? endpoint.queryItems : nil
+    // MARK: - Request Execution
 
-        guard let url = components?.url else {
-            throw APIError.badRequest("Invalid URL for path: \(endpoint.path)")
+    private func performRequest(
+        _ endpoint: Endpoint,
+        body: (any Encodable & Sendable)?
+    ) async throws -> Data {
+        var urlString = "\(baseURL)\(endpoint.path)"
+
+        if let queryItems = endpoint.queryItems, !queryItems.isEmpty {
+            var components = URLComponents(string: urlString)
+            components?.queryItems = queryItems
+            urlString = components?.url?.absoluteString ?? urlString
+        }
+
+        guard let url = URL(string: urlString) else {
+            throw APIError.invalidURL
         }
 
         var request = URLRequest(url: url)
         request.httpMethod = endpoint.method.rawValue
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
 
-        if let body = endpoint.body {
-            request.httpBody = try encoder.encode(AnyEncodable(body))
+        if endpoint.requiresAuth {
+            if let token = await KeychainManager.shared.accessToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
         }
 
-        return request
+        if let body {
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.networkError("Invalid response")
+        }
+
+        switch httpResponse.statusCode {
+        case 200...201:
+            return data
+        case 401:
+            if endpoint.requiresAuth {
+                return try await handleUnauthorized(endpoint: endpoint, body: body)
+            }
+            let msg = parseMessage(from: data)
+            throw APIError.badRequest(msg)
+        case 403:
+            throw APIError.forbidden
+        case 404:
+            throw APIError.notFound
+        case 409:
+            let msg = parseMessage(from: data)
+            throw APIError.conflict(msg)
+        case 429:
+            throw APIError.rateLimited
+        case 400:
+            let msg = parseMessage(from: data)
+            throw APIError.badRequest(msg)
+        case 500...599:
+            throw APIError.serverError
+        default:
+            let msg = parseMessage(from: data)
+            throw APIError.unknown(httpResponse.statusCode, msg)
+        }
     }
 
-    // MARK: - Logging
+    // MARK: - Multipart Upload
 
-    private func logRequest(_ request: URLRequest) {
-        #if DEBUG
-        let method = request.httpMethod ?? "?"
-        let url = request.url?.absoluteString ?? "?"
-        logger.debug("➡️ \(method) \(url)")
-        if let body = request.httpBody, let json = String(data: body, encoding: .utf8) {
-            logger.debug("   Body: \(json)")
+    private func performMultipartRequest(
+        _ endpoint: Endpoint,
+        fileData: Data,
+        fieldName: String,
+        fileName: String,
+        mimeType: String
+    ) async throws -> Data {
+        let urlString = "\(baseURL)\(endpoint.path)"
+        guard let url = URL(string: urlString) else { throw APIError.invalidURL }
+
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = endpoint.method.rawValue
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        if endpoint.requiresAuth {
+            if let token = await KeychainManager.shared.accessToken {
+                request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            }
         }
-        #endif
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(fieldName)\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.networkError("Invalid response")
+        }
+
+        switch httpResponse.statusCode {
+        case 200...201:
+            return data
+        case 401:
+            throw APIError.unauthorized
+        default:
+            let msg = parseMessage(from: data)
+            throw APIError.badRequest(msg)
+        }
     }
 
-    private func logResponse(_ response: HTTPURLResponse, data: Data) {
-        #if DEBUG
-        let status = response.statusCode
-        let url = response.url?.absoluteString ?? "?"
-        logger.debug("⬅️ \(status) \(url)")
-        if let json = String(data: data, encoding: .utf8)?.prefix(1000) {
-            logger.debug("   Response: \(json)")
+    // MARK: - Token Refresh
+
+    private func handleUnauthorized(
+        endpoint: Endpoint,
+        body: (any Encodable & Sendable)?
+    ) async throws -> Data {
+        if isRefreshing {
+            return try await withCheckedThrowingContinuation { continuation in
+                pendingRequests.append(continuation)
+            }
         }
-        #endif
+
+        isRefreshing = true
+        defer { isRefreshing = false }
+
+        do {
+            try await refreshToken()
+            let data = try await performRequest(endpoint, body: body)
+
+            for continuation in pendingRequests {
+                continuation.resume(returning: data)
+            }
+            pendingRequests.removeAll()
+
+            return data
+        } catch {
+            for continuation in pendingRequests {
+                continuation.resume(throwing: APIError.unauthorized)
+            }
+            pendingRequests.removeAll()
+            throw APIError.unauthorized
+        }
+    }
+
+    private func refreshToken() async throws {
+        guard let refreshToken = await KeychainManager.shared.refreshToken else {
+            throw APIError.unauthorized
+        }
+
+        let body = RefreshTokenRequest(refreshToken: refreshToken)
+        let urlString = "\(baseURL)/auth/refresh-token"
+        guard let url = URL(string: urlString) else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            await KeychainManager.shared.clearTokens()
+            throw APIError.unauthorized
+        }
+
+        let tokenResponse = try decoder.decode(APIResponse<TokenData>.self, from: data)
+        guard let tokens = tokenResponse.data else { throw APIError.unauthorized }
+
+        await KeychainManager.shared.saveTokens(
+            access: tokens.accessToken,
+            refresh: tokens.refreshToken
+        )
+    }
+
+    // MARK: - Helpers
+
+    private func parseMessage(from data: Data) -> String {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let message = json["message"] as? String {
+            return message
+        }
+        return "Something went wrong"
     }
 }
 
-// MARK: - Helpers
+// MARK: - Internal Models
 
-/// Empty Decodable used when we only need to inspect `APIResponse.error`.
-private struct EmptyBody: Decodable {}
+struct EmptyData: Decodable, Sendable {}
 
-/// Type-erased Encodable wrapper so `Endpoint.body` (any Encodable) can be encoded.
-private struct AnyEncodable: Encodable {
-    private let _encode: (Encoder) throws -> Void
+private struct RefreshTokenRequest: Encodable, Sendable {
+    let refreshToken: String
+}
 
-    init(_ value: any Encodable) {
-        self._encode = { encoder in
-            try value.encode(to: encoder)
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        try _encode(encoder)
-    }
+private struct TokenData: Decodable, Sendable {
+    let accessToken: String
+    let refreshToken: String
 }

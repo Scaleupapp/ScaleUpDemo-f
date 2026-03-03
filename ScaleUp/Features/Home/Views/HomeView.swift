@@ -1,369 +1,876 @@
 import SwiftUI
 
-// MARK: - Home View
+struct SeeAllDestination: Hashable {
+    let title: String
+    let items: [Content]
+}
+
+struct QuizListDestination: Hashable {}
 
 struct HomeView: View {
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
-
-    @State private var viewModel: HomeViewModel?
-    @State private var seeAllTitle: String = ""
-    @State private var seeAllItems: [Content] = []
-    @State private var showSeeAll = false
-    @State private var showQuizList = false
+    @State private var viewModel = HomeViewModel()
+    @State private var quizViewModel = QuizListViewModel()
 
     var body: some View {
         NavigationStack {
             ZStack {
-                ColorTokens.backgroundDark
-                    .ignoresSafeArea()
+                ColorTokens.background.ignoresSafeArea()
 
-                if let viewModel {
-                    if viewModel.isLoading && viewModel.dashboardData == nil {
-                        homeSkeletonView
-                    } else if let error = viewModel.error, viewModel.dashboardData == nil {
-                        ErrorStateView(
-                            message: error.errorDescription ?? "Failed to load dashboard."
-                        ) {
-                            Task { await viewModel.loadDashboard() }
-                        }
-                    } else {
-                        homeContent(viewModel: viewModel)
-                    }
+                if viewModel.isLoading && viewModel.dashboard == nil && viewModel.recommendations.isEmpty {
+                    loadingState
+                } else {
+                    mainContent
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Content.self) { content in
-                ContentDetailView(contentId: content.id)
+                PlayerView(contentId: content.id)
             }
-            .navigationDestination(for: String.self) { contentId in
-                ContentDetailView(contentId: contentId)
+            .navigationDestination(for: SeeAllDestination.self) { destination in
+                SeeAllContentView(title: destination.title, items: destination.items)
+                    .navigationDestination(for: Content.self) { content in
+                        PlayerView(contentId: content.id)
+                    }
             }
-            .navigationDestination(isPresented: $showSeeAll) {
-                ContentListView(title: seeAllTitle, items: seeAllItems)
+            .navigationDestination(for: QuizListDestination.self) { _ in
+                QuizListView()
             }
-            .navigationDestination(isPresented: $showQuizList) {
-                QuizListView(embedded: true)
-            }
-        }
-        .onAppear {
-            if viewModel == nil {
-                viewModel = HomeViewModel(
-                    dashboardService: dependencies.dashboardService,
-                    progressService: dependencies.progressService,
-                    recommendationService: dependencies.recommendationService
-                )
+            .navigationDestination(for: Quiz.self) { quiz in
+                QuizDetailView(quiz: quiz)
             }
         }
         .task {
-            if let viewModel, viewModel.dashboardData == nil {
-                await viewModel.loadDashboard()
-            }
+            await viewModel.loadDashboard()
+            await quizViewModel.loadQuizzes()
         }
     }
 
-    // MARK: - Home Content
+    // MARK: - Main Content
 
-    @ViewBuilder
-    private func homeContent(viewModel: HomeViewModel) -> some View {
+    private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: Spacing.md) {
+            VStack(spacing: 0) {
+                // Compact header: greeting + goal + score
+                compactHeader
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
+                    .padding(.bottom, Spacing.sm)
 
-                // Greeting Header
-                greetingHeader(viewModel: viewModel)
+                // Inline stats strip
+                statsStrip
+                    .padding(.bottom, Spacing.xs)
 
-                // Quick Stats Bar
-                quickStatsBar(viewModel: viewModel)
+                // Content type filter
+                contentTypeFilter
+                    .padding(.bottom, Spacing.sm)
 
-                // Hero Journey Card (Netflix-style, top priority)
-                if viewModel.hasActiveJourney, let journey = viewModel.dashboardData?.journey {
-                    HeroPlanCard(journey: journey) {
-                        // Navigate to Journey tab in future
+                // Next action (slim)
+                if let action = viewModel.firstNextAction {
+                    if action.type == "quiz" {
+                        NavigationLink(value: QuizListDestination()) {
+                            nextActionBanner(action)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.md)
+                    } else {
+                        Button {
+                            appState.selectedTab = .journey
+                        } label: {
+                            nextActionBanner(action)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.md)
                     }
                 }
 
-                // Quiz Alert Banner (prominent, tappable)
-                if viewModel.pendingQuizzes > 0 {
-                    QuizAlertBanner(count: viewModel.pendingQuizzes) {
-                        showQuizList = true
-                    }
+                // Quiz section
+                if !quizViewModel.availableQuizzes.isEmpty {
+                    quizSection
+                        .padding(.bottom, Spacing.sm)
                 }
 
-                // Continue Watching
-                if !viewModel.continueWatching.isEmpty {
-                    ContinueWatchingRow(items: viewModel.continueWatching)
+                // Content sections
+                if hasAnyContent {
+                    contentFeed
+                        .padding(.top, Spacing.xs)
+                } else if !viewModel.isLoading {
+                    homeEmptyState
+                        .padding(.top, Spacing.xl)
                 }
 
-                // Trending Now
-                if !viewModel.trendingContent.isEmpty {
-                    contentSection(
-                        title: "Trending Now",
-                        icon: "flame.fill",
-                        iconColor: .orange,
-                        items: viewModel.trendingContent
-                    )
-                }
-
-                // Recommended For You
-                if !viewModel.recommendations.isEmpty {
-                    contentSection(
-                        title: viewModel.objectiveLabel.map { "Recommended for \($0)" } ?? "Recommended For You",
-                        icon: "sparkles",
-                        iconColor: ColorTokens.primary,
-                        items: viewModel.recommendations
-                    )
-                }
-
-                // Knowledge Snapshot
-                if !viewModel.topicMasteries.isEmpty {
-                    KnowledgeSnapshotRow(topics: viewModel.topicMasteries)
-                }
-
-                // Weekly Stats
-                if let stats = viewModel.weeklyStats {
-                    WeeklyStatsCard(stats: stats)
-                }
-
-                // Bottom spacing for tab bar
-                Spacer()
-                    .frame(height: Spacing.xxl)
+                Spacer().frame(height: Spacing.xxxl)
             }
-            .padding(.vertical, Spacing.sm)
         }
         .refreshable {
-            await viewModel.refresh()
+            await viewModel.loadDashboard()
         }
     }
 
-    // MARK: - Greeting Header
+    // MARK: - Compact Header
 
-    @ViewBuilder
-    private func greetingHeader(viewModel: HomeViewModel) -> some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(viewModel.greeting), \(appState.currentUser?.firstName ?? "Learner")")
-                    .font(Typography.titleMedium)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                Text(viewModel.formattedDate)
-                    .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
+    private var compactHeader: some View {
+        HStack(spacing: Spacing.sm) {
+            // Greeting
+            VStack(alignment: .leading, spacing: 1) {
+                Text(viewModel.greeting)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                if let name = appState.currentUser?.firstName {
+                    Text(name)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
+                }
             }
 
             Spacer()
 
-            if viewModel.streak > 0 {
-                StreakBadge(count: viewModel.streak)
+            // Goal pill (if available)
+            if let objective = viewModel.primaryObjective {
+                goalPill(objective)
             }
 
-            Image(systemName: "bell")
-                .font(.system(size: 18))
-                .foregroundStyle(ColorTokens.textSecondaryDark)
-                .padding(.leading, Spacing.sm)
+            // Score badge
+            scoreBadge
         }
-        .padding(.horizontal, Spacing.md)
     }
 
-    // MARK: - Quick Stats Bar
+    private func goalPill(_ objective: Objective) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: "target")
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.gold)
 
-    @ViewBuilder
-    private func quickStatsBar(viewModel: HomeViewModel) -> some View {
+            Text(objective.targetRole ?? objective.targetSkill ?? "Goal")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+            if let days = objective.daysRemaining {
+                Text("\(days)d")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(ColorTokens.surface)
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private var scoreBadge: some View {
+        VStack(spacing: 1) {
+            Text("\(viewModel.readinessScore)")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(ColorTokens.gold)
+            Text("Score")
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(ColorTokens.gold.opacity(0.7))
+        }
+        .frame(width: 44, height: 44)
+        .background(ColorTokens.gold.opacity(0.12))
+        .clipShape(Circle())
+    }
+
+    // MARK: - Stats Strip
+
+    private var statsStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
-                StatPill(
-                    icon: "chart.bar.fill",
-                    label: "Readiness",
-                    value: "\(viewModel.readinessScore)%",
-                    color: readinessColor(viewModel.readinessScore)
+            HStack(spacing: 8) {
+                statChip(
+                    icon: "play.circle.fill",
+                    text: "\(viewModel.weeklyStats?.contentConsumed ?? 0) watched this week"
                 )
-
-                if viewModel.streak > 0 {
-                    StatPill(
-                        icon: "flame.fill",
-                        label: "Streak",
-                        value: "\(viewModel.streak) days",
-                        color: .orange
-                    )
-                }
-
-                if viewModel.pendingQuizzes > 0 {
-                    StatPill(
-                        icon: "questionmark.circle.fill",
-                        label: "Quizzes",
-                        value: "\(viewModel.pendingQuizzes) pending",
-                        color: ColorTokens.primary
-                    )
-                }
-
-                if let stats = viewModel.weeklyStats {
-                    StatPill(
-                        icon: "book.fill",
-                        label: "This Week",
-                        value: "\(stats.contentConsumed) lessons",
-                        color: .cyan
-                    )
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-
-    // MARK: - Reusable Content Section
-
-    @ViewBuilder
-    private func contentSection(title: String, icon: String, iconColor: Color, items: [Content]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Subtle top separator
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            .clear,
-                            ColorTokens.surfaceElevatedDark,
-                            .clear,
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                statChip(
+                    icon: "checkmark.circle.fill",
+                    text: "\(viewModel.weeklyStats?.totalContentConsumed ?? 0) lessons completed"
                 )
-                .frame(height: 1)
-                .padding(.horizontal, Spacing.lg)
-
-            // Section header with icon and See All
-            HStack {
-                HStack(spacing: Spacing.xs) {
-                    Image(systemName: icon)
-                        .font(.system(size: 14))
-                        .foregroundStyle(iconColor)
-                    Text(title)
-                        .font(Typography.titleMedium)
-                        .foregroundStyle(ColorTokens.textPrimaryDark)
-                }
-
-                Spacer()
-
-                Button {
-                    seeAllTitle = title
-                    seeAllItems = items
-                    showSeeAll = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("See All")
-                            .font(Typography.bodySmall)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 10, weight: .semibold))
+                NavigationLink(value: QuizListDestination()) {
+                    if viewModel.pendingQuizzes > 0 {
+                        statChip(
+                            icon: "brain.head.profile",
+                            text: "\(viewModel.pendingQuizzes) quizzes pending",
+                            accent: ColorTokens.warning
+                        )
+                    } else {
+                        statChip(
+                            icon: "brain.head.profile",
+                            text: "Quizzes"
+                        )
                     }
-                    .foregroundStyle(ColorTokens.primary)
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-
-            // Horizontal carousel
-            HorizontalCarousel(items: items) { content in
-                NavigationLink(value: content) {
-                    ContentCard(
-                        title: content.title,
-                        creatorName: content.creator.firstName + " " + content.creator.lastName,
-                        domain: content.domain,
-                        thumbnailURL: content.resolvedThumbnailURL,
-                        duration: content.duration,
-                        rating: content.averageRating > 0 ? content.averageRating : nil,
-                        viewCount: content.viewCount > 0 ? content.viewCount : nil
-                    )
                 }
                 .buttonStyle(.plain)
+                if let journey = viewModel.journey {
+                    statChip(
+                        icon: "map.fill",
+                        text: "Journey: week \(journey.currentWeek ?? 1)"
+                    )
+                }
+                if viewModel.weeklyGrowthDelta != 0 {
+                    growthChip
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+        }
+    }
+
+    private func statChip(icon: String, text: String, accent: Color = ColorTokens.gold) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(accent)
+
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(ColorTokens.surface)
+        .clipShape(Capsule())
+        .overlay(
+            Capsule().stroke(ColorTokens.border, lineWidth: 1)
+        )
+    }
+
+    private var growthChip: some View {
+        let isUp = viewModel.weeklyGrowthDelta > 0
+        return HStack(spacing: 4) {
+            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
+                .font(.system(size: 9))
+            Text(isUp
+                 ? "+\(viewModel.weeklyGrowthDelta) from last week"
+                 : "\(viewModel.weeklyGrowthDelta) from last week")
+                .font(.system(size: 12, weight: .semibold))
+        }
+        .foregroundStyle(isUp ? ColorTokens.success : ColorTokens.warning)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background((isUp ? ColorTokens.success : ColorTokens.warning).opacity(0.1))
+        .clipShape(Capsule())
+    }
+
+    // MARK: - Next Action Banner
+
+    private func nextActionBanner(_ action: NextAction) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: action.type == "quiz" ? "brain.head.profile" : "play.circle.fill")
+                .font(.system(size: 16))
+                .foregroundStyle(ColorTokens.gold)
+
+            Text(action.message ?? "Continue your learning journey")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+
+            Spacer(minLength: 4)
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(ColorTokens.gold)
+        }
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, 10)
+        .background(ColorTokens.gold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Content Feed
+
+    private var contentFeed: some View {
+        VStack(spacing: Spacing.lg) {
+            // Continue Watching (not filtered — always show progress)
+            if !viewModel.continueWatching.isEmpty && viewModel.selectedContentType == nil {
+                sectionRow(title: "Continue Watching", icon: "play.circle.fill") {
+                    continueWatchingCards
+                }
+            }
+
+            // Hero content card
+            if let hero = viewModel.heroContent {
+                heroCard(hero)
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            // Recommended For You
+            if viewModel.filteredRecommendations.count > 1 {
+                let recItems = Array(viewModel.filteredRecommendations.dropFirst())
+                sectionRow(title: "Recommended For You", icon: "sparkles", items: recItems) {
+                    horizontalContentScroll(items: recItems, width: 180)
+                }
+            }
+
+            // Trending
+            if !viewModel.filteredTrending.isEmpty {
+                sectionRow(title: "Trending", icon: "flame.fill", items: viewModel.filteredTrending) {
+                    horizontalContentScroll(items: viewModel.filteredTrending, width: 180)
+                }
+            }
+
+            // All Content
+            if !viewModel.filteredAllContent.isEmpty {
+                sectionRow(title: "Explore", icon: "safari.fill", items: viewModel.filteredAllContent) {
+                    horizontalContentScroll(items: viewModel.filteredAllContent, width: 180)
+                }
             }
         }
+    }
+
+    // MARK: - Hero Card
+
+    private func heroCard(_ content: Content) -> some View {
+        NavigationLink(value: content) {
+            HStack(spacing: Spacing.sm) {
+                Group {
+                    if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                        AsyncImage(url: imageURL) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            default:
+                                heroPlaceholder
+                            }
+                        }
+                    } else {
+                        heroPlaceholder
+                    }
+                }
+                .frame(width: 150, height: 100)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(alignment: .topLeading) {
+                    homeContentTypeBadge(content.contentType)
+                        .padding(4)
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if !content.formattedDuration.isEmpty {
+                        Text(content.formattedDuration)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.black.opacity(0.75))
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                            .padding(4)
+                    }
+                }
+                .overlay {
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .shadow(radius: 4)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        if let domain = content.domain {
+                            Text(domain.uppercased())
+                                .font(.system(size: 9, weight: .bold))
+                                .tracking(1.2)
+                                .foregroundStyle(ColorTokens.gold)
+                        }
+                    }
+
+                    Text(content.title)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+
+                    if let creator = content.creatorId {
+                        HStack(spacing: 4) {
+                            Text(creator.displayName)
+                                .font(.system(size: 11))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                                .lineLimit(1)
+                            if let tier = creator.tier {
+                                TierBadge(tier: tier, compact: true)
+                            }
+                        }
+                    }
+
+                    HStack(spacing: 6) {
+                        if let views = content.viewCount, views > 0 {
+                            Label(formatCount(views), systemImage: "eye")
+                        }
+                        if let rating = content.averageRating, rating > 0 {
+                            Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                                .foregroundStyle(ColorTokens.gold)
+                        }
+                    }
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(Spacing.sm)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var heroPlaceholder: some View {
+        ZStack {
+            LinearGradient(
+                colors: [ColorTokens.gold.opacity(0.2), ColorTokens.surfaceElevated, ColorTokens.surface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            Image(systemName: "play.rectangle.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+    }
+
+    // MARK: - Section Row
+
+    private func sectionRow<V: View>(title: String, icon: String, items: [Content] = [], @ViewBuilder content: () -> V) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 13))
+                    .foregroundStyle(ColorTokens.gold)
+                Text(title)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                Spacer()
+                if !items.isEmpty {
+                    NavigationLink(value: SeeAllDestination(title: title, items: items)) {
+                        Text("See All")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+
+            content()
+        }
+    }
+
+    // MARK: - Content Cards
+
+    private func horizontalContentScroll(items: [Content], width: CGFloat) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 12) {
+                ForEach(items) { item in
+                    NavigationLink(value: item) {
+                        contentCard(item, width: width)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+        }
+    }
+
+    private func contentCard(_ content: Content, width: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Group {
+                if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                    AsyncImage(url: imageURL) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        default:
+                            thumbnailPlaceholder(for: content)
+                        }
+                    }
+                } else {
+                    thumbnailPlaceholder(for: content)
+                }
+            }
+            .frame(width: width, height: width * 9 / 16)
+            .clipped()
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(alignment: .topLeading) {
+                homeContentTypeBadge(content.contentType)
+                    .padding(6)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if !content.formattedDuration.isEmpty {
+                    Text(content.formattedDuration)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.75))
+                        .clipShape(RoundedRectangle(cornerRadius: 3))
+                        .padding(6)
+                }
+            }
+
+            Text(content.title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            if let creator = content.creatorId {
+                HStack(spacing: 3) {
+                    Text(creator.displayName)
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .lineLimit(1)
+                    if let tier = creator.tier {
+                        TierBadge(tier: tier, compact: true)
+                    }
+                }
+            }
+        }
+        .frame(width: width)
+    }
+
+    private func homeContentTypeBadge(_ type: ContentType) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: type.badgeIcon)
+                .font(.system(size: 9, weight: .bold))
+            Text(type.badgeLabel)
+                .font(.system(size: 10, weight: .black))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(type.badgeColor)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+    }
+
+    private func thumbnailPlaceholder(for content: Content) -> some View {
+        ZStack {
+            LinearGradient(
+                colors: [ColorTokens.surfaceElevated, ColorTokens.card],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            VStack(spacing: 4) {
+                Image(systemName: content.contentType == .video ? "play.fill" : "doc.text")
+                    .font(.system(size: 22))
+                    .foregroundStyle(ColorTokens.gold.opacity(0.5))
+                if let domain = content.domain {
+                    Text(domain)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+        }
+    }
+
+    // MARK: - Continue Watching
+
+    private var continueWatchingCards: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 12) {
+                ForEach(viewModel.continueWatching) { item in
+                    if let content = item.content {
+                        NavigationLink(value: content) {
+                            VStack(alignment: .leading, spacing: 6) {
+                                ZStack(alignment: .bottom) {
+                                    Group {
+                                        if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                                            AsyncImage(url: imageURL) { phase in
+                                                switch phase {
+                                                case .success(let image):
+                                                    image.resizable().aspectRatio(contentMode: .fill)
+                                                default:
+                                                    thumbnailPlaceholder(for: content)
+                                                }
+                                            }
+                                        } else {
+                                            thumbnailPlaceholder(for: content)
+                                        }
+                                    }
+                                    .frame(width: 220, height: 220 * 9 / 16)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                    VStack {
+                                        Spacer()
+                                        GeometryReader { geo in
+                                            ZStack(alignment: .leading) {
+                                                Rectangle().fill(Color.white.opacity(0.3))
+                                                Rectangle().fill(ColorTokens.gold)
+                                                    .frame(width: geo.size.width * item.progress)
+                                            }
+                                            .frame(height: 3)
+                                        }
+                                        .frame(height: 3)
+                                    }
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+
+                                Text(content.title)
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(2)
+
+                                Text("\(item.percentageCompleted ?? 0)% watched")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                            }
+                            .frame(width: 220)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+        }
+    }
+
+    // MARK: - Loading State
+
+    private var loadingState: some View {
+        VStack(spacing: Spacing.lg) {
+            SkeletonLoader(height: 50)
+                .padding(.horizontal, Spacing.lg)
+            SkeletonLoader(height: 36)
+                .padding(.horizontal, Spacing.lg)
+            SkeletonLoader(height: 120)
+                .padding(.horizontal, Spacing.lg)
+            SkeletonLoader(height: 180)
+                .padding(.horizontal, Spacing.lg)
+            Spacer()
+        }
+        .padding(.top, Spacing.xl)
+    }
+
+    // MARK: - Empty State
+
+    private var hasAnyContent: Bool {
+        !viewModel.continueWatching.isEmpty ||
+        !viewModel.filteredRecommendations.isEmpty ||
+        !viewModel.filteredTrending.isEmpty ||
+        !viewModel.filteredAllContent.isEmpty ||
+        !quizViewModel.availableQuizzes.isEmpty
+    }
+
+    // MARK: - Content Type Filter
+
+    private var contentTypeFilter: some View {
+        HStack(spacing: 0) {
+            homeTypeTab(nil, label: "All")
+            homeTypeTab(.video, label: "Videos")
+            homeTypeTab(.article, label: "Articles")
+            homeTypeTab(.infographic, label: "Infographics")
+        }
+        .padding(3)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    private func homeTypeTab(_ type: ContentType?, label: String) -> some View {
+        let isSelected = viewModel.selectedContentType == type
+        return Button {
+            Haptics.selection()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                viewModel.selectedContentType = type
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .black : ColorTokens.textTertiary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .background(isSelected ? ColorTokens.gold : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var homeEmptyState: some View {
+        VStack(spacing: Spacing.lg) {
+            Image(systemName: "books.vertical")
+                .font(.system(size: 44))
+                .foregroundStyle(ColorTokens.textTertiary)
+
+            VStack(spacing: Spacing.sm) {
+                Text("Your feed is empty")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Text("Start exploring content to get personalized\nrecommendations and track your progress.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+            }
+
+            Button {
+                appState.selectedTab = .discover
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "safari.fill")
+                        .font(.system(size: 13))
+                    Text("Explore Content")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .foregroundStyle(.black)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(ColorTokens.gold)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Spacing.xl)
+        .padding(.vertical, 40)
     }
 
     // MARK: - Helpers
 
-    private func readinessColor(_ score: Int) -> Color {
-        switch score {
-        case 70...100: return .green
-        case 40..<70: return .orange
-        default: return .red
+    private func formatCount(_ count: Int) -> String {
+        if count >= 1_000_000 { return String(format: "%.1fM", Double(count) / 1_000_000) }
+        if count >= 1_000 { return String(format: "%.1fK", Double(count) / 1_000) }
+        return "\(count)"
+    }
+
+    // MARK: - Quiz Section
+
+    private var quizSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            // Header
+            HStack(spacing: 6) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 13))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Quizzes")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                Spacer()
+                NavigationLink(value: QuizListDestination()) {
+                    Text("See All")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+
+            // Quiz cards
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHStack(spacing: 12) {
+                    ForEach(quizViewModel.availableQuizzes.prefix(4)) { quiz in
+                        NavigationLink(value: quiz) {
+                            homeQuizCard(quiz)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+            }
         }
     }
 
-    // MARK: - Skeleton Loading View
+    private func homeQuizCard(_ quiz: Quiz) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Type icon + badge
+            HStack(spacing: 6) {
+                Image(systemName: quiz.type.icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.gold)
 
-    private var homeSkeletonView: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: Spacing.md) {
-                // Greeting skeleton
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        SkeletonLoader(width: 200, height: 20)
-                        SkeletonLoader(width: 120, height: 14)
-                    }
-                    Spacer()
-                    SkeletonLoader(width: 50, height: 28, cornerRadius: CornerRadius.full)
-                }
-                .padding(.horizontal, Spacing.md)
+                Text(quiz.type.displayName.uppercased())
+                    .font(.system(size: 9, weight: .black))
+                    .tracking(0.8)
+                    .foregroundStyle(ColorTokens.gold)
 
-                // Hero card skeleton
-                SkeletonLoader(height: 200, cornerRadius: CornerRadius.medium)
-                    .padding(.horizontal, Spacing.md)
+                Spacer()
 
-                // Stats bar skeleton
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: Spacing.sm) {
-                        ForEach(0..<3, id: \.self) { _ in
-                            SkeletonLoader(width: 120, height: 48, cornerRadius: CornerRadius.medium)
-                        }
-                    }
-                    .padding(.horizontal, Spacing.md)
-                }
-
-                // Content sections skeleton
-                ForEach(0..<2, id: \.self) { _ in
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        SkeletonLoader(width: 160, height: 18)
-                            .padding(.horizontal, Spacing.md)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: Spacing.sm) {
-                                ForEach(0..<3, id: \.self) { _ in
-                                    SkeletonCard()
-                                }
-                            }
-                            .padding(.horizontal, Spacing.md)
-                        }
-                    }
+                if quiz.status == .inProgress {
+                    Text("IN PROGRESS")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.blue)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.blue.opacity(0.15))
+                        .clipShape(Capsule())
                 }
             }
-            .padding(.vertical, Spacing.sm)
+
+            // Trigger context
+            Text(quizTriggerContext(quiz))
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .lineLimit(1)
+
+            // Title
+            Text(quiz.title)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+
+            Spacer()
+
+            // Stats row
+            HStack(spacing: 10) {
+                Label("\(quiz.totalQuestions)Q", systemImage: "list.bullet")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+
+                Label("\(quiz.estimatedMinutes)m", systemImage: "clock")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+
+                Spacer()
+            }
+
+            // CTA
+            Text("Take Quiz")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(ColorTokens.gold)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
         }
+        .padding(12)
+        .frame(width: 190, height: 185)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(ColorTokens.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+                )
+        )
     }
-}
 
-// MARK: - Stat Pill
-
-private struct StatPill: View {
-    let icon: String
-    let label: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(color)
-
-            VStack(alignment: .leading, spacing: 0) {
-                Text(label)
-                    .font(Typography.micro)
-                    .foregroundStyle(ColorTokens.textTertiaryDark)
-                Text(value)
-                    .font(Typography.caption.bold())
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
-            }
+    private func quizTriggerContext(_ quiz: Quiz) -> String {
+        switch quiz.type {
+        case .topicConsolidation:
+            return "3+ lessons on \(quiz.topic) completed"
+        case .weeklyReview:
+            return "Weekly check on your progress"
+        case .retentionCheck:
+            return "Test what you remember"
+        case .milestoneAssessment:
+            return "Milestone reached in \(quiz.topic)"
+        case .competencyAssessment:
+            return "Skill assessment for \(quiz.topic)"
+        case .appliedScenario:
+            return "Apply \(quiz.topic) concepts"
+        case .examSimulation:
+            return "Practice exam for \(quiz.topic)"
+        default:
+            return "Based on your \(quiz.topic) learning"
         }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(ColorTokens.surfaceElevatedDark)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
     }
 }

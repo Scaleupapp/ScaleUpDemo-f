@@ -1,177 +1,133 @@
 import SwiftUI
 
-// MARK: - Register View
-
-/// Registration form with first name, last name, email, and password.
 struct RegisterView: View {
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
 
-    // MARK: - Navigation
-
-    let onSignIn: () -> Void
-
-    // MARK: - State
-
-    @State private var viewModel: RegisterViewModel?
-
-    // MARK: - Body
+    @State private var viewModel = AuthViewModel()
 
     var body: some View {
         ZStack {
-            ColorTokens.backgroundDark
-                .ignoresSafeArea()
+            ColorTokens.background.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    // MARK: Header
-                    headerSection
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.lg) {
+                    // Header
+                    VStack(spacing: Spacing.sm) {
+                        Text("Create account")
+                            .font(Typography.displayMedium)
+                            .foregroundStyle(ColorTokens.textPrimary)
 
-                    if let vm = viewModel {
-                        // MARK: Error Banner
-                        if let errorMessage = vm.errorMessage {
-                            errorBanner(errorMessage)
-                        }
-
-                        // MARK: Form
-                        formSection(vm)
-
-                        // MARK: Submit
-                        PrimaryButton(
-                            title: "Create Account",
-                            isLoading: vm.isLoading
-                        ) {
-                            Task { await vm.register(appState: appState) }
-                        }
-
-                        // MARK: Sign In Link
-                        signInLink
+                        Text("Start your learning journey today")
+                            .font(Typography.bodySmall)
+                            .foregroundStyle(ColorTokens.textSecondary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, Spacing.xl)
+
+                    // Form
+                    VStack(spacing: Spacing.md) {
+                        HStack(spacing: Spacing.sm) {
+                            ScaleUpTextField(
+                                label: "First Name",
+                                icon: "person",
+                                text: $viewModel.firstName,
+                                autocapitalization: .words
+                            )
+
+                            ScaleUpTextField(
+                                label: "Last Name",
+                                icon: "person",
+                                text: $viewModel.lastName,
+                                autocapitalization: .words
+                            )
+                        }
+
+                        ScaleUpTextField(
+                            label: "Email",
+                            icon: "envelope",
+                            text: $viewModel.email,
+                            keyboardType: .emailAddress,
+                            autocapitalization: .never
+                        )
+
+                        ScaleUpTextField(
+                            label: "Password",
+                            icon: "lock",
+                            text: $viewModel.password,
+                            isSecure: true,
+                            autocapitalization: .never
+                        )
+
+                        // Password hint
+                        Text("Must be at least 8 characters")
+                            .font(Typography.caption)
+                            .foregroundStyle(
+                                viewModel.password.isEmpty
+                                    ? ColorTokens.textTertiary
+                                    : viewModel.password.count >= 8
+                                        ? ColorTokens.success
+                                        : ColorTokens.error
+                            )
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+
+                    // Error
+                    if let error = viewModel.errorMessage {
+                        errorBanner(error)
+                    }
+
+                    // Create Account
+                    PrimaryButton(
+                        title: "Create Account",
+                        isLoading: viewModel.isLoading,
+                        isDisabled: !viewModel.isRegisterValid
+                    ) {
+                        Task {
+                            if let authData = await viewModel.register() {
+                                await appState.handleAuthSuccess(authData)
+                            }
+                        }
+                    }
+
+                    // Terms
+                    Text("By creating an account, you agree to our\nTerms of Service and Privacy Policy")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .multilineTextAlignment(.center)
+
+                    Spacer().frame(height: Spacing.xxl)
                 }
                 .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.xl)
-                .padding(.bottom, Spacing.xxl)
-            }
-            .scrollDismissesKeyboard(.interactively)
-        }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(ColorTokens.backgroundDark, for: .navigationBar)
-        .loadingOverlay(isPresented: viewModel?.isLoading ?? false)
-        .onAppear {
-            if viewModel == nil {
-                viewModel = RegisterViewModel(
-                    authService: dependencies.authService,
-                    authManager: dependencies.authManager,
-                    hapticManager: dependencies.hapticManager
-                )
             }
         }
-    }
-
-    // MARK: - Header
-
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Create Account")
-                .font(Typography.displayMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-            Text("Start your learning journey today")
-                .font(Typography.body)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
-        }
-    }
-
-    // MARK: - Form
-
-    @ViewBuilder
-    private func formSection(_ vm: RegisterViewModel) -> some View {
-        VStack(spacing: Spacing.md) {
-            TextFieldStyled(
-                label: "First Name",
-                placeholder: "Enter your first name",
-                text: Binding(
-                    get: { vm.firstName },
-                    set: { vm.firstName = $0 }
-                ),
-                icon: "person.fill",
-                errorMessage: vm.firstNameError,
-                textContentType: .givenName
-            )
-
-            TextFieldStyled(
-                label: "Last Name (Optional)",
-                placeholder: "Enter your last name",
-                text: Binding(
-                    get: { vm.lastName },
-                    set: { vm.lastName = $0 }
-                ),
-                icon: "person.fill",
-                textContentType: .familyName
-            )
-
-            TextFieldStyled(
-                label: "Email",
-                placeholder: "Enter your email",
-                text: Binding(
-                    get: { vm.email },
-                    set: { vm.email = $0 }
-                ),
-                icon: "envelope.fill",
-                errorMessage: vm.emailError,
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress,
-                autocapitalization: .never
-            )
-
-            TextFieldStyled(
-                label: "Password",
-                placeholder: "Create a password (min 8 characters)",
-                text: Binding(
-                    get: { vm.password },
-                    set: { vm.password = $0 }
-                ),
-                icon: "lock.fill",
-                isSecure: true,
-                errorMessage: vm.passwordError,
-                textContentType: .newPassword
-            )
-        }
-    }
-
-    // MARK: - Sign In Link
-
-    private var signInLink: some View {
-        HStack {
-            Spacer()
-            Text("Already have an account?")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
-            Button {
-                onSignIn()
-            } label: {
-                Text("Sign In")
-                    .font(Typography.bodySmall)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(ColorTokens.primary)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .frame(width: 40, height: 40)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Circle())
+                }
             }
-            Spacer()
         }
-        .padding(.top, Spacing.sm)
     }
-
-    // MARK: - Error Banner
 
     private func errorBanner(_ message: String) -> some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(ColorTokens.error)
             Text(message)
-                .font(Typography.bodySmall)
+                .font(Typography.caption)
                 .foregroundStyle(ColorTokens.error)
             Spacer()
         }
-        .padding(Spacing.md)
+        .padding(Spacing.sm)
         .background(ColorTokens.error.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }

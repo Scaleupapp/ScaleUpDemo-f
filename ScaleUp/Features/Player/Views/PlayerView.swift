@@ -1,718 +1,908 @@
 import SwiftUI
-import NukeUI
 
-// MARK: - Player View
-
-/// Main player container pushed from ContentDetailView when "Play" is tapped.
-/// Renders a YouTube or native player depending on the content's sourceType,
-/// with controls overlay, metadata, actions, AI summary, similar content, and comments.
 struct PlayerView: View {
-
     let contentId: String
 
-    @Environment(DependencyContainer.self) private var dependencies
-    @Environment(AppState.self) private var appState
-    @Environment(\.dismiss) private var dismiss
+    @State private var viewModel = PlayerViewModel()
+    @State private var selectedTab: PlayerTab = .about
+    @State private var showReportSheet = false
+    @State private var reportReason = ""
+    @State private var reportDescription = ""
+    @State private var isReporting = false
+    @State private var reportSuccess = false
 
-    @State private var viewModel: PlayerViewModel?
-
-    // MARK: - YouTube Player Coordinator Reference
-
-    @State private var youtubeCoordinator: YouTubePlayerView.Coordinator?
-    @State private var youtubeError: Int?
-    @State private var showPlaylistSheet = false
+    enum PlayerTab: String, CaseIterable {
+        case about = "About"
+        case comments = "Comments"
+    }
 
     var body: some View {
         ZStack {
-            ColorTokens.backgroundDark.ignoresSafeArea()
+            ColorTokens.background.ignoresSafeArea()
 
-            if let viewModel {
-                if viewModel.isLoading && viewModel.content == nil {
-                    loadingView
-                } else if let error = viewModel.error, viewModel.content == nil {
-                    ErrorStateView(
-                        message: error.errorDescription ?? "Failed to load content."
-                    ) {
-                        Task { await viewModel.loadContent(id: contentId) }
-                    }
-                } else if let content = viewModel.content {
-                    playerContent(content: content, viewModel: viewModel)
-                }
-            }
-        }
-        .navigationBarHidden(true)
-        .navigationDestination(for: Content.self) { content in
-            ContentDetailView(contentId: content.id)
-        }
-        .statusBarHidden(viewModel?.isFullscreen == true || viewModel?.isControlsVisible == false)
-        .ignoresSafeArea(viewModel?.isFullscreen == true ? .all : [])
-        .sheet(isPresented: $showPlaylistSheet) {
-            AddToPlaylistSheet(contentId: contentId)
-                .environment(dependencies)
-        }
-        .onAppear {
-            initializeViewModel()
-        }
-        .task {
-            if let viewModel, viewModel.content == nil {
-                await viewModel.loadContent(id: contentId)
-            }
-        }
-        .onDisappear {
-            OrientationHelper.resetToDefault()
-            Task {
-                await viewModel?.cleanup()
-            }
-        }
-    }
-
-    // MARK: - Player Content Layout
-
-    private func playerContent(content: Content, viewModel: PlayerViewModel) -> some View {
-        // Always use native player — videos are stored in S3 regardless of sourceType
-        nativeContent(content: content, viewModel: viewModel)
-    }
-
-    // MARK: - YouTube Content (full-page WKWebView)
-
-    /// For YouTube, the mobile page already has title, comments, related videos.
-    /// We show the WKWebView full-screen with just a close button.
-    private func youtubeContent(content: Content, viewModel: PlayerViewModel) -> some View {
-        ZStack(alignment: .topLeading) {
-            if let videoId = viewModel.youtubeVideoId {
-                YouTubePlayerView(
-                    videoId: videoId,
-                    isPlaying: Binding(
-                        get: { viewModel.isPlaying },
-                        set: { viewModel.isPlaying = $0 }
-                    ),
-                    currentTime: Binding(
-                        get: { viewModel.currentTime },
-                        set: { viewModel.currentTime = $0 }
-                    ),
-                    duration: Binding(
-                        get: { viewModel.duration },
-                        set: { viewModel.duration = $0 }
-                    ),
-                    isReady: Binding(
-                        get: { viewModel.isPlayerReady },
-                        set: { viewModel.isPlayerReady = $0 }
-                    ),
-                    onTimeUpdate: { current, total in
-                        viewModel.onTimeUpdate(current: current, total: total)
-                    },
-                    onVideoEnded: {
-                        Task { await viewModel.onVideoEnded() }
-                    }
-                )
-                .ignoresSafeArea()
-            }
-
-            // Close button
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 4)
-            }
-            .padding(.top, Spacing.sm)
-            .padding(.leading, Spacing.md)
-        }
-    }
-
-    // MARK: - Native Content (custom player + metadata)
-
-    private func nativeContent(content: Content, viewModel: PlayerViewModel) -> some View {
-        VStack(spacing: 0) {
-            // Video player area — fills screen in fullscreen, 16:9 otherwise
-            playerArea(content: content, viewModel: viewModel)
-
-            // Hide metadata in fullscreen mode
-            if !viewModel.isFullscreen {
-            ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: Spacing.md) {
-                    titleSection(content: content)
-                    creatorRow(content: content)
-                    actionBar(viewModel: viewModel)
-
-                    Divider()
-                        .background(ColorTokens.surfaceElevatedDark)
-
-                    if let aiData = content.aiData, aiData.summary != nil {
-                        aiSummarySection(aiData: aiData, viewModel: viewModel)
-                        Divider()
-                            .background(ColorTokens.surfaceElevatedDark)
-                    }
-
-                    if !viewModel.similarContent.isEmpty {
-                        similarContentSection(viewModel: viewModel)
-                        Divider()
-                            .background(ColorTokens.surfaceElevatedDark)
-                    }
-
-                    CommentsSection(
-                        comments: viewModel.comments,
-                        commentCount: viewModel.commentCount,
-                        isLoading: viewModel.isLoadingComments,
-                        isSubmitting: viewModel.isSubmittingComment,
-                        newCommentText: Binding(
-                            get: { viewModel.newCommentText },
-                            set: { viewModel.newCommentText = $0 }
+            if viewModel.isLoading && viewModel.content == nil {
+                ProgressView()
+                    .tint(ColorTokens.gold)
+            } else if let content = viewModel.content {
+                VStack(spacing: 0) {
+                    // Video player
+                    VideoPlayerView(
+                        player: viewModel.player,
+                        isPlaying: Binding(
+                            get: { viewModel.isPlaying },
+                            set: { _ in viewModel.togglePlayPause() }
                         ),
-                        currentUserId: appState.currentUser?.id,
-                        onSubmit: {
-                            Task { await viewModel.addComment() }
-                        }
+                        currentTime: viewModel.currentTime,
+                        duration: viewModel.duration,
+                        playbackSpeed: viewModel.playbackSpeed,
+                        onSeek: { viewModel.seek(to: $0) },
+                        onSeekRelative: { viewModel.seekRelative(seconds: $0) },
+                        onSpeedTap: { viewModel.showSpeedPicker = true }
                     )
 
-                    Spacer()
-                        .frame(height: Spacing.xxxl)
-                }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.md)
-            }
-            } // end if !isFullscreen
-        }
-    }
+                    // Content details
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            // Title
+                            Text(content.title)
+                                .font(Typography.titleLarge)
+                                .foregroundStyle(ColorTokens.textPrimary)
+                                .padding(.horizontal, Spacing.lg)
+                                .padding(.top, Spacing.md)
 
-    // MARK: - Player Area
+                            // Stats row
+                            statsRow(content)
+                                .padding(.horizontal, Spacing.lg)
 
-    private func playerArea(content: Content, viewModel: PlayerViewModel) -> some View {
-        ZStack(alignment: .bottom) {
-            // Use presigned stream URL (falls back to contentURL)
-            NativePlayerView(
-                videoURL: viewModel.streamURL ?? content.contentURL,
-                isPlaying: Binding(
-                    get: { viewModel.isPlaying },
-                    set: { viewModel.isPlaying = $0 }
-                ),
-                currentTime: Binding(
-                    get: { viewModel.currentTime },
-                    set: { viewModel.currentTime = $0 }
-                ),
-                duration: Binding(
-                    get: { viewModel.duration },
-                    set: { viewModel.duration = $0 }
-                ),
-                playbackSpeed: viewModel.playbackSpeed,
-                isMuted: viewModel.isMuted,
-                onTimeUpdate: { current, total in
-                    viewModel.onTimeUpdate(current: current, total: total)
-                },
-                onVideoEnded: {
-                    Task { await viewModel.onVideoEnded() }
-                }
-            )
-            .playerAspectRatio(isFullscreen: viewModel.isFullscreen)
-            .background(Color.black)
-            .clipped()
+                            // Creator row
+                            if let creator = content.creatorId {
+                                creatorRow(creator)
+                                    .padding(.horizontal, Spacing.lg)
+                            }
 
-            // Controls overlay
-            PlayerControlsOverlay(
-                isPlaying: viewModel.isPlaying,
-                currentTime: viewModel.currentTime,
-                duration: viewModel.duration,
-                isVisible: viewModel.isControlsVisible,
-                isMuted: viewModel.isMuted,
-                isFullscreen: viewModel.isFullscreen,
-                playbackSpeedLabel: viewModel.playbackSpeedLabel,
-                onPlayPause: {
-                    viewModel.togglePlayPause()
-                },
-                onSeek: { seconds in
-                    viewModel.seek(to: seconds)
-                },
-                onClose: {
-                    if viewModel.isFullscreen {
-                        viewModel.toggleFullscreen()
-                    } else {
-                        dismiss()
+                            // Action bar
+                            ActionBar(
+                                isLiked: viewModel.isLiked,
+                                isSaved: viewModel.isSaved,
+                                likeCount: viewModel.likeCount,
+                                saveCount: viewModel.saveCount,
+                                userRating: viewModel.userRating,
+                                onLike: { Task { await viewModel.toggleLike() } },
+                                onSave: { Task { await viewModel.toggleSave() } },
+                                onRate: { val in Task { await viewModel.rate(val) } },
+                                onShare: {},
+                                onPlaylist: {
+                                    viewModel.showPlaylistSheet = true
+                                    Task { await viewModel.loadPlaylists() }
+                                }
+                            )
+                            .padding(.horizontal, Spacing.lg)
+
+                            // Tab selector
+                            tabSelector
+                                .padding(.horizontal, Spacing.lg)
+
+                            // Tab content
+                            switch selectedTab {
+                            case .about:
+                                aboutContent(content)
+                            case .comments:
+                                commentsSection
+                            }
+
+                            // Related content
+                            if !viewModel.relatedContent.isEmpty {
+                                ContentRow(
+                                    title: "Up Next",
+                                    items: viewModel.relatedContent,
+                                    cardWidth: 200
+                                )
+                            }
+
+                            Spacer().frame(height: Spacing.xxxl)
+                        }
                     }
-                },
-                onTap: {
-                    viewModel.toggleControls()
-                },
-                onSkipForward: {
-                    viewModel.skipForward()
-                },
-                onSkipBackward: {
-                    viewModel.skipBackward()
-                },
-                onToggleMute: {
-                    viewModel.toggleMute()
-                },
-                onSelectSpeed: { speed in
-                    viewModel.setPlaybackSpeed(speed)
-                },
-                onToggleFullscreen: {
-                    viewModel.toggleFullscreen()
                 }
-            )
-            .playerAspectRatio(isFullscreen: viewModel.isFullscreen)
+            }
 
-            // Mini progress bar at the bottom of the video area
-            miniProgressBar(viewModel: viewModel)
+            // Playlist added toast
+            if let message = viewModel.playlistAddedMessage {
+                VStack {
+                    Spacer()
+                    Text(message)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.sm)
+                        .background(ColorTokens.success.opacity(0.9))
+                        .clipShape(Capsule())
+                        .padding(.bottom, Spacing.xxl)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                .animation(.easeOut, value: viewModel.playlistAddedMessage)
+            }
         }
-    }
-
-    // MARK: - Mini Progress Bar
-
-    private func miniProgressBar(viewModel: PlayerViewModel) -> some View {
-        GeometryReader { geometry in
-            VStack {
-                Spacer()
-                ZStack(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(height: 3)
-
-                    Rectangle()
-                        .fill(ColorTokens.primary)
-                        .frame(
-                            width: geometry.size.width * viewModel.progress,
-                            height: 3
-                        )
-                        .animation(Animations.quick, value: viewModel.progress)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(role: .destructive) {
+                        reportReason = ""
+                        reportDescription = ""
+                        showReportSheet = true
+                    } label: {
+                        Label("Report Content", systemImage: "flag")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
                 }
             }
         }
-        .playerAspectRatio(isFullscreen: viewModel.isFullscreen)
-        .allowsHitTesting(false)
+        .navigationDestination(for: Content.self) { content in
+            PlayerView(contentId: content.id)
+        }
+        .task {
+            await viewModel.loadContent(id: contentId)
+        }
+        .onDisappear {
+            viewModel.cleanup()
+        }
+        .sheet(isPresented: $viewModel.showSpeedPicker) {
+            speedPickerSheet
+                .presentationDetents([.height(280)])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $viewModel.showPlaylistSheet) {
+            playlistSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showReportSheet) {
+            reportSheet
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
     }
 
-    // MARK: - Title Section
+    // MARK: - Tab Selector
 
-    private func titleSection(content: Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(content.title)
-                .font(Typography.titleLarge)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
+    private var tabSelector: some View {
+        HStack(spacing: 0) {
+            ForEach(PlayerTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        HStack(spacing: Spacing.xs) {
+                            Text(tab.rawValue)
+                                .font(Typography.bodyBold)
+                                .foregroundStyle(selectedTab == tab ? ColorTokens.textPrimary : ColorTokens.textTertiary)
 
-            HStack(spacing: Spacing.sm) {
-                if let duration = content.duration {
-                    Label(formatDuration(duration), systemImage: "clock")
+                            if tab == .comments {
+                                Text("\(viewModel.commentCount)")
+                                    .font(Typography.micro)
+                                    .foregroundStyle(selectedTab == tab ? ColorTokens.gold : ColorTokens.textTertiary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(selectedTab == tab ? ColorTokens.gold.opacity(0.15) : ColorTokens.surfaceElevated)
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        Rectangle()
+                            .fill(selectedTab == tab ? ColorTokens.gold : Color.clear)
+                            .frame(height: 2)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    // MARK: - About Tab Content
+
+    private func aboutContent(_ content: Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // AI Summary
+            if let aiData = content.aiData, aiData.summary != nil {
+                aiSummarySection(aiData)
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            // Description
+            if let desc = content.description, !desc.isEmpty {
+                descriptionSection(desc)
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            // Content info
+            contentInfoSection(content)
+                .padding(.horizontal, Spacing.lg)
+
+            // Tags
+            if let tags = content.tags, !tags.isEmpty {
+                tagsSection(tags)
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            // Source attribution
+            if content.sourceType == .youtube, let attr = content.sourceAttribution {
+                sourceAttribution(attr)
+                    .padding(.horizontal, Spacing.lg)
+            }
+        }
+    }
+
+    // MARK: - Content Info
+
+    private func contentInfoSection(_ content: Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Details")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.textPrimary)
+            }
+
+            VStack(spacing: Spacing.xs) {
+                if let domain = content.domain, !domain.isEmpty {
+                    infoRow(label: "Domain", value: domain)
+                }
+                if let difficulty = content.difficulty {
+                    infoRow(label: "Difficulty", value: difficulty.rawValue.capitalized)
+                }
+                if let topics = content.topics, !topics.isEmpty {
+                    infoRow(label: "Topics", value: topics.joined(separator: ", "))
+                }
+                if let ratingCount = content.ratingCount, ratingCount > 0 {
+                    infoRow(label: "Ratings", value: "\(ratingCount) ratings")
+                }
+                if let commentCount = content.commentCount, commentCount > 0 {
+                    infoRow(label: "Comments", value: "\(commentCount)")
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+    }
+
+    private func infoRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textTertiary)
+                .frame(width: 80, alignment: .leading)
+            Text(value)
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textSecondary)
+            Spacer()
+        }
+    }
+
+    // MARK: - Comments Section
+
+    private var commentsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Comment input
+            commentInputBar
+                .padding(.horizontal, Spacing.lg)
+
+            // Comments list
+            if viewModel.isLoadingComments {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(ColorTokens.gold)
+                    Spacer()
+                }
+                .padding(.vertical, Spacing.xl)
+            } else if viewModel.comments.isEmpty {
+                VStack(spacing: Spacing.sm) {
+                    Image(systemName: "bubble.left.and.bubble.right")
+                        .font(.system(size: 32))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text("No comments yet")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text("Be the first to share your thoughts")
                         .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiaryDark)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.xl)
+            } else {
+                LazyVStack(spacing: Spacing.md) {
+                    ForEach(viewModel.comments) { comment in
+                        commentRow(comment)
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+            }
+        }
+    }
+
+    private var commentInputBar: some View {
+        HStack(spacing: Spacing.sm) {
+            // User avatar placeholder
+            Circle()
+                .fill(ColorTokens.surfaceElevated)
+                .frame(width: 32, height: 32)
+                .overlay {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
 
-                Text("\(formatCount(content.viewCount)) views")
-                    .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.textTertiaryDark)
+            TextField("Add a comment...", text: $viewModel.newCommentText, axis: .vertical)
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .lineLimit(1...4)
+                .padding(.horizontal, Spacing.sm)
+                .padding(.vertical, 8)
+                .background(ColorTokens.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
 
-                Text(content.difficulty.rawValue.capitalized)
-                    .font(Typography.micro)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(difficultyColor(content.difficulty))
+            if !viewModel.newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    Task { await viewModel.postComment() }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .disabled(viewModel.isPostingComment)
+            }
+        }
+    }
+
+    private func commentRow(_ comment: Comment) -> some View {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+            // Avatar
+            Circle()
+                .fill(ColorTokens.surfaceElevated)
+                .frame(width: 32, height: 32)
+                .overlay {
+                    Text(comment.userId?.initials ?? "?")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: Spacing.xs) {
+                    Text(comment.userId?.displayName ?? "User")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .fontWeight(.semibold)
+
+                    Text(comment.timeAgo)
+                        .font(Typography.micro)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+
+                Text(comment.text)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textSecondary)
+
+                if let likes = comment.likeCount, likes > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 10))
+                        Text("\(likes)")
+                            .font(Typography.micro)
+                    }
+                    .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+
+            Spacer()
+        }
+    }
+
+    // MARK: - Speed Picker Sheet
+
+    private var speedPickerSheet: some View {
+        VStack(spacing: Spacing.lg) {
+            Text("Playback Speed")
+                .font(Typography.titleMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .padding(.top, Spacing.md)
+
+            VStack(spacing: 0) {
+                ForEach(viewModel.speedOptions, id: \.self) { speed in
+                    Button {
+                        viewModel.setSpeed(speed)
+                        viewModel.showSpeedPicker = false
+                    } label: {
+                        HStack {
+                            Text(speedDisplayName(speed))
+                                .font(Typography.body)
+                                .foregroundStyle(ColorTokens.textPrimary)
+
+                            Spacer()
+
+                            if viewModel.playbackSpeed == speed {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(ColorTokens.gold)
+                            }
+                        }
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.md)
+                    }
+
+                    if speed != viewModel.speedOptions.last {
+                        Divider()
+                            .background(ColorTokens.divider)
+                    }
+                }
+            }
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .padding(.horizontal, Spacing.lg)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .background(ColorTokens.background)
+    }
+
+    private func speedDisplayName(_ speed: Float) -> String {
+        switch speed {
+        case 0.5: return "0.5x — Slow"
+        case 0.75: return "0.75x"
+        case 1.0: return "1x — Normal"
+        case 1.25: return "1.25x"
+        case 1.5: return "1.5x"
+        case 2.0: return "2x — Fast"
+        default: return "\(speed)x"
+        }
+    }
+
+    // MARK: - Playlist Sheet
+
+    private var playlistSheet: some View {
+        VStack(spacing: Spacing.md) {
+            Text("Save to Playlist")
+                .font(Typography.titleMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .padding(.top, Spacing.md)
+
+            // Create new playlist
+            HStack(spacing: Spacing.sm) {
+                TextField("New playlist name", text: $viewModel.newPlaylistName)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .padding(.horizontal, Spacing.sm)
+                    .padding(.vertical, 10)
+                    .background(ColorTokens.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+
+                Button {
+                    Task { await viewModel.createAndAddToPlaylist() }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(
+                            viewModel.newPlaylistName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            ? ColorTokens.textTertiary : ColorTokens.gold
+                        )
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+
+            Divider()
+                .background(ColorTokens.divider)
+                .padding(.horizontal, Spacing.lg)
+
+            // Error message
+            if let error = viewModel.playlistError {
+                Text(error)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, Spacing.lg)
+            }
+
+            // Existing playlists
+            if viewModel.isLoadingPlaylists {
+                ProgressView()
+                    .tint(ColorTokens.gold)
+                    .padding(.vertical, Spacing.lg)
+            } else if viewModel.playlists.isEmpty {
+                VStack(spacing: Spacing.xs) {
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 28))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text("No playlists yet")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(.vertical, Spacing.lg)
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(viewModel.playlists) { playlist in
+                            Button {
+                                Task { await viewModel.addToPlaylist(playlist) }
+                            } label: {
+                                HStack(spacing: Spacing.sm) {
+                                    Image(systemName: "music.note.list")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(ColorTokens.gold)
+                                        .frame(width: 36, height: 36)
+                                        .background(ColorTokens.surfaceElevated)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(playlist.title)
+                                            .font(Typography.bodySmall)
+                                            .foregroundStyle(ColorTokens.textPrimary)
+
+                                        Text("\(playlist.itemCount ?? 0) items")
+                                            .font(Typography.micro)
+                                            .foregroundStyle(ColorTokens.textTertiary)
+                                    }
+
+                                    Spacer()
+
+                                    Image(systemName: "plus")
+                                        .foregroundStyle(ColorTokens.textSecondary)
+                                }
+                                .padding(.horizontal, Spacing.lg)
+                                .padding(.vertical, Spacing.sm)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .background(ColorTokens.background)
+    }
+
+    // MARK: - Report Sheet
+
+    private var reportReasons: [(value: String, label: String, icon: String)] {
+        [
+            ("inappropriate", "Inappropriate Content", "eye.slash"),
+            ("spam", "Spam", "xmark.bin"),
+            ("misleading", "Misleading", "exclamationmark.triangle"),
+            ("copyright", "Copyright Violation", "doc.badge.ellipsis"),
+            ("harassment", "Harassment", "hand.raised"),
+            ("other", "Other", "ellipsis.circle"),
+        ]
+    }
+
+    private var reportSheet: some View {
+        VStack(spacing: Spacing.lg) {
+            if reportSuccess {
+                // Success state
+                VStack(spacing: Spacing.md) {
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(ColorTokens.success)
+                    Text("Report Submitted")
+                        .font(Typography.titleMedium)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Thank you for helping keep our community safe.")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                }
+                .padding(Spacing.lg)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        showReportSheet = false
+                        reportSuccess = false
+                    }
+                }
+            } else {
+                Text("Report Content")
+                    .font(Typography.titleMedium)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .padding(.top, Spacing.md)
+
+                // Reason picker
+                VStack(spacing: 0) {
+                    ForEach(reportReasons, id: \.value) { reason in
+                        Button {
+                            reportReason = reason.value
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: reason.icon)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(reportReason == reason.value ? ColorTokens.gold : ColorTokens.textTertiary)
+                                    .frame(width: 24)
+
+                                Text(reason.label)
+                                    .font(Typography.bodySmall)
+                                    .foregroundStyle(ColorTokens.textPrimary)
+
+                                Spacer()
+
+                                if reportReason == reason.value {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(ColorTokens.gold)
+                                }
+                            }
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.vertical, Spacing.sm)
+                        }
+
+                        if reason.value != reportReasons.last?.value {
+                            Divider().background(ColorTokens.divider)
+                        }
+                    }
+                }
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                .padding(.horizontal, Spacing.lg)
+
+                // Optional description
+                TextField("Additional details (optional)", text: $reportDescription, axis: .vertical)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .lineLimit(2...4)
+                    .padding(Spacing.sm)
+                    .background(ColorTokens.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                    .padding(.horizontal, Spacing.lg)
+
+                // Submit button
+                Button {
+                    Task {
+                        guard !reportReason.isEmpty else { return }
+                        isReporting = true
+                        do {
+                            try await ContentService().reportContent(
+                                contentId: contentId,
+                                reason: reportReason,
+                                description: reportDescription.isEmpty ? nil : reportDescription
+                            )
+                            Haptics.success()
+                            reportSuccess = true
+                        } catch {
+                            Haptics.error()
+                            showReportSheet = false
+                        }
+                        isReporting = false
+                    }
+                } label: {
+                    HStack {
+                        if isReporting {
+                            ProgressView().tint(.white)
+                        } else {
+                            Image(systemName: "flag.fill")
+                            Text("Submit Report")
+                        }
+                    }
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(reportReason.isEmpty ? ColorTokens.textTertiary : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Spacing.md)
+                    .background(reportReason.isEmpty ? ColorTokens.surfaceElevated : ColorTokens.error)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                }
+                .disabled(reportReason.isEmpty || isReporting)
+                .padding(.horizontal, Spacing.lg)
+
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(ColorTokens.background)
+    }
+
+    // MARK: - Creator Row
+
+    private func creatorRow(_ creator: Creator) -> some View {
+        HStack(spacing: Spacing.sm) {
+            CreatorAvatar(creator: creator, size: 40)
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: Spacing.xs) {
+                    Text(creator.displayName)
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+
+                    if let tier = creator.tier {
+                        TierBadge(tier: tier)
+                    }
+                }
+
+                if let followers = creator.followersCount, followers > 0 {
+                    Text("\(formatCount(followers)) followers")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                Haptics.light()
+            } label: {
+                Text("Follow")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.buttonPrimaryText)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 6)
+                    .background(ColorTokens.gold)
                     .clipShape(Capsule())
             }
         }
     }
 
-    // MARK: - Creator Row
+    // MARK: - Stats Row
 
-    private func creatorRow(content: Content) -> some View {
-        NavigationLink {
-            PublicProfileView(userId: content.creator.id)
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                CreatorAvatar(
-                    imageURL: content.creator.profilePicture,
-                    name: "\(content.creator.firstName) \(content.creator.lastName)",
-                    size: 40
-                )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(content.creator.firstName) \(content.creator.lastName)")
-                        .font(Typography.bodyBold)
-                        .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                    Text(content.domain)
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textSecondaryDark)
-                }
-
-                Spacer()
+    private func statsRow(_ content: Content) -> some View {
+        HStack(spacing: Spacing.md) {
+            if let views = content.viewCount {
+                Label(formatCount(views) + " views", systemImage: "eye")
+            }
+            if let rating = content.averageRating, rating > 0 {
+                Label(String(format: "%.1f", rating), systemImage: "star.fill")
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            if !content.formattedDuration.isEmpty {
+                Label(content.formattedDuration, systemImage: "clock")
+            }
+            if let comments = content.commentCount, comments > 0 {
+                Label("\(comments)", systemImage: "bubble.left")
             }
         }
-        .buttonStyle(.plain)
+        .font(Typography.caption)
+        .foregroundStyle(ColorTokens.textTertiary)
     }
 
-    // MARK: - Action Bar
+    // MARK: - AI Summary
 
-    private func actionBar(viewModel: PlayerViewModel) -> some View {
-        HStack(spacing: Spacing.xl) {
-            // Like
-            actionButton(
-                icon: viewModel.isLiked ? "heart.fill" : "heart",
-                label: "\(viewModel.likeCount)",
-                color: viewModel.isLiked ? ColorTokens.error : ColorTokens.textSecondaryDark
-            ) {
-                Task { await viewModel.toggleLike() }
-            }
-
-            // Save
-            actionButton(
-                icon: viewModel.isSaved ? "bookmark.fill" : "bookmark",
-                label: "Save",
-                color: viewModel.isSaved ? ColorTokens.primary : ColorTokens.textSecondaryDark
-            ) {
-                Task { await viewModel.toggleSave() }
-            }
-
-            // Rate
-            Menu {
-                ForEach(1...5, id: \.self) { star in
-                    Button {
-                        Task { await viewModel.rateContent(value: star) }
-                    } label: {
-                        Label(
-                            "\(star) Star\(star > 1 ? "s" : "")",
-                            systemImage: star <= viewModel.userRating ? "star.fill" : "star"
-                        )
-                    }
-                }
-            } label: {
-                VStack(spacing: 4) {
-                    Image(systemName: viewModel.userRating > 0 ? "star.fill" : "star")
-                        .font(.system(size: 22))
-                        .foregroundStyle(
-                            viewModel.userRating > 0
-                                ? ColorTokens.warning
-                                : ColorTokens.textSecondaryDark
-                        )
-                    Text("Rate")
-                        .font(Typography.micro)
-                        .foregroundStyle(ColorTokens.textSecondaryDark)
-                }
-            }
-
-            // Add to Playlist
-            actionButton(
-                icon: "text.badge.plus",
-                label: "Playlist",
-                color: ColorTokens.textSecondaryDark
-            ) {
-                showPlaylistSheet = true
-            }
-
-            // Share
-            ShareLink(
-                item: content(viewModel)?.contentURL ?? "",
-                subject: Text(content(viewModel)?.title ?? "")
-            ) {
-                VStack(spacing: 4) {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 22))
-                        .foregroundStyle(ColorTokens.textSecondaryDark)
-                    Text("Share")
-                        .font(Typography.micro)
-                        .foregroundStyle(ColorTokens.textSecondaryDark)
-                }
-            }
-
-            Spacer()
-        }
-        .padding(.vertical, Spacing.xs)
-    }
-
-    private func content(_ viewModel: PlayerViewModel) -> Content? {
-        viewModel.content
-    }
-
-    private func actionButton(
-        icon: String,
-        label: String,
-        color: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 22))
-                    .foregroundStyle(color)
-                Text(label)
-                    .font(Typography.micro)
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
-            }
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - AI Summary Section
-
-    private func aiSummarySection(aiData: AIData, viewModel: PlayerViewModel) -> some View {
+    private func aiSummarySection(_ aiData: AIData) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             Button {
-                withAnimation(Animations.standard) {
+                withAnimation(Motion.springSnappy) {
                     viewModel.isAISummaryExpanded.toggle()
                 }
             } label: {
                 HStack {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 16))
-                            .foregroundStyle(ColorTokens.primary)
-
-                        Text("AI Summary")
-                            .font(Typography.titleMedium)
-                            .foregroundStyle(ColorTokens.textPrimaryDark)
-                    }
-
+                    Image(systemName: "brain.head.profile")
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("AI Summary")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
                     Spacer()
-
                     Image(systemName: viewModel.isAISummaryExpanded ? "chevron.up" : "chevron.down")
-                        .font(.system(size: 14))
-                        .foregroundStyle(ColorTokens.textTertiaryDark)
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
             }
-            .buttonStyle(.plain)
 
             if viewModel.isAISummaryExpanded {
-                VStack(alignment: .leading, spacing: Spacing.sm) {
-                    // Summary text
-                    if let summary = aiData.summary {
-                        Text(summary)
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(ColorTokens.textSecondaryDark)
-                            .lineSpacing(4)
-                    }
-
-                    // Key concepts as TagChips
-                    if let concepts = aiData.keyConcepts, !concepts.isEmpty {
-                        Text("Key Concepts")
-                            .font(Typography.bodyBold)
-                            .foregroundStyle(ColorTokens.textPrimaryDark)
-                            .padding(.top, Spacing.xs)
-
-                        FlowLayout(spacing: Spacing.sm) {
-                            ForEach(concepts, id: \.concept) { concept in
-                                TagChip(title: concept.concept)
-                            }
-                        }
-                    }
+                if let summary = aiData.summary {
+                    Text(summary)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
                 }
-                .padding(Spacing.md)
-                .background(ColorTokens.surfaceDark)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-    }
 
-    // MARK: - Source Attribution Section
-
-    private func sourceAttributionSection(content: Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "play.rectangle.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.red)
-
-                Text("This content is sourced from YouTube")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
-            }
-
-            if let attribution = content.sourceAttribution {
-                HStack(spacing: Spacing.sm) {
-                    if let creatorName = attribution.originalCreatorName {
-                        Text("Original creator:")
-                            .font(Typography.caption)
-                            .foregroundStyle(ColorTokens.textTertiaryDark)
-
-                        if let creatorUrl = attribution.originalCreatorUrl,
-                           let url = URL(string: creatorUrl) {
-                            Link(destination: url) {
-                                Text(creatorName)
+                if let concepts = aiData.keyConcepts, !concepts.isEmpty {
+                    FlowLayout(spacing: Spacing.xs) {
+                        ForEach(concepts) { concept in
+                            HStack(spacing: 4) {
+                                if let ts = concept.timestamp {
+                                    Text(ts)
+                                        .font(Typography.micro)
+                                        .foregroundStyle(ColorTokens.gold)
+                                }
+                                Text(concept.concept)
                                     .font(Typography.caption)
-                                    .foregroundStyle(ColorTokens.primary)
-                                    .underline()
+                                    .foregroundStyle(ColorTokens.textPrimary)
                             }
-                        } else {
-                            Text(creatorName)
-                                .font(Typography.caption)
-                                .foregroundStyle(ColorTokens.textPrimaryDark)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(ColorTokens.surfaceElevated)
+                            .clipShape(Capsule())
                         }
                     }
                 }
 
-                if let disclaimer = attribution.importDisclaimer {
-                    Text(disclaimer)
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiaryDark)
-                        .lineSpacing(2)
+                if let prereqs = aiData.prerequisites, !prereqs.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Prerequisites")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        ForEach(prereqs, id: \.self) { prereq in
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(ColorTokens.success)
+                                Text(prereq)
+                                    .font(Typography.caption)
+                                    .foregroundStyle(ColorTokens.textSecondary)
+                            }
+                        }
+                    }
                 }
             }
         }
         .padding(Spacing.md)
-        .background(ColorTokens.surfaceDark)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }
 
-    // MARK: - Similar Content Section
+    // MARK: - Description
 
-    private func similarContentSection(viewModel: PlayerViewModel) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Similar Content")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
+    private func descriptionSection(_ description: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(description)
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .lineLimit(viewModel.isDescriptionExpanded ? nil : 3)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: Spacing.sm) {
-                    ForEach(viewModel.similarContent) { item in
-                        NavigationLink(value: item) {
-                            ContentCard(
-                                title: item.title,
-                                creatorName: "\(item.creator.firstName) \(item.creator.lastName)",
-                                domain: item.domain,
-                                thumbnailURL: item.resolvedThumbnailURL,
-                                duration: item.duration,
-                                rating: item.averageRating > 0 ? item.averageRating : nil,
-                                viewCount: item.viewCount > 0 ? item.viewCount : nil,
-                                isYouTube: item.sourceType == .youtube
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
+            Button {
+                withAnimation {
+                    viewModel.isDescriptionExpanded.toggle()
                 }
+            } label: {
+                Text(viewModel.isDescriptionExpanded ? "Show less" : "Show more")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.gold)
             }
-            .padding(.horizontal, -Spacing.md)
-            .padding(.leading, Spacing.md)
         }
     }
 
-    // MARK: - YouTube Error Fallback
+    // MARK: - Tags
 
-    private func youtubeErrorFallback(content: Content) -> some View {
-        ZStack {
-            // Thumbnail background
-            if let thumbnailURL = content.resolvedThumbnailURL, let url = URL(string: thumbnailURL) {
-                LazyImage(url: url) { state in
-                    if let image = state.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
-                        Rectangle().fill(ColorTokens.surfaceElevatedDark)
-                    }
-                }
-                .overlay(Color.black.opacity(0.6))
-            } else {
-                Rectangle().fill(ColorTokens.surfaceElevatedDark)
-            }
-
-            VStack(spacing: Spacing.md) {
-                Image(systemName: "play.slash")
-                    .font(.system(size: 36))
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
-
-                Text("This video can't be embedded")
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                Text("Tap to open in YouTube")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
-
-                Button {
-                    if let url = URL(string: content.contentURL) {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "play.rectangle.fill")
-                            .foregroundStyle(.red)
-                        Text("Open in YouTube")
-                            .font(Typography.bodyBold)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.vertical, Spacing.sm)
-                    .background(ColorTokens.surfaceElevatedDark)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+    private func tagsSection(_ tags: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.xs) {
+                ForEach(tags, id: \.self) { tag in
+                    Text("#\(tag)")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Capsule())
                 }
             }
         }
     }
 
-    // MARK: - Loading View
+    // MARK: - Source Attribution
 
-    private var loadingView: some View {
-        VStack(spacing: Spacing.lg) {
-            // Player placeholder
-            Rectangle()
-                .fill(ColorTokens.surfaceElevatedDark)
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .overlay {
-                    ProgressView()
-                        .tint(ColorTokens.primary)
-                        .scaleEffect(1.5)
+    private func sourceAttribution(_ attr: SourceAttribution) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "play.rectangle.fill")
+                .foregroundStyle(.red)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Sourced from YouTube")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                if let creator = attr.originalCreatorName {
+                    Text("by \(creator)")
+                        .font(Typography.micro)
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
-
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                SkeletonLoader(height: 24)
-                SkeletonLoader(width: 200, height: 16)
-                SkeletonLoader(width: 160, height: 14)
             }
-            .padding(.horizontal, Spacing.md)
-
-            Spacer()
         }
+        .padding(Spacing.sm)
+        .background(ColorTokens.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }
 
     // MARK: - Helpers
 
-    private func initializeViewModel() {
-        if viewModel == nil {
-            viewModel = PlayerViewModel(
-                contentService: dependencies.contentService,
-                progressService: dependencies.progressService,
-                recommendationService: dependencies.recommendationService
-            )
-        }
-    }
-
-    private func formatDuration(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let secs = seconds % 60
-        if minutes >= 60 {
-            let hours = minutes / 60
-            let remainingMinutes = minutes % 60
-            return String(format: "%dh %dm", hours, remainingMinutes)
-        }
-        return String(format: "%d:%02d", minutes, secs)
-    }
-
     private func formatCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
-        }
+        if count >= 1_000_000 { return String(format: "%.1fM", Double(count) / 1_000_000) }
+        if count >= 1_000 { return String(format: "%.1fK", Double(count) / 1_000) }
         return "\(count)"
-    }
-
-    private func difficultyColor(_ difficulty: Difficulty) -> Color {
-        switch difficulty {
-        case .beginner: return ColorTokens.success
-        case .intermediate: return ColorTokens.warning
-        case .advanced: return ColorTokens.error
-        }
-    }
-}
-
-// MARK: - Player Aspect Ratio Extension
-
-extension View {
-    /// Applies 16:9 aspect ratio in portrait mode, fills available space in fullscreen.
-    @ViewBuilder
-    func playerAspectRatio(isFullscreen: Bool) -> some View {
-        if isFullscreen {
-            self
-        } else {
-            self.aspectRatio(16 / 9, contentMode: .fit)
-        }
     }
 }

@@ -1,29 +1,35 @@
 import SwiftUI
-import SwiftData
 
 @main
 struct ScaleUpApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var appState = AppState()
-    @State private var dependencies = DependencyContainer()
-
-    let modelContainer: ModelContainer
-
-    init() {
-        do {
-            modelContainer = try DatabaseManager.createContainer()
-        } catch {
-            fatalError("Failed to create SwiftData container: \(error)")
-        }
-    }
 
     var body: some Scene {
         WindowGroup {
-            AppCoordinator()
+            rootView
                 .environment(appState)
-                .environment(dependencies)
-                .preferredColorScheme(appState.preferredColorScheme)
-                .modelContainer(modelContainer)
+                .preferredColorScheme(appState.colorScheme)
+        }
+    }
+
+    @ViewBuilder
+    private var rootView: some View {
+        switch appState.launchState {
+        case .splash:
+            SplashView()
+                .transition(.opacity)
+
+        case .welcome:
+            WelcomeView()
+                .transition(.opacity)
+
+        case .onboarding(let step):
+            OnboardingContainerView(initialStep: step, appState: appState)
+                .transition(.opacity)
+
+        case .home:
+            MainTabView()
+                .transition(.opacity)
         }
     }
 }

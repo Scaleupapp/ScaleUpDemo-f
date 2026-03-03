@@ -1,364 +1,269 @@
 import SwiftUI
 
-// MARK: - Quiz Detail View
-
 struct QuizDetailView: View {
-    @Environment(DependencyContainer.self) private var dependencies
-    @Environment(\.dismiss) private var dismiss
-
     let quiz: Quiz
-
-    @State private var showQuizSession = false
-    @State private var appeared = false
+    @State private var showSession = false
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
-            ColorTokens.backgroundDark
-                .ignoresSafeArea()
+            ColorTokens.background.ignoresSafeArea()
 
             ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-
-                    // Hero section with gradient backdrop
+                VStack(spacing: Spacing.xl) {
+                    // Hero section
                     heroSection
 
-                    // Main content
-                    VStack(spacing: Spacing.lg) {
+                    // Quick stats
+                    statsGrid
 
-                        // Quiz info cards
-                        infoSection
+                    // Difficulty breakdown
+                    difficultySection
 
-                        // What to expect
-                        expectationSection
-
-                        // Source content
-                        if let ids = quiz.sourceContentIds, !ids.isEmpty {
-                            sourceContentSection
-                        }
-
-                        // Expiry warning
-                        if let expiresAt = quiz.expiresAt {
-                            expiryBanner(expiresAt)
-                        }
-
-                        // Start button
-                        PrimaryButton(title: "Start Quiz") {
-                            showQuizSession = true
-                        }
-                        .padding(.horizontal, Spacing.md)
-
-                        Spacer()
-                            .frame(height: Spacing.xl)
+                    // Topics covered
+                    if !uniqueConcepts.isEmpty {
+                        topicsSection
                     }
-                    .padding(.top, Spacing.lg)
+
+                    // Expiry warning
+                    if let expiryText = quiz.expiresInText {
+                        expiryBanner(expiryText)
+                    }
+
+                    // Start button
+                    startButton
+
+                    Spacer().frame(height: Spacing.xxxl)
                 }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.md)
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .fullScreenCover(isPresented: $showQuizSession) {
-            QuizQuestionView(quizId: quiz.id)
-                .environment(dependencies)
-        }
-        .onAppear {
-            if !appeared {
-                appeared = true
-            }
+        .navigationBarBackButtonHidden()
+        .toolbar(.hidden, for: .navigationBar)
+        .fullScreenCover(isPresented: $showSession) {
+            QuizSessionView(quiz: quiz)
         }
     }
 
-    // MARK: - Hero Section
+    // MARK: - Hero
 
     private var heroSection: some View {
-        ZStack {
-            // Gradient backdrop
-            LinearGradient(
-                colors: [
-                    quizTypeColor.opacity(0.3),
-                    quizTypeColor.opacity(0.1),
-                    ColorTokens.backgroundDark
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 260)
-
-            // Decorative circles
-            Circle()
-                .fill(quizTypeColor.opacity(0.08))
-                .frame(width: 200, height: 200)
-                .offset(x: -100, y: -40)
-
-            Circle()
-                .fill(quizTypeColor.opacity(0.05))
-                .frame(width: 160, height: 160)
-                .offset(x: 120, y: 20)
-
-            VStack(spacing: Spacing.md) {
-                // Type badge
-                Text(quizTypeLabel)
-                    .font(Typography.caption)
+        VStack(spacing: Spacing.md) {
+            // Back button
+            HStack {
+                Button { dismiss() } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Back")
+                            .font(.system(size: 14, weight: .medium))
+                    }
                     .foregroundStyle(.white)
-                    .padding(.horizontal, Spacing.sm + 4)
-                    .padding(.vertical, Spacing.xs + 2)
-                    .background(quizTypeColor)
-                    .clipShape(Capsule())
-
-                // Icon with glow
-                ZStack {
-                    Circle()
-                        .fill(quizTypeColor.opacity(0.15))
-                        .frame(width: 110, height: 110)
-
-                    Circle()
-                        .fill(quizTypeColor.opacity(0.08))
-                        .frame(width: 130, height: 130)
-
-                    Image(systemName: quizTypeIcon)
-                        .font(.system(size: 44, weight: .medium))
-                        .foregroundStyle(quizTypeColor)
-                        .frame(width: 88, height: 88)
-                        .background(
-                            Circle()
-                                .fill(ColorTokens.surfaceDark)
-                        )
-                        .overlay(
-                            Circle()
-                                .stroke(quizTypeColor.opacity(0.3), lineWidth: 2)
-                        )
                 }
-
-                // Topic name
-                Text(quiz.topic)
-                    .font(Typography.displayMedium)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, Spacing.lg)
+                Spacer()
             }
-            .padding(.top, Spacing.md)
+
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.gold.opacity(0.15))
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: quiz.type.icon)
+                    .font(.system(size: 32))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+
+            // Type badge
+            HStack(spacing: 4) {
+                Image(systemName: quiz.type.icon)
+                    .font(.system(size: 10))
+                Text(quiz.type.displayName)
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .foregroundStyle(ColorTokens.gold)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(ColorTokens.gold.opacity(0.12))
+            .clipShape(Capsule())
+
+            // Title
+            Text(quiz.title)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(.white)
+                .multilineTextAlignment(.center)
+
+            // Topic
+            Text(quiz.topic.capitalized)
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.textSecondary)
         }
-        .clipped()
     }
 
-    // MARK: - Info Section
+    // MARK: - Stats Grid
 
-    private var infoSection: some View {
-        HStack(spacing: Spacing.sm) {
-            infoCard(
-                icon: "list.bullet",
-                value: "\(quiz.totalQuestions)",
-                label: "Questions",
-                color: ColorTokens.primary
-            )
-
-            if let timeLimit = quiz.timeLimit {
-                infoCard(
-                    icon: "clock",
-                    value: "\(timeLimit / 60)",
-                    label: "Minutes",
-                    color: ColorTokens.info
-                )
-            }
-
-            if let tpq = quiz.timePerQuestion {
-                infoCard(
-                    icon: "timer",
-                    value: "\(tpq)s",
-                    label: "Per Question",
-                    color: ColorTokens.warning
-                )
-            }
+    private var statsGrid: some View {
+        HStack(spacing: 12) {
+            statBox(value: "\(quiz.totalQuestions)", label: "Questions", icon: "list.bullet")
+            statBox(value: "~\(quiz.estimatedMinutes)m", label: "Duration", icon: "clock")
+            statBox(value: "\(quiz.timePerQuestionSeconds)s", label: "Per Question", icon: "timer")
         }
-        .padding(.horizontal, Spacing.md)
     }
 
-    private func infoCard(icon: String, value: String, label: String, color: Color) -> some View {
-        VStack(spacing: Spacing.sm) {
+    private func statBox(value: String, label: String, icon: String) -> some View {
+        VStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundStyle(color)
+                .font(.system(size: 16))
+                .foregroundStyle(ColorTokens.gold)
 
             Text(value)
-                .font(Typography.monoLarge)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
 
             Text(label)
-                .font(Typography.caption)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.md)
-        .background(ColorTokens.surfaceDark)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-        .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .stroke(color.opacity(0.15), lineWidth: 1)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(ColorTokens.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(ColorTokens.border, lineWidth: 1)
+                )
         )
     }
 
-    // MARK: - Expectation Section
+    // MARK: - Difficulty
 
-    private var expectationSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("What to Expect")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-                .padding(.horizontal, Spacing.md)
+    private var difficultySection: some View {
+        let dist = quiz.difficultyDistribution
 
-            VStack(spacing: Spacing.sm) {
-                expectationRow(
-                    icon: "brain.head.profile",
-                    text: "Multiple choice questions to test your understanding"
-                )
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Difficulty Mix")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
 
-                expectationRow(
-                    icon: "arrow.counterclockwise",
-                    text: "You can skip questions and come back later"
-                )
-
-                if quiz.timePerQuestion != nil {
-                    expectationRow(
-                        icon: "timer",
-                        text: "Timed quiz — manage your time wisely"
-                    )
-                }
-
-                expectationRow(
-                    icon: "chart.bar.fill",
-                    text: "Get detailed analysis of your performance"
-                )
+            HStack(spacing: 10) {
+                difficultyBar(label: "Easy", count: dist.easy, color: .green, total: quiz.totalQuestions)
+                difficultyBar(label: "Medium", count: dist.medium, color: .orange, total: quiz.totalQuestions)
+                difficultyBar(label: "Hard", count: dist.hard, color: .red, total: quiz.totalQuestions)
             }
         }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(ColorTokens.surface)
+        )
     }
 
-    private func expectationRow(icon: String, text: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundStyle(ColorTokens.primary)
-                .frame(width: 28, height: 28)
-                .background(ColorTokens.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+    private func difficultyBar(label: String, count: Int, color: Color, total: Int) -> some View {
+        VStack(spacing: 6) {
+            Text("\(count)")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
 
-            Text(text)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+            GeometryReader { geo in
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color.opacity(0.15))
+                        .frame(width: 28)
 
-            Spacer()
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color)
+                        .frame(width: 28, height: total > 0 ? geo.size.height * CGFloat(count) / CGFloat(total) : 0)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .frame(height: 40)
+
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
         }
-        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Source Content Section
+    // MARK: - Topics
 
-    private var sourceContentSection: some View {
+    private var uniqueConcepts: [String] {
+        let concepts = quiz.questions.compactMap { $0.concept }
+        return Array(Set(concepts)).sorted()
+    }
+
+    private var topicsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: Spacing.xs) {
-                Image(systemName: "doc.text.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(ColorTokens.textTertiaryDark)
+            Text("Topics Covered")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.white)
 
-                Text("Based on \(quiz.sourceContentIds?.count ?? 0) content items")
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
-            }
-            .padding(.horizontal, Spacing.md)
-
-            if let ids = quiz.sourceContentIds {
-                ForEach(ids, id: \.self) { contentId in
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "play.rectangle.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(ColorTokens.textTertiaryDark)
-
-                        Text(contentId)
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(ColorTokens.textSecondaryDark)
-                            .lineLimit(1)
-
-                        Spacer()
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textTertiaryDark)
-                    }
-                    .padding(Spacing.md)
-                    .background(ColorTokens.surfaceDark)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-                    .padding(.horizontal, Spacing.md)
+            FlowLayout(spacing: 6) {
+                ForEach(uniqueConcepts, id: \.self) { concept in
+                    Text(concept)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Capsule())
                 }
             }
         }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(ColorTokens.surface)
+        )
     }
 
     // MARK: - Expiry Banner
 
-    private func expiryBanner(_ expiresAt: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(ColorTokens.warning)
+    private func expiryBanner(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .font(.system(size: 14))
+                .foregroundStyle(.orange)
 
-            Text("This quiz expires \(formatExpiryDate(expiresAt))")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.warning)
+            Text("Expires in \(text)")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.orange)
 
             Spacer()
         }
-        .padding(Spacing.md)
-        .background(ColorTokens.warning.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-        .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.small)
-                .stroke(ColorTokens.warning.opacity(0.2), lineWidth: 1)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(.orange.opacity(0.1))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(.orange.opacity(0.2), lineWidth: 1)
+                )
         )
-        .padding(.horizontal, Spacing.md)
     }
 
-    // MARK: - Helpers
+    // MARK: - Start Button
 
-    private var quizTypeIcon: String {
-        switch quiz.type {
-        case .topicConsolidation: return "books.vertical"
-        case .weeklyReview: return "calendar.badge.clock"
-        case .milestoneAssessment: return "flag.checkered"
-        case .retentionCheck: return "brain"
-        case .onDemand: return "sparkles"
-        case .playlistMastery: return "music.note.list"
-        }
-    }
-
-    private var quizTypeColor: Color {
-        switch quiz.type {
-        case .topicConsolidation: return ColorTokens.primary
-        case .weeklyReview: return ColorTokens.info
-        case .milestoneAssessment: return ColorTokens.anchorGold
-        case .retentionCheck: return ColorTokens.warning
-        case .onDemand: return ColorTokens.success
-        case .playlistMastery: return ColorTokens.primaryLight
-        }
-    }
-
-    private var quizTypeLabel: String {
-        switch quiz.type {
-        case .topicConsolidation: return "Topic Consolidation"
-        case .weeklyReview: return "Weekly Review"
-        case .milestoneAssessment: return "Milestone Assessment"
-        case .retentionCheck: return "Retention Check"
-        case .onDemand: return "On Demand"
-        case .playlistMastery: return "Playlist Mastery"
-        }
-    }
-
-    private func formatExpiryDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: dateString) else {
-            formatter.formatOptions = [.withInternetDateTime]
-            guard let date = formatter.date(from: dateString) else {
-                return dateString
+    private var startButton: some View {
+        Button {
+            Haptics.medium()
+            showSession = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: quiz.status == .inProgress ? "play.fill" : "bolt.fill")
+                    .font(.system(size: 14))
+                Text(quiz.status == .inProgress ? "Continue Quiz" : "Start Quiz")
+                    .font(.system(size: 16, weight: .bold))
             }
-            return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: .now)
+            .foregroundStyle(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(ColorTokens.gold)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
-        return RelativeDateTimeFormatter().localizedString(for: date, relativeTo: .now)
     }
 }
+
+// FlowLayout is defined in InterestsStepView.swift and shared across the app

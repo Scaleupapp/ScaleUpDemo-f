@@ -1,514 +1,428 @@
 import SwiftUI
 
-// MARK: - Settings View
-
 struct SettingsView: View {
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
-
+    @Environment(\.dismiss) private var dismiss
     @State private var showLogoutAlert = false
-    @State private var showDeleteAlert = false
-    @State private var notificationsEnabled = true
-    @State private var isLoggingOut = false
+    @State private var showDeactivateAlert = false
+    @State private var isDeactivating = false
+    @State private var showClearCacheAlert = false
+    @State private var cacheCleared = false
+
+    private let userService = UserService()
 
     var body: some View {
         ZStack {
-            ColorTokens.backgroundDark
-                .ignoresSafeArea()
+            ColorTokens.background.ignoresSafeArea()
 
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: Spacing.lg) {
-
-                    // Account Section
-                    accountSection
-
-                    // Preferences Section
-                    preferencesSection
-
-                    // Content Section
-                    contentSection
-
-                    // Creator Section
-                    if appState.currentUser?.role != .creator {
-                        creatorSection
-                    }
-
-                    // Admin Section (only for admin users)
-                    if appState.currentUser?.role == .admin {
-                        adminSection
-                    }
-
-                    // About Section
-                    aboutSection
-
-                    // Danger Zone
-                    dangerZoneSection
-
-                    // Bottom spacing
-                    Spacer()
-                        .frame(height: Spacing.xxl)
-                }
-                .padding(.vertical, Spacing.md)
+            List {
+                accountSection
+                preferencesSection
+                appSection
+                aboutSection
+                dangerSection
             }
+            .scrollContentBackground(.hidden)
+            .listStyle(.insetGrouped)
         }
         .navigationTitle("Settings")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
-        .alert("Sign Out", isPresented: $showLogoutAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Sign Out", role: .destructive) {
-                performLogout()
+        .navigationBarTitleDisplayMode(.large)
+        .alert("Log Out", isPresented: $showLogoutAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Log Out", role: .destructive) {
+                Task { await appState.logout() }
             }
         } message: {
-            Text("Are you sure you want to sign out? You'll need to sign in again to access your account.")
+            Text("Are you sure you want to log out?")
         }
-        .alert("Delete Account", isPresented: $showDeleteAlert) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                // Placeholder — not yet implemented
+        .alert("Deactivate Account", isPresented: $showDeactivateAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Deactivate", role: .destructive) {
+                Task { await deactivateAccount() }
             }
         } message: {
-            Text("This action is permanent and cannot be undone. All your data will be deleted.")
+            Text("This will deactivate your account. You can reactivate by logging in again within 30 days.")
+        }
+        .alert("Clear Cache", isPresented: $showClearCacheAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Clear", role: .destructive) {
+                clearCache()
+            }
+        } message: {
+            Text("This will clear cached images and data. The app may load slower temporarily.")
         }
     }
 
-    // MARK: - Account Section
+    // MARK: - Account
 
     private var accountSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("Account")
-
-            VStack(spacing: 0) {
-                // Email (display only)
-                settingsDisplayRow(
-                    icon: "envelope.fill",
-                    iconColor: ColorTokens.primary,
-                    title: "Email",
-                    value: appState.currentUser?.email ?? "Not set"
-                )
-
-                settingsDivider
-
-                // Phone (display only)
-                settingsDisplayRow(
-                    icon: "phone.fill",
-                    iconColor: ColorTokens.success,
-                    title: "Phone",
-                    value: appState.currentUser?.phone ?? "Not set"
-                )
-
-                settingsDivider
-
-                // Change Password (placeholder)
-                settingsNavigationRow(
-                    icon: "lock.fill",
-                    iconColor: ColorTokens.warning,
-                    title: "Change Password"
-                ) {
-                    settingsPlaceholder(title: "Change Password", icon: "lock.fill", subtitle: "Password management coming soon.")
-                }
+        Section {
+            if let email = appState.currentUser?.email {
+                settingsInfoRow(icon: "envelope.fill", title: "Email", value: email)
             }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
+            if let phone = appState.currentUser?.phone {
+                settingsInfoRow(icon: "phone.fill", title: "Phone", value: phone)
+            }
+            settingsInfoRow(icon: "key.fill", title: "Auth Provider",
+                        value: appState.currentUser?.authProvider?.rawValue.capitalized ?? "Local")
+        } header: {
+            sectionHeader("Account")
         }
+        .listRowBackground(ColorTokens.surface)
     }
 
-    // MARK: - Preferences Section
+    // MARK: - Preferences
 
     private var preferencesSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("Preferences")
+        Section {
+            settingsInfoRow(icon: "clock.fill", title: "Member Since",
+                        value: memberSinceString)
+            settingsInfoRow(icon: "person.fill", title: "Role",
+                        value: appState.currentUser?.role.rawValue.capitalized ?? "Consumer")
+        } header: {
+            sectionHeader("Profile")
+        }
+        .listRowBackground(ColorTokens.surface)
+    }
 
-            VStack(spacing: 0) {
-                // Color Scheme Picker
-                colorSchemePicker
+    // MARK: - App
 
-                settingsDivider
+    private var appSection: some View {
+        Section {
+            settingsNavigableRow(icon: "paintbrush.fill", title: "Appearance", value: appState.appearance.rawValue) {
+                AppearanceSettingsView()
+            }
 
-                // Notifications
-                settingsNavigationRow(
-                    icon: "bell.fill",
-                    iconColor: ColorTokens.error,
-                    title: "Notifications"
-                ) {
-                    NotificationSettingsView()
+            settingsNavigableRow(icon: "bell.fill", title: "Notifications", value: "Enabled") {
+                NotificationSettingsView()
+            }
+
+            Button {
+                showClearCacheAlert = true
+            } label: {
+                HStack {
+                    Image(systemName: "externaldrive.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+
+                    Text("Clear Cache")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+
+                    Spacer()
+
+                    if cacheCleared {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(ColorTokens.success)
+                            .font(.system(size: 14))
+                    }
                 }
             }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
+        } header: {
+            sectionHeader("App")
         }
+        .listRowBackground(ColorTokens.surface)
     }
 
-    // MARK: - Color Scheme Picker
-
-    @ViewBuilder
-    private var colorSchemePicker: some View {
-        HStack(spacing: Spacing.sm) {
-            settingsIconBadge(icon: "paintbrush.fill", color: ColorTokens.primary)
-
-            Text("Appearance")
-                .font(Typography.body)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-            Spacer()
-
-            Picker("", selection: Binding(
-                get: { colorSchemeOption },
-                set: { setColorScheme($0) }
-            )) {
-                Text("System").tag(0)
-                Text("Light").tag(1)
-                Text("Dark").tag(2)
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 180)
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-    }
-
-    private var colorSchemeOption: Int {
-        switch appState.preferredColorScheme {
-        case nil: return 0
-        case .light: return 1
-        case .dark: return 2
-        default: return 0
-        }
-    }
-
-    private func setColorScheme(_ option: Int) {
-        switch option {
-        case 0: appState.preferredColorScheme = nil
-        case 1: appState.preferredColorScheme = .light
-        case 2: appState.preferredColorScheme = .dark
-        default: break
-        }
-    }
-
-    // MARK: - Content Section
-
-    private var contentSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("Content")
-
-            VStack(spacing: 0) {
-                // Offline Downloads (placeholder)
-                settingsNavigationRow(
-                    icon: "arrow.down.circle.fill",
-                    iconColor: ColorTokens.info,
-                    title: "Offline Downloads"
-                ) {
-                    settingsPlaceholder(title: "Offline Downloads", icon: "arrow.down.circle.fill", subtitle: "Manage your downloaded content for offline access.")
-                }
-
-                settingsDivider
-
-                // Clear Cache
-                settingsActionRow(
-                    icon: "trash.fill",
-                    iconColor: ColorTokens.textTertiaryDark,
-                    title: "Clear Cache"
-                ) {
-                    // Placeholder action
-                }
-            }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-
-    // MARK: - Creator Section
-
-    private var creatorSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("Creator")
-
-            VStack(spacing: 0) {
-                settingsNavigationRow(
-                    icon: "star.fill",
-                    iconColor: ColorTokens.warning,
-                    title: "Become a Creator"
-                ) {
-                    CreatorApplicationView()
-                }
-            }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-
-    // MARK: - Admin Section
-
-    private var adminSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("Administration")
-
-            VStack(spacing: 0) {
-                settingsNavigationRow(
-                    icon: "shield.fill",
-                    iconColor: ColorTokens.error,
-                    title: "Admin Panel"
-                ) {
-                    AdminDashboardView()
-                }
-            }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-
-    // MARK: - About Section
+    // MARK: - About
 
     private var aboutSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("About")
+        Section {
+            settingsInfoRow(icon: "info.circle.fill", title: "Version", value: "1.0.0")
 
-            VStack(spacing: 0) {
-                // App Version
-                settingsDisplayRow(
-                    icon: "info.circle.fill",
-                    iconColor: ColorTokens.textTertiaryDark,
-                    title: "Version",
-                    value: appVersion
-                )
+            settingsLinkRow(icon: "doc.text.fill", title: "Terms of Service",
+                          urlString: "https://scaleup.io/terms")
 
-                settingsDivider
+            settingsLinkRow(icon: "hand.raised.fill", title: "Privacy Policy",
+                          urlString: "https://scaleup.io/privacy")
+        } header: {
+            sectionHeader("About")
+        }
+        .listRowBackground(ColorTokens.surface)
+    }
 
-                // Terms of Service
-                settingsNavigationRow(
-                    icon: "doc.text.fill",
-                    iconColor: ColorTokens.textTertiaryDark,
-                    title: "Terms of Service"
-                ) {
-                    settingsPlaceholder(title: "Terms of Service", icon: "doc.text.fill", subtitle: "Terms of service content will be displayed here.")
-                }
+    // MARK: - Danger Zone
 
-                settingsDivider
-
-                // Privacy Policy
-                settingsNavigationRow(
-                    icon: "hand.raised.fill",
-                    iconColor: ColorTokens.textTertiaryDark,
-                    title: "Privacy Policy"
-                ) {
-                    settingsPlaceholder(title: "Privacy Policy", icon: "hand.raised.fill", subtitle: "Privacy policy content will be displayed here.")
-                }
-
-                settingsDivider
-
-                // Rate App
-                settingsActionRow(
-                    icon: "heart.fill",
-                    iconColor: ColorTokens.error,
-                    title: "Rate App"
-                ) {
-                    // Placeholder — would open App Store review
+    private var dangerSection: some View {
+        Section {
+            Button {
+                showLogoutAlert = true
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "rectangle.portrait.and.arrow.forward")
+                        .foregroundStyle(ColorTokens.warning)
+                    Text("Log Out")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.warning)
+                    Spacer()
                 }
             }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
-        }
-    }
 
-    // MARK: - Danger Zone Section
-
-    private var dangerZoneSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            settingsSectionTitle("Danger Zone")
-
-            VStack(spacing: 0) {
-                // Logout
-                Button {
-                    showLogoutAlert = true
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        settingsIconBadge(icon: "rectangle.portrait.and.arrow.right", color: ColorTokens.error)
-
-                        Text("Sign Out")
-                            .font(Typography.body)
-                            .foregroundStyle(ColorTokens.error)
-
-                        Spacer()
-
-                        if isLoggingOut {
-                            ProgressView()
-                                .tint(ColorTokens.error)
-                        }
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
-                }
-
-                settingsDivider
-
-                // Delete Account
-                Button {
-                    showDeleteAlert = true
-                } label: {
-                    HStack(spacing: Spacing.sm) {
-                        settingsIconBadge(icon: "person.crop.circle.badge.xmark", color: ColorTokens.error)
-
-                        Text("Delete Account")
-                            .font(Typography.body)
-                            .foregroundStyle(ColorTokens.error)
-
-                        Spacer()
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
+            Button {
+                showDeactivateAlert = true
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "person.slash.fill")
+                        .foregroundStyle(ColorTokens.error)
+                    Text("Deactivate Account")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.error)
+                    Spacer()
                 }
             }
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .padding(.horizontal, Spacing.md)
+        } header: {
+            sectionHeader("")
         }
+        .listRowBackground(ColorTokens.surface)
     }
 
-    // MARK: - Logout
+    // MARK: - Row Helpers
 
-    private func performLogout() {
-        isLoggingOut = true
-        let authMgr = dependencies.authManager
-        Task {
-            await authMgr.logout()
-            appState.logout()
-            isLoggingOut = false
-        }
-    }
-
-    // MARK: - App Version
-
-    private var appVersion: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
-        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-        return "\(version) (\(build))"
-    }
-
-    // MARK: - Reusable Settings Row Components
-
-    @ViewBuilder
-    private func settingsSectionTitle(_ title: String) -> some View {
-        Text(title)
-            .font(Typography.titleMedium)
-            .foregroundStyle(ColorTokens.textPrimaryDark)
-            .padding(.horizontal, Spacing.md)
-    }
-
-    @ViewBuilder
-    private func settingsIconBadge(icon: String, color: Color) -> some View {
-        Image(systemName: icon)
-            .font(.system(size: 14))
-            .foregroundStyle(.white)
-            .frame(width: 28, height: 28)
-            .background(color)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-    }
-
-    @ViewBuilder
-    private func settingsDisplayRow(icon: String, iconColor: Color, title: String, value: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            settingsIconBadge(icon: icon, color: iconColor)
+    /// Static info row (not tappable)
+    private func settingsInfoRow(icon: String, title: String, value: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.gold)
+                .frame(width: 24)
 
             Text(title)
                 .font(Typography.body)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
+                .foregroundStyle(ColorTokens.textPrimary)
 
             Spacer()
 
             Text(value)
                 .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+                .foregroundStyle(ColorTokens.textTertiary)
                 .lineLimit(1)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
     }
 
-    @ViewBuilder
-    private func settingsNavigationRow<Destination: View>(icon: String, iconColor: Color, title: String, @ViewBuilder destination: () -> Destination) -> some View {
+    /// Navigable row that pushes a destination view
+    private func settingsNavigableRow<Destination: View>(
+        icon: String, title: String, value: String,
+        @ViewBuilder destination: () -> Destination
+    ) -> some View {
         NavigationLink {
             destination()
         } label: {
-            HStack(spacing: Spacing.sm) {
-                settingsIconBadge(icon: icon, color: iconColor)
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 24)
 
                 Text(title)
                     .font(Typography.body)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
+                    .foregroundStyle(ColorTokens.textPrimary)
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.textTertiaryDark)
+                Text(value)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textTertiary)
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
         }
     }
 
-    @ViewBuilder
-    private func settingsToggleRow(icon: String, iconColor: Color, title: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: Spacing.sm) {
-            settingsIconBadge(icon: icon, color: iconColor)
+    /// Row that opens an external URL
+    private func settingsLinkRow(icon: String, title: String, urlString: String) -> some View {
+        Button {
+            if let url = URL(string: urlString) {
+                UIApplication.shared.open(url)
+            }
+        } label: {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 24)
 
+                Text(title)
+                    .font(Typography.body)
+                    .foregroundStyle(ColorTokens.textPrimary)
+
+                Spacer()
+
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+    }
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(Typography.caption)
+            .foregroundStyle(ColorTokens.textTertiary)
+            .textCase(nil)
+    }
+
+    private var memberSinceString: String {
+        guard let date = appState.currentUser?.createdAt else { return "Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM yyyy"
+        return formatter.string(from: date)
+    }
+
+    // MARK: - Actions
+
+    private func clearCache() {
+        URLCache.shared.removeAllCachedResponses()
+        cacheCleared = true
+        Haptics.success()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            cacheCleared = false
+        }
+    }
+
+    private func deactivateAccount() async {
+        isDeactivating = true
+        do {
+            try await userService.deactivate()
+            await appState.logout()
+        } catch {
+            // Silently fail — user stays logged in
+        }
+        isDeactivating = false
+    }
+}
+
+// MARK: - Notification Settings
+
+struct NotificationSettingsView: View {
+    @State private var pushEnabled = true
+    @State private var quizReminders = true
+    @State private var streakReminders = true
+    @State private var socialUpdates = true
+
+    var body: some View {
+        ZStack {
+            ColorTokens.background.ignoresSafeArea()
+
+            List {
+                Section {
+                    Toggle(isOn: $pushEnabled) {
+                        settingsLabel(icon: "bell.fill", title: "Push Notifications")
+                    }
+                    .tint(ColorTokens.gold)
+                } header: {
+                    Text("General")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .textCase(nil)
+                }
+                .listRowBackground(ColorTokens.surface)
+
+                Section {
+                    Toggle(isOn: $quizReminders) {
+                        settingsLabel(icon: "questionmark.circle.fill", title: "Quiz Reminders")
+                    }
+                    .tint(ColorTokens.gold)
+
+                    Toggle(isOn: $streakReminders) {
+                        settingsLabel(icon: "flame.fill", title: "Streak Reminders")
+                    }
+                    .tint(ColorTokens.gold)
+
+                    Toggle(isOn: $socialUpdates) {
+                        settingsLabel(icon: "person.2.fill", title: "Social Updates")
+                    }
+                    .tint(ColorTokens.gold)
+                } header: {
+                    Text("Categories")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .textCase(nil)
+                }
+                .listRowBackground(ColorTokens.surface)
+            }
+            .scrollContentBackground(.hidden)
+            .listStyle(.insetGrouped)
+        }
+        .navigationTitle("Notifications")
+        .navigationBarTitleDisplayMode(.large)
+    }
+
+    private func settingsLabel(icon: String, title: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.gold)
+                .frame(width: 24)
             Text(title)
                 .font(Typography.body)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-            Spacer()
-
-            Toggle("", isOn: isOn)
-                .tint(ColorTokens.primary)
-                .labelsHidden()
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-    }
-
-    @ViewBuilder
-    private func settingsActionRow(icon: String, iconColor: Color, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.sm) {
-                settingsIconBadge(icon: icon, color: iconColor)
-
-                Text(title)
-                    .font(Typography.body)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                Spacer()
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
+                .foregroundStyle(ColorTokens.textPrimary)
         }
     }
+}
 
-    private var settingsDivider: some View {
-        Divider()
-            .background(ColorTokens.textTertiaryDark.opacity(0.2))
-            .padding(.leading, Spacing.md + 28 + Spacing.sm)
-    }
+// MARK: - Appearance Settings
 
-    // MARK: - Placeholder View
+struct AppearanceSettingsView: View {
+    @Environment(AppState.self) private var appState
 
-    @ViewBuilder
-    private func settingsPlaceholder(title: String, icon: String, subtitle: String) -> some View {
+    var body: some View {
         ZStack {
-            ColorTokens.backgroundDark.ignoresSafeArea()
-            EmptyStateView(
-                icon: icon,
-                title: title,
-                subtitle: subtitle
-            )
+            ColorTokens.background.ignoresSafeArea()
+
+            List {
+                Section {
+                    ForEach(AppAppearance.allCases, id: \.self) { option in
+                        Button {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                appState.appearance = option
+                            }
+                            Haptics.selection()
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: option.icon)
+                                    .font(.system(size: 16))
+                                    .foregroundStyle(appState.appearance == option ? ColorTokens.gold : ColorTokens.textTertiary)
+                                    .frame(width: 28)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(option.rawValue)
+                                        .font(Typography.body)
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                    Text(appearanceDescription(option))
+                                        .font(Typography.caption)
+                                        .foregroundStyle(ColorTokens.textTertiary)
+                                }
+
+                                Spacer()
+
+                                if appState.appearance == option {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 20))
+                                        .foregroundStyle(ColorTokens.gold)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                } header: {
+                    Text("Theme")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .textCase(nil)
+                }
+                .listRowBackground(ColorTokens.surface)
+            }
+            .scrollContentBackground(.hidden)
+            .listStyle(.insetGrouped)
         }
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarColorScheme(.dark, for: .navigationBar)
+        .navigationTitle("Appearance")
+        .navigationBarTitleDisplayMode(.large)
+    }
+
+    private func appearanceDescription(_ option: AppAppearance) -> String {
+        switch option {
+        case .system: return "Match your device settings"
+        case .light: return "Light backgrounds with dark text"
+        case .dark: return "Dark backgrounds with light text"
+        }
     }
 }

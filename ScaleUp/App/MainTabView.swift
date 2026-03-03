@@ -1,105 +1,131 @@
 import SwiftUI
 
-// MARK: - Main Tab View
-
 struct MainTabView: View {
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
 
-    @State private var selectedTab: Tab = .home
-
-    // MARK: - Tab Definition
-
-    enum Tab: String, CaseIterable {
-        case home
-        case discover
-        case journey
-        case progress
-        case profile
-
-        var title: String {
-            switch self {
-            case .home: return "Home"
-            case .discover: return "Discover"
-            case .journey: return "Journey"
-            case .progress: return "Progress"
-            case .profile: return "Profile"
+    var body: some View {
+        @Bindable var appState = appState
+        TabView(selection: $appState.selectedTab) {
+            ForEach(Tab.allCases) { tab in
+                tab.view
+                    .tabItem {
+                        Image(systemName: tab.icon)
+                        Text(tab.label)
+                    }
+                    .tag(tab)
             }
         }
-
-        var icon: String {
-            switch self {
-            case .home: return "house.fill"
-            case .discover: return "safari.fill"
-            case .journey: return "map.fill"
-            case .progress: return "chart.bar.fill"
-            case .profile: return "person.fill"
-            }
+        .tint(ColorTokens.gold)
+        .onAppear {
+            configureTabBarAppearance()
         }
     }
 
-    // MARK: - Body
+    private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor(ColorTokens.background)
 
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView()
-                .tabItem {
-                    Label(Tab.home.title, systemImage: Tab.home.icon)
-                }
-                .tag(Tab.home)
+        // Unselected
+        let normalAttrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor(ColorTokens.textTertiary)
+        ]
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = normalAttrs
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor(ColorTokens.textTertiary)
 
-            NavigationStack {
-                    DiscoverView()
-                }
-                .tabItem {
-                    Label(Tab.discover.title, systemImage: Tab.discover.icon)
-                }
-                .tag(Tab.discover)
+        // Selected
+        let selectedAttrs: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor(ColorTokens.gold)
+        ]
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = selectedAttrs
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(ColorTokens.gold)
 
-            JourneyView()
-                .tabItem {
-                    Label(Tab.journey.title, systemImage: Tab.journey.icon)
-                }
-                .tag(Tab.journey)
+        // Top border
+        appearance.shadowColor = UIColor(white: 1, alpha: 0.05)
 
-            KnowledgeProfileView()
-                .tabItem {
-                    Label(Tab.progress.title, systemImage: Tab.progress.icon)
-                }
-                .tag(Tab.progress)
-
-            ProfileView()
-                .tabItem {
-                    Label(Tab.profile.title, systemImage: Tab.profile.icon)
-                }
-                .tag(Tab.profile)
-        }
-        .tint(ColorTokens.primary)
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
-        .sensoryFeedback(.selection, trigger: selectedTab)
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }
 
-// MARK: - Placeholder Tab View
+// MARK: - Tab Definition
 
-struct PlaceholderTabView: View {
-    let tab: MainTabView.Tab
+enum Tab: String, CaseIterable, Identifiable {
+    case home
+    case discover
+    case journey
+    case progress
+    case profile
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .home: return "Home"
+        case .discover: return "Discover"
+        case .journey: return "My Plan"
+        case .progress: return "Progress"
+        case .profile: return "Profile"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .home: return "house.fill"
+        case .discover: return "safari.fill"
+        case .journey: return "map.fill"
+        case .progress: return "chart.bar.fill"
+        case .profile: return "person.fill"
+        }
+    }
+
+    @MainActor @ViewBuilder
+    var view: some View {
+        switch self {
+        case .home: HomeView()
+        case .discover: DiscoverView()
+        case .journey: MyPlanView()
+        case .progress: ProgressTabView()
+        case .profile: ProfileTabView()
+        }
+    }
+}
+
+// MARK: - Placeholder Tab (Phase 1 only)
+
+struct PlaceholderTab: View {
+    let tab: Tab
 
     var body: some View {
         NavigationStack {
             ZStack {
-                ColorTokens.backgroundDark
-                    .ignoresSafeArea()
+                ColorTokens.background.ignoresSafeArea()
 
-                EmptyStateView(
-                    icon: tab.icon,
-                    title: tab.title,
-                    subtitle: "Coming Soon"
-                )
+                VStack(spacing: Spacing.md) {
+                    Image(systemName: tab.icon)
+                        .font(.system(size: 40))
+                        .foregroundStyle(ColorTokens.gold)
+
+                    Text(tab.label)
+                        .font(Typography.titleLarge)
+                        .foregroundStyle(ColorTokens.textPrimary)
+
+                    Text("Coming in Phase \(phaseNumber)")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
             }
-            .navigationTitle(tab.title)
+            .navigationTitle(tab.label)
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+    }
+
+    private var phaseNumber: String {
+        switch tab {
+        case .home, .discover: return "3"
+        case .journey: return "5"
+        case .progress: return "4"
+        case .profile: return "6"
         }
     }
 }

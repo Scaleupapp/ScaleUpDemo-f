@@ -1,499 +1,791 @@
 import SwiftUI
 
-// MARK: - Quiz Results View
-
 struct QuizResultsView: View {
-    @Environment(DependencyContainer.self) private var dependencies
-    @Environment(\.dismiss) private var dismiss
-
     let quizId: String
-    var preloadedAttempt: QuizAttempt?
-    var preloadedQuiz: Quiz?
+    var attempt: QuizAttempt?
 
-    @State private var viewModel: QuizResultsViewModel?
-    @State private var showReview = false
-    @State private var showCelebration = false
-    @State private var appeared = false
+    @State private var viewModel = QuizResultsViewModel()
+    @State private var showScoreAnimation = false
+    @State private var showDetails = false
+    @State private var navigateToContentId: String?
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                ColorTokens.backgroundDark
-                    .ignoresSafeArea()
+        ZStack {
+            ColorTokens.background.ignoresSafeArea()
 
-                if let viewModel {
-                    if viewModel.isLoading && viewModel.attempt == nil {
-                        LoadingOverlay(message: "Loading results...")
-                    } else if let error = viewModel.error, viewModel.attempt == nil {
-                        ErrorStateView(
-                            message: error.localizedDescription,
-                            retryAction: {
-                                Task { await viewModel.loadResults(quizId: quizId) }
-                            }
-                        )
-                    } else if viewModel.attempt != nil {
-                        resultsContent(viewModel: viewModel)
-                    }
-                }
+            if viewModel.isLoading {
+                loadingState
+            } else {
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: Spacing.xl) {
+                        // Score Hero
+                        scoreHero
 
-                // Celebration overlay
-                if showCelebration {
-                    CelebrationOverlay()
-                        .allowsHitTesting(false)
-                        .ignoresSafeArea()
-                }
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .foregroundStyle(ColorTokens.textSecondaryDark)
+                        // Quick Stats
+                        quickStats
+
+                        // Topic Breakdown
+                        if !viewModel.topicBreakdown.isEmpty {
+                            topicBreakdownSection
+                        }
+
+                        // Competency Breakdown (Claude-evaluated)
+                        if !viewModel.competencyBreakdown.isEmpty {
+                            competencyBreakdownSection
+                        }
+
+                        // Strengths & Weaknesses
+                        strengthsWeaknessesSection
+
+                        // Missed Concepts
+                        if let missed = viewModel.analysis?.missedConcepts, !missed.isEmpty {
+                            missedConceptsSection(missed)
+                        }
+
+                        // Competency Progress
+                        if let competency = viewModel.competency {
+                            competencySection(competency)
+                        }
+
+                        // Journey Impact
+                        if let impact = viewModel.journeyImpact {
+                            journeyImpactSection(impact)
+                        }
+
+                        // Next Actions
+                        if !viewModel.nextActions.isEmpty {
+                            nextActionsSection
+                        }
+
+                        // Bottom actions
+                        bottomActions
+
+                        Spacer().frame(height: Spacing.xxxl)
                     }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.md)
                 }
             }
         }
-        .onAppear {
-            if viewModel == nil {
-                let vm = QuizResultsViewModel(quizService: dependencies.quizService)
-                if let preloadedAttempt {
-                    vm.attempt = preloadedAttempt
-                    vm.quiz = preloadedQuiz
-                }
-                viewModel = vm
+        .navigationBarBackButtonHidden()
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: Binding(
+            get: { navigateToContentId != nil },
+            set: { if !$0 { navigateToContentId = nil } }
+        )) {
+            if let contentId = navigateToContentId {
+                PlayerView(contentId: contentId)
             }
         }
         .task {
-            guard let viewModel else { return }
-            if viewModel.attempt == nil {
+            if let attempt {
+                viewModel.loadFromAttempt(attempt, quiz: nil)
+            } else {
                 await viewModel.loadResults(quizId: quizId)
             }
-            // Trigger celebration after a short delay
-            if !appeared {
-                appeared = true
-                try? await Task.sleep(for: .milliseconds(600))
-                if viewModel.isHighScore {
-                    withAnimation(Animations.spring) {
-                        showCelebration = true
-                    }
-                    // Auto-dismiss celebration
-                    try? await Task.sleep(for: .seconds(3))
-                    withAnimation(Animations.smooth) {
-                        showCelebration = false
-                    }
-                }
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.6).delay(0.3)) {
+                showScoreAnimation = true
             }
-        }
-        .sheet(isPresented: $showReview) {
-            if let viewModel, let quiz = viewModel.quiz, let attempt = viewModel.attempt {
-                NavigationStack {
-                    QuizReviewView(quiz: quiz, attempt: attempt)
-                }
+            withAnimation(.easeOut(duration: 0.5).delay(0.8)) {
+                showDetails = true
             }
         }
     }
 
-    // MARK: - Results Content
+    // MARK: - Score Hero
 
-    @ViewBuilder
-    private func resultsContent(viewModel: QuizResultsViewModel) -> some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(spacing: Spacing.lg) {
-
-                // Score Gauge
-                scoreSection(viewModel: viewModel)
-
-                // Score summary
-                scoreSummary(viewModel: viewModel)
-
-                // Trend comparison
-                if let trendText = viewModel.trendText {
-                    trendSection(trendText: trendText, comparison: viewModel.comparison)
-                }
-
-                // Topic breakdown
-                if let breakdown = viewModel.topicBreakdown, !breakdown.isEmpty {
-                    topicBreakdownSection(breakdown: breakdown)
-                }
-
-                // Strengths
-                if !viewModel.strengths.isEmpty {
-                    strengthsSection(strengths: viewModel.strengths)
-                }
-
-                // Weaknesses
-                if !viewModel.weaknesses.isEmpty {
-                    weaknessesSection(weaknesses: viewModel.weaknesses)
-                }
-
-                // Missed concepts
-                if !viewModel.missedConcepts.isEmpty {
-                    missedConceptsSection(concepts: viewModel.missedConcepts)
-                }
-
-                // Action buttons
-                actionButtons
-
-                Spacer()
-                    .frame(height: Spacing.xxl)
-            }
-            .padding(.vertical, Spacing.lg)
-        }
-    }
-
-    // MARK: - Score Section
-
-    private func scoreSection(viewModel: QuizResultsViewModel) -> some View {
+    private var scoreHero: some View {
         VStack(spacing: Spacing.md) {
-            ScoreGauge(
-                score: viewModel.scorePercentage,
-                size: 180,
-                label: viewModel.isHighScore ? "Excellent!" : "Keep Going"
-            )
+            // Close button
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .frame(width: 34, height: 34)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Circle())
+                }
+                Spacer()
+            }
 
-            if viewModel.isHighScore {
-                Text("You passed!")
-                    .font(Typography.titleLarge)
-                    .foregroundStyle(ColorTokens.success)
-            } else {
-                Text("Almost there!")
-                    .font(Typography.titleLarge)
-                    .foregroundStyle(ColorTokens.warning)
+            // Score ring
+            ZStack {
+                Circle()
+                    .stroke(ColorTokens.surfaceElevated, lineWidth: 8)
+                    .frame(width: 140, height: 140)
+
+                Circle()
+                    .trim(from: 0, to: showScoreAnimation ? viewModel.scorePercentage / 100 : 0)
+                    .stroke(
+                        viewModel.scoreColor,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .frame(width: 140, height: 140)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 1.2), value: showScoreAnimation)
+
+                VStack(spacing: 2) {
+                    Text("\(Int(viewModel.scorePercentage))%")
+                        .font(.system(size: 36, weight: .black, design: .rounded))
+                        .foregroundStyle(viewModel.scoreColor)
+
+                    Text(viewModel.scoreGrade)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                .scaleEffect(showScoreAnimation ? 1.0 : 0.5)
+                .opacity(showScoreAnimation ? 1.0 : 0)
+            }
+
+            // Comparison
+            if let comparison = viewModel.analysis?.comparisonToPrevious {
+                HStack(spacing: 6) {
+                    Image(systemName: viewModel.trendIcon)
+                        .font(.system(size: 12))
+                        .foregroundStyle(viewModel.trendColor)
+
+                    if let improvement = comparison.improvement {
+                        Text(improvement >= 0 ? "+\(Int(improvement))%" : "\(Int(improvement))%")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(viewModel.trendColor)
+                    }
+
+                    Text("from last attempt")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(viewModel.trendColor.opacity(0.1))
+                .clipShape(Capsule())
+            }
+
+            // Confidence badge
+            if let confidence = viewModel.analysis?.confidenceScore {
+                HStack(spacing: 4) {
+                    Image(systemName: confidenceIcon(confidence))
+                        .font(.system(size: 11))
+                    Text("Confidence: \(confidenceLabel(confidence))")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(confidenceColor(confidence))
             }
         }
+        .padding(.bottom, Spacing.sm)
     }
 
-    // MARK: - Score Summary
+    // MARK: - Quick Stats
 
-    private func scoreSummary(viewModel: QuizResultsViewModel) -> some View {
-        HStack(spacing: Spacing.md) {
-            scoreStat(
-                icon: "checkmark.circle.fill",
-                color: ColorTokens.success,
-                value: "\(viewModel.score?.correct ?? 0)",
-                label: "Correct"
-            )
-
-            scoreStat(
-                icon: "xmark.circle.fill",
-                color: ColorTokens.error,
-                value: "\(viewModel.score?.incorrect ?? 0)",
-                label: "Incorrect"
-            )
-
-            scoreStat(
-                icon: "minus.circle.fill",
-                color: ColorTokens.textTertiaryDark,
-                value: "\(viewModel.score?.skipped ?? 0)",
-                label: "Skipped"
-            )
+    private var quickStats: some View {
+        HStack(spacing: 10) {
+            if let score = viewModel.score {
+                miniStat(value: "\(score.correct)", label: "Correct", color: .green)
+                miniStat(value: "\(score.incorrect)", label: "Wrong", color: .red)
+                miniStat(value: "\(score.skipped)", label: "Skipped", color: .orange)
+            }
+            miniStat(value: viewModel.formattedTotalTime, label: "Time", color: ColorTokens.gold)
         }
-        .padding(.horizontal, Spacing.md)
+        .opacity(showDetails ? 1 : 0)
     }
 
-    private func scoreStat(icon: String, color: Color, value: String, label: String) -> some View {
-        VStack(spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 24))
-                .foregroundStyle(color)
-
+    private func miniStat(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
             Text(value)
-                .font(Typography.monoLarge)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
             Text(label)
-                .font(Typography.caption)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.md)
-        .background(ColorTokens.surfaceDark)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(ColorTokens.surface)
+        )
     }
 
-    // MARK: - Trend Section
+    // MARK: - Topic Breakdown
 
-    private func trendSection(trendText: String, comparison: ComparisonToPrevious?) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: trendIcon(comparison?.trend))
-                .foregroundStyle(trendColor(comparison?.trend))
+    private var topicBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            sectionHeader("Topic Performance")
 
-            Text(trendText)
-                .font(Typography.bodyBold)
-                .foregroundStyle(trendColor(comparison?.trend))
+            VStack(spacing: 8) {
+                ForEach(viewModel.topicBreakdown) { topic in
+                    HStack(spacing: Spacing.sm) {
+                        Text(topic.topic.capitalized)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                            .frame(width: 100, alignment: .leading)
 
-            Spacer()
-        }
-        .padding(Spacing.md)
-        .background(trendColor(comparison?.trend).opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-        .padding(.horizontal, Spacing.md)
-    }
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(ColorTokens.surfaceElevated)
 
-    private func trendIcon(_ trend: Trend?) -> String {
-        switch trend {
-        case .improving: return "arrow.up.right"
-        case .declining: return "arrow.down.right"
-        case .stable: return "arrow.right"
-        case .none: return "arrow.right"
-        }
-    }
-
-    private func trendColor(_ trend: Trend?) -> Color {
-        switch trend {
-        case .improving: return ColorTokens.success
-        case .declining: return ColorTokens.error
-        case .stable: return ColorTokens.info
-        case .none: return ColorTokens.textSecondaryDark
-        }
-    }
-
-    // MARK: - Topic Breakdown Section
-
-    private func topicBreakdownSection(breakdown: [TopicBreakdown]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("Topic Breakdown")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-                .padding(.horizontal, Spacing.md)
-
-            ForEach(breakdown, id: \.topic) { topic in
-                VStack(alignment: .leading, spacing: Spacing.xs) {
-                    HStack {
-                        Text(topic.topic)
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                        Spacer()
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(barColor(for: topic.percentage))
+                                    .frame(width: geo.size.width * topic.percentage / 100)
+                            }
+                        }
+                        .frame(height: 8)
 
                         Text("\(topic.correct)/\(topic.total)")
-                            .font(Typography.mono)
-                            .foregroundStyle(ColorTokens.textSecondaryDark)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(barColor(for: topic.percentage))
+                            .frame(width: 30, alignment: .trailing)
+                    }
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Strengths & Weaknesses
+
+    private var strengthsWeaknessesSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Strengths
+            if let strengths = viewModel.analysis?.strengths, !strengths.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.green)
+                        Text("Strengths")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+
+                    FlowLayout(spacing: 6) {
+                        ForEach(strengths, id: \.self) { strength in
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 10))
+                                Text(strength)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(.green.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+
+            // Weaknesses
+            if let weaknesses = viewModel.analysis?.weaknesses, !weaknesses.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                        Text("Areas to Improve")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+
+                    FlowLayout(spacing: 6) {
+                        ForEach(weaknesses, id: \.self) { weakness in
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.up.forward")
+                                    .font(.system(size: 10))
+                                Text(weakness)
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(.orange.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Missed Concepts
+
+    private func missedConceptsSection(_ concepts: [MissedConcept]) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            sectionHeader("Review These Concepts")
+
+            VStack(spacing: 8) {
+                ForEach(concepts) { concept in
+                    Button {
+                        handleMissedConceptTap(concept)
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            ZStack {
+                                Circle()
+                                    .fill(.red.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(.red)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(concept.concept)
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.white)
+
+                                if let suggestion = concept.suggestion {
+                                    Text(suggestion)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(ColorTokens.textTertiary)
+                                        .lineLimit(2)
+                                }
+
+                                if let timestamp = concept.timestamp {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "play.circle.fill")
+                                            .font(.system(size: 11))
+                                        Text("Jump to \(timestamp)")
+                                            .font(.system(size: 11, weight: .semibold))
+                                    }
+                                    .foregroundStyle(ColorTokens.gold)
+                                    .padding(.top, 2)
+                                }
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                        .padding(10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(ColorTokens.surfaceElevated)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Competency Progress
+
+    private func competencySection(_ competency: CompetencyData) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            sectionHeader("Your \(competency.topic?.capitalized ?? "") Level")
+
+            HStack(spacing: Spacing.md) {
+                // Level badge
+                VStack(spacing: 4) {
+                    Text(competency.level?.capitalized ?? "—")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("Level")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .frame(width: 80)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    // Score bar
+                    HStack {
+                        Text("Score")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Spacer()
+                        Text("\(Int(competency.score ?? 0))%")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
                     }
 
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(ColorTokens.surfaceElevatedDark)
-
+                                .fill(ColorTokens.surfaceElevated)
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(barColor(percentage: topic.percentage))
-                                .frame(width: geo.size.width * (topic.percentage / 100))
+                                .fill(ColorTokens.gold)
+                                .frame(width: geo.size.width * (competency.score ?? 0) / 100)
                         }
                     }
                     .frame(height: 8)
-                }
-                .padding(.horizontal, Spacing.md)
-            }
-        }
-    }
 
-    private func barColor(percentage: Double) -> Color {
-        switch percentage {
-        case 80...100: return ColorTokens.success
-        case 60..<80: return ColorTokens.primary
-        case 40..<60: return ColorTokens.warning
-        default: return ColorTokens.error
-        }
-    }
-
-    // MARK: - Strengths Section
-
-    private func strengthsSection(strengths: [String]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Strengths")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-                .padding(.horizontal, Spacing.md)
-
-            FlowLayout(spacing: Spacing.sm) {
-                ForEach(strengths, id: \.self) { strength in
-                    Text(strength)
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.success)
-                        .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, Spacing.xs + 2)
-                        .background(ColorTokens.success.opacity(0.15))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(ColorTokens.success.opacity(0.3), lineWidth: 1)
-                        )
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-
-    // MARK: - Weaknesses Section
-
-    private func weaknessesSection(weaknesses: [String]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Areas to Improve")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-                .padding(.horizontal, Spacing.md)
-
-            FlowLayout(spacing: Spacing.sm) {
-                ForEach(weaknesses, id: \.self) { weakness in
-                    Text(weakness)
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.error)
-                        .padding(.horizontal, Spacing.sm)
-                        .padding(.vertical, Spacing.xs + 2)
-                        .background(ColorTokens.error.opacity(0.15))
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(ColorTokens.error.opacity(0.3), lineWidth: 1)
-                        )
-                }
-            }
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-
-    // MARK: - Missed Concepts Section
-
-    private func missedConceptsSection(concepts: [MissedConcept]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Missed Concepts")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-                .padding(.horizontal, Spacing.md)
-
-            ForEach(Array(concepts.enumerated()), id: \.offset) { _, concept in
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(ColorTokens.warning)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(concept.concept ?? "Unknown concept")
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                        if let suggestion = concept.suggestion {
-                            Text(suggestion)
-                                .font(Typography.caption)
-                                .foregroundStyle(ColorTokens.textSecondaryDark)
+                    HStack {
+                        Text("\(competency.quizzesTaken ?? 0) quizzes taken")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Spacer()
+                        if let trend = competency.trend {
+                            HStack(spacing: 2) {
+                                Image(systemName: trend == "improving" ? "arrow.up.right" : "minus")
+                                    .font(.system(size: 9))
+                                Text(trend.capitalized)
+                                    .font(.system(size: 10, weight: .semibold))
+                            }
+                            .foregroundStyle(trend == "improving" ? .green : .orange)
                         }
                     }
+                }
+            }
 
-                    Spacer()
+            // Score history mini chart
+            if let history = competency.scoreHistory, history.count >= 2 {
+                scoreHistoryChart(history)
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
 
-                    if concept.contentId != nil {
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.primary)
+    private func scoreHistoryChart(_ history: [ScoreHistoryEntry]) -> some View {
+        GeometryReader { geo in
+            let maxScore = history.map(\.score).max() ?? 100
+            let minScore = max(0, (history.map(\.score).min() ?? 0) - 10)
+            let range = max(1, maxScore - minScore)
+
+            Path { path in
+                for (index, entry) in history.enumerated() {
+                    let x = geo.size.width * CGFloat(index) / CGFloat(max(1, history.count - 1))
+                    let y = geo.size.height * (1 - (entry.score - minScore) / range)
+                    if index == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
                     }
                 }
-                .padding(Spacing.md)
-                .background(ColorTokens.surfaceDark)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-                .padding(.horizontal, Spacing.md)
+            }
+            .stroke(ColorTokens.gold, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+
+            // Dots
+            ForEach(Array(history.enumerated()), id: \.offset) { index, entry in
+                let x = geo.size.width * CGFloat(index) / CGFloat(max(1, history.count - 1))
+                let y = geo.size.height * (1 - (entry.score - minScore) / range)
+
+                Circle()
+                    .fill(index == history.count - 1 ? ColorTokens.gold : ColorTokens.surfaceElevated)
+                    .stroke(ColorTokens.gold, lineWidth: 2)
+                    .frame(width: 8, height: 8)
+                    .position(x: x, y: y)
             }
         }
+        .frame(height: 60)
+        .padding(.top, 4)
     }
 
-    // MARK: - Action Buttons
+    // MARK: - Journey Impact
 
-    private var actionButtons: some View {
-        VStack(spacing: Spacing.sm) {
-            SecondaryButton(title: "Review Answers") {
-                showReview = true
-            }
-            .padding(.horizontal, Spacing.md)
+    private func journeyImpactSection(_ impact: JourneyImpact) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            sectionHeader("Journey Impact")
 
-            PrimaryButton(title: "Back to Learning") {
-                dismiss()
-            }
-            .padding(.horizontal, Spacing.md)
-        }
-    }
-}
+            HStack(spacing: Spacing.md) {
+                if let week = impact.currentWeek, let total = impact.totalWeeks {
+                    VStack(spacing: 2) {
+                        Text("Week \(week)/\(total)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Journey")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
 
-// MARK: - Celebration Overlay
-
-private struct CelebrationOverlay: View {
-    @State private var particles: [CelebrationParticle] = []
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                ForEach(particles) { particle in
-                    Circle()
-                        .fill(particle.color)
-                        .frame(width: particle.size, height: particle.size)
-                        .position(particle.position)
-                        .opacity(particle.opacity)
+                if let progress = impact.overallProgress {
+                    VStack(spacing: 2) {
+                        Text("\(Int(progress))%")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Progress")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
                 }
             }
-            .onAppear {
-                generateParticles(in: geo.size)
-                animateParticles()
+            .frame(maxWidth: .infinity)
+
+            if let hint = impact.adaptationHint {
+                Text(hint)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ColorTokens.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
             }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Next Actions
+
+    private var nextActionsSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            sectionHeader("What's Next")
+
+            VStack(spacing: 8) {
+                ForEach(viewModel.nextActions) { action in
+                    Button {
+                        handleNextAction(action)
+                    } label: {
+                        HStack(spacing: Spacing.sm) {
+                            Image(systemName: actionIcon(action.type))
+                                .font(.system(size: 14))
+                                .foregroundStyle(ColorTokens.gold)
+                                .frame(width: 32, height: 32)
+                                .background(ColorTokens.gold.opacity(0.12))
+                                .clipShape(Circle())
+
+                            Text(action.label)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.white)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                        .padding(10)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Bottom Actions
+
+    private var bottomActions: some View {
+        VStack(spacing: 10) {
+            Button { dismiss() } label: {
+                Text("Back to Quizzes")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(ColorTokens.gold)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            Button {
+                appState.selectedTab = .home
+                NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
+            } label: {
+                Text("Back to Home")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+        }
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Competency Breakdown
+
+    private var competencyBreakdownSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            sectionHeader("Competency Analysis")
+
+            VStack(spacing: 10) {
+                ForEach(viewModel.competencyBreakdown) { item in
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(item.competency)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+
+                            Spacer()
+
+                            if let level = item.level {
+                                Text(level.capitalized)
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(competencyLevelColor(level))
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(competencyLevelColor(level).opacity(0.15))
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        HStack(spacing: Spacing.sm) {
+                            // MCQ score bar
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(ColorTokens.surfaceElevated)
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(barColor(for: item.percentage ?? 0))
+                                        .frame(width: geo.size.width * (item.percentage ?? 0) / 100)
+                                }
+                            }
+                            .frame(height: 8)
+
+                            Text("\(item.correct ?? 0)/\(item.total ?? 0)")
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(barColor(for: item.percentage ?? 0))
+                                .frame(width: 30, alignment: .trailing)
+                        }
+
+                        // Text score (if text responses were evaluated)
+                        if let textAvg = item.textScoreAvg, textAvg > 0 {
+                            HStack(spacing: 4) {
+                                Image(systemName: "text.bubble.fill")
+                                    .font(.system(size: 9))
+                                Text("Text Score: \(Int(textAvg))%")
+                                    .font(.system(size: 10, weight: .medium))
+                            }
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                    }
+                    .padding(10)
+                    .background(ColorTokens.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    private func competencyLevelColor(_ level: String) -> Color {
+        switch level.lowercased() {
+        case "expert", "proficient": return .green
+        case "competent": return ColorTokens.gold
+        case "foundational": return .orange
+        case "awareness": return .red
+        default: return ColorTokens.textTertiary
         }
     }
 
-    private func generateParticles(in size: CGSize) {
-        let colors: [Color] = [
-            ColorTokens.primary,
-            ColorTokens.primaryLight,
-            ColorTokens.success,
-            ColorTokens.anchorGold,
-            ColorTokens.warning,
-            Color(hex: "#FD79A8"),
-        ]
+    // MARK: - Helpers
 
-        particles = (0..<40).map { _ in
-            CelebrationParticle(
-                id: UUID(),
-                color: colors.randomElement() ?? ColorTokens.primary,
-                size: CGFloat.random(in: 6...14),
-                position: CGPoint(
-                    x: CGFloat.random(in: 0...size.width),
-                    y: size.height + 20
-                ),
-                targetY: CGFloat.random(in: -50...size.height * 0.4),
-                opacity: 1.0
-            )
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 15, weight: .bold))
+            .foregroundStyle(.white)
+    }
+
+    private func barColor(for percentage: Double) -> Color {
+        if percentage >= 80 { return .green }
+        if percentage >= 50 { return .orange }
+        return .red
+    }
+
+    private func confidenceIcon(_ score: Int) -> String {
+        if score >= 70 { return "brain.fill" }
+        if score >= 50 { return "brain" }
+        return "questionmark.circle"
+    }
+
+    private func confidenceLabel(_ score: Int) -> String {
+        if score >= 70 { return "High" }
+        if score >= 50 { return "Moderate" }
+        return "Low (possible guessing)"
+    }
+
+    private func confidenceColor(_ score: Int) -> Color {
+        if score >= 70 { return .green }
+        if score >= 50 { return .orange }
+        return .red
+    }
+
+    private func actionIcon(_ type: String) -> String {
+        switch type {
+        case "study_weak_areas": return "book.fill"
+        case "continue_journey": return "map.fill"
+        case "explore_topic": return "safari.fill"
+        default: return "arrow.right.circle.fill"
         }
     }
 
-    private func animateParticles() {
-        for index in particles.indices {
-            let delay = Double.random(in: 0...0.5)
-            let duration = Double.random(in: 1.5...2.5)
+    // MARK: - Action Handlers
 
-            withAnimation(
-                .spring(duration: duration, bounce: 0.2)
-                .delay(delay)
-            ) {
-                particles[index].position.y = particles[index].targetY
-                particles[index].position.x += CGFloat.random(in: -60...60)
-            }
-
-            withAnimation(
-                .easeOut(duration: 0.8)
-                .delay(delay + duration * 0.6)
-            ) {
-                particles[index].opacity = 0
-            }
+    private func handleMissedConceptTap(_ concept: MissedConcept) {
+        if let contentId = concept.contentId {
+            navigateToContentId = contentId
+        } else if let sourceId = viewModel.quiz?.sourceContentIds?.first {
+            navigateToContentId = sourceId
         }
     }
-}
 
-// MARK: - Celebration Particle
+    private func handleNextAction(_ action: QuizNextAction) {
+        switch action.type {
+        case "study_weak_areas":
+            if let contentId = action.contentId {
+                navigateToContentId = contentId
+            } else {
+                // Go back to quizzes to retake
+                dismiss()
+            }
+        case "continue_journey":
+            // Dismiss to go back, user can navigate to My Plan tab
+            dismiss()
+        case "explore_topic":
+            if let contentId = action.contentId {
+                navigateToContentId = contentId
+            } else {
+                // Dismiss — user can go to Discover tab
+                dismiss()
+            }
+        default:
+            dismiss()
+        }
+    }
 
-private struct CelebrationParticle: Identifiable {
-    let id: UUID
-    let color: Color
-    let size: CGFloat
-    var position: CGPoint
-    let targetY: CGFloat
-    var opacity: Double
+    private var loadingState: some View {
+        VStack(spacing: Spacing.lg) {
+            ProgressView()
+                .scaleEffect(1.5)
+                .tint(ColorTokens.gold)
+            Text("Loading results...")
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+    }
 }

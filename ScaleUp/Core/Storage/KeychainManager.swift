@@ -1,85 +1,73 @@
 import Foundation
 import Security
 
-enum KeychainKey: String {
-    case accessToken = "com.scaleup.accessToken"
-    case refreshToken = "com.scaleup.refreshToken"
-}
+actor KeychainManager {
+    static let shared = KeychainManager()
 
-final class KeychainManager: Sendable {
+    private let service = "com.scaleup.ScaleUp"
 
-    func save(_ data: Data, for key: KeychainKey) throws {
-        // Delete existing item first
-        try? delete(for: key)
+    private enum Keys {
+        static let accessToken = "accessToken"
+        static let refreshToken = "refreshToken"
+    }
+
+    // MARK: - Token Access
+
+    var accessToken: String? {
+        get { read(key: Keys.accessToken) }
+    }
+
+    var refreshToken: String? {
+        get { read(key: Keys.refreshToken) }
+    }
+
+    func saveTokens(access: String, refresh: String) {
+        save(key: Keys.accessToken, value: access)
+        save(key: Keys.refreshToken, value: refresh)
+    }
+
+    func clearTokens() {
+        delete(key: Keys.accessToken)
+        delete(key: Keys.refreshToken)
+    }
+
+    // MARK: - Keychain Operations
+
+    private func save(key: String, value: String) {
+        guard let data = value.data(using: .utf8) else { return }
+        delete(key: key)
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key.rawValue,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
-
-        let status = SecItemAdd(query as CFDictionary, nil)
-        guard status == errSecSuccess else {
-            throw KeychainError.saveFailed(status)
-        }
+        SecItemAdd(query as CFDictionary, nil)
     }
 
-    func save(_ string: String, for key: KeychainKey) throws {
-        guard let data = string.data(using: .utf8) else {
-            throw KeychainError.encodingFailed
-        }
-        try save(data, for: key)
-    }
-
-    func load(for key: KeychainKey) -> Data? {
+    private func read(key: String) -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key.rawValue,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
             kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecMatchLimit as String: kSecMatchLimitOne
         ]
 
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess else { return nil }
-        return result as? Data
-    }
-
-    func loadString(for key: KeychainKey) -> String? {
-        guard let data = load(for: key) else { return nil }
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
         return String(data: data, encoding: .utf8)
     }
 
-    func delete(for key: KeychainKey) throws {
+    private func delete(key: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key.rawValue,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key
         ]
-
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.deleteFailed(status)
-        }
-    }
-
-    func deleteAll() {
-        try? delete(for: .accessToken)
-        try? delete(for: .refreshToken)
-    }
-}
-
-enum KeychainError: Error, LocalizedError {
-    case saveFailed(OSStatus)
-    case deleteFailed(OSStatus)
-    case encodingFailed
-
-    var errorDescription: String? {
-        switch self {
-        case .saveFailed(let status): return "Keychain save failed: \(status)"
-        case .deleteFailed(let status): return "Keychain delete failed: \(status)"
-        case .encodingFailed: return "Failed to encode string to data"
-        }
+        SecItemDelete(query as CFDictionary)
     }
 }

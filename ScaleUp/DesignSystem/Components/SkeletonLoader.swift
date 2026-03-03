@@ -2,53 +2,35 @@ import SwiftUI
 
 struct SkeletonLoader: View {
     var width: CGFloat? = nil
-    var height: CGFloat = 20
+    var height: CGFloat? = nil
     var cornerRadius: CGFloat = CornerRadius.small
 
-    @State private var isAnimating = false
+    @State private var shimmerOffset: CGFloat = -1
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius)
-            .fill(ColorTokens.surfaceElevatedDark)
-            .frame(width: width, height: height)
+            .fill(ColorTokens.surfaceElevated)
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(shimmerGradient)
-                    .offset(x: isAnimating ? 300 : -300)
+                GeometryReader { geo in
+                    LinearGradient(
+                        colors: [
+                            .clear,
+                            ColorTokens.surface.opacity(0.5),
+                            .clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: geo.size.width * 0.6)
+                    .offset(x: shimmerOffset * geo.size.width)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .frame(width: width, height: height)
             .onAppear {
-                withAnimation(
-                    .linear(duration: 1.5)
-                    .repeatForever(autoreverses: false)
-                ) {
-                    isAnimating = true
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    shimmerOffset = 1.5
                 }
             }
-    }
-
-    private var shimmerGradient: LinearGradient {
-        LinearGradient(
-            colors: [
-                .clear,
-                ColorTokens.surfaceDark.opacity(0.4),
-                .clear,
-            ],
-            startPoint: .leading,
-            endPoint: .trailing
-        )
-    }
-}
-
-// MARK: - Skeleton Card (for content card placeholders)
-
-struct SkeletonCard: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            SkeletonLoader(height: 110, cornerRadius: CornerRadius.small + 4)
-            SkeletonLoader(width: 140, height: 14)
-            SkeletonLoader(width: 100, height: 10)
-        }
-        .frame(width: 180)
     }
 }

@@ -1,7 +1,5 @@
 import SwiftUI
 
-// MARK: - Quiz Session View Model
-
 @Observable
 @MainActor
 final class QuizSessionViewModel {
@@ -9,195 +7,232 @@ final class QuizSessionViewModel {
     // MARK: - State
 
     var quiz: Quiz?
-    var attempt: QuizAttempt?
-    var currentQuestionIndex: Int = 0
-    var selectedAnswer: String?
-    var answers: [Int: String] = [:]
-    var isSubmitting: Bool = false
-    var isCompleted: Bool = false
-    var questionStartTime: Date = .now
-    var error: APIError?
+    var attemptId: String?
+    var currentIndex = 0
+    var answers: [Int: String] = [:]   // questionIndex → "A"/"B"/"C"/"D"
+    var textResponses: [Int: String] = [:]  // questionIndex → text response
+    var timeTaken: [Int: Double] = [:]
+    var timeRemaining: Int = 60
+    var isSubmitting = false
+    var isCompleting = false
+    var isStarting = false
+    var hasCompleted = false
+    var completedAttempt: QuizAttempt?
+    var errorMessage: String?
 
-    // MARK: - Dependencies
+    // Timer
+    private var timerTask: Task<Void, Never>?
+    private var questionStartTime: Date?
 
-    private let quizService: QuizService
+    private let quizService = QuizService()
 
-    // MARK: - Init
+    // MARK: - Computed
 
-    init(quizService: QuizService) {
-        self.quizService = quizService
-    }
-
-    // MARK: - Computed Properties
-
-    var totalQuestions: Int {
-        quiz?.questions.count ?? 0
-    }
-
+    var totalQuestions: Int { quiz?.totalQuestions ?? 0 }
     var progress: Double {
         guard totalQuestions > 0 else { return 0 }
-        return Double(currentQuestionIndex) / Double(totalQuestions)
+        return Double(currentIndex + 1) / Double(totalQuestions)
     }
 
     var currentQuestion: QuizQuestion? {
-        guard let quiz, currentQuestionIndex < quiz.questions.count else { return nil }
-        return quiz.questions[currentQuestionIndex]
+        guard let quiz, currentIndex < quiz.questions.count else { return nil }
+        return quiz.questions[currentIndex]
+    }
+
+    var selectedAnswer: String? {
+        answers[currentIndex]
     }
 
     var isLastQuestion: Bool {
-        currentQuestionIndex >= totalQuestions - 1
+        currentIndex >= totalQuestions - 1
     }
 
-    var hasSelectedAnswer: Bool {
-        selectedAnswer != nil
+    var answeredCount: Int {
+        answers.count
+    }
+
+    var timeRemainingFormatted: String {
+        let mins = timeRemaining / 60
+        let secs = timeRemaining % 60
+        return String(format: "%d:%02d", mins, secs)
+    }
+
+    var currentQuestionTimeLimit: Int {
+        currentQuestion?.effectiveTimeLimit ?? quiz?.timePerQuestionSeconds ?? 60
+    }
+
+    var timeRemainingProgress: Double {
+        return Double(timeRemaining) / Double(currentQuestionTimeLimit)
+    }
+
+    var timeColor: Color {
+        if timeRemaining <= 10 { return .red }
+        if timeRemaining <= 20 { return .orange }
+        return ColorTokens.gold
     }
 
     // MARK: - Start Quiz
 
-    /// Starts a quiz attempt and loads the quiz data.
-    func startQuiz(id: String) async {
-        isSubmitting = true
-        error = nil
+    var currentTextResponse: String {
+        get { textResponses[currentIndex] ?? "" }
+        set { textResponses[currentIndex] = newValue.isEmpty ? nil : newValue }
+    }
+
+    var currentQuestionHasTextInput: Bool {
+        currentQuestion?.allowTextResponse == true
+    }
+
+    var currentQuestionScenario: String? {
+        currentQuestion?.scenario
+    }
+
+    // MARK: - Start Quiz
+
+    func startQuiz(_ quiz: Quiz) async {
+        self.quiz = quiz
+        isStarting = true
+        currentIndex = 0
+        answers = [:]
+        textResponses = [:]
+        timeTaken = [:]
+        hasCompleted = false
 
         do {
-            async let attemptTask = quizService.start(id: id)
-            async let quizTask = quizService.getQuiz(id: id)
+            let attempt = try await quizService.startQuiz(id: quiz.id)
+            attemptId = attempt.id
 
-            let (newAttempt, loadedQuiz) = try await (attemptTask, quizTask)
-            self.attempt = newAttempt
-            self.quiz = loadedQuiz
-            self.currentQuestionIndex = 0
-            self.questionStartTime = .now
-            self.answers = [:]
-            self.selectedAnswer = nil
-            self.isCompleted = false
-        } catch let apiError as APIError {
-            self.error = apiError
+            // Restore any existing answers
+            for answer in attempt.answers {
+                answers[answer.questionIndex] = answer.selectedAnswer
+            }
         } catch {
-            self.error = .unknown(0, error.localizedDescription)
+            // Continue with local-only mode
+            attemptId = "local-\(quiz.id)"
         }
 
-        isSubmitting = false
+        isStarting = false
+        startTimer()
     }
 
     // MARK: - Select Answer
 
-    /// Sets the selected answer with haptic feedback.
-    func selectAnswer(_ answer: String) {
+    func selectAnswer(_ label: String) {
         guard !isSubmitting else { return }
-        selectedAnswer = answer
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
-    }
+        Haptics.selection()
 
-    // MARK: - Submit Answer
+        let elapsed = questionStartTime.map { Date().timeIntervalSince($0) } ?? 0
+        answers[currentIndex] = label
+        timeTaken[currentIndex] = elapsed
 
-    /// Submits the selected answer for the current question and advances to the next.
-    func submitAnswer() async {
-        guard !isSubmitting, !isCompleted else { return }
-        guard let attempt, let selectedAnswer else { return }
-        guard let quiz else { return }
-
-        isSubmitting = true
-
-        let timeTaken = Date().timeIntervalSince(questionStartTime)
-
-        do {
-            try await quizService.answer(
-                id: quiz.id,
-                questionIndex: currentQuestionIndex,
-                selectedAnswer: selectedAnswer,
-                timeTaken: timeTaken
+        // Submit to server (fire-and-forget) — include text response if present
+        let qi = currentIndex
+        let quizId = quiz?.id ?? ""
+        let text = textResponses[currentIndex]
+        Task {
+            _ = try? await quizService.submitAnswer(
+                quizId: quizId,
+                questionIndex: qi,
+                selectedAnswer: label,
+                timeTaken: elapsed,
+                textResponse: text
             )
-            answers[currentQuestionIndex] = selectedAnswer
-
-            if isLastQuestion {
-                await completeQuiz()
-            } else {
-                nextQuestion()
-            }
-        } catch {
-            print("[QuizSession] submitAnswer error: \(error)")
-            // Don't block — advance locally even if API fails
-            answers[currentQuestionIndex] = selectedAnswer
-            if isLastQuestion {
-                await completeQuiz()
-            } else {
-                nextQuestion()
-            }
-        }
-
-        isSubmitting = false
-    }
-
-    // MARK: - Skip Question
-
-    /// Submits a skip for the current question and advances.
-    func skipQuestion() async {
-        guard let attempt else { return }
-        guard let quiz else { return }
-
-        isSubmitting = true
-
-        let timeTaken = Date().timeIntervalSince(questionStartTime)
-
-        do {
-            try await quizService.answer(
-                id: quiz.id,
-                questionIndex: currentQuestionIndex,
-                selectedAnswer: "skipped",
-                timeTaken: timeTaken
-            )
-            answers[currentQuestionIndex] = "__skipped__"
-
-            if isLastQuestion {
-                await completeQuiz()
-            } else {
-                nextQuestion()
-            }
-        } catch {
-            print("[QuizSession] skipQuestion error: \(error)")
-            // Don't block — advance locally even if API fails
-            answers[currentQuestionIndex] = "__skipped__"
-            if isLastQuestion {
-                await completeQuiz()
-            } else {
-                nextQuestion()
-            }
-        }
-
-        isSubmitting = false
-    }
-
-    // MARK: - Complete Quiz
-
-    /// Completes the quiz attempt and loads results.
-    func completeQuiz() async {
-        guard !isCompleted else { return }
-        guard let attempt else { return }
-        guard let quiz else { return }
-
-        do {
-            let completedAttempt = try await quizService.complete(id: quiz.id)
-            self.attempt = completedAttempt
-            self.isCompleted = true
-
-            let generator = UINotificationFeedbackGenerator()
-            generator.notificationOccurred(.success)
-        } catch {
-            print("[QuizSession] completeQuiz error: \(error)")
-            // Mark completed locally so user isn't stuck
-            self.isCompleted = true
         }
     }
 
-    // MARK: - Next Question
+    // MARK: - Navigation
 
-    /// Advances to the next question and resets selection state.
     func nextQuestion() {
-        guard currentQuestionIndex < totalQuestions - 1 else { return }
-        currentQuestionIndex += 1
-        selectedAnswer = nil
-        questionStartTime = .now
+        guard !isLastQuestion else { return }
+        stopTimer()
+        currentIndex += 1
+        startTimer()
+    }
+
+    func previousQuestion() {
+        guard currentIndex > 0 else { return }
+        stopTimer()
+        currentIndex -= 1
+        startTimer()
+    }
+
+    func goToQuestion(_ index: Int) {
+        guard index >= 0, index < totalQuestions else { return }
+        stopTimer()
+        currentIndex = index
+        startTimer()
+    }
+
+    // MARK: - Skip
+
+    func skipQuestion() {
+        if answers[currentIndex] == nil {
+            answers[currentIndex] = "skipped"
+
+            let quizId = quiz?.id ?? ""
+            let qi = currentIndex
+            let elapsed = questionStartTime.map { Date().timeIntervalSince($0) } ?? 0
+            Task {
+                _ = try? await quizService.submitAnswer(
+                    quizId: quizId,
+                    questionIndex: qi,
+                    selectedAnswer: "skipped",
+                    timeTaken: elapsed
+                )
+            }
+        }
+
+        if isLastQuestion {
+            Task { await completeQuiz() }
+        } else {
+            nextQuestion()
+        }
+    }
+
+    // MARK: - Complete
+
+    func completeQuiz() async {
+        guard !isCompleting, let quiz else { return }
+        isCompleting = true
+        stopTimer()
+
+        do {
+            let result = try await quizService.completeQuiz(id: quiz.id)
+            completedAttempt = result
+            hasCompleted = true
+        } catch {
+            // Build local result
+            hasCompleted = true
+        }
+
+        isCompleting = false
+    }
+
+    // MARK: - Timer
+
+    private func startTimer() {
+        stopTimer()
+        timeRemaining = currentQuestionTimeLimit
+        questionStartTime = Date()
+
+        timerTask = Task {
+            while timeRemaining > 0 && !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                timeRemaining -= 1
+            }
+            // Auto-skip on timeout
+            if timeRemaining <= 0 && !Task.isCancelled {
+                skipQuestion()
+            }
+        }
+    }
+
+    private func stopTimer() {
+        timerTask?.cancel()
+        timerTask = nil
+    }
+
+    func cleanup() {
+        stopTimer()
     }
 }

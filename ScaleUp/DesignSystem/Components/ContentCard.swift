@@ -1,202 +1,122 @@
 import SwiftUI
-import NukeUI
 
 struct ContentCard: View {
-    let title: String
-    let creatorName: String
-    let domain: String
-    let thumbnailURL: String?
-    let duration: Int?
-    var rating: Double?
-    var viewCount: Int?
-    var progress: Double?
-    var isNew: Bool = false
-    var isYouTube: Bool = false
+    let content: Content
+    var width: CGFloat = 200
+    var progress: Double? = nil
+
+    private var height: CGFloat { width * 9 / 16 }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Thumbnail
-            ZStack(alignment: .bottomLeading) {
-                thumbnailView
-                    .frame(width: 180, height: 110)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small + 4))
-
-                // Subtle gradient overlay at bottom
-                VStack {
-                    Spacer()
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.5)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 40)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small + 4))
-
-                // Duration badge — top right
-                if let duration {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Text(formatDuration(duration))
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(.black.opacity(0.7))
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                        }
-                        Spacer()
-                    }
-                    .padding(Spacing.xs + 2)
-                }
-
-                // NEW badge — top left
-                if isNew {
-                    VStack {
-                        HStack {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            // Thumbnail with overlays
+            thumbnailImage
+                .frame(width: width, height: height)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                .overlay(alignment: .topLeading) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        contentTypeBadge
+                        if content.isNew {
                             Text("NEW")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
+                                .font(Typography.micro)
+                                .foregroundStyle(ColorTokens.buttonPrimaryText)
                                 .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(ColorTokens.primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                            Spacer()
+                                .padding(.vertical, 2)
+                                .background(ColorTokens.gold)
+                                .clipShape(Capsule())
                         }
-                        Spacer()
                     }
-                    .padding(Spacing.xs + 2)
+                    .padding(6)
                 }
-
-                // Progress bar at bottom
-                if let progress, progress > 0 {
-                    VStack {
-                        Spacer()
+                .overlay(alignment: .bottomTrailing) {
+                    if !content.formattedDuration.isEmpty {
+                        Text(content.formattedDuration)
+                            .font(Typography.micro)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(.black.opacity(0.7))
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .padding(6)
+                    }
+                }
+                .overlay(alignment: .bottom) {
+                    if let progress, progress > 0 {
                         GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .fill(.white.opacity(0.2))
-                                Rectangle()
-                                    .fill(ColorTokens.primary)
-                                    .frame(width: geo.size.width * progress)
+                            VStack {
+                                Spacer()
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(ColorTokens.gold)
+                                    .frame(width: geo.size.width * progress, height: 3)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         }
-                        .frame(height: 3)
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
                     }
                 }
-            }
 
-            // Metadata
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+            // Title
+            Text(content.title)
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .lineLimit(2)
+                .frame(width: width, alignment: .leading)
 
-                Text(creatorName)
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundStyle(ColorTokens.textSecondaryDark)
-                    .lineLimit(1)
-
+            // Creator
+            if let creator = content.creatorId {
                 HStack(spacing: 4) {
-                    Text(domain)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(ColorTokens.primary.opacity(0.8))
+                    Text(creator.displayName)
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
 
-                    if let rating {
-                        Text("·")
-                            .font(.system(size: 10))
-                            .foregroundStyle(ColorTokens.textTertiaryDark)
-
-                        HStack(spacing: 2) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 8))
-                                .foregroundStyle(ColorTokens.warning)
-                            Text(String(format: "%.1f", rating))
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(ColorTokens.textSecondaryDark)
-                        }
-                    }
-
-                    if let viewCount {
-                        Text("·")
-                            .font(.system(size: 10))
-                            .foregroundStyle(ColorTokens.textTertiaryDark)
-                        Text(formatViewCount(viewCount))
-                            .font(.system(size: 10))
-                            .foregroundStyle(ColorTokens.textTertiaryDark)
+                    if let tier = creator.tier {
+                        TierBadge(tier: tier, compact: true)
                     }
                 }
             }
         }
-        .frame(width: 180)
-        .padding(Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .fill(ColorTokens.surfaceDark)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .stroke(
-                    LinearGradient(
-                        colors: [
-                            ColorTokens.surfaceElevatedDark,
-                            ColorTokens.primary.opacity(0.12),
-                            ColorTokens.surfaceElevatedDark,
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
+        .frame(width: width)
     }
 
     @ViewBuilder
-    private var thumbnailView: some View {
-        if let thumbnailURL, let url = URL(string: thumbnailURL) {
-            LazyImage(url: url) { state in
-                if let image = state.image {
+    private var thumbnailImage: some View {
+        if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .success(let image):
                     image.resizable().aspectRatio(contentMode: .fill)
-                } else if state.error != nil {
-                    // On error, show placeholder
-                    placeholderView
-                } else {
-                    // Loading state
-                    placeholderView
+                case .failure:
+                    thumbnailPlaceholder
+                default:
+                    SkeletonLoader()
                 }
             }
-            .frame(width: 180, height: 110)
         } else {
-            placeholderView
+            thumbnailPlaceholder
         }
     }
 
-    private var placeholderView: some View {
-        Rectangle()
-            .fill(ColorTokens.surfaceElevatedDark)
-            .overlay {
-                Image(systemName: "play.rectangle.fill")
-                    .font(.system(size: 24))
-                    .foregroundStyle(ColorTokens.textTertiaryDark)
-            }
-    }
-
-    private func formatDuration(_ seconds: Int) -> String {
-        let minutes = seconds / 60
-        let secs = seconds % 60
-        return String(format: "%d:%02d", minutes, secs)
-    }
-
-    private func formatViewCount(_ count: Int) -> String {
-        if count >= 1_000_000 {
-            return String(format: "%.1fM", Double(count) / 1_000_000)
-        } else if count >= 1_000 {
-            return String(format: "%.1fK", Double(count) / 1_000)
+    private var contentTypeBadge: some View {
+        HStack(spacing: 3) {
+            Image(systemName: content.contentType.badgeIcon)
+                .font(.system(size: 9, weight: .bold))
+            Text(content.contentType.badgeLabel)
+                .font(.system(size: 10, weight: .black))
         }
-        return "\(count) views"
+        .foregroundStyle(.white)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(content.contentType.badgeColor)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
+    }
+
+    private var thumbnailPlaceholder: some View {
+        ZStack {
+            ColorTokens.surfaceElevated
+            Image(systemName: content.contentType == .video ? "play.rectangle.fill" : "doc.text.fill")
+                .font(.system(size: 28))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
     }
 }

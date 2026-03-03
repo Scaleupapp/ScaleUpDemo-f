@@ -1,122 +1,228 @@
 import SwiftUI
-
-// MARK: - Edit Profile View Model
+import PhotosUI
 
 @Observable
 @MainActor
 final class EditProfileViewModel {
 
-    // MARK: - Editable Fields
+    // MARK: - Form Fields
 
-    var firstName: String = ""
-    var lastName: String = ""
-    var bio: String = ""
-    var phone: String = ""
+    var firstName = ""
+    var lastName = ""
+    var username = ""
+    var bio = ""
+    var location = ""
+    var skills: [String] = []
+    var newSkill = ""
+    var education: [EducationInput] = []
+    var workExperience: [WorkExperienceInput] = []
+
+    // MARK: - Avatar
+
+    var selectedPhotoItem: PhotosPickerItem?
+    var avatarImage: UIImage?
+    var avatarURL: String?
+    var isUploadingAvatar = false
+
+    // MARK: - Add Education Form
+
+    var showAddEducation = false
+    var newEduDegree = ""
+    var newEduInstitution = ""
+    var newEduYear = ""
+    var newEduCurrently = false
+
+    // MARK: - Add Work Form
+
+    var showAddWork = false
+    var newWorkRole = ""
+    var newWorkCompany = ""
+    var newWorkYears = ""
+    var newWorkCurrently = false
 
     // MARK: - State
 
     var isSaving = false
-    var error: APIError?
-
-    // MARK: - Original Values (for change detection)
-
-    private var originalFirstName: String = ""
-    private var originalLastName: String = ""
-    private var originalBio: String = ""
-    private var originalPhone: String = ""
-
-    // MARK: - Dependencies
-
-    private let userService: UserService
-    private let hapticManager: HapticManager
-
-    // MARK: - Constants
-
-    static let bioMaxLength = 300
-
-    // MARK: - Init
-
-    init(userService: UserService, hapticManager: HapticManager) {
-        self.userService = userService
-        self.hapticManager = hapticManager
-    }
-
-    // MARK: - Populate
-
-    /// Fills editable fields from the current user data.
-    func populate(from user: User) {
-        firstName = user.firstName
-        lastName = user.lastName
-        bio = user.bio ?? ""
-        phone = user.phone ?? ""
-
-        originalFirstName = user.firstName
-        originalLastName = user.lastName
-        originalBio = user.bio ?? ""
-        originalPhone = user.phone ?? ""
-    }
-
-    // MARK: - Has Changes
-
-    /// Returns `true` if any field differs from the original value.
+    var errorMessage: String?
     var hasChanges: Bool {
-        firstName != originalFirstName ||
-        lastName != originalLastName ||
-        bio != originalBio ||
-        phone != originalPhone
+        firstName != originalFirstName || lastName != originalLastName ||
+        username != originalUsername || bio != originalBio ||
+        location != originalLocation || skills != originalSkills ||
+        education.count != originalEducationCount ||
+        workExperience.count != originalWorkCount ||
+        avatarImage != nil
     }
 
-    // MARK: - Validation
+    // MARK: - Private
 
-    var isValid: Bool {
-        !firstName.trimmingCharacters(in: .whitespaces).isEmpty &&
-        !lastName.trimmingCharacters(in: .whitespaces).isEmpty
+    private let userService = UserService()
+    private var originalFirstName = ""
+    private var originalLastName = ""
+    private var originalUsername = ""
+    private var originalBio = ""
+    private var originalLocation = ""
+    private var originalSkills: [String] = []
+    private var originalEducationCount = 0
+    private var originalWorkCount = 0
+
+    // MARK: - Setup
+
+    func configure(with user: User) {
+        firstName = user.firstName
+        lastName = user.lastName ?? ""
+        username = user.username ?? ""
+        bio = user.bio ?? ""
+        location = user.location ?? ""
+        skills = user.skills ?? []
+        avatarURL = user.profilePicture
+        education = (user.education ?? []).map {
+            EducationInput(degree: $0.degree, institution: $0.institution,
+                          yearOfCompletion: $0.yearOfCompletion, currentlyPursuing: $0.currentlyPursuing)
+        }
+        workExperience = (user.workExperience ?? []).map {
+            WorkExperienceInput(role: $0.role, company: $0.company,
+                               years: $0.years, currentlyWorking: $0.currentlyWorking)
+        }
+
+        originalFirstName = firstName
+        originalLastName = lastName
+        originalUsername = username
+        originalBio = bio
+        originalLocation = location
+        originalSkills = skills
+        originalEducationCount = education.count
+        originalWorkCount = workExperience.count
     }
 
-    var bioCharacterCount: Int {
-        bio.count
+    // MARK: - Photo Selection
+
+    func handlePhotoSelection() async {
+        guard let item = selectedPhotoItem else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self) else { return }
+        guard let image = UIImage(data: data) else { return }
+        avatarImage = image
     }
 
-    var bioCharacterCountText: String {
-        "\(bio.count)/\(Self.bioMaxLength)"
+    func uploadAvatarIfNeeded() async -> User? {
+        guard let image = avatarImage else { return nil }
+        guard let jpegData = image.jpegData(compressionQuality: 0.8) else { return nil }
+
+        isUploadingAvatar = true
+        do {
+            let updated = try await userService.uploadAvatar(imageData: jpegData)
+            isUploadingAvatar = false
+            return updated
+        } catch {
+            isUploadingAvatar = false
+            return nil
+        }
     }
 
-    var isBioOverLimit: Bool {
-        bio.count > Self.bioMaxLength
+    // MARK: - Skills
+
+    func addSkill() {
+        let trimmed = newSkill.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty, !skills.contains(trimmed) else { return }
+        skills.append(trimmed)
+        newSkill = ""
+        Haptics.light()
+    }
+
+    func removeSkill(_ skill: String) {
+        skills.removeAll { $0 == skill }
+        Haptics.light()
+    }
+
+    // MARK: - Education
+
+    func addEducation() {
+        let degree = newEduDegree.trimmingCharacters(in: .whitespacesAndNewlines)
+        let institution = newEduInstitution.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !degree.isEmpty, !institution.isEmpty else { return }
+
+        let entry = EducationInput(
+            degree: degree,
+            institution: institution,
+            yearOfCompletion: Int(newEduYear),
+            currentlyPursuing: newEduCurrently ? true : nil
+        )
+        education.append(entry)
+        clearEducationForm()
+        showAddEducation = false
+        Haptics.light()
+    }
+
+    func clearEducationForm() {
+        newEduDegree = ""
+        newEduInstitution = ""
+        newEduYear = ""
+        newEduCurrently = false
+    }
+
+    // MARK: - Work Experience
+
+    func addWorkExperience() {
+        let role = newWorkRole.trimmingCharacters(in: .whitespacesAndNewlines)
+        let company = newWorkCompany.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !role.isEmpty, !company.isEmpty else { return }
+
+        let entry = WorkExperienceInput(
+            role: role,
+            company: company,
+            years: Int(newWorkYears),
+            currentlyWorking: newWorkCurrently ? true : nil
+        )
+        workExperience.append(entry)
+        clearWorkForm()
+        showAddWork = false
+        Haptics.light()
+    }
+
+    func clearWorkForm() {
+        newWorkRole = ""
+        newWorkCompany = ""
+        newWorkYears = ""
+        newWorkCurrently = false
     }
 
     // MARK: - Save
 
-    /// Calls the API to update the user profile. Returns the updated `User` on success.
     func save() async -> User? {
-        guard hasChanges, isValid, !isBioOverLimit else { return nil }
-
         isSaving = true
-        error = nil
+        errorMessage = nil
 
-        do {
-            let fullName = "\(firstName.trimmingCharacters(in: .whitespaces)) \(lastName.trimmingCharacters(in: .whitespaces))"
-            let trimmedBio = bio.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trimmedPhone = phone.trimmingCharacters(in: .whitespaces)
-
-            let updatedUser = try await userService.updateMe(
-                name: fullName,
-                bio: trimmedBio.isEmpty ? nil : trimmedBio,
-                phone: trimmedPhone.isEmpty ? nil : trimmedPhone
-            )
-
-            hapticManager.success()
-            isSaving = false
-            return updatedUser
-        } catch let apiError as APIError {
-            self.error = apiError
-            hapticManager.error()
-        } catch {
-            self.error = .unknown(0, error.localizedDescription)
-            hapticManager.error()
+        // Upload avatar first if changed
+        var latestUser: User?
+        if avatarImage != nil {
+            latestUser = await uploadAvatarIfNeeded()
         }
 
-        isSaving = false
-        return nil
+        let body = UpdateProfileRequest(
+            firstName: firstName.isEmpty ? nil : firstName,
+            lastName: lastName.isEmpty ? nil : lastName,
+            username: username.isEmpty ? nil : username,
+            bio: bio.isEmpty ? nil : bio,
+            location: location.isEmpty ? nil : location,
+            skills: skills.isEmpty ? nil : skills,
+            education: education.isEmpty ? nil : education,
+            workExperience: workExperience.isEmpty ? nil : workExperience
+        )
+
+        do {
+            let updated = try await userService.updateProfile(body: body)
+            Haptics.success()
+            isSaving = false
+            return updated
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+            Haptics.error()
+            isSaving = false
+            return latestUser // Return avatar-updated user if profile update fails
+        } catch {
+            errorMessage = "Failed to save changes"
+            Haptics.error()
+            isSaving = false
+            return latestUser
+        }
     }
 }

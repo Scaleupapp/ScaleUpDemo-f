@@ -1,370 +1,369 @@
 import SwiftUI
-
-// MARK: - Player View Model
+import AVFoundation
 
 @Observable
 @MainActor
 final class PlayerViewModel {
 
-    // MARK: - Content State
+    // MARK: - State
 
     var content: Content?
-    var similarContent: [Content] = []
-    var comments: [Comment] = []
+    var isLoading = false
+    var errorMessage: String?
 
-    // MARK: - Player State
-
-    var isPlaying: Bool = false
+    // Playback
+    var isPlaying = false
     var currentTime: Double = 0
     var duration: Double = 0
-    var isPlayerReady: Bool = false
-    var streamURL: String?
+    var progress: Double { duration > 0 ? currentTime / duration : 0 }
     var playbackSpeed: Float = 1.0
-    var isMuted: Bool = false
-    var isFullscreen: Bool = false
 
-    // MARK: - Interaction State
-
-    var isLiked: Bool = false
-    var isSaved: Bool = false
-    var userRating: Int = 0
-
-    // MARK: - Counts (mutable for optimistic updates)
-
+    // Interactions
+    var isLiked = false
+    var isSaved = false
     var likeCount: Int = 0
     var saveCount: Int = 0
+    var userRating: Int = 0
+
+    // Related
+    var relatedContent: [Content] = []
+
+    // Description
+    var isDescriptionExpanded = false
+    var isAISummaryExpanded = false
+
+    // Comments
+    var comments: [Comment] = []
+    var isLoadingComments = false
+    var newCommentText = ""
+    var isPostingComment = false
     var commentCount: Int = 0
 
-    // MARK: - UI State
+    // Playlists
+    var playlists: [Playlist] = []
+    var showPlaylistSheet = false
+    var isLoadingPlaylists = false
+    var newPlaylistName = ""
+    var playlistAddedMessage: String?
+    var playlistError: String?
 
-    var isControlsVisible: Bool = true
-    var isAISummaryExpanded: Bool = false
-    var isLoading: Bool = false
-    var isLoadingComments: Bool = false
-    var isSubmittingComment: Bool = false
-    var error: APIError?
+    // Speed options
+    let speedOptions: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    var showSpeedPicker = false
 
-    // MARK: - Comment Input
+    // MARK: - Player
 
-    var newCommentText: String = ""
+    private(set) var player: AVPlayer?
+    private var timeObserver: Any?
+    private var progressTimer: Task<Void, Never>?
 
-    // MARK: - Dependencies
-
-    private let contentService: ContentService
-    private let progressService: ProgressService
-    private let recommendationService: RecommendationService
-
-    // MARK: - Progress Tracking
-
-    private let progressTracker: ProgressTracker
-    private var lastSyncTime: Double = 0
-
-    // MARK: - Auto-Hide Timer
-
-    private var controlsHideTask: Task<Void, Never>?
-
-    // MARK: - Init
-
-    init(
-        contentService: ContentService,
-        progressService: ProgressService,
-        recommendationService: RecommendationService
-    ) {
-        self.contentService = contentService
-        self.progressService = progressService
-        self.recommendationService = recommendationService
-        self.progressTracker = ProgressTracker(progressService: progressService)
-    }
+    private let playerService = PlayerService()
+    private let contentService = ContentService()
 
     // MARK: - Load Content
 
-    /// Fetches content (critical), then similar content and comments (non-critical).
     func loadContent(id: String) async {
-        guard !isLoading else { return }
-
         isLoading = true
-        error = nil
+        errorMessage = nil
 
-        // Critical: fetch the content detail first
         do {
-            let fetchedContent = try await contentService.getContent(id: id)
-            content = fetchedContent
+            content = try await contentService.fetchContent(id: id)
+            likeCount = content?.likeCount ?? 0
+            saveCount = content?.saveCount ?? 0
+            commentCount = content?.commentCount ?? 0
 
-            // Sync counts from fetched content
-            likeCount = fetchedContent.likeCount
-            saveCount = fetchedContent.saveCount
-            commentCount = fetchedContent.commentCount
-
-            // Fetch presigned stream URL for S3 playback
-            do {
-                streamURL = try await contentService.getStreamUrl(id: id)
-            } catch {
-                // Fall back to the raw content URL if stream endpoint fails
-                streamURL = fetchedContent.contentURL
+            // Load stream URL
+            if let stream = try? await playerService.fetchStreamURL(contentId: id),
+               let urlString = stream.resolvedURL,
+               let url = URL(string: urlString) {
+                setupPlayer(url: url)
             }
-
-            // Start progress tracking
-            await progressTracker.startTracking(contentId: id)
-
-            // Start auto-hide timer for controls
-            scheduleControlsHide()
-        } catch let apiError as APIError {
-            error = apiError
-            isLoading = false
-            return
         } catch {
-            self.error = .networkError(error)
-            isLoading = false
-            return
+            loadMockContent(id: id)
         }
 
-        // Non-critical: similar content and comments — fail silently
-        do {
-            similarContent = try await recommendationService.similar(id: id)
-        } catch {
-            // Similar content is supplementary — don't block the player
-        }
-
-        do {
-            let result = try await contentService.getComments(id: id, page: 1, limit: 20)
-            comments = result.items
-        } catch {
-            // Comments are supplementary — don't block the player
-        }
+        // Load related content and comments in parallel
+        async let relatedTask: () = loadRelated(id: id)
+        async let commentsTask: () = loadComments(id: id)
+        _ = await (relatedTask, commentsTask)
 
         isLoading = false
     }
 
-    // MARK: - Toggle Like (Optimistic)
+    private func loadRelated(id: String) async {
+        if let related = try? await contentService.fetchSimilar(contentId: id) {
+            relatedContent = related
+        }
+    }
+
+    private func loadComments(id: String) async {
+        isLoadingComments = true
+        if let response = try? await playerService.fetchComments(contentId: id) {
+            comments = response.comments
+        }
+        isLoadingComments = false
+    }
+
+    // MARK: - Player Setup
+
+    private func setupPlayer(url: URL) {
+        let playerItem = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: playerItem)
+
+        // Time observer
+        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
+        timeObserver = player?.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            Task { @MainActor in
+                guard let self else { return }
+                self.currentTime = time.seconds
+                if let dur = self.player?.currentItem?.duration.seconds, dur.isFinite {
+                    self.duration = dur
+                }
+            }
+        }
+
+        startProgressTracking()
+    }
+
+    // MARK: - Playback Controls
+
+    func togglePlayPause() {
+        guard let player else { return }
+        if isPlaying {
+            player.pause()
+        } else {
+            player.play()
+            player.rate = playbackSpeed
+        }
+        isPlaying.toggle()
+    }
+
+    func seek(to fraction: Double) {
+        guard let player, duration > 0 else { return }
+        let time = CMTime(seconds: fraction * duration, preferredTimescale: 600)
+        player.seek(to: time)
+    }
+
+    func seekRelative(seconds: Double) {
+        guard let player else { return }
+        let newTime = max(0, min(duration, currentTime + seconds))
+        let time = CMTime(seconds: newTime, preferredTimescale: 600)
+        player.seek(to: time)
+    }
+
+    func setSpeed(_ speed: Float) {
+        playbackSpeed = speed
+        if isPlaying {
+            player?.rate = speed
+        }
+    }
+
+    // MARK: - Progress Tracking
+
+    private func startProgressTracking() {
+        progressTimer?.cancel()
+        progressTimer = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled else { return }
+                await self?.sendProgressUpdate()
+            }
+        }
+    }
+
+    private func sendProgressUpdate() async {
+        guard let contentId = content?.id else { return }
+        let _ = try? await playerService.updateProgress(
+            contentId: contentId,
+            currentPosition: Int(currentTime),
+            totalDuration: Int(duration),
+            timeSpent: Int(currentTime)
+        )
+
+        if progress >= 0.95 {
+            try? await playerService.markComplete(contentId: contentId)
+        }
+    }
+
+    // MARK: - Interactions
 
     func toggleLike() async {
-        guard let contentId = content?.id else { return }
-
+        guard let id = content?.id else { return }
         isLiked.toggle()
         likeCount += isLiked ? 1 : -1
+        Haptics.light()
 
-        do {
-            try await contentService.like(id: contentId)
-        } catch {
-            isLiked.toggle()
-            likeCount += isLiked ? 1 : -1
+        if let response = try? await contentService.toggleLike(contentId: id) {
+            isLiked = response.liked
+            likeCount = response.likeCount
         }
     }
-
-    // MARK: - Toggle Save (Optimistic)
 
     func toggleSave() async {
-        guard let contentId = content?.id else { return }
-
+        guard let id = content?.id else { return }
         isSaved.toggle()
         saveCount += isSaved ? 1 : -1
+        Haptics.light()
 
-        do {
-            try await contentService.save(id: contentId)
-        } catch {
-            isSaved.toggle()
-            saveCount += isSaved ? 1 : -1
+        if let response = try? await contentService.toggleSave(contentId: id) {
+            isSaved = response.saved
+            saveCount = response.saveCount
         }
     }
 
-    // MARK: - Rate Content
-
-    func rateContent(value: Int) async {
-        guard let contentId = content?.id else { return }
-
-        let previousRating = userRating
+    func rate(_ value: Int) async {
+        guard let id = content?.id else { return }
         userRating = value
-
-        do {
-            try await contentService.rate(id: contentId, value: value)
-        } catch {
-            userRating = previousRating
-        }
+        Haptics.success()
+        try? await contentService.rate(contentId: id, value: value)
     }
 
-    // MARK: - Add Comment
+    // MARK: - Comments
 
-    func addComment() async {
-        guard let contentId = content?.id else { return }
+    func postComment() async {
+        guard let id = content?.id, !newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        isPostingComment = true
+        Haptics.light()
 
-        let trimmedText = newCommentText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedText.isEmpty, !isSubmittingComment else { return }
-
-        isSubmittingComment = true
-
-        do {
-            let comment = try await contentService.addComment(id: contentId, text: trimmedText)
+        if let comment = try? await playerService.addComment(contentId: id, text: newCommentText) {
             comments.insert(comment, at: 0)
             commentCount += 1
             newCommentText = ""
+        }
+
+        isPostingComment = false
+    }
+
+    // MARK: - Playlists
+
+    func loadPlaylists() async {
+        isLoadingPlaylists = true
+        playlistError = nil
+        do {
+            playlists = try await playerService.fetchMyPlaylists()
         } catch {
-            // Silently fail — user can retry
+            print("[Playlist] loadPlaylists failed: \(error)")
+            playlistError = "Could not load playlists"
         }
-
-        isSubmittingComment = false
+        isLoadingPlaylists = false
     }
 
-    // MARK: - Time Update
-
-    /// Called from the player views whenever current time updates.
-    /// Updates local state and syncs progress to the backend every 10 seconds.
-    func onTimeUpdate(current: Double, total: Double) {
-        currentTime = current
-        duration = total
-
-        // Sync progress via the ProgressTracker actor
-        Task {
-            await progressTracker.updateTime(current: current, total: total)
+    func addToPlaylist(_ playlist: Playlist) async {
+        guard let contentId = content?.id else {
+            playlistError = "Content not available"
+            return
         }
-    }
+        playlistError = nil
 
-    // MARK: - Video Ended
+        do {
+            _ = try await playerService.addToPlaylist(playlistId: playlist.id, contentId: contentId)
+            Haptics.success()
+            playlistAddedMessage = "Added to \(playlist.title)"
+            showPlaylistSheet = false
 
-    /// Called when the video reaches the end.
-    func onVideoEnded() async {
-        isPlaying = false
-        isControlsVisible = true
-
-        // Mark content as complete
-        await progressTracker.stopTracking(markComplete: true)
-    }
-
-    // MARK: - Play / Pause
-
-    func togglePlayPause() {
-        isPlaying.toggle()
-
-        // Reset auto-hide timer when user interacts
-        if isPlaying {
-            scheduleControlsHide()
-        } else {
-            // Show controls when paused
-            isControlsVisible = true
-            controlsHideTask?.cancel()
-        }
-    }
-
-    // MARK: - Seek
-
-    func seek(to seconds: Double) {
-        currentTime = seconds
-        // The actual seek is handled by the player view binding
-        scheduleControlsHide()
-    }
-
-    // MARK: - Skip Forward / Backward
-
-    func skipForward() {
-        let newTime = min(currentTime + 10, duration)
-        seek(to: newTime)
-    }
-
-    func skipBackward() {
-        let newTime = max(currentTime - 10, 0)
-        seek(to: newTime)
-    }
-
-    // MARK: - Playback Speed
-
-    static let availableSpeeds: [Float] = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
-
-    func setPlaybackSpeed(_ speed: Float) {
-        playbackSpeed = speed
-        scheduleControlsHide()
-    }
-
-    var playbackSpeedLabel: String {
-        playbackSpeed == 1.0 ? "1x" : "\(String(format: "%g", playbackSpeed))x"
-    }
-
-    // MARK: - Mute
-
-    func toggleMute() {
-        isMuted.toggle()
-        scheduleControlsHide()
-    }
-
-    // MARK: - Fullscreen
-
-    func toggleFullscreen() {
-        withAnimation(Animations.standard) {
-            isFullscreen.toggle()
-        }
-
-        // Force orientation change
-        if isFullscreen {
-            OrientationHelper.lockLandscape()
-        } else {
-            OrientationHelper.lockPortrait()
-        }
-
-        scheduleControlsHide()
-    }
-
-    // MARK: - Controls Visibility
-
-    /// Toggles controls visibility and resets the auto-hide timer.
-    func toggleControls() {
-        withAnimation(Animations.standard) {
-            isControlsVisible.toggle()
-        }
-
-        if isControlsVisible && isPlaying {
-            scheduleControlsHide()
-        } else {
-            controlsHideTask?.cancel()
-        }
-    }
-
-    /// Schedules controls to hide after 3 seconds.
-    private func scheduleControlsHide() {
-        controlsHideTask?.cancel()
-
-        controlsHideTask = Task { @MainActor in
-            try? await Task.sleep(for: .seconds(3))
-
-            guard !Task.isCancelled, isPlaying else { return }
-
-            withAnimation(Animations.standard) {
-                isControlsVisible = false
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                playlistAddedMessage = nil
             }
+        } catch {
+            print("[Playlist] addToPlaylist failed: \(error)")
+            Haptics.error()
+            playlistError = "Failed to add to playlist"
+        }
+    }
+
+    func createAndAddToPlaylist() async {
+        let name = newPlaylistName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else {
+            playlistError = "Enter a playlist name"
+            return
+        }
+        playlistError = nil
+
+        do {
+            let playlist = try await playerService.createPlaylist(title: name)
+
+            // Add current content if available
+            if let contentId = content?.id {
+                _ = try await playerService.addToPlaylist(playlistId: playlist.id, contentId: contentId)
+                playlistAddedMessage = "Created \"\(name)\" and added"
+            } else {
+                playlistAddedMessage = "Created \"\(name)\""
+            }
+
+            newPlaylistName = ""
+            showPlaylistSheet = false
+            Haptics.success()
+
+            // Refresh playlists list
+            await loadPlaylists()
+
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                playlistAddedMessage = nil
+            }
+        } catch {
+            print("[Playlist] createAndAddToPlaylist failed: \(error)")
+            Haptics.error()
+            playlistError = "Failed to create playlist"
         }
     }
 
     // MARK: - Cleanup
 
-    /// Performs final progress sync on dismiss and resets orientation.
-    func cleanup() async {
-        controlsHideTask?.cancel()
-        if isFullscreen {
-            isFullscreen = false
-            OrientationHelper.resetToDefault()
+    func cleanup() {
+        if let observer = timeObserver {
+            player?.removeTimeObserver(observer)
         }
-        await progressTracker.stopTracking(markComplete: false)
+        player?.pause()
+        player = nil
+        progressTimer?.cancel()
     }
 
-    // MARK: - Time Formatting
+    // MARK: - Mock
 
-    /// Formats seconds into "MM:SS" format.
-    func formatTime(_ seconds: Double) -> String {
-        guard seconds.isFinite, seconds >= 0 else { return "00:00" }
-        let totalSeconds = Int(seconds)
-        let minutes = totalSeconds / 60
-        let secs = totalSeconds % 60
-        return String(format: "%02d:%02d", minutes, secs)
-    }
+    private func loadMockContent(id: String) {
+        let creator = Creator(
+            id: "c1", firstName: "Sarah", lastName: "Johnson", username: "sarahj",
+            profilePicture: nil, bio: "Product leader, 10+ years at FAANG. Teaching the next generation.",
+            tier: .anchor, followersCount: 12400, contentCount: 45, averageRating: 4.7
+        )
 
-    // MARK: - Computed Properties
+        content = Content(
+            id: id, creatorId: creator,
+            title: "Product Strategy Fundamentals: Building Your First Roadmap",
+            description: "In this comprehensive guide, we'll cover everything you need to know about building a product roadmap from scratch. You'll learn about prioritization frameworks, stakeholder alignment, and how to communicate your roadmap effectively.\n\nTopics covered:\n• RICE scoring framework\n• OKR alignment\n• Stakeholder mapping\n• Timeline visualization\n• Iteration and feedback loops",
+            contentType: .video, contentURL: nil, thumbnailURL: nil,
+            duration: 1245, sourceType: .original, sourceAttribution: nil,
+            domain: "Product Management", topics: ["Strategy", "Roadmapping", "Prioritization"],
+            tags: ["PM", "strategy", "roadmap", "product"],
+            difficulty: .intermediate,
+            aiData: AIData(
+                summary: "A step-by-step guide to building effective product roadmaps. Covers RICE scoring, OKR alignment, and stakeholder communication strategies.",
+                keyConcepts: [
+                    KeyConcept(concept: "RICE Framework", description: "Reach, Impact, Confidence, Effort scoring", timestamp: "3:24", importance: 5),
+                    KeyConcept(concept: "Stakeholder Mapping", description: "Identifying and managing stakeholders", timestamp: "8:15", importance: 4),
+                    KeyConcept(concept: "OKR Alignment", description: "Connecting roadmap to company objectives", timestamp: "14:02", importance: 5)
+                ],
+                prerequisites: ["Basic product management concepts", "Understanding of agile methodology"],
+                qualityScore: 85
+            ),
+            status: .published,
+            viewCount: 14200, likeCount: 890, commentCount: 45, saveCount: 320,
+            averageRating: 4.6, ratingCount: 156,
+            publishedAt: Date().addingTimeInterval(-86400 * 3), createdAt: nil
+        )
 
-    /// Progress percentage from 0 to 1 for the mini progress bar.
-    var progress: Double {
-        guard duration > 0 else { return 0 }
-        return min(currentTime / duration, 1.0)
-    }
+        likeCount = content?.likeCount ?? 0
+        saveCount = content?.saveCount ?? 0
+        commentCount = content?.commentCount ?? 0
+        duration = Double(content?.duration ?? 0)
 
-    /// The YouTube video ID extracted from the content URL if source is YouTube.
-    /// Delegates to Content.youtubeVideoId which handles all URL formats (S3, youtube.com, youtu.be).
-    var youtubeVideoId: String? {
-        content?.youtubeVideoId
+        // Mock comments
+        comments = [
+            Comment(id: "mc1", userId: CommentUser(id: "u1", firstName: "Alex", lastName: "Kim", username: "alexk", profilePicture: nil), contentId: id, parentId: nil, text: "Great breakdown of RICE framework! Really helped me understand prioritization.", likeCount: 12, isEdited: false, createdAt: Date().addingTimeInterval(-3600), updatedAt: nil),
+            Comment(id: "mc2", userId: CommentUser(id: "u2", firstName: "Priya", lastName: "Sharma", username: "priyas", profilePicture: nil), contentId: id, parentId: nil, text: "The OKR alignment section was exactly what I needed for my team's quarterly planning.", likeCount: 8, isEdited: false, createdAt: Date().addingTimeInterval(-7200), updatedAt: nil),
+            Comment(id: "mc3", userId: CommentUser(id: "u3", firstName: "Jordan", lastName: nil, username: "jordan_pm", profilePicture: nil), contentId: id, parentId: nil, text: "Can you do a follow-up on how to handle competing stakeholder priorities?", likeCount: 5, isEdited: false, createdAt: Date().addingTimeInterval(-86400), updatedAt: nil)
+        ]
     }
 }

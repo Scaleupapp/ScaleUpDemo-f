@@ -1,176 +1,167 @@
 import Foundation
+import SwiftUI
+
+// MARK: - Content Progress Info (from enriched backend responses)
+
+struct ContentProgressInfo: Codable, Sendable, Hashable {
+    let status: String?           // "not_started", "in_progress", "completed"
+    let progressPercentage: Int?
+
+    var isCompleted: Bool { status == "completed" }
+    var isInProgress: Bool { status == "in_progress" }
+}
 
 // MARK: - Content
 
-struct Content: Codable, Identifiable, Hashable {
+struct Content: Codable, Sendable, Identifiable, Hashable {
     let id: String
-    let creatorId: CreatorOrId?
+    let creatorId: Creator?
     let title: String
     let description: String?
     let contentType: ContentType
-    let contentURL: String
+    let contentURL: String?
     let thumbnailURL: String?
-    let duration: Int?
-    let sourceType: SourceType
+    let duration: Int? // seconds
+    let sourceType: ContentSource?
     let sourceAttribution: SourceAttribution?
-    /// YouTube video ID sent by the backend for youtube-sourced content.
-    let backendYoutubeVideoId: String?
-    let domain: String
-    let topics: [String]
-    let tags: [String]
-    let difficulty: Difficulty
+    let domain: String?
+    let topics: [String]?
+    let tags: [String]?
+    let difficulty: Difficulty?
     let aiData: AIData?
-    let status: ContentStatus
-    let publishedAt: String?
-    let viewCount: Int
-    let likeCount: Int
-    let commentCount: Int
-    let saveCount: Int
-    let averageRating: Double
-    let ratingCount: Int
-    let recommendationScore: Double?
-    let createdAt: String
-    let updatedAt: String
-
-    /// Non-optional accessor with fallback for unpopulated or null creatorId.
-    var creator: ContentCreator {
-        creatorId?.resolved ?? ContentCreator(id: "", firstName: "Unknown", lastName: "Creator", username: nil, profilePicture: nil)
-    }
-
-    /// Resolved thumbnail URL that prefers YouTube CDN for YouTube-sourced content,
-    /// falling back to the original thumbnailURL for non-YouTube content.
-    /// Always uses YouTube CDN (S3 thumbnails may not be publicly accessible).
-    var resolvedThumbnailURL: String? {
-        if sourceType == .youtube, let videoId = youtubeVideoId {
-            return "https://img.youtube.com/vi/\(videoId)/mqdefault.jpg"
-        }
-        return thumbnailURL
-    }
-
-    /// Returns the YouTube video ID, preferring the backend-provided value, then extracting from contentURL.
-    var youtubeVideoId: String? {
-        guard sourceType == .youtube else { return nil }
-
-        // Prefer the backend-provided video ID
-        if let backendId = backendYoutubeVideoId, !backendId.isEmpty {
-            return backendId
-        }
-
-        guard let url = URL(string: contentURL) else {
-            // Direct video ID (no URL structure)
-            if !contentURL.contains("/") && !contentURL.contains(".") {
-                return contentURL
-            }
-            return nil
-        }
-
-        // S3 bucket URL: .../youtube/{VIDEO_ID}/...
-        if let idx = url.pathComponents.firstIndex(of: "youtube"),
-           url.pathComponents.count > idx + 1 {
-            return url.pathComponents[idx + 1]
-        }
-
-        // youtube.com/watch?v=VIDEO_ID
-        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-           let videoId = components.queryItems?.first(where: { $0.name == "v" })?.value {
-            return videoId
-        }
-
-        // youtu.be/VIDEO_ID
-        if url.host?.contains("youtu.be") == true {
-            return url.pathComponents.last
-        }
-
-        // youtube.com/embed/VIDEO_ID
-        if url.pathComponents.contains("embed"),
-           let idx = url.pathComponents.firstIndex(of: "embed"),
-           url.pathComponents.count > idx + 1 {
-            return url.pathComponents[idx + 1]
-        }
-
-        return nil
-    }
+    let status: ContentStatus?
+    let viewCount: Int?
+    let likeCount: Int?
+    let commentCount: Int?
+    let saveCount: Int?
+    let averageRating: Double?
+    let ratingCount: Int?
+    let publishedAt: Date?
+    let createdAt: Date?
+    let reportCount: Int?
+    let removalReason: String?
+    let _progress: ContentProgressInfo?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case creatorId, title, description, contentType
-        case contentURL, thumbnailURL, duration
-        case sourceType, sourceAttribution
-        case backendYoutubeVideoId = "youtubeVideoId"
-        case domain, topics, tags, difficulty
-        case aiData, status, publishedAt
-        case viewCount, likeCount, commentCount, saveCount
-        case averageRating, ratingCount
-        case recommendationScore = "_recommendationScore"
-        case createdAt, updatedAt
+        case creatorId, title, description, contentType, contentURL, thumbnailURL
+        case duration, sourceType, sourceAttribution, domain, topics, tags
+        case difficulty, aiData, status, viewCount, likeCount, commentCount
+        case saveCount, averageRating, ratingCount, publishedAt, createdAt
+        case reportCount, removalReason, _progress
     }
-}
-
-// MARK: - SourceType
-
-enum SourceType: String, Codable, Hashable {
-    case original
-    case youtube
-}
-
-// MARK: - ContentCreator
-
-struct ContentCreator: Codable, Identifiable, Hashable {
-    let id: String
-    let firstName: String
-    let lastName: String
-    let username: String?
-    let profilePicture: String?
-
-    enum CodingKeys: String, CodingKey {
-        case id = "_id"
-        case firstName, lastName, username, profilePicture
-    }
-}
-
-// MARK: - CreatorOrId
-
-/// Handles MongoDB's dual format: creatorId can be a populated object or a raw ObjectId string.
-enum CreatorOrId: Codable, Hashable {
-    case object(ContentCreator)
-    case stringId(String)
 
     init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        // Try decoding as ContentCreator first
-        if let creator = try? container.decode(ContentCreator.self) {
-            self = .object(creator)
-        } else if let id = try? container.decode(String.self) {
-            self = .stringId(id)
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        contentType = try container.decode(ContentType.self, forKey: .contentType)
+        contentURL = try container.decodeIfPresent(String.self, forKey: .contentURL)
+        thumbnailURL = try container.decodeIfPresent(String.self, forKey: .thumbnailURL)
+        duration = try container.decodeIfPresent(Int.self, forKey: .duration)
+        sourceType = try container.decodeIfPresent(ContentSource.self, forKey: .sourceType)
+        sourceAttribution = try container.decodeIfPresent(SourceAttribution.self, forKey: .sourceAttribution)
+        domain = try container.decodeIfPresent(String.self, forKey: .domain)
+        topics = try container.decodeIfPresent([String].self, forKey: .topics)
+        tags = try container.decodeIfPresent([String].self, forKey: .tags)
+        difficulty = try container.decodeIfPresent(Difficulty.self, forKey: .difficulty)
+        aiData = try container.decodeIfPresent(AIData.self, forKey: .aiData)
+        status = try container.decodeIfPresent(ContentStatus.self, forKey: .status)
+        viewCount = try container.decodeIfPresent(Int.self, forKey: .viewCount)
+        likeCount = try container.decodeIfPresent(Int.self, forKey: .likeCount)
+        commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount)
+        saveCount = try container.decodeIfPresent(Int.self, forKey: .saveCount)
+        averageRating = try container.decodeIfPresent(Double.self, forKey: .averageRating)
+        ratingCount = try container.decodeIfPresent(Int.self, forKey: .ratingCount)
+        publishedAt = try container.decodeIfPresent(Date.self, forKey: .publishedAt)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        reportCount = try container.decodeIfPresent(Int.self, forKey: .reportCount)
+        removalReason = try container.decodeIfPresent(String.self, forKey: .removalReason)
+        _progress = try container.decodeIfPresent(ContentProgressInfo.self, forKey: ._progress)
+
+        // creatorId can be either a string (ObjectId) or a populated Creator object
+        if let creator = try? container.decodeIfPresent(Creator.self, forKey: .creatorId) {
+            creatorId = creator
+        } else if let creatorIdString = try? container.decodeIfPresent(String.self, forKey: .creatorId) {
+            creatorId = Creator(id: creatorIdString, firstName: "Creator", lastName: nil, username: nil, profilePicture: nil, bio: nil, tier: nil, followersCount: nil, contentCount: nil, averageRating: nil)
         } else {
-            self = .stringId("")
+            creatorId = nil
         }
     }
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        switch self {
-        case .object(let creator):
-            try container.encode(creator)
-        case .stringId(let id):
-            try container.encode(id)
-        }
+    // Memberwise init for mock data
+    init(id: String, creatorId: Creator?, title: String, description: String?, contentType: ContentType, contentURL: String?, thumbnailURL: String?, duration: Int?, sourceType: ContentSource?, sourceAttribution: SourceAttribution?, domain: String?, topics: [String]?, tags: [String]?, difficulty: Difficulty?, aiData: AIData?, status: ContentStatus?, viewCount: Int?, likeCount: Int?, commentCount: Int?, saveCount: Int?, averageRating: Double?, ratingCount: Int?, publishedAt: Date?, createdAt: Date?, reportCount: Int? = nil, removalReason: String? = nil, _progress: ContentProgressInfo? = nil) {
+        self.id = id
+        self.creatorId = creatorId
+        self.title = title
+        self.description = description
+        self.contentType = contentType
+        self.contentURL = contentURL
+        self.thumbnailURL = thumbnailURL
+        self.duration = duration
+        self.sourceType = sourceType
+        self.sourceAttribution = sourceAttribution
+        self.domain = domain
+        self.topics = topics
+        self.tags = tags
+        self.difficulty = difficulty
+        self.aiData = aiData
+        self.status = status
+        self.viewCount = viewCount
+        self.likeCount = likeCount
+        self.commentCount = commentCount
+        self.saveCount = saveCount
+        self.averageRating = averageRating
+        self.ratingCount = ratingCount
+        self.publishedAt = publishedAt
+        self.createdAt = createdAt
+        self.reportCount = reportCount
+        self.removalReason = removalReason
+        self._progress = _progress
     }
 
-    /// Resolved creator, falling back to "Unknown Creator" when only an ID string is available.
-    var resolved: ContentCreator {
-        switch self {
-        case .object(let creator):
-            return creator
-        case .stringId(let id):
-            return ContentCreator(id: id, firstName: "Unknown", lastName: "Creator", username: nil, profilePicture: nil)
-        }
+    var formattedDuration: String {
+        guard let d = duration, d > 0 else { return "" }
+        let minutes = d / 60
+        let seconds = d % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    var isNew: Bool {
+        guard let published = publishedAt else { return false }
+        return Date().timeIntervalSince(published) < 7 * 24 * 3600
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Content, rhs: Content) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
-// MARK: - SourceAttribution
+// MARK: - AI Data
 
-struct SourceAttribution: Codable, Hashable {
+struct AIData: Codable, Sendable {
+    let summary: String?
+    let keyConcepts: [KeyConcept]?
+    let prerequisites: [String]?
+    let qualityScore: Int?
+}
+
+struct KeyConcept: Codable, Sendable, Identifiable {
+    var id: String { concept }
+    let concept: String
+    let description: String?
+    let timestamp: String? // "MM:SS"
+    let importance: Int?
+}
+
+// MARK: - Source Attribution
+
+struct SourceAttribution: Codable, Sendable {
     let platform: String?
     let originalCreatorName: String?
     let originalCreatorUrl: String?
@@ -178,21 +169,50 @@ struct SourceAttribution: Codable, Hashable {
     let importDisclaimer: String?
 }
 
-// MARK: - AIData
+// MARK: - Enums
 
-struct AIData: Codable, Hashable {
-    let summary: String?
-    let keyConcepts: [KeyConcept]?
-    let prerequisites: [String]?
-    let qualityScore: Double?
-    let autoTags: [String]?
+enum ContentType: String, Codable, Sendable {
+    case video, article, infographic
+
+    var badgeIcon: String {
+        switch self {
+        case .video: return "play.fill"
+        case .article: return "doc.text.fill"
+        case .infographic: return "chart.bar.doc.horizontal.fill"
+        }
+    }
+
+    var badgeLabel: String {
+        switch self {
+        case .video: return "VIDEO"
+        case .article: return "ARTICLE"
+        case .infographic: return "INFOGRAPHIC"
+        }
+    }
+
+    var badgeColor: Color {
+        switch self {
+        case .video: return ColorTokens.info
+        case .article: return ColorTokens.success
+        case .infographic: return Color.purple
+        }
+    }
 }
 
-// MARK: - KeyConcept
+enum ContentStatus: String, Codable, Sendable {
+    case draft, processing, ready, published, unpublished, rejected, removed
 
-struct KeyConcept: Codable, Hashable {
-    let concept: String
-    let description: String?
-    let timestamp: String?
-    let importance: Int?
+    // Legacy compatibility
+    case flagged, archived
+}
+
+enum ContentSource: String, Codable, Sendable {
+    case original, youtube
+}
+
+enum Difficulty: String, Codable, Sendable, CaseIterable, Identifiable {
+    case beginner, intermediate, advanced
+
+    var id: String { rawValue }
+    var displayName: String { rawValue.capitalized }
 }

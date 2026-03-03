@@ -1,93 +1,169 @@
 import Foundation
 
-// MARK: - DashboardResponse
+// MARK: - Dashboard
 
-struct DashboardResponse: Codable, Hashable, Sendable {
-    let objectives: [Objective]
-    let readinessScore: Int
+struct Dashboard: Codable, Sendable {
+    let readinessScore: Int?
+    let nextActions: [NextAction]?
+    let pendingQuizzes: Int?
+    let weeklyStats: WeeklyStats?
     let knowledgeProfile: KnowledgeProfile?
-    let journey: JourneySummary?
-    let weeklyStats: WeeklyStats
-    let nextActions: [NextAction]
-    let upcomingMilestones: [Milestone]
-    let pendingQuizzes: Int
+    let objectives: [Objective]?
+    let journey: JourneyOverview?
+    let upcomingMilestones: [Milestone]?
+    let weeklyGrowth: WeeklyGrowth?
+
+    var knowledgeSnapshot: [KnowledgeSnapshot] {
+        knowledgeProfile?.topicMastery ?? []
+    }
 }
 
-// MARK: - JourneySummary
+// MARK: - Objective
 
-struct JourneySummary: Codable, Hashable, Sendable {
-    let title: String
+struct Objective: Codable, Sendable, Identifiable {
+    let id: String
+    let objectiveType: String?
+    let specifics: DashboardObjectiveSpecifics?
+    let isPrimary: Bool?
+    let timeline: String?
+    let targetDate: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case objectiveType, specifics, isPrimary, timeline, targetDate
+    }
+
+    var targetRole: String? { specifics?.targetRole }
+    var targetSkill: String? { specifics?.targetSkill }
+
+    var daysRemaining: Int? {
+        guard let target = targetDate else { return nil }
+        return max(0, Calendar.current.dateComponents([.day], from: Date(), to: target).day ?? 0)
+    }
+}
+
+struct DashboardObjectiveSpecifics: Codable, Sendable {
+    let targetRole: String?
+    let targetSkill: String?
+}
+
+// MARK: - Journey Overview
+
+struct JourneyOverview: Codable, Sendable {
+    let title: String?
     let currentPhase: String?
-    let currentWeek: Int
-    let progress: JourneyProgress
+    let currentWeek: Int?
+    let progress: JourneyProgress?
     let streak: Int?
+}
 
-    /// Maps the free-form phase string to a JourneyPhase enum when possible.
-    var phase: JourneyPhase {
-        guard let currentPhase else { return .foundation }
-        return JourneyPhase(rawValue: currentPhase) ?? .foundation
+struct JourneyProgress: Codable, Sendable {
+    let contentAssigned: Int?
+    let contentConsumed: Int?
+    let milestonesTotal: Int?
+    let milestonesCompleted: Int?
+    let overallPercentage: Int?
+    let quizzesCompleted: Int?
+    let quizzesAssigned: Int?
+    let currentStreak: Int?
+    let longestStreak: Int?
+}
+
+// MARK: - Milestone
+
+struct Milestone: Codable, Sendable, Identifiable, Hashable {
+    let id: String
+    let title: String
+    let type: String?
+    let status: String?
+    let targetCriteria: MilestoneTarget?
+    let scheduledWeek: Int?
+    let scheduledDate: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case title, type, status, targetCriteria, scheduledWeek, scheduledDate
     }
 }
 
-// MARK: - WeeklyStats
-
-struct WeeklyStats: Codable, Hashable, Sendable {
-    let contentConsumed: Int
-    let totalContentConsumed: Int
-    let dominantTopics: [String]
+struct MilestoneTarget: Codable, Sendable, Hashable {
+    let targetScore: Int?
+    let targetTopic: String?
 }
 
-// MARK: - NextAction
+// MARK: - Weekly Growth
 
-struct NextAction: Codable, Hashable, Sendable {
+struct WeeklyGrowth: Codable, Sendable {
+    let contentDelta: Int?
+    let contentThisWeek: Int?
+    let contentLastWeek: Int?
+}
+
+// MARK: - Knowledge Profile
+
+struct KnowledgeProfile: Codable, Sendable {
+    let overallScore: Int?
+    let totalTopicsCovered: Int?
+    let totalQuizzesTaken: Int?
+    let strengths: [String]?
+    let weaknesses: [String]?
+    let topicMastery: [KnowledgeSnapshot]?
+}
+
+// MARK: - Next Action
+
+struct NextAction: Codable, Sendable, Identifiable {
+    var id: String { type + (message ?? "") }
     let type: String
-    let message: String
-    let data: [String: AnyCodableValue]?
+    let message: String?
 }
 
-// MARK: - AnyCodableValue
+// MARK: - Weekly Stats
 
-/// A type-erased Codable value for handling dynamic JSON fields.
-enum AnyCodableValue: Codable, Hashable, Sendable {
-    case string(String)
-    case int(Int)
-    case double(Double)
-    case bool(Bool)
-    case array([AnyCodableValue])
-    case object([String: AnyCodableValue])
-    case null
+struct WeeklyStats: Codable, Sendable {
+    let contentConsumed: Int?
+    let totalContentConsumed: Int?
+    let dominantTopics: [String]?
+}
 
-    init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            self = .null
-        } else if let value = try? container.decode(Bool.self) {
-            self = .bool(value)
-        } else if let value = try? container.decode(Int.self) {
-            self = .int(value)
-        } else if let value = try? container.decode(Double.self) {
-            self = .double(value)
-        } else if let value = try? container.decode(String.self) {
-            self = .string(value)
-        } else if let value = try? container.decode([AnyCodableValue].self) {
-            self = .array(value)
-        } else if let value = try? container.decode([String: AnyCodableValue].self) {
-            self = .object(value)
-        } else {
-            self = .null
-        }
-    }
+// MARK: - Knowledge Snapshot
 
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
+struct KnowledgeSnapshot: Codable, Sendable, Identifiable {
+    var id: String { topic }
+    let topic: String
+    let score: Int
+    let level: String?
+    let trend: Trend?
+}
+
+// MARK: - Trend
+
+enum Trend: String, Codable, Sendable {
+    case improving, stable, declining
+
+    var icon: String {
         switch self {
-        case .string(let value): try container.encode(value)
-        case .int(let value): try container.encode(value)
-        case .double(let value): try container.encode(value)
-        case .bool(let value): try container.encode(value)
-        case .array(let value): try container.encode(value)
-        case .object(let value): try container.encode(value)
-        case .null: try container.encodeNil()
+        case .improving: return "arrow.up.right"
+        case .stable: return "arrow.right"
+        case .declining: return "arrow.down.right"
         }
     }
+}
+
+// MARK: - Daily Plan
+
+struct DailyPlan: Codable, Sendable {
+    let dayNumber: Int?
+    let items: [DailyPlanItem]?
+    let estimatedMinutes: Int?
+}
+
+struct DailyPlanItem: Codable, Sendable, Identifiable {
+    var id: String { contentId ?? title }
+    let title: String
+    let contentId: String?
+    let contentType: ContentType?
+    let duration: Int?
+    let isCompleted: Bool?
+    let topic: String?
 }

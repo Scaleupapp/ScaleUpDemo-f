@@ -1,4 +1,0 @@
-module AppCheckCore {
-umbrella header "/Users/nirpekshnandan/My Products/ScaleUpDemo-f/build/SourcePackages/checkouts/app-check/AppCheckCore/Sources/Public/AppCheckCore/AppCheckCore.h"
-export *
-}

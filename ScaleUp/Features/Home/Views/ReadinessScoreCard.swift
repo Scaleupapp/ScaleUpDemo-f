@@ -1,40 +1,55 @@
 import SwiftUI
 
-// MARK: - Readiness Score Card
-
 struct ReadinessScoreCard: View {
     let score: Int
 
-    var body: some View {
-        VStack(spacing: Spacing.md) {
-            ScoreGauge(
-                score: score,
-                size: 160,
-                label: score >= 70 ? "Exam Readiness" : "Learning Score"
-            )
+    @State private var animatedScore: Double = 0
 
-            Text(scoreMessage)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
-                .multilineTextAlignment(.center)
+    var body: some View {
+        VStack(spacing: Spacing.sm) {
+            // Score ring
+            ZStack {
+                // Background ring
+                Circle()
+                    .stroke(ColorTokens.surfaceElevated, lineWidth: 8)
+                    .frame(width: 120, height: 120)
+
+                // Progress ring
+                Circle()
+                    .trim(from: 0, to: animatedScore / 100)
+                    .stroke(
+                        ColorTokens.goldGradient,
+                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    )
+                    .frame(width: 120, height: 120)
+                    .rotationEffect(.degrees(-90))
+
+                // Score number
+                Text("\(score)")
+                    .font(.system(size: 40, weight: .bold, design: .rounded))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+
+            Text("Learning Score")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.textPrimary)
+
+            Text("Based on quizzes, content & consistency")
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .cardStyle()
-        .padding(.horizontal, Spacing.md)
-    }
-
-    private var scoreMessage: String {
-        switch score {
-        case 90...100:
-            return "Outstanding! You are well-prepared."
-        case 70..<90:
-            return "Great progress! Keep pushing forward."
-        case 50..<70:
-            return "You are on the right track. Stay consistent."
-        case 20..<50:
-            return "Keep learning! Every session counts."
-        default:
-            return "Start your learning journey today."
+        .padding(.vertical, Spacing.lg)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .stroke(ColorTokens.border, lineWidth: 1)
+        )
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.0).delay(0.3)) {
+                animatedScore = Double(score)
+            }
         }
     }
 }

@@ -1,147 +1,116 @@
 import SwiftUI
 
-// MARK: - Login View
-
-/// Dark-themed login form with email, password, and forgot-password link.
 struct LoginView: View {
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
+    @Environment(\.dismiss) private var dismiss
 
-    // MARK: - Navigation
-
-    let onForgotPassword: () -> Void
-
-    // MARK: - State
-
-    @State private var viewModel: LoginViewModel?
-
-    // MARK: - Body
+    @State private var viewModel = AuthViewModel()
+    @State private var showForgotPassword = false
 
     var body: some View {
         ZStack {
-            ColorTokens.backgroundDark
-                .ignoresSafeArea()
+            ColorTokens.background.ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.lg) {
-                    // MARK: Header
-                    headerSection
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: Spacing.lg) {
+                    // Header
+                    VStack(spacing: Spacing.sm) {
+                        Text("Welcome back")
+                            .font(Typography.displayMedium)
+                            .foregroundStyle(ColorTokens.textPrimary)
 
-                    if let vm = viewModel {
-                        // MARK: Error Banner
-                        if let errorMessage = vm.errorMessage {
-                            errorBanner(errorMessage)
+                        Text("Sign in to continue your journey")
+                            .font(Typography.bodySmall)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, Spacing.xl)
+
+                    // Form
+                    VStack(spacing: Spacing.md) {
+                        ScaleUpTextField(
+                            label: "Email",
+                            icon: "envelope",
+                            text: $viewModel.email,
+                            keyboardType: .emailAddress,
+                            autocapitalization: .never
+                        )
+
+                        ScaleUpTextField(
+                            label: "Password",
+                            icon: "lock",
+                            text: $viewModel.password,
+                            isSecure: true,
+                            autocapitalization: .never
+                        )
+                    }
+
+                    // Forgot password
+                    HStack {
+                        Spacer()
+                        Button("Forgot password?") {
+                            showForgotPassword = true
                         }
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.gold)
+                    }
 
-                        // MARK: Form
-                        formSection(vm)
+                    // Error
+                    if let error = viewModel.errorMessage {
+                        errorBanner(error)
+                    }
 
-                        // MARK: Forgot Password
-                        forgotPasswordLink
-
-                        // MARK: Submit
-                        PrimaryButton(
-                            title: "Sign In",
-                            isLoading: vm.isLoading
-                        ) {
-                            Task { await vm.login(appState: appState) }
+                    // Sign In
+                    PrimaryButton(
+                        title: "Sign In",
+                        isLoading: viewModel.isLoading,
+                        isDisabled: !viewModel.isLoginValid
+                    ) {
+                        Task {
+                            if let authData = await viewModel.login() {
+                                await appState.handleAuthSuccess(authData)
+                            }
                         }
                     }
+
+                    Spacer().frame(height: Spacing.xxl)
                 }
                 .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.xl)
             }
-            .scrollDismissesKeyboard(.interactively)
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(ColorTokens.backgroundDark, for: .navigationBar)
-        .loadingOverlay(isPresented: viewModel?.isLoading ?? false)
-        .onAppear {
-            if viewModel == nil {
-                viewModel = LoginViewModel(
-                    authService: dependencies.authService,
-                    authManager: dependencies.authManager,
-                    hapticManager: dependencies.hapticManager
-                )
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                backButton
             }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Components
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("Welcome Back")
-                .font(Typography.displayMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-            Text("Sign in to continue your learning journey")
-                .font(Typography.body)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+    private var backButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Image(systemName: "arrow.left")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(ColorTokens.textPrimary)
+                .frame(width: 40, height: 40)
+                .background(ColorTokens.surfaceElevated)
+                .clipShape(Circle())
         }
     }
-
-    // MARK: - Form
-
-    @ViewBuilder
-    private func formSection(_ vm: LoginViewModel) -> some View {
-        VStack(spacing: Spacing.md) {
-            TextFieldStyled(
-                label: "Email",
-                placeholder: "Enter your email",
-                text: Binding(
-                    get: { vm.email },
-                    set: { vm.email = $0 }
-                ),
-                icon: "envelope.fill",
-                errorMessage: vm.emailError,
-                keyboardType: .emailAddress,
-                textContentType: .emailAddress,
-                autocapitalization: .never
-            )
-
-            TextFieldStyled(
-                label: "Password",
-                placeholder: "Enter your password",
-                text: Binding(
-                    get: { vm.password },
-                    set: { vm.password = $0 }
-                ),
-                icon: "lock.fill",
-                isSecure: true,
-                errorMessage: vm.passwordError,
-                textContentType: .password
-            )
-        }
-    }
-
-    // MARK: - Forgot Password Link
-
-    private var forgotPasswordLink: some View {
-        HStack {
-            Spacer()
-            Button {
-                onForgotPassword()
-            } label: {
-                Text("Forgot Password?")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.primary)
-            }
-        }
-    }
-
-    // MARK: - Error Banner
 
     private func errorBanner(_ message: String) -> some View {
         HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            Image(systemName: "exclamationmark.circle.fill")
                 .foregroundStyle(ColorTokens.error)
             Text(message)
-                .font(Typography.bodySmall)
+                .font(Typography.caption)
                 .foregroundStyle(ColorTokens.error)
             Spacer()
         }
-        .padding(Spacing.md)
+        .padding(Spacing.sm)
         .background(ColorTokens.error.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }

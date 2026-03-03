@@ -1,47 +1,60 @@
 import SwiftUI
 
 struct ProgressRing: View {
-    let progress: Double // 0.0 to 1.0
+    let score: Int
+    let label: String
     var size: CGFloat = 120
-    var lineWidth: CGFloat = 12
-    var showPercentage: Bool = true
+    var lineWidth: CGFloat = 10
+    var showLabel: Bool = true
+    var animated: Bool = true
 
-    @State private var animatedProgress: Double = 0
+    @State private var animatedScore: Double = 0
+
+    private var scoreColor: Color {
+        if score >= 70 { return ColorTokens.gold }
+        if score >= 40 { return ColorTokens.info }
+        return .orange
+    }
 
     var body: some View {
-        ZStack {
-            // Background ring
-            Circle()
-                .stroke(
-                    ColorTokens.surfaceElevatedDark,
-                    lineWidth: lineWidth
-                )
+        VStack(spacing: Spacing.sm) {
+            ZStack {
+                Circle()
+                    .stroke(ColorTokens.surfaceElevated, lineWidth: lineWidth)
 
-            // Progress ring
-            Circle()
-                .trim(from: 0, to: animatedProgress)
-                .stroke(
-                    ColorTokens.progressGradient,
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
+                Circle()
+                    .trim(from: 0, to: animatedScore / 100)
+                    .stroke(
+                        scoreColor,
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
 
-            // Center text
-            if showPercentage {
-                Text("\(Int(progress * 100))")
-                    .font(Typography.monoLarge)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
+                VStack(spacing: 2) {
+                    Text("\(score)")
+                        .font(.system(size: size * 0.28, weight: .black, design: .rounded))
+                        .foregroundStyle(scoreColor)
+
+                    Text("%")
+                        .font(.system(size: size * 0.1, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+            .frame(width: size, height: size)
+
+            if showLabel {
+                Text(label)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textSecondary)
             }
         }
-        .frame(width: size, height: size)
         .onAppear {
-            withAnimation(.spring(duration: 1.0, bounce: 0.2)) {
-                animatedProgress = progress
-            }
-        }
-        .onChange(of: progress) { _, newValue in
-            withAnimation(.spring(duration: 0.6, bounce: 0.2)) {
-                animatedProgress = newValue
+            if animated {
+                withAnimation(.easeOut(duration: 1.0).delay(0.2)) {
+                    animatedScore = Double(score)
+                }
+            } else {
+                animatedScore = Double(score)
             }
         }
     }

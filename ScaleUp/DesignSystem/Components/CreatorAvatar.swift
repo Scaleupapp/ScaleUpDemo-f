@@ -1,25 +1,17 @@
 import SwiftUI
-import NukeUI
 
 struct CreatorAvatar: View {
-    let imageURL: String?
-    let name: String
-    var tier: String? // "anchor", "core", "rising"
-    var size: CGFloat = 48
+    let creator: Creator
+    var size: CGFloat = 40
 
     var body: some View {
         ZStack {
-            // Tier ring
-            Circle()
-                .stroke(tierColor, lineWidth: tier != nil ? 2.5 : 0)
-                .frame(width: size + 6, height: size + 6)
-
-            // Avatar
-            if let imageURL, let url = URL(string: imageURL) {
-                LazyImage(url: url) { state in
-                    if let image = state.image {
+            if let url = creator.profilePicture, let imageURL = URL(string: url) {
+                AsyncImage(url: imageURL) { phase in
+                    switch phase {
+                    case .success(let image):
                         image.resizable().aspectRatio(contentMode: .fill)
-                    } else {
+                    default:
                         initialsView
                     }
                 }
@@ -29,32 +21,25 @@ struct CreatorAvatar: View {
                 initialsView
             }
         }
+        .overlay(
+            Circle()
+                .stroke(tierColor, lineWidth: size > 30 ? 2 : 1.5)
+        )
     }
 
     private var initialsView: some View {
-        Circle()
-            .fill(ColorTokens.surfaceElevatedDark)
-            .frame(width: size, height: size)
-            .overlay {
-                Text(initials)
-                    .font(.system(size: size * 0.35, weight: .semibold))
-                    .foregroundStyle(ColorTokens.primary)
-            }
-    }
+        ZStack {
+            Circle()
+                .fill(ColorTokens.surfaceElevated)
+                .frame(width: size, height: size)
 
-    private var initials: String {
-        let parts = name.split(separator: " ")
-        let first = parts.first?.prefix(1) ?? ""
-        let last = parts.count > 1 ? parts.last?.prefix(1) ?? "" : ""
-        return "\(first)\(last)".uppercased()
+            Text(creator.initials)
+                .font(.system(size: size * 0.35, weight: .semibold))
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
     }
 
     private var tierColor: Color {
-        switch tier?.lowercased() {
-        case "anchor": return ColorTokens.anchorGold
-        case "core": return ColorTokens.coreSilver
-        case "rising": return ColorTokens.risingBronze
-        default: return .clear
-        }
+        creator.tier?.color ?? ColorTokens.border
     }
 }

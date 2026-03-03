@@ -1,212 +1,140 @@
 import SwiftUI
 
 struct OnboardingContainerView: View {
-
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
+    @State private var viewModel: OnboardingViewModel
 
-    @State private var viewModel = OnboardingViewModel()
+    init(initialStep: Int, appState: AppState) {
+        _viewModel = State(initialValue: OnboardingViewModel(initialStep: initialStep, appState: appState))
+    }
 
     var body: some View {
         ZStack {
-            ColorTokens.backgroundDark
-                .ignoresSafeArea()
+            ColorTokens.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // MARK: - Progress Bar
-                progressBar
+                if viewModel.currentStep < 6 {
+                    headerSection
+                }
 
-                // MARK: - Header
-                header
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.top, Spacing.md)
-
-                // MARK: - Step Content
+                // Step Content
                 stepContent
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // MARK: - Bottom Actions
                 if viewModel.currentStep < 6 {
-                    bottomActions
-                        .padding(.horizontal, Spacing.lg)
-                        .padding(.bottom, Spacing.lg)
+                    bottomBar
                 }
             }
         }
-        .preferredColorScheme(.dark)
-        .loadingOverlay(isPresented: viewModel.isLoading, message: "Saving...")
-        .alert("Something went wrong", isPresented: showErrorBinding) {
-            Button("OK") {
-                viewModel.errorMessage = nil
-            }
-        } message: {
-            Text(viewModel.errorMessage ?? "Please try again.")
-        }
-        .onAppear {
-            viewModel.prepopulate(from: appState.currentUser)
-        }
-    }
-
-    // MARK: - Progress Bar
-
-    private var progressBar: some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-                Rectangle()
-                    .fill(ColorTokens.surfaceElevatedDark)
-                    .frame(height: 4)
-
-                Rectangle()
-                    .fill(ColorTokens.heroGradient)
-                    .frame(width: geometry.size.width * viewModel.progress, height: 4)
-                    .animation(Animations.smooth, value: viewModel.progress)
-            }
-        }
-        .frame(height: 4)
+        .animation(Motion.springSmooth, value: viewModel.currentStep)
     }
 
     // MARK: - Header
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            // Back button for objective sub-pages
-            if viewModel.currentStep == 3 && viewModel.objectiveSubPage > 1 {
-                Button {
-                    viewModel.goBackInObjective()
-                } label: {
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Back")
-                            .font(Typography.bodySmall)
-                    }
-                    .foregroundStyle(ColorTokens.primary)
+    private var headerSection: some View {
+        VStack(spacing: Spacing.sm) {
+            // Progress segments
+            HStack(spacing: 4) {
+                ForEach(1...6, id: \.self) { step in
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(step <= viewModel.currentStep ? AnyShapeStyle(ColorTokens.goldGradient) : AnyShapeStyle(ColorTokens.surfaceElevated))
+                        .frame(height: 4)
                 }
-                .padding(.bottom, Spacing.xs)
             }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
 
-            Text(viewModel.stepTitle)
-                .font(Typography.titleLarge)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-            Text(viewModel.stepSubtitle)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+            Text("Step \(viewModel.currentStep) of 6")
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textTertiary)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(Animations.standard, value: viewModel.currentStep)
-        .animation(Animations.standard, value: viewModel.objectiveSubPage)
     }
 
     // MARK: - Step Content
 
+    @ViewBuilder
     private var stepContent: some View {
         Group {
             switch viewModel.currentStep {
-            case 1:
-                ProfileSetupView(viewModel: viewModel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-            case 2:
-                BackgroundView(viewModel: viewModel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-            case 3:
-                ObjectiveSetupView(viewModel: viewModel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-            case 4:
-                PreferencesView(viewModel: viewModel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-            case 5:
-                InterestsView(viewModel: viewModel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-            case 6:
-                OnboardingCompleteView(viewModel: viewModel)
-                    .transition(.asymmetric(
-                        insertion: .move(edge: .trailing).combined(with: .opacity),
-                        removal: .move(edge: .leading).combined(with: .opacity)
-                    ))
-            default:
-                EmptyView()
+            case 1: ProfileStepView(viewModel: viewModel)
+            case 2: BackgroundStepView(viewModel: viewModel)
+            case 3: ObjectiveStepView(viewModel: viewModel)
+            case 4: PreferencesStepView(viewModel: viewModel)
+            case 5: InterestsStepView(viewModel: viewModel)
+            case 6: CompletionStepView(viewModel: viewModel)
+            default: EmptyView()
             }
         }
-        .animation(Animations.standard, value: viewModel.currentStep)
+        .transition(.asymmetric(
+            insertion: .move(edge: viewModel.isMovingForward ? .trailing : .leading).combined(with: .opacity),
+            removal: .move(edge: viewModel.isMovingForward ? .leading : .trailing).combined(with: .opacity)
+        ))
+        .id(viewModel.currentStep)
     }
 
-    // MARK: - Bottom Actions
+    // MARK: - Bottom Bar
 
-    private var bottomActions: some View {
-        VStack(spacing: Spacing.sm) {
-            // Error inline
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.error)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.bottom, Spacing.xs)
-            }
-
-            PrimaryButton(
-                title: viewModel.continueButtonTitle,
-                isLoading: viewModel.isLoading,
-                isDisabled: !viewModel.canAdvance
-            ) {
-                Task {
-                    await viewModel.nextStep(
-                        onboardingService: dependencies.onboardingService,
-                        authManager: dependencies.authManager,
-                        appState: appState
-                    )
-                }
-            }
-
-            if viewModel.canSkip {
+    private var bottomBar: some View {
+        HStack {
+            // Back button
+            if viewModel.currentStep > 1 {
                 Button {
-                    Task {
-                        await viewModel.skipStep(
-                            onboardingService: dependencies.onboardingService,
-                            authManager: dependencies.authManager,
-                            appState: appState
-                        )
-                    }
+                    viewModel.back()
                 } label: {
-                    Text("Skip for now")
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.textSecondaryDark)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Back")
+                            .font(Typography.bodyBold)
+                    }
+                    .foregroundStyle(ColorTokens.textSecondary)
                 }
             }
+
+            Spacer()
+
+            // Skip (for optional steps)
+            if viewModel.isOptionalStep {
+                Button {
+                    Task { await viewModel.skip() }
+                } label: {
+                    Text("Skip")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(.trailing, Spacing.md)
+            }
+
+            // Continue button
+            Button {
+                Task { await viewModel.next() }
+            } label: {
+                HStack(spacing: 6) {
+                    if viewModel.isLoading {
+                        ProgressView()
+                            .tint(ColorTokens.buttonPrimaryText)
+                            .scaleEffect(0.8)
+                    } else {
+                        Text("Continue")
+                            .font(Typography.bodyBold)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 14, weight: .semibold))
+                    }
+                }
+                .foregroundStyle(viewModel.canProceed ? ColorTokens.buttonPrimaryText : ColorTokens.buttonDisabledText)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, 14)
+                .background(
+                    viewModel.canProceed
+                        ? AnyShapeStyle(ColorTokens.goldGradient)
+                        : AnyShapeStyle(ColorTokens.buttonDisabledBg)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            }
+            .disabled(!viewModel.canProceed || viewModel.isLoading)
         }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, Spacing.md)
+        .background(ColorTokens.surface)
     }
-
-    // MARK: - Error Binding
-
-    private var showErrorBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.errorMessage != nil },
-            set: { if !$0 { viewModel.errorMessage = nil } }
-        )
-    }
-}
-
-// MARK: - Preview
-
-#Preview {
-    OnboardingContainerView()
-        .environment(DependencyContainer())
-        .environment(AppState())
 }

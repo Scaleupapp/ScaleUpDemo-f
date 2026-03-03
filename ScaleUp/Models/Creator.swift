@@ -1,103 +1,179 @@
-import Foundation
+import SwiftUI
 
-// MARK: - CreatorProfile
+// MARK: - Mutual Followers Info
 
-struct CreatorProfile: Codable, Identifiable, Hashable {
-    let id: String
-    let userId: String
-    let domain: String
-    let specializations: [String]
-    let bio: String?
-    let tier: CreatorTier
-    let stats: CreatorStats
-    let socialLinks: CreatorSocialLinks?
-    let createdAt: String
-
-    enum CodingKeys: String, CodingKey {
-        case id = "_id"
-        case userId, domain, specializations
-        case bio, tier, stats, socialLinks, createdAt
-    }
+struct MutualFollowersInfo: Codable, Sendable {
+    let count: Int
+    let users: [FollowUser]
 }
 
-// MARK: - CreatorStats
+// MARK: - Creator
 
-struct CreatorStats: Codable, Hashable {
-    let totalContent: Int
-    let totalViews: Int
-    let totalFollowers: Int
-    let averageRating: Double
-}
-
-// MARK: - CreatorSocialLinks
-
-struct CreatorSocialLinks: Codable, Hashable {
-    let linkedin: String?
-    let twitter: String?
-    let youtube: String?
-    let website: String?
-}
-
-// MARK: - CreatorSearchResult
-
-/// Wrapper for the `/creator/search` endpoint response. The API returns user
-/// objects with a nested `creatorProfile` rather than flat `CreatorProfile` objects.
-struct CreatorSearchResult: Codable, Identifiable, Hashable {
+struct Creator: Codable, Sendable, Identifiable, Hashable {
     let id: String
     let firstName: String
-    let lastName: String
+    let lastName: String?
+    let username: String?
+    let profilePicture: String?
+    let bio: String?
+    let tier: CreatorTier?
     let followersCount: Int?
-    let creatorProfile: CreatorProfile?
+    let contentCount: Int?
+    let averageRating: Double?
+    let domain: String?
+    let specializations: [String]?
+    let isVerified: Bool?
+    let createdAt: Date?
+    let isFollowing: Bool?
+    let totalViews: Int?
+    let mutualFollowers: MutualFollowersInfo?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case firstName, lastName, followersCount, creatorProfile
+        case firstName, lastName, username, profilePicture, bio
+        case tier, followersCount, contentCount, averageRating
+        case domain, specializations, isVerified, createdAt
+        case isFollowing, totalViews, mutualFollowers
+        case creatorProfile
     }
 
-    /// Display name combining first and last name.
+    // Nested creator profile from backend response
+    private struct CreatorProfileNested: Codable {
+        let tier: CreatorTier?
+        let domain: String?
+        let specializations: [String]?
+        let isVerified: Bool?
+        let stats: NestedStats?
+    }
+
+    private struct NestedStats: Codable {
+        let totalContent: Int?
+        let totalViews: Int?
+        let totalFollowers: Int?
+        let averageRating: Double?
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        id = try container.decode(String.self, forKey: .id)
+        firstName = try container.decode(String.self, forKey: .firstName)
+        lastName = try container.decodeIfPresent(String.self, forKey: .lastName)
+        username = try container.decodeIfPresent(String.self, forKey: .username)
+        profilePicture = try container.decodeIfPresent(String.self, forKey: .profilePicture)
+        bio = try container.decodeIfPresent(String.self, forKey: .bio)
+        createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        isFollowing = try container.decodeIfPresent(Bool.self, forKey: .isFollowing)
+        mutualFollowers = try container.decodeIfPresent(MutualFollowersInfo.self, forKey: .mutualFollowers)
+
+        // Try to decode nested creatorProfile (from public profile endpoint)
+        let nested = try container.decodeIfPresent(CreatorProfileNested.self, forKey: .creatorProfile)
+
+        // Prefer top-level fields, fall back to nested creatorProfile
+        tier = try container.decodeIfPresent(CreatorTier.self, forKey: .tier) ?? nested?.tier
+        domain = try container.decodeIfPresent(String.self, forKey: .domain) ?? nested?.domain
+        specializations = try container.decodeIfPresent([String].self, forKey: .specializations) ?? nested?.specializations
+        isVerified = try container.decodeIfPresent(Bool.self, forKey: .isVerified) ?? nested?.isVerified
+        totalViews = try container.decodeIfPresent(Int.self, forKey: .totalViews) ?? nested?.stats?.totalViews
+        contentCount = try container.decodeIfPresent(Int.self, forKey: .contentCount) ?? nested?.stats?.totalContent
+        averageRating = try container.decodeIfPresent(Double.self, forKey: .averageRating) ?? nested?.stats?.averageRating
+        followersCount = try container.decodeIfPresent(Int.self, forKey: .followersCount) ?? nested?.stats?.totalFollowers
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(firstName, forKey: .firstName)
+        try container.encodeIfPresent(lastName, forKey: .lastName)
+        try container.encodeIfPresent(username, forKey: .username)
+        try container.encodeIfPresent(profilePicture, forKey: .profilePicture)
+        try container.encodeIfPresent(bio, forKey: .bio)
+        try container.encodeIfPresent(tier, forKey: .tier)
+        try container.encodeIfPresent(followersCount, forKey: .followersCount)
+        try container.encodeIfPresent(contentCount, forKey: .contentCount)
+        try container.encodeIfPresent(averageRating, forKey: .averageRating)
+        try container.encodeIfPresent(domain, forKey: .domain)
+        try container.encodeIfPresent(specializations, forKey: .specializations)
+        try container.encodeIfPresent(isVerified, forKey: .isVerified)
+        try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(isFollowing, forKey: .isFollowing)
+        try container.encodeIfPresent(totalViews, forKey: .totalViews)
+        try container.encodeIfPresent(mutualFollowers, forKey: .mutualFollowers)
+    }
+
+    // Manual init for mock/fallback
+    init(
+        id: String, firstName: String, lastName: String?, username: String?,
+        profilePicture: String?, bio: String?, tier: CreatorTier?,
+        followersCount: Int?, contentCount: Int?, averageRating: Double?,
+        domain: String? = nil, specializations: [String]? = nil,
+        isVerified: Bool? = nil, createdAt: Date? = nil,
+        isFollowing: Bool? = nil, totalViews: Int? = nil,
+        mutualFollowers: MutualFollowersInfo? = nil
+    ) {
+        self.id = id
+        self.firstName = firstName
+        self.lastName = lastName
+        self.username = username
+        self.profilePicture = profilePicture
+        self.bio = bio
+        self.tier = tier
+        self.followersCount = followersCount
+        self.contentCount = contentCount
+        self.averageRating = averageRating
+        self.domain = domain
+        self.specializations = specializations
+        self.isVerified = isVerified
+        self.createdAt = createdAt
+        self.isFollowing = isFollowing
+        self.totalViews = totalViews
+        self.mutualFollowers = mutualFollowers
+    }
+
     var displayName: String {
-        "\(firstName) \(lastName)"
+        if let last = lastName, !last.isEmpty {
+            return "\(firstName) \(last)"
+        }
+        return firstName
+    }
+
+    var initials: String {
+        let first = firstName.prefix(1)
+        let last = (lastName ?? "").prefix(1)
+        return "\(first)\(last)".uppercased()
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Creator, rhs: Creator) -> Bool {
+        lhs.id == rhs.id
     }
 }
 
-// MARK: - CreatorApplication
+// MARK: - Creator Tier
 
-struct CreatorApplication: Codable, Identifiable, Hashable {
-    let id: String
-    let userId: String
-    let domain: String
-    let specializations: [String]
-    let experience: String?
-    let motivation: String?
-    let sampleContentLinks: [String]?
-    let portfolioUrl: String?
-    let socialLinks: CreatorSocialLinks?
-    let endorsements: [Endorsement]?
-    let status: ApplicationStatus
-    let createdAt: String
+enum CreatorTier: String, Codable, Sendable {
+    case rising, core, anchor
 
-    enum CodingKeys: String, CodingKey {
-        case id = "_id"
-        case userId, domain, specializations
-        case experience, motivation
-        case sampleContentLinks, portfolioUrl
-        case socialLinks, endorsements
-        case status, createdAt
+    var displayName: String {
+        rawValue.capitalized
     }
-}
 
-// MARK: - Endorsement
+    var color: Color {
+        switch self {
+        case .anchor: return ColorTokens.gold
+        case .core: return Color(hex: 0xC0C0C0) // silver
+        case .rising: return Color(hex: 0xCD7F32) // bronze
+        }
+    }
 
-struct Endorsement: Codable, Hashable {
-    let endorserId: String
-    let note: String?
-    let createdAt: String
-}
-
-// MARK: - ApplicationStatus
-
-enum ApplicationStatus: String, Codable, Hashable {
-    case pending
-    case approved
-    case rejected
+    var icon: String {
+        switch self {
+        case .anchor: return "crown.fill"
+        case .core: return "star.fill"
+        case .rising: return "arrow.up.right"
+        }
+    }
 }

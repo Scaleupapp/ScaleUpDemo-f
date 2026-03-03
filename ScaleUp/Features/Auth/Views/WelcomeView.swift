@@ -1,197 +1,155 @@
 import SwiftUI
 
-// MARK: - Welcome View
-
-/// Full-bleed dark welcome screen with logo, tagline, and auth CTAs.
 struct WelcomeView: View {
-    @Environment(DependencyContainer.self) private var dependencies
     @Environment(AppState.self) private var appState
 
-    // MARK: - Navigation Callbacks
+    @State private var showLogin = false
+    @State private var showRegister = false
 
-    let onLogin: () -> Void
-    let onRegister: () -> Void
-    let onPhoneOTP: () -> Void
-
-    // MARK: - State
-
-    @State private var isGoogleLoading = false
-    @State private var errorMessage: String?
-    @State private var logoScale: CGFloat = 0.8
-    @State private var contentOpacity: Double = 0
-
-    // MARK: - Body
+    @State private var appeared = false
+    @State private var glowPhase: CGFloat = 0
 
     var body: some View {
-        ZStack {
-            ColorTokens.backgroundDark
-                .ignoresSafeArea()
+        NavigationStack {
+            ZStack {
+                ColorTokens.background.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                Spacer()
+                // Animated ambient glow
+                Canvas { context, size in
+                    let center = CGPoint(x: size.width / 2, y: size.height * 0.3)
+                    let radius = 250 + Foundation.sin(glowPhase) * 30
 
-                // MARK: Logo & Tagline
-                heroSection
-
-                Spacer()
-
-                // MARK: CTAs
-                ctaSection
-
-                Spacer()
-                    .frame(height: Spacing.xl)
-            }
-            .padding(.horizontal, Spacing.lg)
-        }
-        .navigationBarHidden(true)
-        .onAppear {
-            withAnimation(Animations.smooth) {
-                logoScale = 1.0
-                contentOpacity = 1.0
-            }
-        }
-    }
-
-    // MARK: - Hero Section
-
-    private var heroSection: some View {
-        VStack(spacing: Spacing.md) {
-            Image(systemName: "bolt.circle.fill")
-                .font(.system(size: 100))
-                .foregroundStyle(ColorTokens.heroGradient)
-                .scaleEffect(logoScale)
-
-            Text("ScaleUp")
-                .font(Typography.displayLarge)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-            Text("Learn with purpose. Grow with proof.")
-                .font(Typography.body)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
-                .multilineTextAlignment(.center)
-        }
-        .opacity(contentOpacity)
-    }
-
-    // MARK: - CTA Section
-
-    private var ctaSection: some View {
-        VStack(spacing: Spacing.sm) {
-            // Error banner
-            if let errorMessage {
-                errorBanner(errorMessage)
-            }
-
-            // Get Started
-            PrimaryButton(title: "Get Started") {
-                onRegister()
-            }
-
-            // Sign In
-            SecondaryButton(title: "Sign In") {
-                onLogin()
-            }
-
-            // Continue with Google
-            socialButton(
-                title: "Continue with Google",
-                icon: "g.circle.fill",
-                isLoading: isGoogleLoading
-            ) {
-                Task { await handleGoogleSignIn() }
-            }
-
-            // Continue with Phone
-            socialButton(
-                title: "Continue with Phone",
-                icon: "phone.fill",
-                isLoading: false
-            ) {
-                onPhoneOTP()
-            }
-        }
-        .opacity(contentOpacity)
-    }
-
-    // MARK: - Social Button
-
-    private func socialButton(
-        title: String,
-        icon: String,
-        isLoading: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.sm) {
-                if isLoading {
-                    ProgressView()
-                        .tint(ColorTokens.textPrimaryDark)
-                } else {
-                    Image(systemName: icon)
-                        .font(.system(size: 20))
+                    context.addFilter(.blur(radius: 100))
+                    context.fill(
+                        Path(ellipseIn: CGRect(
+                            x: center.x - radius,
+                            y: center.y - radius,
+                            width: radius * 2,
+                            height: radius * 1.5
+                        )),
+                        with: .color(ColorTokens.gold.opacity(0.06 + Foundation.sin(glowPhase) * 0.02))
+                    )
                 }
-                Text(title)
-                    .font(Typography.bodyBold)
+                .ignoresSafeArea()
+                .onAppear {
+                    withAnimation(.easeInOut(duration: 4).repeatForever(autoreverses: true)) {
+                        glowPhase = .pi * 2
+                    }
+                }
+
+                VStack(spacing: 0) {
+                    Spacer()
+
+                    // Logo + Tagline
+                    VStack(spacing: Spacing.xl) {
+                        ScaleUpLogo(fontSize: 42)
+                            .opacity(appeared ? 1 : 0)
+                            .scaleEffect(appeared ? 1 : 0.8)
+
+                        VStack(spacing: Spacing.md) {
+                            Text("Learn with purpose.\nAchieve with proof.")
+                                .font(.system(size: 26, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .opacity(appeared ? 1 : 0)
+                                .offset(y: appeared ? 0 : 20)
+
+                            Text("AI-powered learning that adapts to your goals,\nmeasures your mastery, and gets you there faster.")
+                                .font(.system(size: 14, weight: .regular))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(4)
+                                .opacity(appeared ? 1 : 0)
+                                .offset(y: appeared ? 0 : 15)
+                        }
+                    }
+
+                    Spacer().frame(height: 60)
+
+                    // Feature pills
+                    HStack(spacing: 10) {
+                        featurePill(icon: "target", text: "Goal-Driven")
+                        featurePill(icon: "brain.head.profile", text: "AI Quizzes")
+                        featurePill(icon: "chart.line.uptrend.xyaxis", text: "Track Mastery")
+                    }
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 10)
+
+                    Spacer()
+
+                    // CTA buttons
+                    VStack(spacing: 12) {
+                        Button {
+                            Haptics.medium()
+                            showRegister = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text("Get Started")
+                                    .font(.system(size: 17, weight: .bold))
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 14, weight: .bold))
+                            }
+                            .foregroundStyle(ColorTokens.buttonPrimaryText)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(ColorTokens.goldGradient)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .shadow(color: ColorTokens.gold.opacity(0.3), radius: 12, y: 4)
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 20)
+
+                        Button {
+                            Haptics.selection()
+                            showLogin = true
+                        } label: {
+                            Text("Already have an account? **Sign In**")
+                                .font(.system(size: 14))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 15)
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.bottom, 50)
+                }
             }
-            .foregroundStyle(ColorTokens.textPrimaryDark)
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
-            .background(ColorTokens.surfaceDark)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
-                    .stroke(ColorTokens.surfaceElevatedDark, lineWidth: 1)
-            )
+            .navigationDestination(isPresented: $showLogin) {
+                LoginView()
+            }
+            .navigationDestination(isPresented: $showRegister) {
+                RegisterView()
+            }
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.8)) {
+                    appeared = true
+                }
+            }
         }
-        .disabled(isLoading)
     }
 
-    // MARK: - Error Banner
+    // MARK: - Feature Pill
 
-    private func errorBanner(_ message: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(ColorTokens.error)
-            Text(message)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.error)
+    private func featurePill(icon: String, text: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(ColorTokens.gold)
+            Text(text)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(ColorTokens.textSecondary)
         }
-        .padding(Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ColorTokens.error.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-    }
-
-    // MARK: - Google Sign In
-
-    private func handleGoogleSignIn() async {
-        isGoogleLoading = true
-        errorMessage = nil
-        defer { isGoogleLoading = false }
-
-        do {
-            let googleManager = GoogleSignInManager()
-            let idToken = try await googleManager.signIn()
-
-            let response = try await dependencies.authService.googleAuth(idToken: idToken)
-
-            dependencies.authManager.handleAuthSuccess(
-                accessToken: response.accessToken,
-                refreshToken: response.refreshToken,
-                user: response.user
-            )
-
-            appState.currentUser = response.user
-            dependencies.hapticManager.success()
-
-            if response.user.onboardingComplete {
-                appState.authStatus = .authenticated
-            } else {
-                appState.authStatus = .onboarding
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            dependencies.hapticManager.error()
-        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            Capsule()
+                .fill(ColorTokens.surface)
+                .overlay(
+                    Capsule()
+                        .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+                )
+        )
     }
 }

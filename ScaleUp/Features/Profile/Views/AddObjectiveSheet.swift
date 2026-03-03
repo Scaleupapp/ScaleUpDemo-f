@@ -1,157 +1,140 @@
 import SwiftUI
 
-// MARK: - Add Objective Sheet
-
 struct AddObjectiveSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let viewModel: ProfileViewModel
+    @State private var currentStep = 0
 
-    @State private var step = 1
-    @State private var selectedType: ObjectiveType = .upskilling
-    @State private var selectedTimeline: Timeline = .threeMonths
-    @State private var selectedLevel: Difficulty = .beginner
-    @State private var weeklyHours: Double = 5
-    @State private var isSaving = false
+    // Step 0: Type
+    @State private var objectiveType = ""
 
-    // Specifics fields
-    @State private var examName = ""
-    @State private var targetSkill = ""
+    // Step 1: Specifics (varies by type)
     @State private var targetRole = ""
+    @State private var targetSkill = ""
+    @State private var examName = ""
     @State private var targetCompany = ""
     @State private var fromDomain = ""
     @State private var toDomain = ""
 
+    // Step 2: Details
+    @State private var timeline = "3_months"
+    @State private var currentLevel = "intermediate"
+    @State private var weeklyHours = 10
+    @State private var learningStyle = "mix"
+
+    // Step 3: Topics
+    @State private var topicInput = ""
+    @State private var topics: [String] = []
+
+    // State
+    @State private var isSaving = false
+    @State private var errorMessage: String?
+
+    private let objectiveService = ObjectiveService()
+    var onCreated: (UserObjective) -> Void
+
+    private let objectiveTypes: [(id: String, label: String, icon: String)] = [
+        ("exam_preparation", "Exam Preparation", "doc.text.fill"),
+        ("upskilling", "Upskilling", "arrow.up.circle.fill"),
+        ("interview_preparation", "Interview Prep", "person.fill.questionmark"),
+        ("career_switch", "Career Switch", "arrow.triangle.swap"),
+        ("academic_excellence", "Academic Excellence", "graduationcap.fill"),
+        ("casual_learning", "Casual Learning", "book.fill"),
+        ("networking", "Networking", "person.3.fill"),
+    ]
+
     var body: some View {
         NavigationStack {
             ZStack {
-                ColorTokens.backgroundDark
-                    .ignoresSafeArea()
+                ColorTokens.background.ignoresSafeArea()
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: Spacing.lg) {
-                        // Step indicator
-                        stepIndicator
+                VStack(spacing: 0) {
+                    // Progress
+                    progressBar
 
-                        if step == 1 {
-                            objectiveTypePicker
-                        } else if step == 2 {
-                            specificsForm
-                        } else {
-                            detailsForm
-                        }
-                    }
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.lg)
-                }
-            }
-            .navigationTitle(stepTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if step > 1 {
-                        Button("Back") { step -= 1 }
-                            .foregroundStyle(ColorTokens.textSecondaryDark)
-                    } else {
-                        Button("Cancel") { dismiss() }
-                            .foregroundStyle(ColorTokens.textSecondaryDark)
-                    }
-                }
-
-                ToolbarItem(placement: .topBarTrailing) {
-                    if step < 3 {
-                        Button("Next") { step += 1 }
-                            .foregroundStyle(ColorTokens.primary)
-                            .disabled(step == 2 && !hasValidSpecifics)
-                    } else {
-                        Button {
-                            Task { await save() }
-                        } label: {
-                            if isSaving {
-                                ProgressView()
-                                    .tint(ColorTokens.primary)
-                            } else {
-                                Text("Save")
-                                    .foregroundStyle(ColorTokens.primary)
+                    ScrollView {
+                        VStack(spacing: Spacing.lg) {
+                            switch currentStep {
+                            case 0: typeStep
+                            case 1: specificsStep
+                            case 2: detailsStep
+                            case 3: topicsStep
+                            default: EmptyView()
                             }
                         }
-                        .disabled(isSaving)
+                        .padding(Spacing.md)
                     }
+
+                    // Navigation buttons
+                    navigationButtons
+                }
+            }
+            .navigationTitle("New Objective")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(ColorTokens.textSecondary)
                 }
             }
         }
-        .presentationDetents([.large])
     }
 
-    // MARK: - Step Indicator
+    // MARK: - Progress Bar
 
-    private var stepIndicator: some View {
-        HStack(spacing: Spacing.xs) {
-            ForEach(1...3, id: \.self) { s in
+    private var progressBar: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<4) { step in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(s <= step ? ColorTokens.primary : ColorTokens.surfaceElevatedDark)
+                    .fill(step <= currentStep ? ColorTokens.gold : ColorTokens.surfaceElevated)
                     .frame(height: 3)
             }
         }
+        .padding(.horizontal, Spacing.md)
+        .padding(.top, Spacing.sm)
     }
 
-    private var stepTitle: String {
-        switch step {
-        case 1: return "Objective Type"
-        case 2: return "Details"
-        case 3: return "Commitment"
-        default: return ""
-        }
-    }
+    // MARK: - Step 0: Type Selection
 
-    // MARK: - Step 1: Type Picker
-
-    private var objectiveTypePicker: some View {
+    private var typeStep: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
-            Text("What's your learning goal?")
+            Text("What's your goal?")
                 .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
+                .foregroundStyle(ColorTokens.textPrimary)
 
-            ForEach(objectiveTypeOptions, id: \.type) { option in
+            Text("Choose the type of objective you want to pursue")
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+
+            ForEach(objectiveTypes, id: \.id) { type in
                 Button {
-                    selectedType = option.type
+                    Haptics.selection()
+                    objectiveType = type.id
                 } label: {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: option.icon)
-                            .font(.system(size: 20))
-                            .foregroundStyle(selectedType == option.type ? ColorTokens.primary : ColorTokens.textTertiaryDark)
-                            .frame(width: 32)
+                    HStack(spacing: Spacing.md) {
+                        Image(systemName: type.icon)
+                            .font(.system(size: 18))
+                            .foregroundStyle(objectiveType == type.id ? ColorTokens.gold : ColorTokens.textTertiary)
+                            .frame(width: 36, height: 36)
+                            .background(objectiveType == type.id ? ColorTokens.gold.opacity(0.15) : ColorTokens.surfaceElevated)
+                            .clipShape(Circle())
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(option.label)
-                                .font(Typography.bodyBold)
-                                .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                            Text(option.subtitle)
-                                .font(Typography.caption)
-                                .foregroundStyle(ColorTokens.textSecondaryDark)
-                        }
+                        Text(type.label)
+                            .font(Typography.body)
+                            .foregroundStyle(objectiveType == type.id ? ColorTokens.textPrimary : ColorTokens.textSecondary)
 
                         Spacer()
 
-                        if selectedType == option.type {
+                        if objectiveType == type.id {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(ColorTokens.primary)
+                                .foregroundStyle(ColorTokens.gold)
                         }
                     }
                     .padding(Spacing.md)
-                    .background(
-                        selectedType == option.type
-                            ? ColorTokens.primary.opacity(0.1)
-                            : ColorTokens.surfaceDark
-                    )
+                    .background(objectiveType == type.id ? ColorTokens.gold.opacity(0.08) : ColorTokens.surface)
                     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
                     .overlay(
                         RoundedRectangle(cornerRadius: CornerRadius.medium)
-                            .stroke(
-                                selectedType == option.type ? ColorTokens.primary.opacity(0.4) : Color.clear,
-                                lineWidth: 1
-                            )
+                            .stroke(objectiveType == type.id ? ColorTokens.gold.opacity(0.4) : Color.clear, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -159,223 +142,332 @@ struct AddObjectiveSheet: View {
         }
     }
 
-    // MARK: - Step 2: Specifics
+    // MARK: - Step 1: Specifics
 
-    private var specificsForm: some View {
+    private var specificsStep: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             Text("Tell us more")
                 .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
+                .foregroundStyle(ColorTokens.textPrimary)
 
-            switch selectedType {
-            case .examPreparation:
-                objectiveTextField("Exam Name", text: $examName, placeholder: "e.g. AWS Solutions Architect")
-
-            case .upskilling, .casualLearning, .networking:
-                objectiveTextField("Target Skill / Interest", text: $targetSkill, placeholder: "e.g. Machine Learning, React Native")
-
-            case .interviewPreparation:
-                objectiveTextField("Target Role", text: $targetRole, placeholder: "e.g. Senior iOS Developer")
-                objectiveTextField("Target Company (optional)", text: $targetCompany, placeholder: "e.g. Apple, Google")
-
-            case .careerSwitch:
-                objectiveTextField("Current Domain", text: $fromDomain, placeholder: "e.g. Backend Development")
-                objectiveTextField("Target Domain", text: $toDomain, placeholder: "e.g. iOS Development")
-
-            case .academicExcellence:
-                objectiveTextField("Subject / Area", text: $targetSkill, placeholder: "e.g. Data Structures, Algorithms")
+            switch objectiveType {
+            case "exam_preparation":
+                styledField("Exam Name", placeholder: "e.g. AWS Solutions Architect", text: $examName)
+            case "upskilling":
+                styledField("Target Skill", placeholder: "e.g. System Design", text: $targetSkill)
+            case "interview_preparation":
+                styledField("Target Role", placeholder: "e.g. Senior Engineer", text: $targetRole)
+                styledField("Target Company (optional)", placeholder: "e.g. Google", text: $targetCompany)
+            case "career_switch":
+                styledField("From Domain", placeholder: "e.g. Frontend", text: $fromDomain)
+                styledField("To Domain", placeholder: "e.g. Backend", text: $toDomain)
+            case "academic_excellence":
+                styledField("Subject / Course", placeholder: "e.g. Data Structures", text: $targetSkill)
+            case "casual_learning":
+                styledField("What do you want to learn?", placeholder: "e.g. Machine Learning", text: $targetSkill)
+            case "networking":
+                styledField("Domain of Interest", placeholder: "e.g. Product Management", text: $targetSkill)
+            default:
+                EmptyView()
             }
         }
     }
 
-    private func objectiveTextField(_ label: String, text: Binding<String>, placeholder: String) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(label)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondaryDark)
+    // MARK: - Step 2: Details
 
-            TextField(placeholder, text: text)
-                .font(Typography.body)
-                .foregroundStyle(ColorTokens.textPrimaryDark)
-                .padding(Spacing.md)
-                .background(ColorTokens.surfaceDark)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                .tint(ColorTokens.primary)
-        }
-    }
-
-    private var hasValidSpecifics: Bool {
-        switch selectedType {
-        case .examPreparation: return !examName.trimmingCharacters(in: .whitespaces).isEmpty
-        case .upskilling, .casualLearning, .networking, .academicExcellence:
-            return !targetSkill.trimmingCharacters(in: .whitespaces).isEmpty
-        case .interviewPreparation: return !targetRole.trimmingCharacters(in: .whitespaces).isEmpty
-        case .careerSwitch:
-            return !fromDomain.trimmingCharacters(in: .whitespaces).isEmpty
-                && !toDomain.trimmingCharacters(in: .whitespaces).isEmpty
-        }
-    }
-
-    // MARK: - Step 3: Details
-
-    private var detailsForm: some View {
+    private var detailsStep: some View {
         VStack(alignment: .leading, spacing: Spacing.lg) {
+            Text("Learning preferences")
+                .font(Typography.titleMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
+
             // Timeline
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Timeline")
                     .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
+                    .foregroundStyle(ColorTokens.textPrimary)
 
-                HStack(spacing: Spacing.xs) {
-                    ForEach(timelineOptions, id: \.timeline) { option in
-                        Button {
-                            selectedTimeline = option.timeline
-                        } label: {
-                            Text(option.label)
-                                .font(Typography.caption)
-                                .foregroundStyle(
-                                    selectedTimeline == option.timeline
-                                        ? .white
-                                        : ColorTokens.textSecondaryDark
-                                )
-                                .padding(.horizontal, Spacing.sm)
-                                .padding(.vertical, Spacing.xs + 2)
-                                .background(
-                                    selectedTimeline == option.timeline
-                                        ? ColorTokens.primary
-                                        : ColorTokens.surfaceDark
-                                )
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
+                chipSelector(
+                    options: [("1_month", "1 Month"), ("3_months", "3 Months"), ("6_months", "6 Months"), ("1_year", "1 Year"), ("no_deadline", "No Deadline")],
+                    selection: $timeline
+                )
             }
 
             // Level
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Current Level")
                     .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.textPrimaryDark)
+                    .foregroundStyle(ColorTokens.textPrimary)
 
-                HStack(spacing: Spacing.sm) {
-                    ForEach([Difficulty.beginner, .intermediate, .advanced], id: \.self) { level in
-                        Button {
-                            selectedLevel = level
-                        } label: {
-                            Text(level.rawValue.capitalized)
-                                .font(Typography.bodySmall)
-                                .foregroundStyle(
-                                    selectedLevel == level ? .white : ColorTokens.textSecondaryDark
-                                )
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, Spacing.sm)
-                                .background(
-                                    selectedLevel == level ? ColorTokens.primary : ColorTokens.surfaceDark
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                chipSelector(
+                    options: [("beginner", "Beginner"), ("intermediate", "Intermediate"), ("advanced", "Advanced")],
+                    selection: $currentLevel
+                )
+            }
+
+            // Weekly hours
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("Weekly Commitment")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.textPrimary)
+
+                HStack(spacing: Spacing.md) {
+                    Button {
+                        if weeklyHours > 1 { weeklyHours -= 1; Haptics.light() }
+                    } label: {
+                        Image(systemName: "minus.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+
+                    Text("\(weeklyHours) hrs/week")
+                        .font(Typography.titleMedium)
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 120)
+
+                    Button {
+                        if weeklyHours < 40 { weeklyHours += 1; Haptics.light() }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            // Learning style
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text("Preferred Learning Style")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.textPrimary)
+
+                chipSelector(
+                    options: [("videos", "Videos"), ("articles", "Articles"), ("interactive", "Interactive"), ("mix", "Mix")],
+                    selection: $learningStyle
+                )
+            }
+        }
+    }
+
+    // MARK: - Step 3: Topics
+
+    private var topicsStep: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            Text("Topics of Interest")
+                .font(Typography.titleMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
+
+            Text("Add topics you'd like to focus on")
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+
+            HStack(spacing: Spacing.sm) {
+                TextField("Add a topic", text: $topicInput)
+                    .font(Typography.body)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .padding(Spacing.sm)
+                    .background(ColorTokens.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                    .overlay(RoundedRectangle(cornerRadius: CornerRadius.small).stroke(ColorTokens.border, lineWidth: 1))
+                    .onSubmit { addTopic() }
+
+                Button { addTopic() } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .disabled(topicInput.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+
+            if !topics.isEmpty {
+                FlowLayout(spacing: Spacing.sm) {
+                    ForEach(topics, id: \.self) { topic in
+                        HStack(spacing: 4) {
+                            Text(topic)
+                                .font(Typography.caption)
+                                .foregroundStyle(ColorTokens.gold)
+                            Button {
+                                topics.removeAll { $0 == topic }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                            }
                         }
-                        .buttonStyle(.plain)
+                        .padding(.horizontal, Spacing.sm)
+                        .padding(.vertical, 4)
+                        .background(ColorTokens.gold.opacity(0.1))
+                        .clipShape(Capsule())
                     }
                 }
             }
 
-            // Weekly Hours
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack {
-                    Text("Weekly Commitment")
-                        .font(Typography.bodyBold)
-                        .foregroundStyle(ColorTokens.textPrimaryDark)
-
-                    Spacer()
-
-                    Text("\(Int(weeklyHours)) hrs/week")
-                        .font(Typography.bodyBold)
-                        .foregroundStyle(ColorTokens.primary)
-                }
-
-                Slider(value: $weeklyHours, in: 1...40, step: 1)
-                    .tint(ColorTokens.primary)
-
-                HStack {
-                    Text("1 hr")
-                        .font(Typography.micro)
-                        .foregroundStyle(ColorTokens.textTertiaryDark)
-                    Spacer()
-                    Text("40 hrs")
-                        .font(Typography.micro)
-                        .foregroundStyle(ColorTokens.textTertiaryDark)
-                }
+            if let error = errorMessage {
+                Text(error)
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.error)
             }
         }
     }
 
-    // MARK: - Save
+    // MARK: - Navigation
 
-    private func save() async {
-        isSaving = true
-        var specifics: [String: String] = [:]
-
-        switch selectedType {
-        case .examPreparation:
-            specifics["examName"] = examName.trimmingCharacters(in: .whitespaces)
-        case .upskilling, .casualLearning, .networking, .academicExcellence:
-            specifics["targetSkill"] = targetSkill.trimmingCharacters(in: .whitespaces)
-        case .interviewPreparation:
-            specifics["targetRole"] = targetRole.trimmingCharacters(in: .whitespaces)
-            if !targetCompany.trimmingCharacters(in: .whitespaces).isEmpty {
-                specifics["targetCompany"] = targetCompany.trimmingCharacters(in: .whitespaces)
+    private var navigationButtons: some View {
+        HStack(spacing: Spacing.md) {
+            if currentStep > 0 {
+                Button {
+                    Haptics.selection()
+                    withAnimation { currentStep -= 1 }
+                } label: {
+                    Text("Back")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(ColorTokens.surface)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                        .overlay(RoundedRectangle(cornerRadius: CornerRadius.medium).stroke(ColorTokens.border, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
             }
-        case .careerSwitch:
-            specifics["fromDomain"] = fromDomain.trimmingCharacters(in: .whitespaces)
-            specifics["toDomain"] = toDomain.trimmingCharacters(in: .whitespaces)
+
+            Button {
+                Haptics.medium()
+                if currentStep < 3 {
+                    withAnimation { currentStep += 1 }
+                } else {
+                    Task { await createObjective() }
+                }
+            } label: {
+                HStack(spacing: Spacing.xs) {
+                    if isSaving {
+                        ProgressView().tint(.black).scaleEffect(0.8)
+                    }
+                    Text(currentStep < 3 ? "Next" : "Create Objective")
+                        .font(Typography.bodyBold)
+                }
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(canProceed ? ColorTokens.gold : ColorTokens.gold.opacity(0.3))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canProceed || isSaving)
+        }
+        .padding(Spacing.md)
+        .background(ColorTokens.surface)
+    }
+
+    // MARK: - Helpers
+
+    private var canProceed: Bool {
+        switch currentStep {
+        case 0: return !objectiveType.isEmpty
+        case 1: return hasValidSpecifics
+        case 2: return true
+        case 3: return !topics.isEmpty
+        default: return false
+        }
+    }
+
+    private var hasValidSpecifics: Bool {
+        switch objectiveType {
+        case "exam_preparation": return !examName.trimmingCharacters(in: .whitespaces).isEmpty
+        case "upskilling", "academic_excellence", "casual_learning", "networking":
+            return !targetSkill.trimmingCharacters(in: .whitespaces).isEmpty
+        case "interview_preparation": return !targetRole.trimmingCharacters(in: .whitespaces).isEmpty
+        case "career_switch":
+            return !fromDomain.trimmingCharacters(in: .whitespaces).isEmpty && !toDomain.trimmingCharacters(in: .whitespaces).isEmpty
+        default: return true
+        }
+    }
+
+    private func addTopic() {
+        let trimmed = topicInput.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !trimmed.isEmpty, !topics.contains(trimmed) else { return }
+        topics.append(trimmed)
+        topicInput = ""
+        Haptics.light()
+    }
+
+    private func createObjective() async {
+        isSaving = true
+        errorMessage = nil
+
+        var specifics: ObjectiveSpecificsInput?
+        switch objectiveType {
+        case "exam_preparation":
+            specifics = ObjectiveSpecificsInput(examName: examName)
+        case "upskilling", "academic_excellence", "casual_learning", "networking":
+            specifics = ObjectiveSpecificsInput(targetSkill: targetSkill)
+        case "interview_preparation":
+            specifics = ObjectiveSpecificsInput(targetRole: targetRole, targetCompany: targetCompany.isEmpty ? nil : targetCompany)
+        case "career_switch":
+            specifics = ObjectiveSpecificsInput(fromDomain: fromDomain, toDomain: toDomain)
+        default: break
         }
 
-        await viewModel.createObjective(
-            objectiveType: selectedType,
-            timeline: selectedTimeline,
-            currentLevel: selectedLevel,
-            weeklyCommitHours: Int(weeklyHours),
-            specifics: specifics.isEmpty ? nil : specifics
+        let body = CreateObjectiveRequest(
+            objectiveType: objectiveType,
+            specifics: specifics,
+            timeline: timeline,
+            currentLevel: currentLevel,
+            weeklyCommitHours: weeklyHours,
+            preferredLearningStyle: learningStyle,
+            topicsOfInterest: topics
         )
 
-        isSaving = false
-        dismiss()
+        do {
+            let newObj = try await objectiveService.create(body: body)
+            Haptics.success()
+            isSaving = false
+            onCreated(newObj)
+            dismiss()
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+            Haptics.error()
+            isSaving = false
+        } catch {
+            errorMessage = "Failed to create objective"
+            Haptics.error()
+            isSaving = false
+        }
     }
 
-    // MARK: - Data
-
-    private struct TypeOption {
-        let type: ObjectiveType
-        let icon: String
-        let label: String
-        let subtitle: String
+    private func styledField(_ label: String, placeholder: String, text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(label)
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+            TextField(placeholder, text: text)
+                .font(Typography.body)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .padding(Spacing.sm)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                .overlay(RoundedRectangle(cornerRadius: CornerRadius.small).stroke(ColorTokens.border, lineWidth: 1))
+        }
     }
 
-    private var objectiveTypeOptions: [TypeOption] {
-        [
-            TypeOption(type: .examPreparation, icon: "doc.text.fill", label: "Exam Prep", subtitle: "Prepare for a certification or exam"),
-            TypeOption(type: .upskilling, icon: "arrow.up.circle.fill", label: "Upskilling", subtitle: "Level up a specific skill"),
-            TypeOption(type: .interviewPreparation, icon: "person.crop.rectangle.fill", label: "Interview Prep", subtitle: "Prepare for job interviews"),
-            TypeOption(type: .careerSwitch, icon: "arrow.triangle.swap", label: "Career Switch", subtitle: "Transition to a new domain"),
-            TypeOption(type: .academicExcellence, icon: "graduationcap.fill", label: "Academic", subtitle: "Excel in academic subjects"),
-            TypeOption(type: .casualLearning, icon: "book.fill", label: "Casual Learning", subtitle: "Learn at your own pace"),
-            TypeOption(type: .networking, icon: "person.3.fill", label: "Networking", subtitle: "Build professional connections"),
-        ]
-    }
-
-    private struct TimelineOption {
-        let timeline: Timeline
-        let label: String
-    }
-
-    private var timelineOptions: [TimelineOption] {
-        [
-            TimelineOption(timeline: .oneMonth, label: "1 mo"),
-            TimelineOption(timeline: .threeMonths, label: "3 mo"),
-            TimelineOption(timeline: .sixMonths, label: "6 mo"),
-            TimelineOption(timeline: .oneYear, label: "1 yr"),
-            TimelineOption(timeline: .noDeadline, label: "Open"),
-        ]
+    private func chipSelector(options: [(id: String, label: String)], selection: Binding<String>) -> some View {
+        FlowLayout(spacing: Spacing.sm) {
+            ForEach(options, id: \.id) { option in
+                Button {
+                    Haptics.selection()
+                    selection.wrappedValue = option.id
+                } label: {
+                    Text(option.label)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(selection.wrappedValue == option.id ? .black : ColorTokens.textSecondary)
+                        .padding(.horizontal, Spacing.md)
+                        .padding(.vertical, Spacing.sm)
+                        .background(selection.wrappedValue == option.id ? ColorTokens.gold : ColorTokens.surface)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 }
