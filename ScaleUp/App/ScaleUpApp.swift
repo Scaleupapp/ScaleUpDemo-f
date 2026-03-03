@@ -8,7 +8,7 @@ struct ScaleUpApp: App {
         WindowGroup {
             rootView
                 .environment(appState)
-                .preferredColorScheme(appState.colorScheme)
+                .preferredColorScheme(.dark)
         }
     }
 

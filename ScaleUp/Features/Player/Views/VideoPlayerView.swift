@@ -10,17 +10,33 @@ struct VideoPlayerView: View {
     let onSeek: (Double) -> Void
     let onSeekRelative: (Double) -> Void
     let onSpeedTap: () -> Void
+    var isFullscreen: Bool = false
+    var onFullscreen: (() -> Void)? = nil
 
     @State private var showControls = true
     @State private var hideControlsTask: Task<Void, Never>?
     @State private var isScrubbing = false
 
     var body: some View {
+        if isFullscreen {
+            videoContent
+                .background(Color.black)
+                .ignoresSafeArea()
+        } else {
+            videoContent
+                .aspectRatio(16/9, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 0))
+        }
+    }
+
+    // MARK: - Video Content
+
+    private var videoContent: some View {
         ZStack {
             // Video layer
             if let player {
                 VideoLayer(player: player)
-                    .ignoresSafeArea(edges: .horizontal)
+                    .ignoresSafeArea(edges: isFullscreen ? .all : .horizontal)
             } else {
                 ZStack {
                     ColorTokens.surface
@@ -36,8 +52,7 @@ struct VideoPlayerView: View {
                     .transition(.opacity)
             }
         }
-        .aspectRatio(16/9, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 0))
+        .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeOut(duration: 0.2)) {
                 showControls.toggle()
@@ -71,7 +86,7 @@ struct VideoPlayerView: View {
                     }
                 }
                 .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.sm)
+                .padding(.top, isFullscreen ? Spacing.lg : Spacing.sm)
 
                 Spacer()
             }
@@ -84,7 +99,7 @@ struct VideoPlayerView: View {
                     scheduleHideControls()
                 } label: {
                     Image(systemName: "gobackward.10")
-                        .font(.system(size: 28))
+                        .font(.system(size: isFullscreen ? 34 : 28))
                         .foregroundStyle(.white.opacity(0.9))
                 }
 
@@ -94,7 +109,7 @@ struct VideoPlayerView: View {
                     scheduleHideControls()
                 } label: {
                     Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 44))
+                        .font(.system(size: isFullscreen ? 54 : 44))
                         .foregroundStyle(.white)
                 }
 
@@ -104,7 +119,7 @@ struct VideoPlayerView: View {
                     scheduleHideControls()
                 } label: {
                     Image(systemName: "goforward.10")
-                        .font(.system(size: 28))
+                        .font(.system(size: isFullscreen ? 34 : 28))
                         .foregroundStyle(.white.opacity(0.9))
                 }
             }
@@ -165,9 +180,23 @@ struct VideoPlayerView: View {
                         .foregroundStyle(.white.opacity(0.85))
                         .monospacedDigit()
                         .frame(width: 40, alignment: .trailing)
+
+                    // Fullscreen toggle button
+                    if let onFullscreen {
+                        Button {
+                            onFullscreen()
+                        } label: {
+                            Image(systemName: isFullscreen
+                                  ? "arrow.down.right.and.arrow.up.left"
+                                  : "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 28, height: 28)
+                        }
+                    }
                 }
                 .padding(.horizontal, Spacing.md)
-                .padding(.bottom, Spacing.sm)
+                .padding(.bottom, isFullscreen ? Spacing.lg : Spacing.sm)
             }
         }
     }

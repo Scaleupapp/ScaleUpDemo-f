@@ -9,30 +9,6 @@ enum AppLaunchState: Equatable {
     case home
 }
 
-// MARK: - App Appearance
-
-enum AppAppearance: String, CaseIterable, Sendable {
-    case system = "System"
-    case light = "Light"
-    case dark = "Dark"
-
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .system: return "circle.lefthalf.filled"
-        case .light: return "sun.max.fill"
-        case .dark: return "moon.fill"
-        }
-    }
-}
-
 // MARK: - App State
 
 @Observable
@@ -43,19 +19,6 @@ final class AppState {
     var currentUser: User?
     var isCheckingAuth = true
     var selectedTab: Tab = .home
-
-    // Theme — stored property so @Observable can track changes
-    var appearance: AppAppearance = AppAppearance(
-        rawValue: UserDefaults.standard.string(forKey: "appearance") ?? "System"
-    ) ?? .system {
-        didSet {
-            UserDefaults.standard.set(appearance.rawValue, forKey: "appearance")
-        }
-    }
-
-    var colorScheme: ColorScheme? {
-        appearance.colorScheme
-    }
 
     private let authService = AuthService()
 

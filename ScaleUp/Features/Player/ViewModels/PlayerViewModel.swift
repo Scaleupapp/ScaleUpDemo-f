@@ -37,6 +37,7 @@ final class PlayerViewModel {
     var isLoadingComments = false
     var newCommentText = ""
     var isPostingComment = false
+    var commentError: String?
     var commentCount: Int = 0
 
     // Playlists
@@ -98,8 +99,13 @@ final class PlayerViewModel {
 
     private func loadComments(id: String) async {
         isLoadingComments = true
-        if let response = try? await playerService.fetchComments(contentId: id) {
+        commentError = nil
+        do {
+            let response = try await playerService.fetchComments(contentId: id)
             comments = response.comments
+        } catch {
+            print("[Comments] loadComments failed: \(error)")
+            commentError = "Could not load comments"
         }
         isLoadingComments = false
     }
@@ -223,12 +229,19 @@ final class PlayerViewModel {
     func postComment() async {
         guard let id = content?.id, !newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         isPostingComment = true
+        commentError = nil
         Haptics.light()
 
-        if let comment = try? await playerService.addComment(contentId: id, text: newCommentText) {
+        do {
+            let comment = try await playerService.addComment(contentId: id, text: newCommentText)
             comments.insert(comment, at: 0)
             commentCount += 1
             newCommentText = ""
+            Haptics.success()
+        } catch {
+            print("[Comments] postComment failed: \(error)")
+            commentError = "Failed to post comment. Please try again."
+            Haptics.error()
         }
 
         isPostingComment = false

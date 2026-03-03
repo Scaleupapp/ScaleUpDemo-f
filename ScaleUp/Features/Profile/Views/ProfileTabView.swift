@@ -103,6 +103,9 @@ struct ProfileTabView: View {
                 // Role-specific sections
                 roleSpecificSection(user: user)
 
+                // AI Tutor History
+                aiTutorHistoryLink
+
                 // Objectives section (all users)
                 objectivesSection
 
@@ -434,6 +437,44 @@ struct ProfileTabView: View {
         if n >= 10_000 { return String(format: "%.0fK", Double(n) / 1_000) }
         if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1_000) }
         return "\(n)"
+    }
+
+    // MARK: - AI Tutor History Link
+
+    private var aiTutorHistoryLink: some View {
+        NavigationLink {
+            AITutorHistoryView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 24))
+                    .foregroundStyle(ColorTokens.gold)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("AI Tutor History")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Review past AI tutor conversations")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.md)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.md)
     }
 
     // MARK: - Objectives Section

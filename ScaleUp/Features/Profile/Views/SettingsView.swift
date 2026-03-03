@@ -89,9 +89,7 @@ struct SettingsView: View {
 
     private var appSection: some View {
         Section {
-            settingsNavigableRow(icon: "paintbrush.fill", title: "Appearance", value: appState.appearance.rawValue) {
-                AppearanceSettingsView()
-            }
+            settingsInfoRow(icon: "paintbrush.fill", title: "Appearance", value: "Dark")
 
             settingsNavigableRow(icon: "bell.fill", title: "Notifications", value: "Enabled") {
                 NotificationSettingsView()
@@ -359,70 +357,3 @@ struct NotificationSettingsView: View {
     }
 }
 
-// MARK: - Appearance Settings
-
-struct AppearanceSettingsView: View {
-    @Environment(AppState.self) private var appState
-
-    var body: some View {
-        ZStack {
-            ColorTokens.background.ignoresSafeArea()
-
-            List {
-                Section {
-                    ForEach(AppAppearance.allCases, id: \.self) { option in
-                        Button {
-                            withAnimation(.easeOut(duration: 0.2)) {
-                                appState.appearance = option
-                            }
-                            Haptics.selection()
-                        } label: {
-                            HStack(spacing: Spacing.sm) {
-                                Image(systemName: option.icon)
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(appState.appearance == option ? ColorTokens.gold : ColorTokens.textTertiary)
-                                    .frame(width: 28)
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(option.rawValue)
-                                        .font(Typography.body)
-                                        .foregroundStyle(ColorTokens.textPrimary)
-                                    Text(appearanceDescription(option))
-                                        .font(Typography.caption)
-                                        .foregroundStyle(ColorTokens.textTertiary)
-                                }
-
-                                Spacer()
-
-                                if appState.appearance == option {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(ColorTokens.gold)
-                                }
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                } header: {
-                    Text("Theme")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiary)
-                        .textCase(nil)
-                }
-                .listRowBackground(ColorTokens.surface)
-            }
-            .scrollContentBackground(.hidden)
-            .listStyle(.insetGrouped)
-        }
-        .navigationTitle("Appearance")
-        .navigationBarTitleDisplayMode(.large)
-    }
-
-    private func appearanceDescription(_ option: AppAppearance) -> String {
-        switch option {
-        case .system: return "Match your device settings"
-        case .light: return "Light backgrounds with dark text"
-        case .dark: return "Dark backgrounds with light text"
-        }
-    }
-}

@@ -4,7 +4,7 @@ import Security
 actor KeychainManager {
     static let shared = KeychainManager()
 
-    private let service = "com.scaleup.ScaleUp"
+    private let service = "com.scaleupapp.ios"
 
     private enum Keys {
         static let accessToken = "accessToken"

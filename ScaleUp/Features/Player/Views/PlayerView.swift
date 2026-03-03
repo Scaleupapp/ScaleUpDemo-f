@@ -10,6 +10,13 @@ struct PlayerView: View {
     @State private var reportDescription = ""
     @State private var isReporting = false
     @State private var reportSuccess = false
+    @State private var isFullscreen = false
+    @State private var showShareSheet = false
+
+    // AI Tutor
+    @State private var aiTutorVM = AITutorViewModel()
+    @State private var showAITutorSheet = false
+    @State private var showAITooltip = false
 
     enum PlayerTab: String, CaseIterable {
         case about = "About"
@@ -27,7 +34,7 @@ struct PlayerView: View {
                 VStack(spacing: 0) {
                     // Video player
                     VideoPlayerView(
-                        player: viewModel.player,
+                        player: isFullscreen ? nil : viewModel.player,
                         isPlaying: Binding(
                             get: { viewModel.isPlaying },
                             set: { _ in viewModel.togglePlayPause() }
@@ -37,7 +44,8 @@ struct PlayerView: View {
                         playbackSpeed: viewModel.playbackSpeed,
                         onSeek: { viewModel.seek(to: $0) },
                         onSeekRelative: { viewModel.seekRelative(seconds: $0) },
-                        onSpeedTap: { viewModel.showSpeedPicker = true }
+                        onSpeedTap: { viewModel.showSpeedPicker = true },
+                        onFullscreen: { isFullscreen = true }
                     )
 
                     // Content details
@@ -70,7 +78,7 @@ struct PlayerView: View {
                                 onLike: { Task { await viewModel.toggleLike() } },
                                 onSave: { Task { await viewModel.toggleSave() } },
                                 onRate: { val in Task { await viewModel.rate(val) } },
-                                onShare: {},
+                                onShare: { showShareSheet = true },
                                 onPlaylist: {
                                     viewModel.showPlaylistSheet = true
                                     Task { await viewModel.loadPlaylists() }
@@ -100,6 +108,15 @@ struct PlayerView: View {
                             }
 
                             Spacer().frame(height: Spacing.xxxl)
+                        }
+                    }
+                    .scrollDismissesKeyboard(.interactively)
+                    .overlay(alignment: .bottomTrailing) {
+                        // Floating "Ask AI" button
+                        if !isFullscreen {
+                            askAIButton
+                                .padding(.trailing, Spacing.lg)
+                                .padding(.bottom, 80) // clear tab bar + safe area
                         }
                     }
                 }
@@ -145,6 +162,20 @@ struct PlayerView: View {
         }
         .task {
             await viewModel.loadContent(id: contentId)
+            // Load AI Tutor status after content loads
+            await aiTutorVM.loadStatus(
+                contentId: contentId,
+                contentTitle: viewModel.content?.title ?? "Content"
+            )
+            // Show tooltip for first-time users
+            if !aiTutorVM.hasShownTooltip && aiTutorVM.buttonVisible {
+                showAITooltip = true
+                aiTutorVM.markTooltipShown()
+                Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    withAnimation { showAITooltip = false }
+                }
+            }
         }
         .onDisappear {
             viewModel.cleanup()
@@ -163,6 +194,49 @@ struct PlayerView: View {
             reportSheet
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $isFullscreen) {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                VideoPlayerView(
+                    player: viewModel.player,
+                    isPlaying: Binding(
+                        get: { viewModel.isPlaying },
+                        set: { _ in viewModel.togglePlayPause() }
+                    ),
+                    currentTime: viewModel.currentTime,
+                    duration: viewModel.duration,
+                    playbackSpeed: viewModel.playbackSpeed,
+                    onSeek: { viewModel.seek(to: $0) },
+                    onSeekRelative: { viewModel.seekRelative(seconds: $0) },
+                    onSpeedTap: { viewModel.showSpeedPicker = true },
+                    isFullscreen: true,
+                    onFullscreen: { isFullscreen = false }
+                )
+            }
+            .ignoresSafeArea()
+            .persistentSystemOverlays(.hidden)
+            .sheet(isPresented: $viewModel.showSpeedPicker) {
+                speedPickerSheet
+                    .presentationDetents([.height(280)])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let content = viewModel.content {
+                ShareActivityView(items: ["Check out \"\(content.title)\" on ScaleUp!"])
+                    .presentationDetents([.medium])
+            }
+        }
+        .sheet(isPresented: $showAITutorSheet) {
+            AITutorSheetView(
+                contentId: contentId,
+                contentTitle: viewModel.content?.title ?? "Content",
+                viewModel: aiTutorVM
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -293,6 +367,22 @@ struct PlayerView: View {
             commentInputBar
                 .padding(.horizontal, Spacing.lg)
 
+            // Comment error
+            if let error = viewModel.commentError {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundStyle(ColorTokens.error)
+                    Text(error)
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.error)
+                    Spacer()
+                }
+                .padding(Spacing.sm)
+                .background(ColorTokens.error.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                .padding(.horizontal, Spacing.lg)
+            }
+
             // Comments list
             if viewModel.isLoadingComments {
                 HStack {
@@ -342,6 +432,7 @@ struct PlayerView: View {
             TextField("Add a comment...", text: $viewModel.newCommentText, axis: .vertical)
                 .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textPrimary)
+                .tint(ColorTokens.gold)
                 .lineLimit(1...4)
                 .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, 8)
@@ -898,6 +989,66 @@ struct PlayerView: View {
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }
 
+    // MARK: - Ask AI Button
+
+    private var askAIButton: some View {
+        Button {
+            if aiTutorVM.isLoadingStatus {
+                // Still loading, do nothing
+            } else if aiTutorVM.isDisabled {
+                Haptics.warning()
+                withAnimation { showAITooltip = true }
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    withAnimation { showAITooltip = false }
+                }
+            } else {
+                Haptics.light()
+                showAITutorSheet = true
+            }
+        } label: {
+            HStack(spacing: Spacing.xs) {
+                if aiTutorVM.isLoadingStatus {
+                    ProgressView()
+                        .tint(ColorTokens.buttonPrimaryText)
+                        .scaleEffect(0.7)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+
+                Text("Ask AI")
+                    .font(Typography.captionBold)
+            }
+            .foregroundStyle(ColorTokens.buttonPrimaryText)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.vertical, Spacing.sm)
+            .background(aiTutorVM.isDisabled ? ColorTokens.textTertiary : ColorTokens.gold)
+            .clipShape(Capsule())
+            .shadow(color: ColorTokens.gold.opacity(0.3), radius: 8, y: 4)
+        }
+        .overlay(alignment: .top) {
+            if showAITooltip {
+                tooltipBubble(aiTutorVM.isDisabled
+                    ? "AI Tutor not available for this video"
+                    : "Ask AI about this video")
+                    .offset(y: -44)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .bottom)))
+            }
+        }
+    }
+
+    private func tooltipBubble(_ text: String) -> some View {
+        Text(text)
+            .font(Typography.caption)
+            .foregroundStyle(ColorTokens.textPrimary)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
+            .background(ColorTokens.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+    }
+
     // MARK: - Helpers
 
     private func formatCount(_ count: Int) -> String {
@@ -905,4 +1056,16 @@ struct PlayerView: View {
         if count >= 1_000 { return String(format: "%.1fK", Double(count) / 1_000) }
         return "\(count)"
     }
+}
+
+// MARK: - Share Sheet
+
+private struct ShareActivityView: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

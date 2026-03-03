@@ -26,6 +26,7 @@
 		26BDAD61E8DB27421C25DD55 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE09302AF43EC4201680CE4 /* HomeView.swift */; };
 		2C587C7956257B6328A7F6F5 /* PlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16C309F5DEE1E728216A72A7 /* PlayerView.swift */; };
 		2DDB61FCEDDB71E02A494B6F /* ContentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 160A1F78B3F5C125BD810631 /* ContentService.swift */; };
+		2E87737BDDEF62DEE513C54F /* AITutorMessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93AC614423E7A593D4020704 /* AITutorMessageBubble.swift */; };
 		3031252428507BB3B3AD957E /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 314D01601386BD44512AC3AC /* SplashView.swift */; };
 		308E0F670C103DA954E8E6A7 /* OnboardingContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2CCD0AF3E6AF66E5A894554 /* OnboardingContainerView.swift */; };
 		30EBDCA3338D1449E76C3F5D /* ExploreGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB6BEB862CBF686A005C2DF4 /* ExploreGridView.swift */; };
@@ -48,8 +49,10 @@
 		4A7778CD73147E15F6E0355D /* ScaleUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */; };
 		4B1D87910EB1315C4FE995DB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3F6A5A1E69F51B5356AA87A7 /* GoogleSignIn */; };
 		4D23772A120D2FB1DA27B154 /* ObjectiveBriefView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3F8F172C303B25B148719 /* ObjectiveBriefView.swift */; };
+		4E79AF74D5991A280BABDF8D /* AITutorHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */; };
 		4F6342DA46706F0B12B3D5BD /* CreateContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0F6CDF4BAFAB818C8A2F319 /* CreateContentView.swift */; };
 		51B2F8DA3819B514E7F1C820 /* ObjectiveStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE94411C902C1553200970B /* ObjectiveStepView.swift */; };
+		53D64357DCDABC34D4777051 /* AITutorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9D3E65976611A01D01058A /* AITutorService.swift */; };
 		5488D2D7B34719BC12B21771 /* TopicDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964B81EF0DAEAECECAEBE1E7 /* TopicDetailViewModel.swift */; };
 		5651469BBA3D330D3A46AF69 /* QuizSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC6890D3E1C4FD4F8B85E95 /* QuizSessionView.swift */; };
 		56C8F73CDA335B165A3ED096 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF315BDB3AAE03E4E2795E0 /* UserService.swift */; };
@@ -60,8 +63,10 @@
 		615E7F6767F7CBB9FCCAA20A /* PreviewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B97BBDC4FB5495822539FB2 /* PreviewHelpers.swift */; };
 		62341DB18FD436BDCDF53B65 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3FF8BEE662D44A13BAE021 /* SettingsView.swift */; };
 		6386FC97514D6F3E78149B60 /* QuizSessionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7514BEB988C13693790E69B2 /* QuizSessionViewModel.swift */; };
+		65153FCC81549E7869B3C3C7 /* AITutor.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC70377CFA5F997485094F1B /* AITutor.swift */; };
 		6530CA81A363CDF02631A8E8 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984467574B3CEEA59B68E9E6 /* DiscoverView.swift */; };
 		68267BE5D60429969BC09FE1 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12A5D49EBD49EC189B98C659 /* OnboardingViewModel.swift */; };
+		6A000F3CB665253447A70893 /* AITutorViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68D847E33411689C67E8DDD1 /* AITutorViewModel.swift */; };
 		6A508A4E6329B8FAD1D90D3D /* BackgroundStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 525ED418E82CE9629856551D /* BackgroundStepView.swift */; };
 		6C6E9ACF67EB4EF47DAAC33E /* LearningPath.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1873C223FE150A82F592675 /* LearningPath.swift */; };
 		6E24E648AB8BDCF9B3A9081E /* CreatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03E34B6A50E38145ACED09D /* CreatorService.swift */; };
@@ -90,10 +95,12 @@
 		97F7F11B33093D12980B7204 /* OnboardingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C0952DA371E65B5BAEF48E /* OnboardingService.swift */; };
 		9A4C3237DF8F63AF0A6E3B40 /* MyContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D05DAB1044B3215C83D630B /* MyContentViewModel.swift */; };
 		9A86C9D975069E65B4B0B097 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12E645CC5045EF597C4A5EF /* Onboarding.swift */; };
+		9C8133F4C56F1AB1EDEBEF12 /* AITutorSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4360C561A62E9E17EAF559 /* AITutorSheetView.swift */; };
 		9CC8953E37027F722C400A94 /* MilestoneCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74080EDBB82330F54039BA22 /* MilestoneCard.swift */; };
 		9D2B0D1F9AB4B93A8C8536BF /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D989D59400C3C9E8233B8BD /* AdminDashboardView.swift */; };
 		9E9505E410700AAA623DD9ED /* CreatorApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E28C33417A31691D35E8217 /* CreatorApplicationView.swift */; };
 		A150DAF648A01157AF3942C6 /* UserObjective.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9D49F86A25007138C2AA75 /* UserObjective.swift */; };
+		A4E1D6F6E88B0AA7180CA8B7 /* AITutorTypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A9DD6FC8946940AE8F458D /* AITutorTypingIndicator.swift */; };
 		A9895314335F03C298A82A95 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6345CA87F28CAB287DBE9463 /* Assets.xcassets */; };
 		ABD51A9D77C9927139CD9784 /* ConsumptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BA0A748861879E69F594E8 /* ConsumptionHistoryView.swift */; };
 		ACC27673D4EBD98E8C05EC82 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDA1EA66E812B6D410C89F6 /* RegisterView.swift */; };
@@ -205,7 +212,9 @@
 		5B40B74C4604610CBD9A5184 /* ContentCreationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentCreationService.swift; sourceTree = "<group>"; };
 		5D989D59400C3C9E8233B8BD /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
 		6345CA87F28CAB287DBE9463 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorHistoryView.swift; sourceTree = "<group>"; };
 		661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpTests.swift; sourceTree = "<group>"; };
+		68D847E33411689C67E8DDD1 /* AITutorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorViewModel.swift; sourceTree = "<group>"; };
 		6BC6890D3E1C4FD4F8B85E95 /* QuizSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizSessionView.swift; sourceTree = "<group>"; };
 		6BE09302AF43EC4201680CE4 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		6E9D49F86A25007138C2AA75 /* UserObjective.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserObjective.swift; sourceTree = "<group>"; };
@@ -221,14 +230,17 @@
 		7A5C9E69390F6A5A71FE407B /* ContentProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentProgress.swift; sourceTree = "<group>"; };
 		7B875570EEE19B26D37FAE6F /* CompletionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionStepView.swift; sourceTree = "<group>"; };
 		7B97BBDC4FB5495822539FB2 /* PreviewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewHelpers.swift; sourceTree = "<group>"; };
+		7B9D3E65976611A01D01058A /* AITutorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorService.swift; sourceTree = "<group>"; };
 		7BDF23307E37EFE298593AA0 /* MyPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlanView.swift; sourceTree = "<group>"; };
 		7BED62C59C6A36689079698F /* ProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressRing.swift; sourceTree = "<group>"; };
+		7CC9363E7C3BDCE5D76CAE7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7CE94411C902C1553200970B /* ObjectiveStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveStepView.swift; sourceTree = "<group>"; };
 		7F45BD0E40088B0F3BBE3301 /* Knowledge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Knowledge.swift; sourceTree = "<group>"; };
 		899E47FA8A0AAAE132F896E1 /* ScaleUpUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpUITests.swift; sourceTree = "<group>"; };
 		8A1647243F39A6C50AFA3E64 /* Endpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Endpoint.swift; sourceTree = "<group>"; };
 		8A646FFEF7D89FCA53F60241 /* KnowledgeService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KnowledgeService.swift; sourceTree = "<group>"; };
 		8FF6D1F7E5C438B86866214B /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		93AC614423E7A593D4020704 /* AITutorMessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorMessageBubble.swift; sourceTree = "<group>"; };
 		94F1892E72872C6002B6C6CE /* EditProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileViewModel.swift; sourceTree = "<group>"; };
 		9581EBC0DE752787D23EA5FF /* CreatorAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorAvatar.swift; sourceTree = "<group>"; };
 		964B81EF0DAEAECECAEBE1E7 /* TopicDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicDetailViewModel.swift; sourceTree = "<group>"; };
@@ -247,6 +259,7 @@
 		AE175A34670E20BC35648307 /* ContentDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentDetailView.swift; sourceTree = "<group>"; };
 		AE5948E1C0BCA337F38B0E8B /* ScaleUpTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ScaleUpTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AEF036AE29224BAD23476945 /* AddObjectiveSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddObjectiveSheet.swift; sourceTree = "<group>"; };
+		AF4360C561A62E9E17EAF559 /* AITutorSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorSheetView.swift; sourceTree = "<group>"; };
 		B0F60870B68E2A84D48946C6 /* QuizDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizDetailView.swift; sourceTree = "<group>"; };
 		B0F6CDF4BAFAB818C8A2F319 /* CreateContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateContentView.swift; sourceTree = "<group>"; };
 		B1873C223FE150A82F592675 /* LearningPath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LearningPath.swift; sourceTree = "<group>"; };
@@ -257,6 +270,7 @@
 		B8585BC43F37EB235D52D662 /* ProfileHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileHeaderView.swift; sourceTree = "<group>"; };
 		B8D27957FF796512FA9CD896 /* GenerateJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateJourneyView.swift; sourceTree = "<group>"; };
 		BB853FBC14783D0A166BC32D /* ScaleUpTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpTextField.swift; sourceTree = "<group>"; };
+		BC70377CFA5F997485094F1B /* AITutor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutor.swift; sourceTree = "<group>"; };
 		BE8D8226EBF02CC8B025E4DF /* EditContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditContentViewModel.swift; sourceTree = "<group>"; };
 		BF68F8B4181048890E38B0FD /* PrimaryButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
 		C0A9BB7A9BCC2740CB8377ED /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
@@ -283,6 +297,7 @@
 		E80E349B32BEBC48AFE29340 /* RecommendationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationService.swift; sourceTree = "<group>"; };
 		E91A395DB118F51FC07A29A6 /* ProfileStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStepView.swift; sourceTree = "<group>"; };
 		E9A4EDB277EAFA7F745C6515 /* QuizResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizResultsView.swift; sourceTree = "<group>"; };
+		E9A9DD6FC8946940AE8F458D /* AITutorTypingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorTypingIndicator.swift; sourceTree = "<group>"; };
 		EA5F5A722554BB4925C1BBDE /* CreatorProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorProfileView.swift; sourceTree = "<group>"; };
 		EC3609F353FCE053E9B79B05 /* WeekStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStrip.swift; sourceTree = "<group>"; };
 		EF0548A68E66F3F98772616E /* FollowUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowUser.swift; sourceTree = "<group>"; };
@@ -352,6 +367,9 @@
 			isa = PBXGroup;
 			children = (
 				C545DA6F0DCF8B099E7AFDE3 /* ActionBar.swift */,
+				93AC614423E7A593D4020704 /* AITutorMessageBubble.swift */,
+				AF4360C561A62E9E17EAF559 /* AITutorSheetView.swift */,
+				E9A9DD6FC8946940AE8F458D /* AITutorTypingIndicator.swift */,
 				16C309F5DEE1E728216A72A7 /* PlayerView.swift */,
 				11B2C0E7F9144D8A75BD8783 /* VideoPlayerView.swift */,
 			);
@@ -410,6 +428,7 @@
 				DFFA63ADE7496F70C249BDA7 /* Models */,
 				2F0F28E52A8B8C083390D455 /* Preview Content */,
 				7D919A7C44342F112477F565 /* Resources */,
+				7CC9363E7C3BDCE5D76CAE7F /* Info.plist */,
 			);
 			path = ScaleUp;
 			sourceTree = "<group>";
@@ -470,6 +489,7 @@
 		376FEE1B75FB286DBBAF1FAA /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				7B9D3E65976611A01D01058A /* AITutorService.swift */,
 				D7D651438987D7C3AD1FBC34 /* PlayerService.swift */,
 			);
 			path = Services;
@@ -527,6 +547,7 @@
 			children = (
 				AEF036AE29224BAD23476945 /* AddObjectiveSheet.swift */,
 				5D989D59400C3C9E8233B8BD /* AdminDashboardView.swift */,
+				6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */,
 				5633F29ED915AA7767689BB4 /* ApplicationStatusView.swift */,
 				AA8A218BB1743A1E5065904D /* ContentModerationView.swift */,
 				1E28C33417A31691D35E8217 /* CreatorApplicationView.swift */,
@@ -665,6 +686,7 @@
 		9657582EAE9B4749257D9555 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				68D847E33411689C67E8DDD1 /* AITutorViewModel.swift */,
 				CBA41A03D9AF94321DB08E1E /* PlayerViewModel.swift */,
 			);
 			path = ViewModels;
@@ -832,6 +854,7 @@
 			isa = PBXGroup;
 			children = (
 				745763EE8FF0F674F82AFFD7 /* AdminStats.swift */,
+				BC70377CFA5F997485094F1B /* AITutor.swift */,
 				AAB8C8E18FB9EFC98640E620 /* Comment.swift */,
 				27E642F5E366FF9FB869CD92 /* Content.swift */,
 				7A5C9E69390F6A5A71FE407B /* ContentProgress.swift */,
@@ -1085,6 +1108,13 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				65153FCC81549E7869B3C3C7 /* AITutor.swift in Sources */,
+				4E79AF74D5991A280BABDF8D /* AITutorHistoryView.swift in Sources */,
+				2E87737BDDEF62DEE513C54F /* AITutorMessageBubble.swift in Sources */,
+				53D64357DCDABC34D4777051 /* AITutorService.swift in Sources */,
+				9C8133F4C56F1AB1EDEBEF12 /* AITutorSheetView.swift in Sources */,
+				A4E1D6F6E88B0AA7180CA8B7 /* AITutorTypingIndicator.swift in Sources */,
+				6A000F3CB665253447A70893 /* AITutorViewModel.swift in Sources */,
 				B5274390D20A7A2F9665CBEF /* APIClient.swift in Sources */,
 				DF95001964136BA998CB7FF4 /* APIError.swift in Sources */,
 				ADFD3022E2A3098E45830223 /* ActionBar.swift in Sources */,
@@ -1236,16 +1266,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = ScaleUp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ScaleUp;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.scaleup.ScaleUp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scaleupapp.ios;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1261,7 +1294,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.scaleup.ScaleUpTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scaleupapp.ScaleUpTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ScaleUp.app/ScaleUp";
@@ -1301,8 +1334,10 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1337,7 +1372,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.scaleup.ScaleUpUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scaleupapp.ScaleUpUITests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = ScaleUp;
@@ -1378,7 +1413,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1420,7 +1455,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.scaleup.ScaleUpTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scaleupapp.ScaleUpTests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ScaleUp.app/ScaleUp";
@@ -1432,16 +1467,19 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = ScaleUp/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = ScaleUp;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.scaleup.ScaleUp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scaleupapp.ios;
 				SDKROOT = iphoneos;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1457,7 +1495,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.scaleup.ScaleUpUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scaleupapp.ScaleUpUITests;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = ScaleUp;

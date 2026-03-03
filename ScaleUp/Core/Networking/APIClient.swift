@@ -48,7 +48,7 @@ struct Pagination: Decodable, Sendable {
 actor APIClient {
     static let shared = APIClient()
 
-    private let baseURL = "http://localhost:5001/api/v1"
+    private let baseURL = "http://15.207.72.150:5000/api/v1"
     private let session: URLSession
     private let decoder: JSONDecoder
 

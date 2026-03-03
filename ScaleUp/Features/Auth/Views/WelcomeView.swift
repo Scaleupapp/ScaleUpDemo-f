@@ -5,6 +5,7 @@ struct WelcomeView: View {
 
     @State private var showLogin = false
     @State private var showRegister = false
+    @State private var showPhoneAuth = false
 
     @State private var appeared = false
     @State private var glowPhase: CGFloat = 0
@@ -102,9 +103,31 @@ struct WelcomeView: View {
 
                         Button {
                             Haptics.selection()
+                            showPhoneAuth = true
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: "phone.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                Text("Sign in with Phone OTP")
+                                    .font(.system(size: 15, weight: .semibold))
+                            }
+                            .foregroundStyle(ColorTokens.gold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(ColorTokens.gold.opacity(0.4), lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(appeared ? 1 : 0)
+                        .offset(y: appeared ? 0 : 18)
+
+                        Button {
+                            Haptics.selection()
                             showLogin = true
                         } label: {
-                            Text("Already have an account? **Sign In**")
+                            Text("Already have an account? **Sign In with Email**")
                                 .font(.system(size: 14))
                                 .foregroundStyle(ColorTokens.textSecondary)
                         }
@@ -121,6 +144,9 @@ struct WelcomeView: View {
             }
             .navigationDestination(isPresented: $showRegister) {
                 RegisterView()
+            }
+            .navigationDestination(isPresented: $showPhoneAuth) {
+                PhoneAuthView()
             }
             .onAppear {
                 withAnimation(.easeOut(duration: 0.8)) {
