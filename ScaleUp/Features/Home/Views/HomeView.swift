@@ -58,19 +58,18 @@ struct HomeView: View {
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
-                // Compact header: greeting + goal + score
+                // Compact header: greeting + score
                 compactHeader
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.md)
                     .padding(.bottom, Spacing.sm)
 
-                // Inline stats strip
-                statsStrip
-                    .padding(.bottom, Spacing.xs)
-
-                // Content type filter
-                contentTypeFilter
-                    .padding(.bottom, Spacing.sm)
+                // Welcome card for new users
+                if viewModel.isNewUser {
+                    welcomeCard
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.bottom, Spacing.md)
+                }
 
                 // Next action (slim)
                 if let action = viewModel.firstNextAction {
@@ -134,40 +133,11 @@ struct HomeView: View {
 
             Spacer()
 
-            // Goal pill (if available)
-            if let objective = viewModel.primaryObjective {
-                goalPill(objective)
-            }
-
-            // Score badge
-            scoreBadge
-        }
-    }
-
-    private func goalPill(_ objective: Objective) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: "target")
-                .font(.system(size: 10))
-                .foregroundStyle(ColorTokens.gold)
-
-            Text(objective.targetRole ?? objective.targetSkill ?? "Goal")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white)
-                .lineLimit(1)
-
-            if let days = objective.daysRemaining {
-                Text("\(days)d")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(ColorTokens.gold)
+            // Score badge — only when user has a score
+            if viewModel.readinessScore > 0 {
+                scoreBadge
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(ColorTokens.surface)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule().stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
-        )
     }
 
     private var scoreBadge: some View {
@@ -184,82 +154,60 @@ struct HomeView: View {
         .clipShape(Circle())
     }
 
-    // MARK: - Stats Strip
+    // MARK: - Welcome Card (New Users)
 
-    private var statsStrip: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                statChip(
-                    icon: "play.circle.fill",
-                    text: "\(viewModel.weeklyStats?.contentConsumed ?? 0) watched this week"
-                )
-                statChip(
-                    icon: "checkmark.circle.fill",
-                    text: "\(viewModel.weeklyStats?.totalContentConsumed ?? 0) lessons completed"
-                )
-                NavigationLink(value: QuizListDestination()) {
-                    if viewModel.pendingQuizzes > 0 {
-                        statChip(
-                            icon: "brain.head.profile",
-                            text: "\(viewModel.pendingQuizzes) quizzes pending",
-                            accent: ColorTokens.warning
-                        )
-                    } else {
-                        statChip(
-                            icon: "brain.head.profile",
-                            text: "Quizzes"
-                        )
-                    }
-                }
-                .buttonStyle(.plain)
-                if let journey = viewModel.journey {
-                    statChip(
-                        icon: "map.fill",
-                        text: "Journey: week \(journey.currentWeek ?? 1)"
-                    )
-                }
-                if viewModel.weeklyGrowthDelta != 0 {
-                    growthChip
-                }
+    private var welcomeCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Start Your Learning Journey")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white)
+
+            VStack(alignment: .leading, spacing: 10) {
+                welcomeBullet(icon: "safari.fill", text: "Browse Discover to find content you like")
+                welcomeBullet(icon: "play.circle.fill", text: "Watch a video and try the AI Tutor")
+                welcomeBullet(icon: "brain.head.profile", text: "Take quizzes to build your knowledge profile")
             }
-            .padding(.horizontal, Spacing.lg)
-        }
-    }
 
-    private func statChip(icon: String, text: String, accent: Color = ColorTokens.gold) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(accent)
-
-            Text(text)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(ColorTokens.textSecondary)
+            Button {
+                Haptics.selection()
+                appState.selectedTab = .discover
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Explore Content")
+                        .font(.system(size: 13, weight: .bold))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(ColorTokens.buttonPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(ColorTokens.goldGradient)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, Spacing.xs)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(ColorTokens.surface)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule().stroke(ColorTokens.border, lineWidth: 1)
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+                )
         )
     }
 
-    private var growthChip: some View {
-        let isUp = viewModel.weeklyGrowthDelta > 0
-        return HStack(spacing: 4) {
-            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
-                .font(.system(size: 9))
-            Text(isUp
-                 ? "+\(viewModel.weeklyGrowthDelta) from last week"
-                 : "\(viewModel.weeklyGrowthDelta) from last week")
-                .font(.system(size: 12, weight: .semibold))
+    private func welcomeBullet(icon: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(ColorTokens.gold)
+                .frame(width: 20)
+            Text(text)
+                .font(.system(size: 13))
+                .foregroundStyle(ColorTokens.textSecondary)
         }
-        .foregroundStyle(isUp ? ColorTokens.success : ColorTokens.warning)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background((isUp ? ColorTokens.success : ColorTokens.warning).opacity(0.1))
-        .clipShape(Capsule())
     }
 
     // MARK: - Next Action Banner
@@ -295,8 +243,8 @@ struct HomeView: View {
 
     private var contentFeed: some View {
         VStack(spacing: Spacing.lg) {
-            // Continue Watching (not filtered — always show progress)
-            if !viewModel.continueWatching.isEmpty && viewModel.selectedContentType == nil {
+            // Continue Watching
+            if !viewModel.continueWatching.isEmpty {
                 sectionRow(title: "Continue Watching", icon: "play.circle.fill") {
                     continueWatchingCards
                 }
@@ -309,24 +257,24 @@ struct HomeView: View {
             }
 
             // Recommended For You
-            if viewModel.filteredRecommendations.count > 1 {
-                let recItems = Array(viewModel.filteredRecommendations.dropFirst())
+            if viewModel.recommendations.count > 1 {
+                let recItems = Array(viewModel.recommendations.dropFirst())
                 sectionRow(title: "Recommended For You", icon: "sparkles", items: recItems) {
                     horizontalContentScroll(items: recItems, width: 180)
                 }
             }
 
             // Trending
-            if !viewModel.filteredTrending.isEmpty {
-                sectionRow(title: "Trending", icon: "flame.fill", items: viewModel.filteredTrending) {
-                    horizontalContentScroll(items: viewModel.filteredTrending, width: 180)
+            if !viewModel.trending.isEmpty {
+                sectionRow(title: "Trending", icon: "flame.fill", items: viewModel.trending) {
+                    horizontalContentScroll(items: viewModel.trending, width: 180)
                 }
             }
 
             // All Content
-            if !viewModel.filteredAllContent.isEmpty {
-                sectionRow(title: "Explore", icon: "safari.fill", items: viewModel.filteredAllContent) {
-                    horizontalContentScroll(items: viewModel.filteredAllContent, width: 180)
+            if !viewModel.allContent.isEmpty {
+                sectionRow(title: "Explore", icon: "safari.fill", items: viewModel.allContent) {
+                    horizontalContentScroll(items: viewModel.allContent, width: 180)
                 }
             }
         }
@@ -660,44 +608,10 @@ struct HomeView: View {
 
     private var hasAnyContent: Bool {
         !viewModel.continueWatching.isEmpty ||
-        !viewModel.filteredRecommendations.isEmpty ||
-        !viewModel.filteredTrending.isEmpty ||
-        !viewModel.filteredAllContent.isEmpty ||
+        !viewModel.recommendations.isEmpty ||
+        !viewModel.trending.isEmpty ||
+        !viewModel.allContent.isEmpty ||
         !quizViewModel.availableQuizzes.isEmpty
-    }
-
-    // MARK: - Content Type Filter
-
-    private var contentTypeFilter: some View {
-        HStack(spacing: 0) {
-            homeTypeTab(nil, label: "All")
-            homeTypeTab(.video, label: "Videos")
-            homeTypeTab(.article, label: "Articles")
-            homeTypeTab(.infographic, label: "Infographics")
-        }
-        .padding(3)
-        .background(ColorTokens.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .padding(.horizontal, Spacing.lg)
-    }
-
-    private func homeTypeTab(_ type: ContentType?, label: String) -> some View {
-        let isSelected = viewModel.selectedContentType == type
-        return Button {
-            Haptics.selection()
-            withAnimation(.easeInOut(duration: 0.2)) {
-                viewModel.selectedContentType = type
-            }
-        } label: {
-            Text(label)
-                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
-                .foregroundStyle(isSelected ? .black : ColorTokens.textTertiary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(isSelected ? ColorTokens.gold : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .buttonStyle(.plain)
     }
 
     private var homeEmptyState: some View {

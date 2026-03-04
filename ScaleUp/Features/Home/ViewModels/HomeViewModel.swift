@@ -11,7 +11,6 @@ final class HomeViewModel {
     var allContent: [Content] = []
     var isLoading = false
     var errorMessage: String?
-    var selectedContentType: ContentType?
 
     private let dashboardService = DashboardService()
     private let contentService = ContentService()
@@ -29,22 +28,12 @@ final class HomeViewModel {
     }
 
     var heroContent: Content? {
-        filteredRecommendations.first ?? filteredAllContent.first
+        recommendations.first ?? allContent.first
     }
 
-    var filteredRecommendations: [Content] {
-        guard let type = selectedContentType else { return recommendations }
-        return recommendations.filter { $0.contentType == type }
-    }
-
-    var filteredTrending: [Content] {
-        guard let type = selectedContentType else { return trending }
-        return trending.filter { $0.contentType == type }
-    }
-
-    var filteredAllContent: [Content] {
-        guard let type = selectedContentType else { return allContent }
-        return allContent.filter { $0.contentType == type }
+    var isNewUser: Bool {
+        let watched = weeklyStats?.totalContentConsumed ?? 0
+        return readinessScore == 0 && watched == 0 && continueWatching.isEmpty
     }
 
     var firstNextAction: NextAction? {
