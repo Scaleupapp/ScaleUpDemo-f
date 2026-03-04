@@ -60,6 +60,12 @@ struct MyPlanView: View {
                 await viewModel.loadDashboard()
             }
         }
+        .coachMark(
+            .tabJourney,
+            icon: "map.fill",
+            title: "Learning Roadmap",
+            message: "Set objectives and generate an AI-powered learning plan with daily goals and milestones."
+        )
     }
 
     // MARK: - No Journey State (shows real objective + generate CTA)

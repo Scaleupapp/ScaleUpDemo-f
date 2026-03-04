@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
+    @Environment(CoachMarkManager.self) private var coachMarkManager
 
     var body: some View {
         @Bindable var appState = appState
@@ -18,6 +19,17 @@ struct MainTabView: View {
         .tint(ColorTokens.gold)
         .onAppear {
             configureTabBarAppearance()
+        }
+        .overlay {
+            if coachMarkManager.showWelcomeCarousel {
+                WelcomeCarouselView {
+                    // After carousel dismisses, show the Home tab coach mark
+                    Task {
+                        try? await Task.sleep(for: .seconds(1))
+                        coachMarkManager.show(.tabHome)
+                    }
+                }
+            }
         }
     }
 

@@ -3,11 +3,13 @@ import SwiftUI
 @main
 struct ScaleUpApp: App {
     @State private var appState = AppState()
+    @State private var coachMarkManager = CoachMarkManager()
 
     var body: some Scene {
         WindowGroup {
             rootView
                 .environment(appState)
+                .environment(coachMarkManager)
                 .preferredColorScheme(.dark)
         }
     }

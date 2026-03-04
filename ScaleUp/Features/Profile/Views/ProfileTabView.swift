@@ -74,6 +74,12 @@ struct ProfileTabView: View {
                 CreateContentView()
             }
         }
+        .coachMark(
+            .tabProfile,
+            icon: "person.fill",
+            title: "Your Account",
+            message: "Manage objectives, view saved content, AI tutor history, and apply to become a creator."
+        )
     }
 
     // MARK: - Profile Content
@@ -885,17 +891,13 @@ struct ProfileTabView: View {
     }
 
     private var emptyStateView: some View {
-        VStack(spacing: Spacing.md) {
-            Image(systemName: "person.crop.circle.badge.exclamationmark")
-                .font(.system(size: 40))
-                .foregroundStyle(ColorTokens.textTertiary)
-            Text("Couldn't load profile")
-                .font(Typography.bodyBold)
-                .foregroundStyle(ColorTokens.textPrimary)
-            Text("Pull down to retry")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textTertiary)
-        }
+        ErrorStateView(
+            message: "We couldn't load your profile.\nCheck your connection and try again.",
+            retryLabel: "Reload Profile",
+            onRetry: {
+                Task { await viewModel.loadProfile() }
+            }
+        )
     }
 }
 

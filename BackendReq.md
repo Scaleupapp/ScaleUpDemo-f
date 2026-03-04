@@ -3030,3 +3030,4 @@ These are planned but not yet built. The current architecture supports them:
 
 *End of Document. This is the single source of truth for all frontend development on ScaleUp.*
 *Version 2.0 — February 2026*
+

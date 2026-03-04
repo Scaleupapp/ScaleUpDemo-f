@@ -39,6 +39,12 @@ struct DiscoverView: View {
         .task {
             await viewModel.loadFeed()
         }
+        .coachMark(
+            .tabDiscover,
+            icon: "safari.fill",
+            title: "Content Library",
+            message: "Search and browse all content. Filter by type, topic, or difficulty. Find creators to follow."
+        )
     }
 
     // MARK: - Search Bar
@@ -950,45 +956,14 @@ struct DiscoverView: View {
     // MARK: - Empty State
 
     private var discoverEmptyState: some View {
-        VStack(spacing: Spacing.lg) {
-            Spacer().frame(height: 40)
-
-            Image(systemName: "safari")
-                .font(.system(size: 44))
-                .foregroundStyle(ColorTokens.textTertiary)
-
-            VStack(spacing: Spacing.sm) {
-                Text("No content available yet")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Text("Content will appear here as creators\npublish new lessons and resources.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-            }
-
-            Button {
-                Task { await viewModel.loadFeed() }
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 13))
-                    Text("Refresh")
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .foregroundStyle(.black)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
-                .background(ColorTokens.gold)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
+        EmptyStateView(
+            icon: "safari",
+            title: "No content available yet",
+            message: "Content will appear here as creators publish new lessons and resources.",
+            actionLabel: "Refresh",
+            actionIcon: "arrow.clockwise",
+            action: { Task { await viewModel.loadFeed() } }
+        )
     }
 
     // MARK: - Section Header

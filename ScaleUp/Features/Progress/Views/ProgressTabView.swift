@@ -43,6 +43,12 @@ struct ProgressTabView: View {
                 await viewModel.loadProfile()
             }
         }
+        .coachMark(
+            .tabProgress,
+            icon: "chart.bar.fill",
+            title: "Knowledge Profile",
+            message: "Your knowledge profile builds as you take quizzes. See topic mastery, strengths, and growth."
+        )
     }
 
     // MARK: - Main Content

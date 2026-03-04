@@ -45,6 +45,12 @@ struct HomeView: View {
             await viewModel.loadDashboard()
             await quizViewModel.loadQuizzes()
         }
+        .coachMark(
+            .tabHome,
+            icon: "house.fill",
+            title: "Your Dashboard",
+            message: "Your readiness score, recommendations, and next actions update as you learn."
+        )
     }
 
     // MARK: - Main Content
@@ -695,43 +701,14 @@ struct HomeView: View {
     }
 
     private var homeEmptyState: some View {
-        VStack(spacing: Spacing.lg) {
-            Image(systemName: "books.vertical")
-                .font(.system(size: 44))
-                .foregroundStyle(ColorTokens.textTertiary)
-
-            VStack(spacing: Spacing.sm) {
-                Text("Your feed is empty")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Text("Start exploring content to get personalized\nrecommendations and track your progress.")
-                    .font(.system(size: 14))
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(3)
-            }
-
-            Button {
-                appState.selectedTab = .discover
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "safari.fill")
-                        .font(.system(size: 13))
-                    Text("Explore Content")
-                        .font(.system(size: 14, weight: .bold))
-                }
-                .foregroundStyle(.black)
-                .padding(.horizontal, 24)
-                .padding(.vertical, 12)
-                .background(ColorTokens.gold)
-                .clipShape(Capsule())
-            }
-            .buttonStyle(.plain)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.xl)
-        .padding(.vertical, 40)
+        EmptyStateView(
+            icon: "books.vertical",
+            title: "Your feed is empty",
+            message: "Start exploring content to get personalized recommendations and track your progress.",
+            actionLabel: "Explore Content",
+            actionIcon: "safari.fill",
+            action: { appState.selectedTab = .discover }
+        )
     }
 
     // MARK: - Helpers

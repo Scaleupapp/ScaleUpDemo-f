@@ -28,8 +28,21 @@ struct PlayerView: View {
             ColorTokens.background.ignoresSafeArea()
 
             if viewModel.isLoading && viewModel.content == nil {
-                ProgressView()
-                    .tint(ColorTokens.gold)
+                VStack(spacing: Spacing.md) {
+                    ProgressView()
+                        .tint(ColorTokens.gold)
+                    Text("Loading content...")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            } else if !viewModel.isLoading && viewModel.content == nil {
+                ErrorStateView(
+                    message: "This content couldn't be loaded.\nIt may have been removed or your connection dropped.",
+                    retryLabel: "Try Again",
+                    onRetry: {
+                        Task { await viewModel.loadContent(id: contentId) }
+                    }
+                )
             } else if let content = viewModel.content {
                 VStack(spacing: 0) {
                     // Video player
