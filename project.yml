@@ -46,10 +46,6 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "ScaleUp"
         INFOPLIST_KEY_CFBundleIconName: "AppIcon"
         SWIFT_STRICT_CONCURRENCY: complete
-    entitlements:
-      path: ScaleUp/ScaleUp.entitlements
-      properties:
-        aps-environment: development
     dependencies:
       - package: Nuke
         product: Nuke
