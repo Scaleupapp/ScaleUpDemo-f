@@ -1,6 +1,24 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import AVFoundation
+
+// MARK: - Video File Transferable (saves to disk, never loads into memory)
+
+struct VideoFileTransferable: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { video in
+            SentTransferredFile(video.url)
+        } importing: { received in
+            let dest = FileManager.default.temporaryDirectory
+                .appendingPathComponent("picked_\(UUID().uuidString.prefix(8)).mov")
+            try FileManager.default.copyItem(at: received.file, to: dest)
+            return Self(url: dest)
+        }
+    }
+}
 
 @Observable
 @MainActor
@@ -21,11 +39,17 @@ final class CreateContentViewModel {
 
     var selectedVideoItem: PhotosPickerItem?
     var selectedFileName: String?
-    var selectedFileSize: Int = 0
+    var selectedFileSize: Int64 = 0
     var selectedMimeType: String = "video/mp4"
-    var mediaData: Data?
+    var mediaFileURL: URL?
+    var mediaData: Data? // Only for small files (images, PDFs)
     var mediaThumbnail: UIImage?
-    var hasSelectedMedia: Bool { mediaData != nil }
+    var hasSelectedMedia: Bool { mediaFileURL != nil }
+    var isLoadingMedia = false
+
+    // Size info
+    var fileSizeTooLarge: Bool { selectedFileSize > 4 * 1024 * 1024 * 1024 }
+    var willCompress: Bool { selectedMimeType.hasPrefix("video/") && selectedFileSize > 500 * 1024 * 1024 }
 
     // Video thumbnail
     var thumbnailPickerItem: PhotosPickerItem?
@@ -50,30 +74,14 @@ final class CreateContentViewModel {
 
     // MARK: - Upload State
 
-    var isUploading = false
-    var uploadProgress: Double = 0
-    var uploadPhase: UploadPhase = .idle
+    var uploadStarted = false
     var errorMessage: String?
-    var createdContent: Content?
-
-    enum UploadPhase: Equatable {
-        case idle
-        case requestingURL
-        case uploadingToStorage
-        case registeringContent
-        case processing
-        case complete
-    }
-
-    // MARK: - Services
-
-    private let service = ContentCreationService()
 
     // MARK: - Computed
 
     var canProceed: Bool {
         switch currentStep {
-        case .media: return hasSelectedMedia
+        case .media: return hasSelectedMedia && !fileSizeTooLarge
         case .details: return !title.trimmingCharacters(in: .whitespaces).isEmpty
         case .categorize: return !domain.trimmingCharacters(in: .whitespaces).isEmpty && !topics.isEmpty
         case .review: return true
@@ -90,9 +98,7 @@ final class CreateContentViewModel {
     }
 
     var fileSizeDisplay: String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: Int64(selectedFileSize))
+        ByteCountFormatter.string(fromByteCount: selectedFileSize, countStyle: .file)
     }
 
     // MARK: - Media Selection
@@ -100,45 +106,61 @@ final class CreateContentViewModel {
     func handleVideoSelection() async {
         guard let item = selectedVideoItem else { return }
 
-        // Try to load video data
-        if let data = try? await item.loadTransferable(type: Data.self) {
-            mediaData = data
-            selectedFileSize = data.count
-            mediaThumbnail = nil
-            customThumbnail = nil
-            videoDuration = nil
+        isLoadingMedia = true
+        mediaThumbnail = nil
+        customThumbnail = nil
+        videoDuration = nil
+        mediaFileURL = nil
+        mediaData = nil
 
-            // Determine MIME type from UTType
-            if let contentType = item.supportedContentTypes.first {
-                if contentType.conforms(to: .mpeg4Movie) || contentType.conforms(to: .movie) {
+        // Determine content type from UTType
+        let isVideo = item.supportedContentTypes.contains(where: { $0.conforms(to: .movie) })
+        let isImage = item.supportedContentTypes.contains(where: { $0.conforms(to: .image) })
+
+        if isVideo {
+            // Load as file (never into memory)
+            if let video = try? await item.loadTransferable(type: VideoFileTransferable.self) {
+                mediaFileURL = video.url
+                let attrs = try? FileManager.default.attributesOfItem(atPath: video.url.path)
+                selectedFileSize = (attrs?[.size] as? Int64) ?? 0
+
+                if let utType = item.supportedContentTypes.first {
+                    selectedMimeType = utType.conforms(to: .quickTimeMovie) ? "video/quicktime" : "video/mp4"
+                } else {
                     selectedMimeType = "video/mp4"
-                    self.contentType = "video"
-                } else if contentType.conforms(to: .quickTimeMovie) {
-                    selectedMimeType = "video/quicktime"
-                    self.contentType = "video"
-                } else if contentType.conforms(to: .pdf) {
-                    selectedMimeType = "application/pdf"
-                    self.contentType = "article"
-                } else if contentType.conforms(to: .image) {
-                    selectedMimeType = "image/jpeg"
-                    self.contentType = "infographic"
                 }
+                contentType = "video"
+
+                let ext = selectedMimeType.split(separator: "/").last.map(String.init) ?? "mp4"
+                selectedFileName = "content_\(UUID().uuidString.prefix(8)).\(ext)"
+
+                await extractVideoThumbnail(from: video.url)
             }
+        } else {
+            // Small file: load into Data
+            if let data = try? await item.loadTransferable(type: Data.self) {
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("picked_\(UUID().uuidString.prefix(8))")
+                try? data.write(to: tempURL)
+                mediaFileURL = tempURL
+                mediaData = data
+                selectedFileSize = Int64(data.count)
 
-            // Generate filename
-            let ext = selectedMimeType.split(separator: "/").last.map(String.init) ?? "mp4"
-            selectedFileName = "content_\(UUID().uuidString.prefix(8)).\(ext)"
-
-            // Generate thumbnail based on content type
-            if self.contentType == "video" {
-                await extractVideoThumbnail(from: data)
-            } else if self.contentType == "infographic" {
-                // For images, create thumbnail directly from data
-                if let image = UIImage(data: data) {
-                    mediaThumbnail = image
+                if isImage {
+                    selectedMimeType = "image/jpeg"
+                    contentType = "infographic"
+                    mediaThumbnail = UIImage(data: data)
+                } else {
+                    selectedMimeType = "application/pdf"
+                    contentType = "article"
                 }
+
+                let ext = selectedMimeType.split(separator: "/").last.map(String.init) ?? "dat"
+                selectedFileName = "content_\(UUID().uuidString.prefix(8)).\(ext)"
             }
         }
+
+        isLoadingMedia = false
     }
 
     func handleThumbnailSelection() async {
@@ -155,21 +177,16 @@ final class CreateContentViewModel {
         thumbnailPickerItem = nil
     }
 
-    /// The thumbnail to display — custom overrides auto-generated
     var displayThumbnail: UIImage? {
         customThumbnail ?? mediaThumbnail
     }
 
-    private func extractVideoThumbnail(from data: Data) async {
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_video_\(UUID().uuidString.prefix(6)).mp4")
-        try? data.write(to: tempURL)
-
-        let asset = AVAsset(url: tempURL)
+    private func extractVideoThumbnail(from url: URL) async {
+        let asset = AVAsset(url: url)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         generator.maximumSize = CGSize(width: 600, height: 600)
 
-        // Extract thumbnail at 1 second in (more representative than frame 0)
         let time = CMTime(seconds: 1, preferredTimescale: 600)
         if let cgImage = try? await generator.image(at: time).image {
             mediaThumbnail = UIImage(cgImage: cgImage)
@@ -177,12 +194,9 @@ final class CreateContentViewModel {
             mediaThumbnail = UIImage(cgImage: cgImage)
         }
 
-        // Get duration
         if let duration = try? await asset.load(.duration) {
             videoDuration = duration.seconds
         }
-
-        try? FileManager.default.removeItem(at: tempURL)
     }
 
     var durationDisplay: String? {
@@ -235,72 +249,27 @@ final class CreateContentViewModel {
         }
     }
 
-    // MARK: - Upload & Create
+    // MARK: - Start Upload via UploadManager
 
-    func startUpload() async {
-        guard let data = mediaData, let fileName = selectedFileName else { return }
+    func startUpload(uploadManager: UploadManager) {
+        guard let fileURL = mediaFileURL, let fileName = selectedFileName else { return }
 
-        isUploading = true
-        errorMessage = nil
-        uploadProgress = 0
+        let job = UploadJob(
+            fileURL: fileURL,
+            fileName: fileName,
+            mimeType: selectedMimeType,
+            fileSize: selectedFileSize,
+            title: title.trimmingCharacters(in: .whitespaces),
+            description: description.trimmingCharacters(in: .whitespaces).isEmpty ? nil : description.trimmingCharacters(in: .whitespaces),
+            contentType: contentType,
+            domain: domain.trimmingCharacters(in: .whitespaces).lowercased(),
+            topics: topics,
+            tags: tags,
+            difficulty: difficulty
+        )
 
-        do {
-            // Phase 1: Get pre-signed URL
-            uploadPhase = .requestingURL
-            uploadProgress = 0.1
-            let uploadInfo = try await service.requestUploadURL(
-                fileName: fileName,
-                fileType: selectedMimeType,
-                fileSize: data.count
-            )
-
-            // Phase 2: Upload to S3
-            uploadPhase = .uploadingToStorage
-            uploadProgress = 0.3
-            try await service.uploadToS3(url: uploadInfo.uploadURL, data: data, contentType: selectedMimeType)
-            uploadProgress = 0.7
-
-            // Phase 3: Register content
-            uploadPhase = .registeringContent
-            uploadProgress = 0.85
-
-            let body = CompleteUploadRequest(
-                key: uploadInfo.key,
-                title: title.trimmingCharacters(in: .whitespaces),
-                description: description.trimmingCharacters(in: .whitespaces).isEmpty ? nil : description.trimmingCharacters(in: .whitespaces),
-                contentType: contentType,
-                domain: domain.trimmingCharacters(in: .whitespaces).lowercased(),
-                topics: topics,
-                tags: tags,
-                difficulty: difficulty
-            )
-
-            let content = try await service.completeUpload(body: body)
-            createdContent = content
-
-            // Phase 4: Processing (AI analysis happens server-side)
-            uploadPhase = .processing
-            uploadProgress = 0.95
-
-            // Brief pause for dramatic effect, then complete
-            try? await Task.sleep(for: .milliseconds(800))
-
-            uploadPhase = .complete
-            uploadProgress = 1.0
-            Haptics.success()
-
-        } catch let error as APIError {
-            errorMessage = error.errorDescription
-            uploadPhase = .idle
-            Haptics.error()
-        } catch {
-            errorMessage = "Upload failed. Please try again."
-            uploadPhase = .idle
-            Haptics.error()
-        }
-
-        isUploading = false
+        uploadManager.startUpload(job: job)
+        uploadStarted = true
+        Haptics.medium()
     }
 }
-
-import AVFoundation

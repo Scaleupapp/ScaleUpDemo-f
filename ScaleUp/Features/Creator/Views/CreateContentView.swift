@@ -3,7 +3,9 @@ import PhotosUI
 
 struct CreateContentView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(UploadManager.self) private var uploadManager
     @State private var viewModel = CreateContentViewModel()
+    @State private var showCompressionConfirm = false
     var onCreated: ((Content) -> Void)?
 
     var body: some View {
@@ -11,42 +13,132 @@ struct CreateContentView: View {
             ZStack {
                 ColorTokens.background.ignoresSafeArea()
 
-                if viewModel.uploadPhase == .complete {
-                    successView
-                } else {
-                    VStack(spacing: 0) {
-                        // Step indicator
-                        stepProgressBar
+                VStack(spacing: 0) {
+                    // Step indicator
+                    stepProgressBar
 
-                        // Content
-                        ScrollView {
-                            VStack(spacing: Spacing.lg) {
-                                stepContent
-                            }
-                            .padding(Spacing.md)
-                            .padding(.bottom, 100)
+                    // Content
+                    ScrollView {
+                        VStack(spacing: Spacing.lg) {
+                            stepContent
                         }
-
-                        // Bottom action bar
-                        if !viewModel.isUploading {
-                            actionBar
-                        } else {
-                            uploadProgressBar
-                        }
+                        .padding(Spacing.md)
+                        .padding(.bottom, 100)
                     }
+
+                    actionBar
                 }
             }
-            .navigationTitle(viewModel.isUploading ? "Uploading..." : viewModel.stepTitle)
+            .navigationTitle(viewModel.stepTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    if !viewModel.isUploading && viewModel.uploadPhase != .complete {
-                        Button("Cancel") { dismiss() }
-                            .foregroundStyle(ColorTokens.textSecondary)
-                    }
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(ColorTokens.textSecondary)
                 }
             }
-            .interactiveDismissDisabled(viewModel.isUploading)
+            .onChange(of: viewModel.uploadStarted) { _, started in
+                if started { dismiss() }
+            }
+            .sheet(isPresented: $showCompressionConfirm) {
+                compressionConfirmSheet
+                    .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+    }
+
+    // MARK: - Compression Confirmation Sheet
+
+    private var compressionConfirmSheet: some View {
+        VStack(spacing: Spacing.lg) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.gold.opacity(0.1))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 28))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .padding(.top, Spacing.lg)
+
+            // Title & explanation
+            VStack(spacing: Spacing.sm) {
+                Text("File Size Optimization")
+                    .font(Typography.titleMedium)
+                    .foregroundStyle(ColorTokens.textPrimary)
+
+                Text("Your video is \(viewModel.fileSizeDisplay), which exceeds the recommended size. The system will compress it to optimize the upload.")
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+            }
+
+            // What this means
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                compressionInfoRow(icon: "arrow.down.right.circle", color: ColorTokens.success,
+                                   text: "Resolution may be reduced to 1080p")
+                compressionInfoRow(icon: "eye", color: ColorTokens.info,
+                                   text: "Quality difference is minimal for most viewers")
+                compressionInfoRow(icon: "clock", color: ColorTokens.warning,
+                                   text: "Compression runs in the background — you can keep using the app")
+                compressionInfoRow(icon: "bell", color: ColorTokens.gold,
+                                   text: "You'll be notified when it's ready to upload")
+            }
+            .padding(Spacing.md)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            Spacer()
+
+            // Action buttons
+            VStack(spacing: Spacing.sm) {
+                Button {
+                    showCompressionConfirm = false
+                    viewModel.startUpload(uploadManager: uploadManager)
+                } label: {
+                    HStack(spacing: Spacing.xs) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14))
+                        Text("Compress & Upload")
+                            .font(Typography.bodyBold)
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(ColorTokens.gold)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    showCompressionConfirm = false
+                } label: {
+                    Text("Cancel — I'll reduce the size manually")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, Spacing.md)
+        }
+        .padding(.horizontal, Spacing.lg)
+        .background(ColorTokens.background.ignoresSafeArea())
+    }
+
+    private func compressionInfoRow(icon: String, color: Color, text: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .foregroundStyle(color)
+                .frame(width: 20)
+            Text(text)
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
         }
     }
 
@@ -137,8 +229,58 @@ struct CreateContentView: View {
                 mediaPicker
             }
 
+            // Loading indicator
+            if viewModel.isLoadingMedia {
+                HStack(spacing: Spacing.sm) {
+                    ProgressView()
+                        .tint(ColorTokens.gold)
+                    Text("Loading media...")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.xl)
+            }
+
+            // Compression info banner
+            if viewModel.hasSelectedMedia && viewModel.willCompress {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Video will be optimized")
+                            .font(Typography.captionBold)
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Resolution may be reduced to 1080p for faster upload. This happens automatically in the background.")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+                .padding(Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(ColorTokens.gold.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            // File too large error
+            if viewModel.fileSizeTooLarge {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.error)
+                    Text("File too large. Maximum 4 GB.")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.error)
+                }
+                .padding(Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(ColorTokens.error.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
             // Supported formats (only when nothing selected)
-            if !viewModel.hasSelectedMedia {
+            if !viewModel.hasSelectedMedia && !viewModel.isLoadingMedia {
                 VStack(spacing: Spacing.xs) {
                     Text("Supported formats")
                         .font(Typography.captionBold)
@@ -153,8 +295,12 @@ struct CreateContentView: View {
                 }
                 .padding(.top, Spacing.md)
 
-                Text("Maximum file size: 2 GB")
+                Text("Maximum file size: 4 GB")
                     .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textTertiary)
+
+                Text("Videos over 500 MB are optimized automatically")
+                    .font(.system(size: 10))
                     .foregroundStyle(ColorTokens.textTertiary)
             }
         }
@@ -840,12 +986,25 @@ struct CreateContentView: View {
                     .font(Typography.bodyBold)
                     .foregroundStyle(ColorTokens.textPrimary)
 
-                timelineItem(step: 1, icon: "arrow.up.circle.fill", color: ColorTokens.info,
-                             title: "Upload to Cloud", desc: "Your file is securely uploaded")
-                timelineItem(step: 2, icon: "cpu.fill", color: ColorTokens.gold,
+                if viewModel.willCompress {
+                    timelineItem(step: 1, icon: "wand.and.stars", color: ColorTokens.warning,
+                                 title: "Auto-Optimize", desc: "Video is compressed for faster upload")
+                }
+                timelineItem(step: viewModel.willCompress ? 2 : 1, icon: "arrow.up.circle.fill", color: ColorTokens.info,
+                             title: "Upload to Cloud", desc: "Uploaded in chunks with progress tracking")
+                timelineItem(step: viewModel.willCompress ? 3 : 2, icon: "cpu.fill", color: ColorTokens.gold,
                              title: "AI Analysis", desc: "GPT-4o analyzes content quality & key concepts")
-                timelineItem(step: 3, icon: "checkmark.seal.fill", color: ColorTokens.success,
+                timelineItem(step: viewModel.willCompress ? 4 : 3, icon: "checkmark.seal.fill", color: ColorTokens.success,
                              title: "Ready to Publish", desc: "Review AI insights, then publish when ready")
+
+                HStack(spacing: Spacing.xs) {
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 10))
+                    Text("You can browse the app while uploading")
+                        .font(.system(size: 10, weight: .medium))
+                }
+                .foregroundStyle(ColorTokens.textTertiary)
+                .padding(.top, 4)
             }
 
             if let error = viewModel.errorMessage {
@@ -929,7 +1088,11 @@ struct CreateContentView: View {
 
             Button {
                 if viewModel.currentStep == .review {
-                    Task { await viewModel.startUpload() }
+                    if viewModel.willCompress {
+                        showCompressionConfirm = true
+                    } else {
+                        viewModel.startUpload(uploadManager: uploadManager)
+                    }
                 } else {
                     viewModel.goNext()
                 }
@@ -959,143 +1122,5 @@ struct CreateContentView: View {
         )
     }
 
-    // MARK: - Upload Progress
-
-    private var uploadProgressBar: some View {
-        VStack(spacing: Spacing.md) {
-            HStack(spacing: Spacing.sm) {
-                ZStack {
-                    Circle()
-                        .stroke(ColorTokens.surfaceElevated, lineWidth: 3)
-                        .frame(width: 32, height: 32)
-                    Circle()
-                        .trim(from: 0, to: viewModel.uploadProgress)
-                        .stroke(ColorTokens.gold, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .frame(width: 32, height: 32)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut, value: viewModel.uploadProgress)
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(uploadPhaseText)
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.textPrimary)
-                    Text("\(Int(viewModel.uploadProgress * 100))%")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.gold)
-                }
-
-                Spacer()
-            }
-
-            // Full width progress bar
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(ColorTokens.surfaceElevated)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(ColorTokens.gold)
-                        .frame(width: geo.size.width * viewModel.uploadProgress)
-                        .animation(.easeInOut(duration: 0.3), value: viewModel.uploadProgress)
-                }
-            }
-            .frame(height: 6)
-        }
-        .padding(Spacing.md)
-        .background(ColorTokens.surface)
-    }
-
-    private var uploadPhaseText: String {
-        switch viewModel.uploadPhase {
-        case .idle: return "Preparing..."
-        case .requestingURL: return "Preparing upload..."
-        case .uploadingToStorage: return "Uploading to cloud..."
-        case .registeringContent: return "Registering content..."
-        case .processing: return "AI analysis queued..."
-        case .complete: return "Complete!"
-        }
-    }
-
-    // MARK: - Success View
-
-    private var successView: some View {
-        VStack(spacing: Spacing.xl) {
-            Spacer()
-
-            // Animated success
-            ZStack {
-                Circle()
-                    .fill(ColorTokens.success.opacity(0.1))
-                    .frame(width: 120, height: 120)
-
-                Circle()
-                    .fill(ColorTokens.success.opacity(0.2))
-                    .frame(width: 80, height: 80)
-
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(ColorTokens.success)
-            }
-
-            VStack(spacing: Spacing.sm) {
-                Text("Content Uploaded!")
-                    .font(Typography.titleLarge)
-                    .foregroundStyle(ColorTokens.textPrimary)
-
-                Text("Your content is being analyzed by AI.\nYou can publish it once processing is complete.")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-
-            // Content card preview
-            if let content = viewModel.createdContent {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: contentTypeIcon)
-                        .font(.system(size: 20))
-                        .foregroundStyle(ColorTokens.gold)
-                        .frame(width: 44, height: 44)
-                        .background(ColorTokens.gold.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(content.title)
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                            .lineLimit(1)
-                        Text("Status: Processing")
-                            .font(Typography.caption)
-                            .foregroundStyle(ColorTokens.warning)
-                    }
-
-                    Spacer()
-                }
-                .padding(Spacing.md)
-                .background(ColorTokens.surface)
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-                .padding(.horizontal, Spacing.md)
-            }
-
-            Spacer()
-
-            Button {
-                if let content = viewModel.createdContent {
-                    onCreated?(content)
-                }
-                dismiss()
-            } label: {
-                Text("Done")
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(ColorTokens.gold)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, Spacing.md)
-            .padding(.bottom, Spacing.lg)
-        }
-    }
+    // MARK: - Upload Progress (handled by UploadProgressOverlay)
 }
