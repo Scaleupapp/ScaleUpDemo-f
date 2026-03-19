@@ -48,8 +48,10 @@ final class CreateContentViewModel {
     var isLoadingMedia = false
 
     // Size info
-    var fileSizeTooLarge: Bool { selectedFileSize > 4 * 1024 * 1024 * 1024 }
-    var willCompress: Bool { selectedMimeType.hasPrefix("video/") && selectedFileSize > 500 * 1024 * 1024 }
+    var isVideo: Bool { selectedMimeType.hasPrefix("video/") }
+    var willCompress: Bool { isVideo && selectedFileSize > 500 * 1024 * 1024 }
+    /// Only block non-compressible files over 4GB. Videos will be compressed down.
+    var fileSizeTooLarge: Bool { selectedFileSize > 4 * 1024 * 1024 * 1024 && !isVideo }
 
     // Video thumbnail
     var thumbnailPickerItem: PhotosPickerItem?

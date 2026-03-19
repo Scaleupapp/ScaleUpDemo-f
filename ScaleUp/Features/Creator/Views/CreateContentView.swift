@@ -263,13 +263,13 @@ struct CreateContentView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
 
-            // File too large error
+            // File too large error (only for non-video files — videos get compressed)
             if viewModel.fileSizeTooLarge {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(ColorTokens.error)
-                    Text("File too large. Maximum 4 GB.")
+                    Text("File too large. Maximum 4 GB for non-video files.")
                         .font(Typography.caption)
                         .foregroundStyle(ColorTokens.error)
                 }
