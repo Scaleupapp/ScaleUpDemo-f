@@ -42,7 +42,7 @@ struct CreateContentView: View {
             }
             .sheet(isPresented: $showCompressionConfirm) {
                 compressionConfirmSheet
-                    .presentationDetents([.medium])
+                    .presentationDetents([.fraction(0.4)])
                     .presentationDragIndicator(.visible)
             }
         }
@@ -51,76 +51,47 @@ struct CreateContentView: View {
     // MARK: - Compression Confirmation Sheet
 
     private var compressionConfirmSheet: some View {
-        VStack(spacing: Spacing.lg) {
-            // Icon
-            ZStack {
-                Circle()
-                    .fill(ColorTokens.gold.opacity(0.1))
-                    .frame(width: 72, height: 72)
-                Image(systemName: "wand.and.stars")
-                    .font(.system(size: 28))
-                    .foregroundStyle(ColorTokens.gold)
-            }
-            .padding(.top, Spacing.lg)
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "wand.and.stars")
+                .font(.system(size: 24))
+                .foregroundStyle(ColorTokens.gold)
+                .padding(.top, Spacing.lg)
 
-            // Title & explanation
-            VStack(spacing: Spacing.sm) {
-                Text("File Size Optimization")
-                    .font(Typography.titleMedium)
-                    .foregroundStyle(ColorTokens.textPrimary)
+            Text("Optimize for upload?")
+                .font(Typography.titleMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
 
-                Text("Your video is \(viewModel.fileSizeDisplay), which exceeds the recommended size. The system will compress it to optimize the upload.")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-
-            // What this means
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                compressionInfoRow(icon: "arrow.down.right.circle", color: ColorTokens.success,
-                                   text: "Resolution may be reduced to 1080p")
-                compressionInfoRow(icon: "eye", color: ColorTokens.info,
-                                   text: "Quality difference is minimal for most viewers")
-                compressionInfoRow(icon: "clock", color: ColorTokens.warning,
-                                   text: "Compression runs in the background — you can keep using the app")
-                compressionInfoRow(icon: "bell", color: ColorTokens.gold,
-                                   text: "You'll be notified when it's ready to upload")
-            }
-            .padding(Spacing.md)
-            .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            Text("Your video (\(viewModel.fileSizeDisplay)) will be compressed to 1080p with minimal quality loss. This happens in the background.")
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .padding(.horizontal, Spacing.sm)
 
             Spacer()
 
-            // Action buttons
             VStack(spacing: Spacing.sm) {
                 Button {
                     showCompressionConfirm = false
                     viewModel.startUpload(uploadManager: uploadManager)
                 } label: {
-                    HStack(spacing: Spacing.xs) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14))
-                        Text("Compress & Upload")
-                            .font(Typography.bodyBold)
-                    }
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(ColorTokens.gold)
-                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                    Text("Compress & Upload")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(ColorTokens.gold)
+                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
                 }
                 .buttonStyle(.plain)
 
                 Button {
                     showCompressionConfirm = false
                 } label: {
-                    Text("Cancel — I'll reduce the size manually")
+                    Text("Cancel")
                         .font(Typography.bodySmall)
                         .foregroundStyle(ColorTokens.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .padding(.vertical, 10)
                 }
                 .buttonStyle(.plain)
             }
@@ -128,18 +99,6 @@ struct CreateContentView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .background(ColorTokens.background.ignoresSafeArea())
-    }
-
-    private func compressionInfoRow(icon: String, color: Color, text: String) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 13))
-                .foregroundStyle(color)
-                .frame(width: 20)
-            Text(text)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondary)
-        }
     }
 
     // MARK: - Step Progress Bar

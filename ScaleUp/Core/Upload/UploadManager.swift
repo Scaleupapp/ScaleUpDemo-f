@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import AVFoundation
 
 // MARK: - Upload Job
@@ -63,6 +64,7 @@ final class UploadManager {
     private var completedParts: [(partNumber: Int, etag: String)] = []
     private var partURLs: [(partNumber: Int, url: String)] = []
     private var uploadTask: Task<Void, Never>?
+    private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
     static let partSize: Int = 10 * 1024 * 1024 // 10 MB
 
@@ -86,6 +88,7 @@ final class UploadManager {
         partURLs = []
         showOverlay = true
 
+        beginBackgroundTask()
         uploadTask = Task { await runPipeline(job: job) }
     }
 
@@ -93,7 +96,8 @@ final class UploadManager {
         guard let job = currentJob else { return }
         errorMessage = nil
 
-        // If we already have a compressed file and upload failed, skip compression
+        beginBackgroundTask()
+
         if let fileURL = uploadFileURL, FileManager.default.fileExists(atPath: fileURL.path) {
             uploadTask = Task { await runUpload(fileURL: fileURL, job: job) }
         } else {
@@ -107,13 +111,13 @@ final class UploadManager {
         phase = .idle
         showOverlay = false
 
-        // Abort multipart if in progress
         if let key = s3Key, let uid = uploadId {
             Task {
                 try? await service.abortMultipart(key: key, uploadId: uid)
             }
         }
         cleanup()
+        endBackgroundTask()
     }
 
     func dismissOverlay() {
@@ -122,6 +126,26 @@ final class UploadManager {
         if phase == .complete {
             phase = .idle
             cleanup()
+        }
+    }
+
+    // MARK: - Background Task Management
+
+    private func beginBackgroundTask() {
+        endBackgroundTask() // End any existing one first
+        backgroundTaskID = UIApplication.shared.beginBackgroundTask(withName: "ScaleUpUpload") { [weak self] in
+            // System is about to kill our background time — don't cancel, just end the task marker.
+            // The upload state is preserved so it can resume when the user returns.
+            Task { @MainActor [weak self] in
+                self?.endBackgroundTask()
+            }
+        }
+    }
+
+    private func endBackgroundTask() {
+        if backgroundTaskID != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+            backgroundTaskID = .invalid
         }
     }
 
@@ -143,10 +167,11 @@ final class UploadManager {
                 wasCompressed = true
                 compressionProgress = 1.0
             } catch {
-                if Task.isCancelled { return }
+                if Task.isCancelled { endBackgroundTask(); return }
                 phase = .failed
                 errorMessage = "Compression failed: \(error.localizedDescription)"
                 Haptics.error()
+                endBackgroundTask()
                 return
             }
         }
@@ -156,7 +181,6 @@ final class UploadManager {
     }
 
     private func runUpload(fileURL: URL, job: UploadJob) async {
-        // Phase 2: Upload
         phase = .uploading
         uploadProgress = 0
         partsCompleted = 0
@@ -165,7 +189,6 @@ final class UploadManager {
         let fileSize = (attrs?[.size] as? Int64) ?? job.fileSize
 
         do {
-            // Determine upload strategy: small files use single PUT, large files use multipart
             let useMultipart = fileSize > Int64(Self.partSize) * 2
 
             if useMultipart {
@@ -196,6 +219,7 @@ final class UploadManager {
             phase = .complete
             completedContentTitle = job.title
             Haptics.success()
+            endBackgroundTask()
 
             // Auto-dismiss after 5 seconds
             try? await Task.sleep(for: .seconds(5))
@@ -206,10 +230,11 @@ final class UploadManager {
             }
 
         } catch {
-            if Task.isCancelled { return }
+            if Task.isCancelled { endBackgroundTask(); return }
             phase = .failed
             errorMessage = "Upload failed: \(error.localizedDescription)"
             Haptics.error()
+            endBackgroundTask()
         }
     }
 
@@ -256,7 +281,6 @@ final class UploadManager {
         let partCount = Int(ceil(Double(fileSize) / Double(partSize)))
         totalParts = partCount
 
-        // Initiate multipart upload if we don't have one already
         if uploadId == nil || partURLs.isEmpty {
             let initResult = try await service.initiateMultipart(
                 fileName: job.fileName,
@@ -287,13 +311,22 @@ final class UploadManager {
             let readSize = min(partSize, remainingBytes)
             guard let chunkData = handle.readData(ofLength: readSize) as Data?, !chunkData.isEmpty else { continue }
 
+            // Write chunk to temp file for file-based upload (avoids keeping in memory)
+            let chunkFile = FileManager.default.temporaryDirectory
+                .appendingPathComponent("chunk_\(part.partNumber).tmp")
+            try chunkData.write(to: chunkFile)
+
             guard let partURL = URL(string: part.url) else { throw UploadError.invalidURL }
 
             var request = URLRequest(url: partURL)
             request.httpMethod = "PUT"
             request.timeoutInterval = 300
 
-            let (_, response) = try await URLSession.shared.upload(for: request, from: chunkData)
+            let (_, response) = try await URLSession.shared.upload(for: request, fromFile: chunkFile)
+
+            // Clean up chunk file
+            try? FileManager.default.removeItem(at: chunkFile)
+
             guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
                 throw UploadError.partFailed(part.partNumber)
             }
@@ -304,7 +337,6 @@ final class UploadManager {
             uploadProgress = Double(partsCompleted) / Double(totalParts)
         }
 
-        // Complete multipart
         guard let key = s3Key, let uid = uploadId else { throw UploadError.missingKey }
         try await service.completeMultipart(
             key: key,
@@ -316,7 +348,6 @@ final class UploadManager {
     // MARK: - Compression Helper
 
     private func compressVideo(inputURL: URL) async throws -> CompressionResult {
-        // Observe compressor progress
         let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -336,7 +367,6 @@ final class UploadManager {
         uploadId = nil
         completedParts = []
         partURLs = []
-        // Clean up temp compressed file
         if let url = uploadFileURL, wasCompressed {
             try? FileManager.default.removeItem(at: url)
         }
