@@ -552,28 +552,30 @@ struct QuizSessionView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
 
-            if viewModel.isCompleting {
-                ProgressView()
-                    .tint(ColorTokens.gold)
-                Text("Calculating results...")
-                    .font(.system(size: 14))
-                    .foregroundStyle(ColorTokens.textSecondary)
-            } else {
-                Button {
-                    navigateToResults = true
-                } label: {
-                    Text("View Results")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(ColorTokens.gold)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .padding(.horizontal, Spacing.xl)
-            }
+            ProgressView()
+                .tint(ColorTokens.gold)
+            Text(viewModel.isCompleting ? "Calculating results..." : "Loading results...")
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.textSecondary)
 
             Spacer()
+        }
+        .onChange(of: viewModel.isCompleting) { _, isCompleting in
+            if !isCompleting && viewModel.hasCompleted {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(600))
+                    navigateToResults = true
+                }
+            }
+        }
+        .onAppear {
+            // If already done completing when view appears, navigate immediately
+            if !viewModel.isCompleting && viewModel.hasCompleted {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(600))
+                    navigateToResults = true
+                }
+            }
         }
     }
 }

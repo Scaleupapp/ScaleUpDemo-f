@@ -291,10 +291,16 @@ struct SettingsView: View {
 // MARK: - Notification Settings
 
 struct NotificationSettingsView: View {
-    @State private var pushEnabled = true
+    @Environment(PushNotificationManager.self) private var pushManager
     @State private var quizReminders = true
     @State private var streakReminders = true
     @State private var socialUpdates = true
+    @State private var journeyUpdates = true
+
+    @AppStorage("notif_quiz") private var quizPref = true
+    @AppStorage("notif_streak") private var streakPref = true
+    @AppStorage("notif_social") private var socialPref = true
+    @AppStorage("notif_journey") private var journeyPref = true
 
     var body: some View {
         ZStack {
@@ -302,33 +308,59 @@ struct NotificationSettingsView: View {
 
             List {
                 Section {
-                    Toggle(isOn: $pushEnabled) {
+                    HStack(spacing: Spacing.sm) {
                         settingsLabel(icon: "bell.fill", title: "Push Notifications")
+                        Spacer()
+                        if pushManager.isPermissionGranted {
+                            Text("Enabled")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.green)
+                        } else {
+                            Button("Enable") {
+                                Task { await pushManager.requestPermission() }
+                            }
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(ColorTokens.gold)
+                        }
                     }
-                    .tint(ColorTokens.gold)
                 } header: {
                     Text("General")
                         .font(Typography.caption)
                         .foregroundStyle(ColorTokens.textTertiary)
                         .textCase(nil)
+                } footer: {
+                    if !pushManager.isPermissionGranted {
+                        Text("Enable push notifications to receive quiz reminders, streak alerts, and more.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
                 }
                 .listRowBackground(ColorTokens.surface)
 
                 Section {
                     Toggle(isOn: $quizReminders) {
-                        settingsLabel(icon: "questionmark.circle.fill", title: "Quiz Reminders")
+                        settingsLabel(icon: "brain.head.profile", title: "Quiz Reminders")
                     }
                     .tint(ColorTokens.gold)
+                    .onChange(of: quizReminders) { _, val in quizPref = val }
 
                     Toggle(isOn: $streakReminders) {
                         settingsLabel(icon: "flame.fill", title: "Streak Reminders")
                     }
                     .tint(ColorTokens.gold)
+                    .onChange(of: streakReminders) { _, val in streakPref = val }
+
+                    Toggle(isOn: $journeyUpdates) {
+                        settingsLabel(icon: "map.fill", title: "Journey Updates")
+                    }
+                    .tint(ColorTokens.gold)
+                    .onChange(of: journeyUpdates) { _, val in journeyPref = val }
 
                     Toggle(isOn: $socialUpdates) {
                         settingsLabel(icon: "person.2.fill", title: "Social Updates")
                     }
                     .tint(ColorTokens.gold)
+                    .onChange(of: socialUpdates) { _, val in socialPref = val }
                 } header: {
                     Text("Categories")
                         .font(Typography.caption)
@@ -342,6 +374,15 @@ struct NotificationSettingsView: View {
         }
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            quizReminders = quizPref
+            streakReminders = streakPref
+            socialUpdates = socialPref
+            journeyUpdates = journeyPref
+        }
+        .task {
+            await pushManager.checkPermissionStatus()
+        }
     }
 
     private func settingsLabel(icon: String, title: String) -> some View {

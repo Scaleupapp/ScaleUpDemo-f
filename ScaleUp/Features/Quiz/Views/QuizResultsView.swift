@@ -214,14 +214,21 @@ struct QuizResultsView: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             sectionHeader("Topic Performance")
 
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 ForEach(viewModel.topicBreakdown) { topic in
-                    HStack(spacing: Spacing.sm) {
-                        Text(topic.topic.capitalized)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .frame(width: 100, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack {
+                            Text(topic.topic.capitalized)
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+
+                            Spacer(minLength: 8)
+
+                            Text("\(topic.correct)/\(topic.total)")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(barColor(for: topic.percentage))
+                        }
 
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
@@ -230,15 +237,10 @@ struct QuizResultsView: View {
 
                                 RoundedRectangle(cornerRadius: 4)
                                     .fill(barColor(for: topic.percentage))
-                                    .frame(width: geo.size.width * topic.percentage / 100)
+                                    .frame(width: max(0, geo.size.width * topic.percentage / 100))
                             }
                         }
                         .frame(height: 8)
-
-                        Text("\(topic.correct)/\(topic.total)")
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(barColor(for: topic.percentage))
-                            .frame(width: 30, alignment: .trailing)
                     }
                 }
             }
@@ -248,6 +250,7 @@ struct QuizResultsView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(ColorTokens.surface)
         )
+        .clipped()
         .opacity(showDetails ? 1 : 0)
     }
 
@@ -267,19 +270,23 @@ struct QuizResultsView: View {
                             .foregroundStyle(.white)
                     }
 
-                    FlowLayout(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 6) {
                         ForEach(strengths, id: \.self) { strength in
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 10))
+                                    .foregroundStyle(.green)
                                 Text(strength)
                                     .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.green)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            .foregroundStyle(.green)
                             .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .background(.green.opacity(0.1))
-                            .clipShape(Capsule())
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
                 }
@@ -297,19 +304,23 @@ struct QuizResultsView: View {
                             .foregroundStyle(.white)
                     }
 
-                    FlowLayout(spacing: 6) {
+                    VStack(alignment: .leading, spacing: 6) {
                         ForEach(weaknesses, id: \.self) { weakness in
-                            HStack(spacing: 4) {
+                            HStack(spacing: 6) {
                                 Image(systemName: "arrow.up.forward")
                                     .font(.system(size: 10))
+                                    .foregroundStyle(.orange)
                                 Text(weakness)
                                     .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.orange)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            .foregroundStyle(.orange)
                             .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
+                            .padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .background(.orange.opacity(0.1))
-                            .clipShape(Capsule())
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
                         }
                     }
                 }
@@ -320,6 +331,7 @@ struct QuizResultsView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(ColorTokens.surface)
         )
+        .clipped()
         .opacity(showDetails ? 1 : 0)
     }
 
@@ -469,11 +481,12 @@ struct QuizResultsView: View {
             let maxScore = history.map(\.score).max() ?? 100
             let minScore = max(0, (history.map(\.score).min() ?? 0) - 10)
             let range = max(1, maxScore - minScore)
+            let inset: CGFloat = 6
 
             Path { path in
                 for (index, entry) in history.enumerated() {
-                    let x = geo.size.width * CGFloat(index) / CGFloat(max(1, history.count - 1))
-                    let y = geo.size.height * (1 - (entry.score - minScore) / range)
+                    let x = inset + (geo.size.width - inset * 2) * CGFloat(index) / CGFloat(max(1, history.count - 1))
+                    let y = inset + (geo.size.height - inset * 2) * (1 - (entry.score - minScore) / range)
                     if index == 0 {
                         path.move(to: CGPoint(x: x, y: y))
                     } else {
@@ -483,10 +496,9 @@ struct QuizResultsView: View {
             }
             .stroke(ColorTokens.gold, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
 
-            // Dots
             ForEach(Array(history.enumerated()), id: \.offset) { index, entry in
-                let x = geo.size.width * CGFloat(index) / CGFloat(max(1, history.count - 1))
-                let y = geo.size.height * (1 - (entry.score - minScore) / range)
+                let x = inset + (geo.size.width - inset * 2) * CGFloat(index) / CGFloat(max(1, history.count - 1))
+                let y = inset + (geo.size.height - inset * 2) * (1 - (entry.score - minScore) / range)
 
                 Circle()
                     .fill(index == history.count - 1 ? ColorTokens.gold : ColorTokens.surfaceElevated)
@@ -496,6 +508,7 @@ struct QuizResultsView: View {
             }
         }
         .frame(height: 60)
+        .clipped()
         .padding(.top, 4)
     }
 
@@ -630,13 +643,14 @@ struct QuizResultsView: View {
             VStack(spacing: 10) {
                 ForEach(viewModel.competencyBreakdown) { item in
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack {
+                        HStack(alignment: .top) {
                             Text(item.competency)
                                 .font(.system(size: 13, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
 
-                            Spacer()
+                            Spacer(minLength: 8)
 
                             if let level = item.level {
                                 Text(level.capitalized)
@@ -646,18 +660,18 @@ struct QuizResultsView: View {
                                     .padding(.vertical, 3)
                                     .background(competencyLevelColor(level).opacity(0.15))
                                     .clipShape(Capsule())
+                                    .layoutPriority(1)
                             }
                         }
 
                         HStack(spacing: Spacing.sm) {
-                            // MCQ score bar
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     RoundedRectangle(cornerRadius: 4)
                                         .fill(ColorTokens.surfaceElevated)
                                     RoundedRectangle(cornerRadius: 4)
                                         .fill(barColor(for: item.percentage ?? 0))
-                                        .frame(width: geo.size.width * (item.percentage ?? 0) / 100)
+                                        .frame(width: max(0, geo.size.width * (item.percentage ?? 0) / 100))
                                 }
                             }
                             .frame(height: 8)
@@ -668,7 +682,6 @@ struct QuizResultsView: View {
                                 .frame(width: 30, alignment: .trailing)
                         }
 
-                        // Text score (if text responses were evaluated)
                         if let textAvg = item.textScoreAvg, textAvg > 0 {
                             HStack(spacing: 4) {
                                 Image(systemName: "text.bubble.fill")
@@ -690,6 +703,7 @@ struct QuizResultsView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(ColorTokens.surface)
         )
+        .clipped()
         .opacity(showDetails ? 1 : 0)
     }
 

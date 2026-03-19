@@ -12,7 +12,7 @@ settings:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: "NK5P69WG2H"
     GENERATE_INFOPLIST_FILE: YES
-    CURRENT_PROJECT_VERSION: 7
+    CURRENT_PROJECT_VERSION: 8
     MARKETING_VERSION: "1.0.0"
   configs:
     Release:
@@ -46,6 +46,10 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "ScaleUp"
         INFOPLIST_KEY_CFBundleIconName: "AppIcon"
         SWIFT_STRICT_CONCURRENCY: complete
+    entitlements:
+      path: ScaleUp/ScaleUp.entitlements
+      properties:
+        aps-environment: development
     dependencies:
       - package: Nuke
         product: Nuke

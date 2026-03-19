@@ -7,10 +7,13 @@ struct SeeAllDestination: Hashable {
 
 struct QuizListDestination: Hashable {}
 
+struct NotificationDestination: Hashable {}
+
 struct HomeView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = HomeViewModel()
     @State private var quizViewModel = QuizListViewModel()
+    @State private var notificationVM = NotificationViewModel()
 
     var body: some View {
         NavigationStack {
@@ -40,10 +43,14 @@ struct HomeView: View {
             .navigationDestination(for: Quiz.self) { quiz in
                 QuizDetailView(quiz: quiz)
             }
+            .navigationDestination(for: NotificationDestination.self) { _ in
+                NotificationListView()
+            }
         }
         .task {
             await viewModel.loadDashboard()
             await quizViewModel.loadQuizzes()
+            await notificationVM.refreshUnreadCount()
         }
         .coachMark(
             .tabHome,
@@ -136,6 +143,32 @@ struct HomeView: View {
             // Score badge — only when user has a score
             if viewModel.readinessScore > 0 {
                 scoreBadge
+            }
+
+            // Notification bell
+            NavigationLink(value: NotificationDestination()) {
+                notificationBell
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var notificationBell: some View {
+        ZStack(alignment: .topTrailing) {
+            Image(systemName: "bell.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .frame(width: 36, height: 36)
+
+            if notificationVM.unreadCount > 0 {
+                Text(notificationVM.unreadCount > 99 ? "99+" : "\(notificationVM.unreadCount)")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.red)
+                    .clipShape(Capsule())
+                    .offset(x: 4, y: -2)
             }
         }
     }
