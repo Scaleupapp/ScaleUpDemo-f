@@ -53,6 +53,26 @@ actor ContentCreationService {
         _ = try await api.requestRaw(ContentCreationEndpoints.abortMultipart, body: body)
     }
 
+    /// Request a presigned URL to upload a thumbnail image
+    func requestThumbnailUpload() async throws -> UploadURLResponse {
+        try await api.request(ContentCreationEndpoints.requestThumbnailUpload)
+    }
+
+    /// Upload thumbnail JPEG data directly to S3
+    func uploadThumbnailToS3(url: String, data: Data) async throws {
+        guard let uploadURL = URL(string: url) else { throw APIError.invalidURL }
+
+        var request = URLRequest(url: uploadURL)
+        request.httpMethod = "PUT"
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.httpBody = data
+
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+            throw APIError.badRequest("Thumbnail upload failed")
+        }
+    }
+
     // MARK: - Content Management
 
     func fetchMyContent(page: Int = 1, status: String? = nil) async throws -> [Content] {
@@ -99,6 +119,7 @@ struct CompleteUploadRequest: Encodable, Sendable {
     let topics: [String]
     let tags: [String]
     let difficulty: String
+    let thumbnailKey: String?
 }
 
 // MARK: - Multipart Models
@@ -153,6 +174,7 @@ struct UpdateContentRequest: Encodable, Sendable {
 private enum ContentCreationEndpoints: Endpoint {
     case requestUpload
     case completeUpload
+    case requestThumbnailUpload
     case initiateMultipart
     case completeMultipart
     case abortMultipart
@@ -166,6 +188,7 @@ private enum ContentCreationEndpoints: Endpoint {
         switch self {
         case .requestUpload: return "/content/request-upload"
         case .completeUpload: return "/content/complete-upload"
+        case .requestThumbnailUpload: return "/content/request-thumbnail-upload"
         case .initiateMultipart: return "/content/multipart/initiate"
         case .completeMultipart: return "/content/multipart/complete"
         case .abortMultipart: return "/content/multipart/abort"
@@ -178,7 +201,7 @@ private enum ContentCreationEndpoints: Endpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .requestUpload, .completeUpload, .publish, .unpublish,
+        case .requestUpload, .completeUpload, .requestThumbnailUpload, .publish, .unpublish,
              .initiateMultipart, .completeMultipart, .abortMultipart: return .post
         case .myContent: return .get
         case .update: return .put

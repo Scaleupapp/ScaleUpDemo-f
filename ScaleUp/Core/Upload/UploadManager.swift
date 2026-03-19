@@ -16,6 +16,7 @@ struct UploadJob: Sendable {
     let topics: [String]
     let tags: [String]
     let difficulty: String
+    let thumbnailData: Data?
 }
 
 // MARK: - Upload Manager
@@ -63,6 +64,7 @@ final class UploadManager {
     private var uploadId: String?
     private var completedParts: [(partNumber: Int, etag: String)] = []
     private var partURLs: [(partNumber: Int, url: String)] = []
+    private var thumbnailKey: String?
     private var uploadTask: Task<Void, Never>?
     private var backgroundTaskID: UIBackgroundTaskIdentifier = .invalid
 
@@ -197,11 +199,23 @@ final class UploadManager {
                 try await uploadSinglePut(fileURL: fileURL, fileSize: Int(fileSize), job: job)
             }
 
-            // Phase 3: Register content
+            // Phase 3: Upload thumbnail + Register content
             phase = .registering
             uploadProgress = 1.0
 
             guard let key = s3Key else { throw UploadError.missingKey }
+
+            // Upload thumbnail if available
+            if let thumbData = job.thumbnailData {
+                do {
+                    let thumbInfo = try await service.requestThumbnailUpload()
+                    try await service.uploadThumbnailToS3(url: thumbInfo.uploadURL, data: thumbData)
+                    thumbnailKey = thumbInfo.key
+                } catch {
+                    // Non-fatal — proceed without thumbnail
+                    thumbnailKey = nil
+                }
+            }
 
             let body = CompleteUploadRequest(
                 key: key,
@@ -211,7 +225,8 @@ final class UploadManager {
                 domain: job.domain,
                 topics: job.topics,
                 tags: job.tags,
-                difficulty: job.difficulty
+                difficulty: job.difficulty,
+                thumbnailKey: thumbnailKey
             )
 
             _ = try await service.completeUpload(body: body)
@@ -365,6 +380,7 @@ final class UploadManager {
         currentJob = nil
         s3Key = nil
         uploadId = nil
+        thumbnailKey = nil
         completedParts = []
         partURLs = []
         if let url = uploadFileURL, wasCompressed {

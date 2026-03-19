@@ -256,6 +256,9 @@ final class CreateContentViewModel {
     func startUpload(uploadManager: UploadManager) {
         guard let fileURL = mediaFileURL, let fileName = selectedFileName else { return }
 
+        // Prepare thumbnail JPEG data (compress to reasonable size)
+        let thumbData = displayThumbnail?.jpegData(compressionQuality: 0.8)
+
         let job = UploadJob(
             fileURL: fileURL,
             fileName: fileName,
@@ -267,7 +270,8 @@ final class CreateContentViewModel {
             domain: domain.trimmingCharacters(in: .whitespaces).lowercased(),
             topics: topics,
             tags: tags,
-            difficulty: difficulty
+            difficulty: difficulty,
+            thumbnailData: thumbData
         )
 
         uploadManager.startUpload(job: job)
