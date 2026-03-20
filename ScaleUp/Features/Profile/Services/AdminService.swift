@@ -94,6 +94,46 @@ actor AdminService {
     func dismissReports(id: String) async throws {
         _ = try await api.requestRaw(AdminEndpoints.dismissReports(id: id))
     }
+
+    func fetchContentReports(contentId: String) async throws -> [ContentReport] {
+        try await api.request(AdminEndpoints.contentReports(contentId: contentId))
+    }
+}
+
+// MARK: - Content Report Model
+
+struct ContentReport: Codable, Sendable, Identifiable {
+    let id: String
+    let contentId: String
+    let reporterId: ReportUser?
+    let reason: String
+    let description: String?
+    let createdAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case contentId, reporterId, reason, description, createdAt
+    }
+
+    var reasonDisplay: String {
+        reason.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+}
+
+struct ReportUser: Codable, Sendable {
+    let id: String?
+    let firstName: String?
+    let lastName: String?
+    let email: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case firstName, lastName, email
+    }
+
+    var displayName: String {
+        [firstName, lastName].compactMap { $0 }.joined(separator: " ")
+    }
 }
 
 // MARK: - Paginated API Response
@@ -146,6 +186,7 @@ private enum AdminEndpoints: Endpoint {
     case content(status: String?, minReports: Int?, search: String?, page: Int)
     case removeContent(id: String)
     case dismissReports(id: String)
+    case contentReports(contentId: String)
 
     var path: String {
         switch self {
@@ -160,12 +201,13 @@ private enum AdminEndpoints: Endpoint {
         case .content: return "/admin/content"
         case .removeContent(let id): return "/admin/content/\(id)/remove"
         case .dismissReports(let id): return "/admin/content/\(id)/dismiss"
+        case .contentReports(let id): return "/admin/content/\(id)/reports"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .stats, .users, .applications, .content: return .get
+        case .stats, .users, .applications, .content, .contentReports: return .get
         case .ban, .unban, .moderateContent, .promoteCreator, .removeContent, .dismissReports: return .put
         case .rejectApplication: return .post
         }

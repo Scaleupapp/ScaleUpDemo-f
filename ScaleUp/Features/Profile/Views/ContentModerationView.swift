@@ -25,6 +25,12 @@ final class ContentModerationViewModel {
     var contentToDismiss: Content?
     var showDismissConfirm = false
 
+    // Report details
+    var selectedContent: Content?
+    var reports: [ContentReport] = []
+    var isLoadingReports = false
+    var showReportDetails = false
+
     private let adminService = AdminService()
 
     func loadContent(reset: Bool = true) async {
@@ -95,6 +101,14 @@ final class ContentModerationViewModel {
         } catch {
             Haptics.error()
         }
+    }
+
+    func loadReports(for item: Content) async {
+        selectedContent = item
+        isLoadingReports = true
+        showReportDetails = true
+        reports = (try? await adminService.fetchContentReports(contentId: item.id)) ?? []
+        isLoadingReports = false
     }
 }
 
@@ -181,9 +195,14 @@ struct ContentModerationView: View {
                 } else {
                     List {
                         ForEach(viewModel.content) { item in
-                            moderationRow(item)
-                                .listRowBackground(ColorTokens.surface)
-                                .listRowSeparatorTint(ColorTokens.border.opacity(0.3))
+                            Button {
+                                Task { await viewModel.loadReports(for: item) }
+                            } label: {
+                                moderationRow(item)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(ColorTokens.surface)
+                            .listRowSeparatorTint(ColorTokens.border.opacity(0.3))
                         }
 
                         // Load more
@@ -249,6 +268,9 @@ struct ContentModerationView: View {
             if let item = viewModel.contentToDismiss {
                 Text("Dismiss all reports for \"\(item.title)\"? The content will remain published.")
             }
+        }
+        .sheet(isPresented: $viewModel.showReportDetails) {
+            reportDetailsSheet
         }
     }
 
@@ -475,6 +497,177 @@ struct ContentModerationView: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    // MARK: - Report Details Sheet
+
+    private var reportDetailsSheet: some View {
+        NavigationStack {
+            ZStack {
+                ColorTokens.background.ignoresSafeArea()
+
+                if viewModel.isLoadingReports {
+                    ProgressView().tint(ColorTokens.gold)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Spacing.md) {
+                            // Content info
+                            if let item = viewModel.selectedContent {
+                                HStack(spacing: Spacing.sm) {
+                                    if let thumb = item.thumbnailURL, let url = URL(string: thumb) {
+                                        AsyncImage(url: url) { phase in
+                                            switch phase {
+                                            case .success(let image):
+                                                image.resizable().aspectRatio(contentMode: .fill)
+                                            default:
+                                                ColorTokens.surfaceElevated
+                                            }
+                                        }
+                                        .frame(width: 80, height: 54)
+                                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.title)
+                                            .font(Typography.bodySmall)
+                                            .foregroundStyle(ColorTokens.textPrimary)
+                                            .lineLimit(2)
+                                        if let creator = item.creatorId {
+                                            Text("by \(creator.displayName)")
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                        }
+                                        if let reports = item.reportCount, reports > 0 {
+                                            Text("\(reports) report\(reports == 1 ? "" : "s")")
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.error)
+                                        }
+                                    }
+                                }
+                                .padding(Spacing.md)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(ColorTokens.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                            }
+
+                            // Reports list
+                            if viewModel.reports.isEmpty {
+                                Text("No report details found")
+                                    .font(Typography.bodySmall)
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, Spacing.xl)
+                            } else {
+                                ForEach(viewModel.reports) { report in
+                                    VStack(alignment: .leading, spacing: Spacing.sm) {
+                                        HStack {
+                                            // Reason badge
+                                            Text(report.reasonDisplay)
+                                                .font(.system(size: 11, weight: .bold))
+                                                .foregroundStyle(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 3)
+                                                .background(reasonColor(report.reason))
+                                                .clipShape(Capsule())
+
+                                            Spacer()
+
+                                            if let date = report.createdAt {
+                                                Text(date, style: .relative)
+                                                    .font(Typography.caption)
+                                                    .foregroundStyle(ColorTokens.textTertiary)
+                                            }
+                                        }
+
+                                        if let desc = report.description, !desc.isEmpty {
+                                            Text(desc)
+                                                .font(Typography.bodySmall)
+                                                .foregroundStyle(ColorTokens.textSecondary)
+                                        }
+
+                                        if let reporter = report.reporterId {
+                                            Text("Reported by \(reporter.displayName)")
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                        }
+                                    }
+                                    .padding(Spacing.md)
+                                    .background(ColorTokens.surface)
+                                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                                }
+                            }
+
+                            // Action buttons
+                            if let item = viewModel.selectedContent {
+                                HStack(spacing: Spacing.sm) {
+                                    Button {
+                                        viewModel.showReportDetails = false
+                                        viewModel.contentToRemove = item
+                                        viewModel.removalReason = ""
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                            viewModel.showRemoveSheet = true
+                                        }
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "trash.fill")
+                                                .font(.system(size: 12))
+                                            Text("Remove")
+                                                .font(Typography.bodySmall)
+                                        }
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, Spacing.sm)
+                                        .background(ColorTokens.error)
+                                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                                    }
+
+                                    if let reports = item.reportCount, reports > 0 {
+                                        Button {
+                                            viewModel.showReportDetails = false
+                                            viewModel.contentToDismiss = item
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                                viewModel.showDismissConfirm = true
+                                            }
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: "xmark.circle")
+                                                    .font(.system(size: 12))
+                                                Text("Dismiss")
+                                                    .font(Typography.bodySmall)
+                                            }
+                                            .foregroundStyle(ColorTokens.textPrimary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, Spacing.sm)
+                                            .background(ColorTokens.surfaceElevated)
+                                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(Spacing.md)
+                    }
+                }
+            }
+            .navigationTitle("Report Details")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { viewModel.showReportDetails = false }
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private func reasonColor(_ reason: String) -> Color {
+        switch reason {
+        case "inappropriate", "harassment": return ColorTokens.error
+        case "spam": return .orange
+        case "misleading": return ColorTokens.warning
+        case "copyright": return .purple
+        default: return ColorTokens.textTertiary
+        }
     }
 
     private func statusColor(_ status: ContentStatus) -> Color {
