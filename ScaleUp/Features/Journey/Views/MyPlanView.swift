@@ -108,16 +108,13 @@ struct MyPlanView: View {
                     phaseSection
                 }
 
-                // 4. NEXT ACTION — What should I do right now?
+                // 4. TODAY — What's on my plate?
+                todaySection
+
+                // 5. NEXT ACTION — What should I do right now?
                 if let action = viewModel.primaryNextAction {
                     nextActionCard(action)
                 }
-
-                // 4b. QUIZZES — Always-visible quiz entry
-                quizzesSection
-
-                // 5. TODAY — What's on my plate?
-                todaySection
 
                 // 6. THIS WEEK — How's my week going?
                 weekStripSection
@@ -300,7 +297,12 @@ struct MyPlanView: View {
                 // Quick stats
                 HStack(spacing: Spacing.md) {
                     miniStat(value: "\(viewModel.dashboard?.progress?.contentConsumed ?? 0)/\(viewModel.dashboard?.progress?.contentAssigned ?? 0)", label: "Lessons")
-                    miniStat(value: "\(viewModel.dashboard?.progress?.quizzesCompleted ?? 0)/\(viewModel.dashboard?.progress?.quizzesAssigned ?? 0)", label: "Quizzes")
+
+                    NavigationLink(value: QuizListDestination()) {
+                        miniStat(value: "\(viewModel.dashboard?.progress?.quizzesCompleted ?? 0)/\(viewModel.dashboard?.progress?.quizzesAssigned ?? 0)", label: "Quizzes")
+                    }
+                    .buttonStyle(.plain)
+
                     miniStat(value: "\(viewModel.dashboard?.progress?.milestonesCompleted ?? 0)/\(viewModel.dashboard?.progress?.milestonesTotal ?? 0)", label: "Milestones")
                 }
             }
