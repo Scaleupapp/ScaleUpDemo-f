@@ -35,7 +35,7 @@ final class ContentModerationViewModel {
         do {
             let result = try await adminService.fetchContent(
                 status: nil,
-                minReports: selectedTab == 0 ? 3 : nil,
+                minReports: selectedTab == 0 ? 1 : nil,
                 search: searchText.isEmpty ? nil : searchText,
                 page: currentPage
             )

@@ -7,11 +7,12 @@ final class PendingApplicationsViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    private let adminService = AdminService()
     private let creatorService = CreatorService()
 
     func loadApplications() async {
         isLoading = true
-        applications = (try? await creatorService.fetchPendingApplications()) ?? []
+        applications = (try? await adminService.fetchApplications()) ?? []
         isLoading = false
     }
 
