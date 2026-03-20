@@ -8,6 +8,7 @@ struct GapsDestination: Hashable {}
 
 struct ProgressTabView: View {
     @State private var viewModel = ProgressViewModel()
+    @State private var showDetailedAnalytics = false
 
     var body: some View {
         NavigationStack {
@@ -56,49 +57,42 @@ struct ProgressTabView: View {
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Spacing.xl) {
-                // Knowledge Score Hero
+                // 1. Knowledge Score Hero (with explanatory labels)
                 scoreHeroSection
 
-                // Weekly Growth
-                if let growth = viewModel.weeklyGrowth {
-                    weeklyGrowthBanner(growth)
-                }
-
-                // Streaks & Activity
+                // 2. Streaks & Activity
                 if viewModel.currentStreak > 0 || !viewModel.activityHeatmap.isEmpty {
                     streaksActivitySection
                 }
 
-                // Topic Mastery
+                // 3. Focus This Week (gaps-based actionable card)
+                if !viewModel.gaps.isEmpty {
+                    focusThisWeekCard
+                }
+
+                // 4. Weekly Growth
+                if let growth = viewModel.weeklyGrowth {
+                    weeklyGrowthBanner(growth)
+                }
+
+                // 5. Topic Mastery
                 if !viewModel.topicMastery.isEmpty {
                     topicMasterySection
                 }
 
-                // Strengths & Gaps
+                // 6. Strengths & Gaps (with Practice Now)
                 strengthsGapsSection
 
-                // Learning Velocity
-                if let velocity = viewModel.velocity {
-                    velocitySection(velocity)
-                }
-
-                // Quiz History
+                // 7. Quiz Performance
                 quizHistorySection
 
-                // Consumption Stats
-                if let stats = viewModel.consumptionStats {
-                    consumptionSection(stats)
-                }
-
-                // Behavioral Insights
-                if let behavioral = viewModel.behavioral {
-                    behavioralSection(behavioral)
-                }
-
-                // Learning Timeline
+                // 8. Recent Activity Timeline
                 if !viewModel.timelineEvents.isEmpty {
                     timelineSection
                 }
+
+                // 9. Detailed Analytics (collapsed)
+                detailedAnalyticsSection
 
                 Spacer().frame(height: Spacing.xxxl)
             }
@@ -124,7 +118,7 @@ struct ProgressTabView: View {
             HStack(spacing: Spacing.xl) {
                 ProgressRing(
                     score: viewModel.overallScore,
-                    label: "Knowledge Score",
+                    label: "Knowledge",
                     size: 110,
                     lineWidth: 10
                 )
@@ -138,12 +132,40 @@ struct ProgressTabView: View {
                     }
                 }
             }
+
+            // Explanatory labels
+            VStack(spacing: 4) {
+                scoreExplanation(
+                    icon: "brain.head.profile",
+                    text: "Knowledge Score is based on your quiz performance across all topics"
+                )
+                if viewModel.readinessScore > 0 {
+                    scoreExplanation(
+                        icon: "gauge.open.with.lines.needle.33percent",
+                        text: "Readiness = 40% knowledge + 30% journey progress + 30% consistency"
+                    )
+                }
+            }
+            .padding(.top, 4)
         }
         .padding(Spacing.lg)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(ColorTokens.surface)
         )
+    }
+
+    private func scoreExplanation(icon: String, text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 9))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .frame(width: 14)
+            Text(text)
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func statRow(icon: String, label: String, value: String) -> some View {
@@ -163,6 +185,76 @@ struct ProgressTabView: View {
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
         }
+    }
+
+    // MARK: - Focus This Week
+
+    private var focusThisWeekCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: "target")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Focus This Week")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+
+            ForEach(viewModel.gaps.prefix(2)) { gap in
+                HStack(spacing: Spacing.sm) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(gap.topic.capitalized)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+
+                        Text("Score: \(gap.scoreValue)% · \(gap.level?.capitalized ?? "Beginner")")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+
+                    Spacer()
+
+                    // Practice Now CTA
+                    if let content = viewModel.gapContent.first(where: { $0.topics?.contains(gap.topic) ?? false }) {
+                        NavigationLink(value: content) {
+                            Text("Practice")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(ColorTokens.gold)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        NavigationLink(value: QuizListDestination()) {
+                            Text("Quiz")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(ColorTokens.gold)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(10)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(ColorTokens.gold.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+                        )
+                )
+            }
+        }
+        .padding(Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
     }
 
     // MARK: - Weekly Growth
@@ -222,6 +314,12 @@ struct ProgressTabView: View {
                 Text("Your Topics")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
+
+                Spacer()
+
+                Text("Based on quizzes")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
             }
 
             VStack(spacing: 8) {
@@ -288,7 +386,7 @@ struct ProgressTabView: View {
                 }
             }
 
-            // Gaps
+            // Gaps with Practice Now
             if !viewModel.gaps.isEmpty {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     HStack {
@@ -344,24 +442,44 @@ struct ProgressTabView: View {
                     .lineLimit(2)
             }
 
-            // Gap content thumbnails
+            // Practice Now CTA — prominent button
             if let content = viewModel.gapContent.first(where: { $0.topics?.contains(gap.topic) ?? false }) {
                 NavigationLink(value: content) {
                     HStack(spacing: 8) {
                         Image(systemName: "play.circle.fill")
                             .font(.system(size: 14))
-                            .foregroundStyle(ColorTokens.gold)
-                        Text(content.title)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(ColorTokens.gold)
-                            .lineLimit(1)
+                            .foregroundStyle(.black)
+                        Text("Practice Now")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.black)
                         Spacer()
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 9))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black.opacity(0.6))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(ColorTokens.gold)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .buttonStyle(.plain)
+            } else {
+                NavigationLink(value: QuizListDestination()) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 14))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Take a Quiz")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10))
                             .foregroundStyle(ColorTokens.gold)
                     }
-                    .padding(8)
-                    .background(ColorTokens.gold.opacity(0.08))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(ColorTokens.gold.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)
@@ -376,62 +494,6 @@ struct ProgressTabView: View {
                         .stroke(.orange.opacity(0.15), lineWidth: 1)
                 )
         )
-    }
-
-    // MARK: - Learning Velocity
-
-    private func velocitySection(_ velocity: LearningVelocity) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
-                Image(systemName: "speedometer")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Learning Velocity")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-
-            HStack(spacing: 0) {
-                velocityMetric(
-                    value: String(format: "%.1f", velocity.topicsPerWeek ?? 0),
-                    label: "Topics/Week",
-                    icon: "book.fill"
-                )
-                velocityMetric(
-                    value: String(format: "+%.1f%%", velocity.averageScoreImprovement ?? 0),
-                    label: "Avg Improvement",
-                    icon: "arrow.up.right"
-                )
-                velocityMetric(
-                    value: String(format: "%.1f", velocity.contentToMasteryRatio ?? 0),
-                    label: "Content/Mastery",
-                    icon: "chart.xyaxis.line"
-                )
-            }
-        }
-        .padding(Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(ColorTokens.surface)
-        )
-    }
-
-    private func velocityMetric(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundStyle(ColorTokens.gold)
-
-            Text(value)
-                .font(.system(size: 16, weight: .black, design: .rounded))
-                .foregroundStyle(.white)
-
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundStyle(ColorTokens.textTertiary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Quiz History
@@ -467,6 +529,9 @@ struct ProgressTabView: View {
                         Text("No quizzes taken yet")
                             .font(.system(size: 13))
                             .foregroundStyle(ColorTokens.textTertiary)
+                        Text("Quiz scores build your Knowledge Score")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
                         NavigationLink(value: QuizListDestination()) {
                             Text("Take Your First Quiz")
                                 .font(.system(size: 13, weight: .bold))
@@ -501,7 +566,6 @@ struct ProgressTabView: View {
 
     private func quizHistoryRow(_ attempt: QuizAttempt) -> some View {
         HStack(spacing: Spacing.sm) {
-            // Score circle
             ZStack {
                 Circle()
                     .fill(quizScoreColor(attempt.score?.percentage).opacity(0.15))
@@ -551,125 +615,6 @@ struct ProgressTabView: View {
         return .red
     }
 
-    // MARK: - Consumption Stats
-
-    private func consumptionSection(_ stats: ConsumptionStats) -> some View {
-        NavigationLink(value: ConsumptionHistoryDestination()) {
-            VStack(alignment: .leading, spacing: Spacing.sm) {
-                HStack(spacing: 6) {
-                    Image(systemName: "clock.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.gold)
-                    Text("Learning Stats")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-
-                    Spacer()
-
-                    Text("View History")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.gold)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(ColorTokens.gold)
-                }
-
-                HStack(spacing: 0) {
-                    consumptionMetric(
-                        value: "\(stats.totalContentConsumed ?? 0)",
-                        label: "Content",
-                        icon: "play.rectangle.fill"
-                    )
-                    consumptionMetric(
-                        value: stats.formattedTimeSpent,
-                        label: "Time Spent",
-                        icon: "clock.fill"
-                    )
-                    consumptionMetric(
-                        value: "\(stats.topicCount ?? 0)",
-                        label: "Topics",
-                        icon: "folder.fill"
-                    )
-                }
-            }
-            .padding(Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(ColorTokens.surface)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func consumptionMetric(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Text(value)
-                .font(.system(size: 20, weight: .black, design: .rounded))
-                .foregroundStyle(.white)
-
-            Text(label)
-                .font(.system(size: 10))
-                .foregroundStyle(ColorTokens.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    // MARK: - Behavioral Insights
-
-    private func behavioralSection(_ behavioral: BehavioralProfile) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
-                Image(systemName: "person.crop.circle.badge.checkmark")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Learning Style")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-            }
-
-            HStack(spacing: Spacing.lg) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 6) {
-                        Text(behavioral.typeDisplay)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(ColorTokens.gold)
-                    }
-
-                    if let avgTime = behavioral.averageAnswerTime {
-                        insightRow(label: "Avg Answer Time", value: String(format: "%.0fs", avgTime))
-                    }
-
-                    if let consistency = behavioral.consistencyScore {
-                        insightRow(label: "Consistency", value: "\(Int(consistency * 100))%")
-                    }
-
-                    if let hours = behavioral.peakHours, !hours.isEmpty {
-                        insightRow(label: "Peak Hours", value: hours.prefix(2).map { "\($0):00" }.joined(separator: ", "))
-                    }
-                }
-
-                Spacer()
-            }
-        }
-        .padding(Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(ColorTokens.surface)
-        )
-    }
-
-    private func insightRow(label: String, value: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: 12))
-                .foregroundStyle(ColorTokens.textTertiary)
-            Spacer()
-            Text(value)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-    }
-
     // MARK: - Streaks & Activity
 
     private var streaksActivitySection: some View {
@@ -715,6 +660,11 @@ struct ProgressTabView: View {
                 .frame(maxWidth: .infinity)
             }
             .padding(.vertical, Spacing.sm)
+
+            Text("Completing content or quizzes builds your streak")
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .center)
 
             if !viewModel.activityHeatmap.isEmpty {
                 activityHeatmapGrid
@@ -934,6 +884,238 @@ struct ProgressTabView: View {
         )
     }
 
+    // MARK: - Detailed Analytics (Collapsed)
+
+    @ViewBuilder
+    private var detailedAnalyticsSection: some View {
+        let hasVelocity = viewModel.velocity != nil
+        let hasStats = viewModel.consumptionStats != nil
+        let hasBehavioral = viewModel.behavioral != nil
+
+        if hasVelocity || hasStats || hasBehavioral {
+            VStack(alignment: .leading, spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showDetailedAnalytics.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "chart.dots.scatter")
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Detailed Analytics")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        Spacer()
+
+                        Image(systemName: showDetailedAnalytics ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    .padding(Spacing.md)
+                }
+                .buttonStyle(.plain)
+
+                if showDetailedAnalytics {
+                    VStack(spacing: Spacing.md) {
+                        if let velocity = viewModel.velocity {
+                            velocityContent(velocity)
+                        }
+
+                        if let stats = viewModel.consumptionStats {
+                            consumptionContent(stats)
+                        }
+
+                        if let behavioral = viewModel.behavioral {
+                            behavioralContent(behavioral)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.md)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(ColorTokens.surface)
+            )
+        }
+    }
+
+    // MARK: - Velocity (inside Detailed Analytics)
+
+    private func velocityContent(_ velocity: LearningVelocity) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: "speedometer")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Learning Velocity")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+
+            HStack(spacing: 0) {
+                velocityMetric(
+                    value: String(format: "%.1f", velocity.topicsPerWeek ?? 0),
+                    label: "Topics/Week",
+                    icon: "book.fill"
+                )
+                velocityMetric(
+                    value: String(format: "+%.1f%%", velocity.averageScoreImprovement ?? 0),
+                    label: "Avg Improvement",
+                    icon: "arrow.up.right"
+                )
+                velocityMetric(
+                    value: String(format: "%.1f", velocity.contentToMasteryRatio ?? 0),
+                    label: "Content/Mastery",
+                    icon: "chart.xyaxis.line"
+                )
+            }
+        }
+        .padding(Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(ColorTokens.surfaceElevated)
+        )
+    }
+
+    private func velocityMetric(value: String, label: String, icon: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.gold)
+
+            Text(value)
+                .font(.system(size: 16, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Consumption Stats (inside Detailed Analytics)
+
+    private func consumptionContent(_ stats: ConsumptionStats) -> some View {
+        NavigationLink(value: ConsumptionHistoryDestination()) {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                HStack(spacing: 6) {
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("Learning Stats")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+
+                    Spacer()
+
+                    Text("View History")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.gold)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+
+                HStack(spacing: 0) {
+                    consumptionMetric(
+                        value: "\(stats.totalContentConsumed ?? 0)",
+                        label: "Content",
+                        icon: "play.rectangle.fill"
+                    )
+                    consumptionMetric(
+                        value: stats.formattedTimeSpent,
+                        label: "Time Spent",
+                        icon: "clock.fill"
+                    )
+                    consumptionMetric(
+                        value: "\(stats.topicCount ?? 0)",
+                        label: "Topics",
+                        icon: "folder.fill"
+                    )
+                }
+            }
+            .padding(Spacing.sm)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(ColorTokens.surfaceElevated)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func consumptionMetric(value: String, label: String, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 20, weight: .black, design: .rounded))
+                .foregroundStyle(.white)
+
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Behavioral Insights (inside Detailed Analytics)
+
+    private func behavioralContent(_ behavioral: BehavioralProfile) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: "person.crop.circle.badge.checkmark")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Learning Style")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+
+            HStack(spacing: Spacing.lg) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(behavioral.typeDisplay)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+
+                    if let avgTime = behavioral.averageAnswerTime {
+                        insightRow(label: "Avg Answer Time", value: String(format: "%.0fs", avgTime))
+                    }
+
+                    if let consistency = behavioral.consistencyScore {
+                        insightRow(label: "Consistency", value: "\(Int(consistency * 100))%")
+                    }
+
+                    if let hours = behavioral.peakHours, !hours.isEmpty {
+                        insightRow(label: "Peak Hours", value: hours.prefix(2).map { "\($0):00" }.joined(separator: ", "))
+                    }
+                }
+
+                Spacer()
+            }
+        }
+        .padding(Spacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(ColorTokens.surfaceElevated)
+        )
+    }
+
+    private func insightRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textTertiary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+    }
+
     // MARK: - Empty State
 
     private var progressEmptyState: some View {
@@ -954,6 +1136,13 @@ struct ProgressTabView: View {
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
+
+                Text("Knowledge scores are built from quiz results.\nContent you watch builds your streak.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .padding(.top, 4)
             }
 
             NavigationLink(value: QuizListDestination()) {
