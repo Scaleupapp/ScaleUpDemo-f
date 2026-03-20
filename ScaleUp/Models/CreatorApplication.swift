@@ -86,12 +86,49 @@ enum ApplicationStatus: String, Codable, Sendable {
 // MARK: - Endorsement
 
 struct Endorsement: Codable, Sendable, Identifiable {
-    var id: String { "\(creatorId ?? "unknown")-\(Int(endorsedAt?.timeIntervalSince1970 ?? 0))" }
-    let creatorId: String?
-    let creatorName: String?
-    let creatorTier: CreatorTier?
+    var id: String { "\(endorserId ?? "unknown")-\(Int(endorsedAt?.timeIntervalSince1970 ?? 0))" }
+    let endorserId: String?
+    let endorserName: String?
     let note: String?
     let endorsedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case creatorId, note, endorsedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        endorsedAt = try container.decodeIfPresent(Date.self, forKey: .endorsedAt)
+
+        // creatorId can be a populated object or a string
+        if let obj = try? container.decode(EndorsementCreator.self, forKey: .creatorId) {
+            endorserId = obj.id
+            endorserName = [obj.firstName, obj.lastName].compactMap { $0 }.joined(separator: " ")
+        } else {
+            endorserId = try container.decodeIfPresent(String.self, forKey: .creatorId)
+            endorserName = nil
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(endorserId, forKey: .creatorId)
+        try container.encodeIfPresent(note, forKey: .note)
+        try container.encodeIfPresent(endorsedAt, forKey: .endorsedAt)
+    }
+}
+
+private struct EndorsementCreator: Decodable, Sendable {
+    let id: String
+    let firstName: String?
+    let lastName: String?
+    let username: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case firstName, lastName, username
+    }
 }
 
 // MARK: - Social Links

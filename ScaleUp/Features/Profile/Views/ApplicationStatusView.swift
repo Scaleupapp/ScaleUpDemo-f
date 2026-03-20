@@ -117,26 +117,13 @@ struct ApplicationStatusView: View {
             if let endorsements = application.endorsements, !endorsements.isEmpty {
                 ForEach(endorsements) { endorsement in
                     HStack(spacing: Spacing.sm) {
-                        if let tier = endorsement.creatorTier {
-                            Image(systemName: tier.icon)
-                                .foregroundStyle(tier.color)
-                        }
+                        Image(systemName: "checkmark.seal")
+                            .foregroundStyle(ColorTokens.info)
 
                         VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: Spacing.xs) {
-                                Text(endorsement.creatorName ?? "Creator")
-                                    .font(Typography.bodySmall)
-                                    .foregroundStyle(ColorTokens.textPrimary)
-                                if let tier = endorsement.creatorTier {
-                                    Text(tier.displayName)
-                                        .font(Typography.micro)
-                                        .foregroundStyle(tier.color)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(tier.color.opacity(0.15))
-                                        .clipShape(Capsule())
-                                }
-                            }
+                            Text(endorsement.endorserName ?? "Creator")
+                                .font(Typography.bodySmall)
+                                .foregroundStyle(ColorTokens.textPrimary)
                             if let note = endorsement.note, !note.isEmpty {
                                 Text(note)
                                     .font(Typography.caption)
