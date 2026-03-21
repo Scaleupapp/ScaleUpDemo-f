@@ -272,21 +272,21 @@ struct QuizResultsView: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(strengths, id: \.self) { strength in
-                            HStack(spacing: 6) {
+                            HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 11))
                                     .foregroundStyle(.green)
+                                    .padding(.top, 2)
                                 Text(strength)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(.green)
-                                    .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(.green.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }
@@ -306,21 +306,21 @@ struct QuizResultsView: View {
 
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(weaknesses, id: \.self) { weakness in
-                            HStack(spacing: 6) {
+                            HStack(alignment: .top, spacing: 8) {
                                 Image(systemName: "arrow.up.forward")
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 11))
                                     .foregroundStyle(.orange)
+                                    .padding(.top, 2)
                                 Text(weakness)
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(.orange)
-                                    .lineLimit(2)
                                     .fixedSize(horizontal: false, vertical: true)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .background(.orange.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
                     }
                 }
@@ -331,7 +331,6 @@ struct QuizResultsView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(ColorTokens.surface)
         )
-        .clipped()
         .opacity(showDetails ? 1 : 0)
     }
 
