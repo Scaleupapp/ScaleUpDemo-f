@@ -410,17 +410,26 @@ struct QuizSessionView: View {
                     Task { await viewModel.completeQuiz() }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 14))
-                        Text("Finish Quiz")
-                            .font(.system(size: 14, weight: .bold))
+                        if viewModel.isCompleting {
+                            ProgressView()
+                                .tint(.black)
+                                .scaleEffect(0.8)
+                            Text("Submitting...")
+                                .font(.system(size: 14, weight: .bold))
+                        } else {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 14))
+                            Text("Finish Quiz")
+                                .font(.system(size: 14, weight: .bold))
+                        }
                     }
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(ColorTokens.gold)
+                    .background(viewModel.isCompleting ? ColorTokens.gold.opacity(0.6) : ColorTokens.gold)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+                .disabled(viewModel.isCompleting)
             } else {
                 Button {
                     Haptics.selection()
@@ -552,11 +561,22 @@ struct QuizSessionView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
 
-            ProgressView()
-                .tint(ColorTokens.gold)
-            Text(viewModel.isCompleting ? "Calculating results..." : "Loading results...")
-                .font(.system(size: 14))
-                .foregroundStyle(ColorTokens.textSecondary)
+            VStack(spacing: 8) {
+                ProgressView()
+                    .tint(ColorTokens.gold)
+
+                Text(viewModel.isCompleting ? "Generating insights & analysis..." : "Preparing your results...")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(ColorTokens.textSecondary)
+
+                Text(viewModel.isCompleting
+                    ? "Our AI is analyzing your performance\nand updating your knowledge profile"
+                    : "Almost there...")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+            }
 
             Spacer()
         }

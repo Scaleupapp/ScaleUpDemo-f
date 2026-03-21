@@ -3,6 +3,8 @@ import SwiftUI
 struct QuizListView: View {
     @State private var viewModel = QuizListViewModel()
     @State private var showGenerateSheet = false
+    @State private var generatedQuizToAttempt: Quiz?
+    @State private var showGeneratedQuizDetail = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -44,8 +46,12 @@ struct QuizListView: View {
             generateQuizSheet
         }
         .onChange(of: viewModel.generatedQuizId) { _, newId in
-            guard newId != nil else { return }
-            showGenerateSheet = false
+            // Don't auto-dismiss — let the sheet show "Attempt Now" / "Do Later"
+        }
+        .navigationDestination(isPresented: $showGeneratedQuizDetail) {
+            if let quiz = generatedQuizToAttempt {
+                QuizDetailView(quiz: quiz)
+            }
         }
         .task {
             await viewModel.loadQuizzes()
@@ -534,25 +540,92 @@ struct QuizListView: View {
 
                         // Generate Button / Loading / Result
                         if viewModel.isGenerating {
-                            VStack(spacing: Spacing.sm) {
-                                ProgressView()
-                                    .tint(ColorTokens.gold)
-                                Text(viewModel.generationStatus ?? "Generating...")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(ColorTokens.textSecondary)
-                            }
-                            .padding(.top, Spacing.sm)
-                        } else if viewModel.generatedQuizId != nil {
-                            // Success — sheet will dismiss via onChange
-                            VStack(spacing: Spacing.sm) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .font(.system(size: 36))
-                                    .foregroundStyle(.green)
-                                Text("Quiz Ready!")
-                                    .font(.system(size: 15, weight: .bold))
+                            VStack(spacing: Spacing.md) {
+                                ZStack {
+                                    Circle()
+                                        .fill(ColorTokens.gold.opacity(0.1))
+                                        .frame(width: 80, height: 80)
+
+                                    ProgressView()
+                                        .scaleEffect(1.3)
+                                        .tint(ColorTokens.gold)
+                                }
+
+                                Text(generatingMessage(for: viewModel.generationStatus))
+                                    .font(.system(size: 15, weight: .semibold))
                                     .foregroundStyle(.white)
+
+                                Text("Our AI is crafting personalized questions\nbased on your learning level")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                                    .multilineTextAlignment(.center)
+                                    .lineSpacing(2)
                             }
-                            .padding(.top, Spacing.sm)
+                            .padding(.top, Spacing.lg)
+                            .padding(.horizontal, Spacing.lg)
+                        } else if viewModel.generatedQuizId != nil {
+                            // Success — show Attempt Now / Do Later
+                            VStack(spacing: Spacing.lg) {
+                                ZStack {
+                                    Circle()
+                                        .fill(ColorTokens.success.opacity(0.15))
+                                        .frame(width: 80, height: 80)
+
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 44))
+                                        .foregroundStyle(ColorTokens.success)
+                                }
+
+                                VStack(spacing: 4) {
+                                    Text("Quiz Ready!")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundStyle(.white)
+
+                                    Text("\(viewModel.selectedQuestionCount) questions on \(viewModel.generationTopic)")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(ColorTokens.textTertiary)
+                                }
+
+                                VStack(spacing: Spacing.sm) {
+                                    Button {
+                                        // Find the generated quiz and navigate to it
+                                        if let quizId = viewModel.generatedQuizId,
+                                           let quiz = viewModel.allQuizzes.first(where: { $0.id == quizId }) {
+                                            generatedQuizToAttempt = quiz
+                                            showGenerateSheet = false
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                                showGeneratedQuizDetail = true
+                                            }
+                                        }
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: "play.fill")
+                                                .font(.system(size: 13))
+                                            Text("Attempt Now")
+                                                .font(.system(size: 15, weight: .bold))
+                                        }
+                                        .foregroundStyle(.black)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 14)
+                                        .background(ColorTokens.gold)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+
+                                    Button {
+                                        showGenerateSheet = false
+                                    } label: {
+                                        Text("Do Later")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(ColorTokens.textSecondary)
+                                            .frame(maxWidth: .infinity)
+                                            .padding(.vertical, 12)
+                                            .background(ColorTokens.surfaceElevated)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+                                }
+                                .padding(.horizontal, Spacing.lg)
+                            }
+                            .padding(.top, Spacing.lg)
                         } else {
                             VStack(spacing: Spacing.sm) {
                                 if viewModel.generationFailed {
@@ -677,6 +750,16 @@ struct QuizListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 60)
+    }
+
+    private func generatingMessage(for status: String?) -> String {
+        switch status {
+        case "Queuing...": return "Setting things up..."
+        case "Generating quiz...": return "AI is generating your quiz..."
+        case "generating": return "Crafting questions..."
+        case "queued": return "In queue, starting soon..."
+        default: return status ?? "Generating..."
+        }
     }
 
     private func scoreColor(for percentage: Double) -> Color {
