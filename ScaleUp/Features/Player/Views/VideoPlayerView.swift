@@ -4,6 +4,8 @@ import AVFoundation
 struct VideoPlayerView: View {
     let player: AVPlayer?
     @Binding var isPlaying: Bool
+    let isVideoReady: Bool
+    let isBuffering: Bool
     let currentTime: Double
     let duration: Double
     let playbackSpeed: Float
@@ -46,8 +48,31 @@ struct VideoPlayerView: View {
                 }
             }
 
-            // Controls overlay
-            if showControls {
+            // Loading / buffering indicator
+            if !isVideoReady || isBuffering {
+                ZStack {
+                    if !isVideoReady {
+                        // Initial load — show prominent spinner
+                        Color.black.opacity(0.6)
+                        VStack(spacing: 8) {
+                            ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(.white)
+                            Text("Loading video...")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.7))
+                        }
+                    } else if isBuffering {
+                        // Mid-playback buffering — subtle spinner
+                        ProgressView()
+                            .scaleEffect(1.2)
+                            .tint(.white)
+                    }
+                }
+            }
+
+            // Controls overlay (only when video is ready)
+            if showControls && isVideoReady {
                 controlsOverlay
                     .transition(.opacity)
             }

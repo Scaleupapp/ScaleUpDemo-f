@@ -13,6 +13,8 @@ final class PlayerViewModel {
 
     // Playback
     var isPlaying = false
+    var isVideoReady = false    // True when AVPlayer has loaded video frames
+    var isBuffering = false     // True while video is buffering
     var currentTime: Double = 0
     var duration: Double = 0
     var progress: Double { duration > 0 ? currentTime / duration : 0 }
@@ -67,25 +69,34 @@ final class PlayerViewModel {
         isLoading = true
         errorMessage = nil
 
-        do {
-            content = try await contentService.fetchContent(id: id)
-            likeCount = content?.likeCount ?? 0
-            saveCount = content?.saveCount ?? 0
-            commentCount = content?.commentCount ?? 0
+        // Fetch content metadata AND stream URL in parallel (saves 2-3s)
+        async let contentTask: Content? = {
+            try? await self.contentService.fetchContent(id: id)
+        }()
+        async let streamTask: StreamResponse? = {
+            try? await self.playerService.fetchStreamURL(contentId: id)
+        }()
+        async let relatedTask: () = loadRelated(id: id)
+        async let commentsTask: () = loadComments(id: id)
 
-            // Load stream URL
-            if let stream = try? await playerService.fetchStreamURL(contentId: id),
-               let urlString = stream.resolvedURL,
-               let url = URL(string: urlString) {
-                setupPlayer(url: url)
-            }
-        } catch {
+        let (fetchedContent, stream) = await (contentTask, streamTask)
+
+        if let fetchedContent {
+            content = fetchedContent
+            likeCount = fetchedContent.likeCount ?? 0
+            saveCount = fetchedContent.saveCount ?? 0
+            commentCount = fetchedContent.commentCount ?? 0
+        } else {
             loadMockContent(id: id)
         }
 
-        // Load related content and comments in parallel
-        async let relatedTask: () = loadRelated(id: id)
-        async let commentsTask: () = loadComments(id: id)
+        // Set up player as soon as stream URL is ready
+        if let urlString = stream?.resolvedURL,
+           let url = URL(string: urlString) {
+            setupPlayer(url: url)
+        }
+
+        // Wait for related + comments (already started in parallel)
         _ = await (relatedTask, commentsTask)
 
         isLoading = false
@@ -112,9 +123,55 @@ final class PlayerViewModel {
 
     // MARK: - Player Setup
 
+    private var statusObservation: NSKeyValueObservation?
+    private var bufferObservation: NSKeyValueObservation?
+    private var bufferEmptyObservation: NSKeyValueObservation?
+
     private func setupPlayer(url: URL) {
         let playerItem = AVPlayerItem(url: url)
+        playerItem.preferredForwardBufferDuration = 5 // Buffer 5 seconds ahead
         player = AVPlayer(playerItem: playerItem)
+        player?.automaticallyWaitsToMinimizeStalling = true
+        isVideoReady = false
+        isBuffering = true
+
+        // Observe when video is ready to play (has loaded first frames)
+        statusObservation = playerItem.observe(\.status, options: [.new]) { [weak self] item, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                switch item.status {
+                case .readyToPlay:
+                    self.isVideoReady = true
+                    self.isBuffering = false
+                case .failed:
+                    self.isVideoReady = false
+                    self.isBuffering = false
+                    self.errorMessage = "Video failed to load"
+                default:
+                    break
+                }
+            }
+        }
+
+        // Observe buffering state — playbackLikelyToKeepUp
+        bufferObservation = playerItem.observe(\.isPlaybackLikelyToKeepUp, options: [.new]) { [weak self] item, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if item.isPlaybackLikelyToKeepUp {
+                    self.isBuffering = false
+                }
+            }
+        }
+
+        // Observe buffer empty — player stalled
+        bufferEmptyObservation = playerItem.observe(\.isPlaybackBufferEmpty, options: [.new]) { [weak self] item, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if item.isPlaybackBufferEmpty && self.isPlaying {
+                    self.isBuffering = true
+                }
+            }
+        }
 
         // Time observer
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
@@ -134,7 +191,7 @@ final class PlayerViewModel {
     // MARK: - Playback Controls
 
     func togglePlayPause() {
-        guard let player else { return }
+        guard let player, isVideoReady else { return }
         if isPlaying {
             player.pause()
         } else {
@@ -328,9 +385,17 @@ final class PlayerViewModel {
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
         }
+        statusObservation?.invalidate()
+        bufferObservation?.invalidate()
+        bufferEmptyObservation?.invalidate()
+        statusObservation = nil
+        bufferObservation = nil
+        bufferEmptyObservation = nil
         player?.pause()
         player = nil
         progressTimer?.cancel()
+        isVideoReady = false
+        isBuffering = false
     }
 
     // MARK: - Mock

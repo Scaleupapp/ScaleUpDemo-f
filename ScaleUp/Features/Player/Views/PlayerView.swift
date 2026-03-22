@@ -52,6 +52,8 @@ struct PlayerView: View {
                             get: { viewModel.isPlaying },
                             set: { _ in viewModel.togglePlayPause() }
                         ),
+                        isVideoReady: viewModel.isVideoReady,
+                        isBuffering: viewModel.isBuffering,
                         currentTime: viewModel.currentTime,
                         duration: viewModel.duration,
                         playbackSpeed: viewModel.playbackSpeed,
@@ -218,6 +220,8 @@ struct PlayerView: View {
                         get: { viewModel.isPlaying },
                         set: { _ in viewModel.togglePlayPause() }
                     ),
+                    isVideoReady: viewModel.isVideoReady,
+                    isBuffering: viewModel.isBuffering,
                     currentTime: viewModel.currentTime,
                     duration: viewModel.duration,
                     playbackSpeed: viewModel.playbackSpeed,
