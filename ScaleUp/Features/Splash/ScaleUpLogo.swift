@@ -1,43 +1,64 @@
 import SwiftUI
 
 // MARK: - ScaleUp Logo
-// "scaleUp" — uses real Text for all letters, overlays an arrow on the U's right stem.
+// "sUp" — the U has an upward arrow integrated into it.
+// Matches the brand icon: lowercase s, uppercase U with arrow stem, lowercase p.
 
 struct ScaleUpLogo: View {
     let fontSize: CGFloat
 
     var body: some View {
-        // Render "scaleUp" as a single text, then overlay the arrow
-        ZStack(alignment: .topTrailing) {
-            Text("scaleUp")
+        HStack(alignment: .bottom, spacing: fontSize * -0.02) {
+            // "s" — lowercase
+            Text("s")
                 .font(.system(size: fontSize, weight: .black, design: .rounded))
                 .foregroundStyle(ColorTokens.gold)
 
-            // Arrow extending upward from the U
-            // Position it over the U's right vertical stroke
-            ArrowOverlay(fontSize: fontSize)
-                .offset(
-                    x: -fontSize * 0.28,   // align with U's right stroke
-                    y: -fontSize * 0.32     // extend above the U
-                )
+            // "U" with integrated arrow
+            UpArrowLetter(fontSize: fontSize)
+
+            // "p" — lowercase
+            Text("p")
+                .font(.system(size: fontSize, weight: .black, design: .rounded))
+                .foregroundStyle(ColorTokens.gold)
         }
     }
 }
 
-// MARK: - Arrow Overlay
-// Just the upward arrow stem + chevron head that sits on top of the U
+// MARK: - U with Arrow
+// The U letter has its right stem extended upward into an arrow
 
-private struct ArrowOverlay: View {
+private struct UpArrowLetter: View {
     let fontSize: CGFloat
 
-    private var stemHeight: CGFloat { fontSize * 0.38 }
-    private var strokeWidth: CGFloat { max(fontSize * 0.1, 2.5) }
-    private var headSize: CGFloat { fontSize * 0.14 }
+    var body: some View {
+        ZStack(alignment: .top) {
+            // Base U letter
+            Text("U")
+                .font(.system(size: fontSize, weight: .black, design: .rounded))
+                .foregroundStyle(ColorTokens.gold)
+
+            // Arrow extending from the U
+            ArrowStem(fontSize: fontSize)
+                .offset(y: -fontSize * 0.28)
+        }
+    }
+}
+
+// MARK: - Arrow Stem
+// Upward arrow that extends from the top of the U
+
+private struct ArrowStem: View {
+    let fontSize: CGFloat
+
+    private var stemHeight: CGFloat { fontSize * 0.35 }
+    private var strokeWidth: CGFloat { max(fontSize * 0.12, 3) }
+    private var headSize: CGFloat { fontSize * 0.18 }
 
     var body: some View {
         Canvas { context, size in
             let midX = size.width / 2
-            let gold = Color(hex: 0xD4A843)
+            let gold = Color(hex: 0xE8B84B)
 
             // Stem
             var stem = Path()
@@ -46,7 +67,7 @@ private struct ArrowOverlay: View {
             context.stroke(stem, with: .color(gold),
                            style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round))
 
-            // Chevron arrowhead
+            // Arrowhead
             var head = Path()
             head.move(to: CGPoint(x: midX - headSize, y: headSize * 1.3))
             head.addLine(to: CGPoint(x: midX, y: 0))
