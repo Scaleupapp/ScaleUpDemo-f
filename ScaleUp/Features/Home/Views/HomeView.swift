@@ -149,8 +149,6 @@ struct HomeView: View {
 
             Spacer()
 
-            ObjectiveSwitcherView()
-
             // Score badge — only when user has a score
             if viewModel.readinessScore > 0 {
                 scoreBadge

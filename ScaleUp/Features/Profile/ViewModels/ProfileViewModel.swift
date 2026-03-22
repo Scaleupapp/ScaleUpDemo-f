@@ -106,11 +106,15 @@ final class ProfileViewModel {
         }
     }
 
-    func setPrimaryObjective(_ id: String) async {
+    func activateObjective(_ id: String, context: ObjectiveContext) async {
         do {
-            try await objectiveService.setPrimary(id: id)
+            let result = try await objectiveService.activate(id: id)
             Haptics.success()
             objectives = (try? await objectiveService.list()) ?? objectives
+            context.didActivateObjective(id: id)
+            if result.needsGeneration == true {
+                context.needsJourneyGeneration = true
+            }
         } catch {
             Haptics.error()
         }

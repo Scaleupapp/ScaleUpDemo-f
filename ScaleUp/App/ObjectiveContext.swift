@@ -46,4 +46,12 @@ final class ObjectiveContext {
     var canSwitch: Bool {
         allObjectives.count > 1
     }
+
+    /// Called from Profile page when user activates an objective
+    func didActivateObjective(id: String) {
+        if let obj = allObjectives.first(where: { $0.id == id }) {
+            activeObjective = obj
+        }
+        // The .onChange handlers on views will trigger dashboard reloads
+    }
 }

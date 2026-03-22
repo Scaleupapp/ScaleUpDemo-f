@@ -139,8 +139,6 @@ struct MyPlanView: View {
 
                 Spacer()
 
-                ObjectiveSwitcherView()
-
                 if viewModel.streak > 0 {
                     HStack(spacing: 4) {
                         Image(systemName: "flame.fill")

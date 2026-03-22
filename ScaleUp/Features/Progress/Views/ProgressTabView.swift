@@ -120,23 +120,6 @@ struct ProgressTabView: View {
                     .foregroundStyle(.white)
 
                 Spacer()
-
-                if objectiveContext.canSwitch {
-                    Button {
-                        viewModel.showAllObjectives.toggle()
-                        Task { await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId) }
-                    } label: {
-                        Text(viewModel.showAllObjectives ? "All" : "Filtered")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(viewModel.showAllObjectives ? ColorTokens.gold : ColorTokens.textSecondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(viewModel.showAllObjectives ? ColorTokens.gold.opacity(0.15) : ColorTokens.card)
-                            .clipShape(Capsule())
-                    }
-                }
-
-                ObjectiveSwitcherView()
             }
 
             HStack(spacing: Spacing.xl) {

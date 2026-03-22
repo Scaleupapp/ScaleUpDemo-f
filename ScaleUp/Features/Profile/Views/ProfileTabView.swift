@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ProfileTabView: View {
     @Environment(AppState.self) private var appState
+    @Environment(ObjectiveContext.self) private var objectiveContext
     @State private var viewModel = ProfileViewModel()
     @State private var showFollowList = false
     @State private var showCreatorApplication = false
@@ -639,9 +640,9 @@ struct ProfileTabView: View {
             }
             if obj.isPrimary != true {
                 Button {
-                    Task { await viewModel.setPrimaryObjective(obj.id) }
+                    Task { await viewModel.activateObjective(obj.id, context: objectiveContext) }
                 } label: {
-                    Label("Set as Primary", systemImage: "star.fill")
+                    Label("Switch to this", systemImage: "arrow.triangle.swap")
                 }
             }
         }
