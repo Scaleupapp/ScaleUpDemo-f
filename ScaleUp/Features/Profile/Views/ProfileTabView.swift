@@ -518,6 +518,13 @@ struct ProfileTabView: View {
             }
             .padding(.horizontal, Spacing.md)
 
+            if viewModel.objectives.count > 1 {
+                Text("Tap an objective to switch. Your plan and progress update accordingly.")
+                    .font(Typography.micro)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .padding(.horizontal, Spacing.md)
+            }
+
             if viewModel.objectives.isEmpty {
                 Button {
                     Haptics.light()
@@ -563,68 +570,101 @@ struct ProfileTabView: View {
     }
 
     private func objectiveRow(_ obj: UserObjective) -> some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: obj.typeIcon)
-                .font(.system(size: 16))
-                .foregroundStyle(ColorTokens.gold)
-                .frame(width: 32, height: 32)
-                .background(ColorTokens.gold.opacity(0.1))
-                .clipShape(Circle())
+        objectiveRowContent(obj, isActive: obj.isPrimary == true)
+    }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: Spacing.xs) {
-                    Text(obj.specificTitle)
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.textPrimary)
-                        .lineLimit(1)
-                    if obj.isPrimary == true {
-                        Text("PRIMARY")
-                            .font(Typography.micro)
-                            .foregroundStyle(ColorTokens.gold)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(ColorTokens.gold.opacity(0.15))
-                            .clipShape(Capsule())
+    private func objectiveRowContent(_ obj: UserObjective, isActive: Bool) -> some View {
+        Button {
+            if !isActive {
+                Haptics.light()
+                Task { await viewModel.activateObjective(obj.id, context: objectiveContext) }
+            }
+        } label: {
+            HStack(spacing: Spacing.sm) {
+                // Icon with active indicator
+                ZStack {
+                    Image(systemName: obj.typeIcon)
+                        .font(.system(size: 16))
+                        .foregroundStyle(isActive ? ColorTokens.gold : ColorTokens.textSecondary)
+                        .frame(width: 32, height: 32)
+                        .background(isActive ? ColorTokens.gold.opacity(0.15) : ColorTokens.gold.opacity(0.05))
+                        .clipShape(Circle())
+
+                    if isActive {
+                        Circle()
+                            .stroke(ColorTokens.gold, lineWidth: 2)
+                            .frame(width: 36, height: 36)
                     }
                 }
-                HStack(spacing: Spacing.xs) {
-                    Text(obj.typeDisplay)
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    Text("\u{2022}")
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    Text(obj.levelDisplay)
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    Text("\u{2022}")
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    Text(obj.timelineDisplay)
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiary)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: Spacing.xs) {
+                        Text(obj.specificTitle)
+                            .font(Typography.bodySmall)
+                            .foregroundStyle(isActive ? ColorTokens.textPrimary : ColorTokens.textSecondary)
+                            .lineLimit(1)
+                        if isActive {
+                            Text("ACTIVE")
+                                .font(Typography.micro)
+                                .foregroundStyle(ColorTokens.gold)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(ColorTokens.gold.opacity(0.15))
+                                .clipShape(Capsule())
+                        }
+                    }
+                    HStack(spacing: Spacing.xs) {
+                        Text(obj.typeDisplay)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text("\u{2022}")
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text(obj.levelDisplay)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text("\u{2022}")
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text(obj.timelineDisplay)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    if let topics = obj.topicsOfInterest, !topics.isEmpty {
+                        Text(topics.prefix(3).joined(separator: ", "))
+                            .font(Typography.micro)
+                            .foregroundStyle(ColorTokens.gold.opacity(0.7))
+                            .lineLimit(1)
+                    }
                 }
-                if let topics = obj.topicsOfInterest, !topics.isEmpty {
-                    Text(topics.prefix(3).joined(separator: ", "))
-                        .font(Typography.micro)
-                        .foregroundStyle(ColorTokens.gold.opacity(0.7))
-                        .lineLimit(1)
+
+                Spacer()
+
+                if isActive {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(ColorTokens.gold)
+                } else {
+                    Text("Switch")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(ColorTokens.gold.opacity(0.1))
+                        .clipShape(Capsule())
                 }
             }
-
-            Spacer()
-
-            if let status = obj.status {
-                Image(systemName: status.icon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(statusColor(status))
-            }
+            .padding(Spacing.sm)
+            .padding(.horizontal, Spacing.xs)
+            .background(isActive ? ColorTokens.gold.opacity(0.06) : ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.small)
+                    .stroke(isActive ? ColorTokens.gold.opacity(0.3) : Color.clear, lineWidth: 1)
+            )
         }
-        .padding(Spacing.sm)
-        .padding(.horizontal, Spacing.xs)
-        .background(ColorTokens.surface)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+        .buttonStyle(.plain)
         .padding(.horizontal, Spacing.md)
         .contextMenu {
-            if obj.status == .active {
+            if obj.status == .active && isActive {
                 Button {
                     Task { await viewModel.pauseObjective(obj.id) }
                 } label: {
@@ -636,13 +676,6 @@ struct ProfileTabView: View {
                     Task { await viewModel.resumeObjective(obj.id) }
                 } label: {
                     Label("Resume", systemImage: "play.circle")
-                }
-            }
-            if obj.isPrimary != true {
-                Button {
-                    Task { await viewModel.activateObjective(obj.id, context: objectiveContext) }
-                } label: {
-                    Label("Switch to this", systemImage: "arrow.triangle.swap")
                 }
             }
         }
