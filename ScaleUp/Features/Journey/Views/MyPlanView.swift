@@ -60,24 +60,16 @@ struct MyPlanView: View {
                 await viewModel.loadDashboard()
             }
         }
-        .coachMark(
-            .tabJourney,
-            icon: "map.fill",
-            title: "Learning Roadmap",
-            message: "Set objectives and generate an AI-powered learning plan with daily goals and milestones."
-        )
     }
 
-    // MARK: - No Journey State (shows real objective + generate CTA)
+    // MARK: - No Journey State
 
     private var noJourneyContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Spacing.lg) {
-                // Show real objective if available
                 if viewModel.userObjective != nil {
-                    goalHeader
+                    headerSection
                 }
-
                 GenerateJourneyView(viewModel: viewModel)
             }
             .padding(.horizontal, Spacing.lg)
@@ -88,52 +80,25 @@ struct MyPlanView: View {
         }
     }
 
-    // MARK: - Main Content
+    // MARK: - Main Content (5 sections)
 
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Spacing.lg) {
-                // 1. GOAL — What am I working toward?
-                goalHeader
+                // 1. HEADER — Goal + progress + pace (all in one)
+                headerSection
 
-                // 2. PROGRESS + PACE — How far am I? Am I on track?
-                if viewModel.overallProgress >= 1.0 {
-                    completionCelebration
-                } else {
-                    progressPaceCard
-                }
-
-                // 3. PHASE — Where am I in the journey?
-                if viewModel.currentPhase != nil {
-                    phaseSection
-                }
-
-                // 4. TODAY — What's on my plate?
+                // 2. TODAY — What should I do right now?
                 todaySection
 
-                // 5. NEXT ACTION — What should I do right now?
-                if let action = viewModel.primaryNextAction {
-                    nextActionCard(action)
-                }
+                // 3. THIS WEEK — How's my week going?
+                thisWeekSection
 
-                // 6. THIS WEEK — How's my week going?
-                weekStripSection
+                // 4. YOUR JOURNEY — Phase progress + next milestone
+                journeySection
 
-                if !viewModel.weekGoals.isEmpty {
-                    weekGoalsSection
-                }
-
-                // 7. SKILL / TOPIC MASTERY
-                if !viewModel.objectiveCompetencies.isEmpty {
-                    competencyMasterySection
-                } else if !viewModel.topicMastery.isEmpty {
-                    topicMasterySection
-                }
-
-                // 8. MILESTONES — What have I achieved / what's next?
-                if !viewModel.milestones.isEmpty {
-                    milestonesSection
-                }
+                // 5. SKILLS — Compact readiness with inline actions
+                skillsSection
 
                 Spacer().frame(height: Spacing.xxxl)
             }
@@ -145,11 +110,11 @@ struct MyPlanView: View {
         }
     }
 
-    // MARK: - 1. Goal Header
+    // MARK: - 1. Header (Goal + Progress + Pace — merged)
 
-    private var goalHeader: some View {
+    private var headerSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            // Streak badge row
+            // Title row
             HStack {
                 Text("My Plan")
                     .font(Typography.titleLarge)
@@ -173,159 +138,82 @@ struct MyPlanView: View {
                 }
             }
 
-            // Goal statement
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "scope")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.gold)
-                    Text("GOAL")
-                        .font(.system(size: 10, weight: .heavy, design: .rounded))
-                        .foregroundStyle(ColorTokens.gold)
-                }
+            if viewModel.overallProgress >= 1.0 {
+                completionCelebration
+            } else {
+                // Goal card with integrated progress
+                VStack(alignment: .leading, spacing: 10) {
+                    // Goal title
+                    Text(viewModel.goalTitle)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
 
-                Text(viewModel.goalTitle)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.white)
-
-                HStack(spacing: Spacing.md) {
-                    if !viewModel.timelineDisplay.isEmpty {
-                        Label(viewModel.timelineDisplay, systemImage: "clock")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textSecondary)
-                    }
-                    if !viewModel.currentLevel.isEmpty {
-                        Label(viewModel.currentLevel, systemImage: "gauge.with.dots.needle.33percent")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textSecondary)
-                    }
-                    if viewModel.weeklyHours > 0 {
-                        Label("\(viewModel.weeklyHours)h/week", systemImage: "calendar")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textSecondary)
-                    }
-                }
-
-                // View Objective Brief button
-                if let objId = viewModel.objectiveId {
-                    NavigationLink(value: ObjectiveBriefDestination(objectiveId: objId)) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "brain.fill")
-                                .font(.system(size: 11))
-                            Text("View Objective Brief")
-                                .font(.system(size: 12, weight: .semibold))
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 9, weight: .bold))
+                    // Progress bar
+                    VStack(alignment: .leading, spacing: 6) {
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(ColorTokens.surfaceElevated)
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(
+                                        LinearGradient(colors: [ColorTokens.gold.opacity(0.8), ColorTokens.gold], startPoint: .leading, endPoint: .trailing)
+                                    )
+                                    .frame(width: geo.size.width * viewModel.overallProgress)
+                            }
                         }
-                        .foregroundStyle(ColorTokens.gold)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(ColorTokens.gold.opacity(0.1))
-                        .clipShape(Capsule())
+                        .frame(height: 8)
+
+                        // Progress details — human-readable
+                        HStack(spacing: 0) {
+                            Text(viewModel.progressSummary)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.9))
+
+                            Spacer()
+
+                            // Pace as estimated date
+                            HStack(spacing: 4) {
+                                Image(systemName: viewModel.paceIcon)
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(viewModel.paceColor)
+                                Text(viewModel.paceLabel)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(viewModel.paceColor)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
+
+                    // Meta row
+                    HStack(spacing: Spacing.md) {
+                        metaChip("Week \(viewModel.currentWeek)/\(viewModel.totalWeeks)", icon: "calendar")
+
+                        if !viewModel.currentLevel.isEmpty {
+                            metaChip(viewModel.currentLevel, icon: "gauge.with.dots.needle.33percent")
+                        }
+
+                        if !viewModel.timelineDisplay.isEmpty {
+                            metaChip(viewModel.timelineDisplay, icon: "clock")
+                        }
+                    }
                 }
+                .padding(Spacing.md)
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(ColorTokens.gold.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+                        )
+                )
             }
-            .padding(Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(ColorTokens.gold.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
-                    )
-            )
         }
     }
 
-    // MARK: - 2. Progress + Pace
-
-    private var progressPaceCard: some View {
-        VStack(spacing: Spacing.md) {
-            // Progress bar
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text("\(Int(viewModel.overallProgress * 100))%")
-                        .font(.system(size: 28, weight: .black, design: .rounded))
-                        .foregroundStyle(ColorTokens.gold)
-
-                    Text("complete")
-                        .font(.system(size: 14))
-                        .foregroundStyle(ColorTokens.textSecondary)
-
-                    Spacer()
-
-                    Text("Week \(viewModel.currentWeek) of \(viewModel.totalWeeks)")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(ColorTokens.surfaceElevated)
-                        .clipShape(Capsule())
-                }
-
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(ColorTokens.surfaceElevated)
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(
-                                LinearGradient(colors: [ColorTokens.gold.opacity(0.8), ColorTokens.gold], startPoint: .leading, endPoint: .trailing)
-                            )
-                            .frame(width: geo.size.width * viewModel.overallProgress)
-                    }
-                }
-                .frame(height: 8)
-            }
-
-            // Pace indicator + stats
-            HStack(spacing: Spacing.lg) {
-                // Pace status
-                HStack(spacing: 6) {
-                    Image(systemName: viewModel.paceIcon)
-                        .font(.system(size: 14))
-                        .foregroundStyle(viewModel.paceColor)
-
-                    Text(viewModel.paceStatus)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(viewModel.paceColor)
-                }
-
-                Spacer()
-
-                // Quick stats
-                HStack(spacing: Spacing.md) {
-                    miniStat(value: "\(viewModel.dashboard?.progress?.contentConsumed ?? 0)/\(viewModel.dashboard?.progress?.contentAssigned ?? 0)", label: "Lessons")
-
-                    NavigationLink(value: QuizListDestination()) {
-                        miniStat(value: "\(viewModel.dashboard?.progress?.quizzesCompleted ?? 0)/\(viewModel.dashboard?.progress?.quizzesAssigned ?? 0)", label: "Quizzes")
-                    }
-                    .buttonStyle(.plain)
-
-                    miniStat(value: "\(viewModel.dashboard?.progress?.milestonesCompleted ?? 0)/\(viewModel.dashboard?.progress?.milestonesTotal ?? 0)", label: "Milestones")
-                }
-            }
-        }
-        .padding(Spacing.md)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(ColorTokens.surface)
-        )
+    private func metaChip(_ text: String, icon: String) -> some View {
+        Label(text, systemImage: icon)
+            .font(.system(size: 11))
+            .foregroundStyle(ColorTokens.textSecondary)
     }
-
-    private func miniStat(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
-            Text(value)
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(ColorTokens.textTertiary)
-        }
-    }
-
-    // MARK: - Completion Celebration
 
     private var completionCelebration: some View {
         VStack(spacing: Spacing.md) {
@@ -343,9 +231,9 @@ struct MyPlanView: View {
                 .multilineTextAlignment(.center)
 
             HStack(spacing: Spacing.xl) {
-                miniStat(value: "\(viewModel.dashboard?.progress?.contentConsumed ?? 0)", label: "Lessons")
-                miniStat(value: "\(viewModel.dashboard?.progress?.quizzesCompleted ?? 0)", label: "Quizzes")
-                miniStat(value: "\(viewModel.dashboard?.progress?.milestonesCompleted ?? 0)", label: "Milestones")
+                statBadge("\(viewModel.dashboard?.progress?.contentConsumed ?? 0)", "Lessons")
+                statBadge("\(viewModel.dashboard?.progress?.quizzesCompleted ?? 0)", "Quizzes")
+                statBadge("\(viewModel.dashboard?.progress?.milestonesCompleted ?? 0)", "Milestones")
             }
         }
         .padding(Spacing.xl)
@@ -366,90 +254,242 @@ struct MyPlanView: View {
         )
     }
 
-    // MARK: - 3. Phase
+    // MARK: - 2. Today Section (content + rest day + next action — merged)
 
-    private var phaseSection: some View {
+    private var todaySection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
-                Image(systemName: "map.fill")
-                    .font(.system(size: 12))
+            // Section header with today's date
+            HStack {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 13))
                     .foregroundStyle(ColorTokens.gold)
-                Text("Current Phase")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .textCase(.uppercase)
+                Text(viewModel.todayDateString)
+                    .font(Typography.titleMedium)
+                    .foregroundStyle(.white)
 
                 Spacer()
 
-                Text("Phase \(viewModel.phaseProgress)")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                if let stats = viewModel.todayStats, (stats.totalItems ?? 0) > 0 {
+                    Text("\(stats.completedItems ?? 0)/\(stats.totalItems ?? 0) done")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.gold)
+                }
             }
 
-            if let phase = viewModel.currentPhase {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(phase.name)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.white)
-
-                    // Phase roadmap dots
-                    HStack(spacing: 6) {
-                        ForEach(viewModel.phases) { p in
-                            HStack(spacing: 3) {
-                                Circle()
-                                    .fill(phaseColor(p.status))
-                                    .frame(width: 8, height: 8)
-                                if p.id == phase.id {
-                                    Text(p.name)
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                        .lineLimit(1)
-                                }
-                            }
+            if viewModel.todayContent.isEmpty {
+                // No content today — show informative rest card
+                noContentTodayCard
+            } else {
+                // Today's content items
+                VStack(spacing: 8) {
+                    ForEach(viewModel.incompleteContent) { content in
+                        NavigationLink(value: content) {
+                            todayContentRow(content)
                         }
+                        .buttonStyle(.plain)
                     }
 
-                    // Focus topics
-                    if let topics = phase.focusTopics, !topics.isEmpty {
-                        HStack(spacing: 6) {
-                            Text("Focus:")
-                                .font(.system(size: 11))
-                                .foregroundStyle(ColorTokens.textTertiary)
-                            ForEach(topics, id: \.self) { topic in
-                                Text(topic)
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(ColorTokens.gold)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(ColorTokens.gold.opacity(0.1))
-                                    .clipShape(Capsule())
+                    if !viewModel.completedContent.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(ColorTokens.success)
+                            Text("\(viewModel.completedContent.count) completed")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(ColorTokens.success)
+                            Spacer()
+                        }
+                        .padding(.top, 4)
+
+                        ForEach(viewModel.completedContent) { content in
+                            NavigationLink(value: content) {
+                                todayContentRow(content)
                             }
+                            .buttonStyle(.plain)
+                            .opacity(0.6)
                         }
                     }
                 }
-                .padding(Spacing.md)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(ColorTokens.surface)
-                )
+            }
+
+            // Up Next action (always show if available, even on rest days)
+            if let action = viewModel.primaryNextAction {
+                nextActionCard(action)
             }
         }
     }
 
-    private func phaseColor(_ status: String?) -> Color {
-        switch status {
-        case "completed": return ColorTokens.success
-        case "active": return ColorTokens.gold
-        default: return ColorTokens.textTertiary.opacity(0.5)
+    private var noContentTodayCard: some View {
+        VStack(spacing: Spacing.sm) {
+            Image(systemName: "moon.stars.fill")
+                .font(.system(size: 28))
+                .foregroundStyle(ColorTokens.gold)
+
+            Text("No lessons scheduled")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white)
+
+            // Show when next lesson is
+            Text(viewModel.nextLessonMessage)
+                .font(.system(size: 13))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+
+            // Suggest actions
+            VStack(spacing: 8) {
+                NavigationLink(value: QuizListDestination()) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 14))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Take a quiz to test your knowledge")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white)
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(ColorTokens.surfaceElevated)
+                    )
+                }
+                .buttonStyle(.plain)
+
+                if viewModel.hasCompletedContent {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 14))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                        Text("Review completed lessons")
+                            .font(.system(size: 13))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                        Spacer()
+                    }
+                    .padding(10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(ColorTokens.surfaceElevated.opacity(0.5))
+                    )
+                }
+            }
+            .padding(.top, 4)
         }
+        .frame(maxWidth: .infinity)
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
     }
 
-    // MARK: - 4. Next Action Card
+    private func todayContentRow(_ content: Content) -> some View {
+        let isCompleted = content._progress?.isCompleted == true
+        let isInProgress = content._progress?.isInProgress == true
+        let progressPct = content._progress?.progressPercentage ?? 0
+
+        return HStack(spacing: Spacing.sm) {
+            ZStack(alignment: .bottomTrailing) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(ColorTokens.surfaceElevated)
+                        .frame(width: 60, height: 42)
+
+                    if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                        AsyncImage(url: imageURL) { phase in
+                            if let image = phase.image {
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            }
+                        }
+                        .frame(width: 60, height: 42)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+
+                    if !isCompleted {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .padding(4)
+                            .background(.black.opacity(0.4))
+                            .clipShape(Circle())
+                    }
+                }
+
+                if isCompleted {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(ColorTokens.success)
+                        .background(Circle().fill(ColorTokens.surface).frame(width: 14, height: 14))
+                        .offset(x: 4, y: 4)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(content.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+
+                HStack(spacing: 6) {
+                    if let duration = content.duration {
+                        Text(formatDuration(duration))
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    if isInProgress {
+                        Text("\(progressPct)%")
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+                    if let topic = content.topics?.first {
+                        Text(topic)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(ColorTokens.gold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(ColorTokens.gold.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                if isInProgress && progressPct > 0 {
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(ColorTokens.surfaceElevated)
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(ColorTokens.gold)
+                                .frame(width: geo.size.width * CGFloat(progressPct) / 100)
+                        }
+                    }
+                    .frame(height: 3)
+                }
+            }
+
+            Spacer()
+
+            if isCompleted {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(ColorTokens.success)
+            } else {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(ColorTokens.surface)
+        )
+    }
 
     private func nextActionCard(_ action: NextActionItem) -> some View {
         Group {
-            if action.type == "take_quiz", let _ = action.quizId {
+            if action.type == "take_quiz" {
                 NavigationLink(value: QuizListDestination()) {
                     nextActionContent(action)
                 }
@@ -512,283 +552,200 @@ struct MyPlanView: View {
         )
     }
 
-    // MARK: - 4b. Quizzes Section
+    // MARK: - 3. This Week (week strip + goals — merged)
 
-    private var quizzesSection: some View {
-        let completed = viewModel.dashboard?.progress?.quizzesCompleted ?? 0
-        let assigned = viewModel.dashboard?.progress?.quizzesAssigned ?? 0
-
-        return NavigationLink(value: QuizListDestination()) {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: "brain.head.profile")
-                    .font(.system(size: 18))
-                    .foregroundStyle(ColorTokens.gold)
-                    .frame(width: 40, height: 40)
-                    .background(ColorTokens.gold.opacity(0.12))
-                    .clipShape(Circle())
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Quizzes")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-
-                    if assigned > 0 {
-                        Text("\(completed)/\(assigned) completed")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    } else {
-                        Text("Test your knowledge")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(ColorTokens.textTertiary)
-            }
-            .padding(Spacing.md)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(ColorTokens.surface)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - 5. Today Section
-
-    private var todaySection: some View {
+    private var thisWeekSection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Today's Learning")
-                    .font(Typography.titleMedium)
+                Text("This Week")
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
 
                 Spacer()
 
-                if let stats = viewModel.todayStats {
-                    Text("\(stats.completedItems ?? 0)/\(stats.totalItems ?? 0) done")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.gold)
+                // Quick stats for the week
+                let consumed = viewModel.dashboard?.progress?.contentConsumed ?? 0
+                let assigned = viewModel.dashboard?.progress?.contentAssigned ?? 0
+                HStack(spacing: Spacing.sm) {
+                    miniStat(value: "\(consumed)/\(assigned)", label: "Lessons")
+                    miniStat(value: "\(viewModel.dashboard?.progress?.quizzesCompleted ?? 0)/\(viewModel.dashboard?.progress?.quizzesAssigned ?? 0)", label: "Quizzes")
                 }
             }
 
-            if viewModel.todayContent.isEmpty {
-                restDayCard
-            } else {
-                VStack(spacing: 8) {
-                    // Incomplete items first
-                    ForEach(viewModel.incompleteContent) { content in
-                        NavigationLink(value: content) {
-                            todayContentRow(content)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    // Completed items below with visual distinction
-                    if !viewModel.completedContent.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 10))
-                                .foregroundStyle(ColorTokens.success)
-                            Text("\(viewModel.completedContent.count) completed")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(ColorTokens.success)
-                            Spacer()
-                        }
-                        .padding(.top, 4)
-
-                        ForEach(viewModel.completedContent) { content in
-                            NavigationLink(value: content) {
-                                todayContentRow(content)
-                            }
-                            .buttonStyle(.plain)
-                            .opacity(0.6)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private func todayContentRow(_ content: Content) -> some View {
-        let isCompleted = content._progress?.isCompleted == true
-        let isInProgress = content._progress?.isInProgress == true
-        let progressPct = content._progress?.progressPercentage ?? 0
-
-        return HStack(spacing: Spacing.sm) {
-            ZStack(alignment: .bottomTrailing) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(ColorTokens.surfaceElevated)
-                        .frame(width: 60, height: 42)
-
-                    if let url = content.thumbnailURL, let imageURL = URL(string: url) {
-                        AsyncImage(url: imageURL) { phase in
-                            if let image = phase.image {
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            }
-                        }
-                        .frame(width: 60, height: 42)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-
-                    if !isCompleted {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .padding(4)
-                            .background(.black.opacity(0.4))
-                            .clipShape(Circle())
-                    }
-                }
-
-                // Completion badge
-                if isCompleted {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(ColorTokens.success)
-                        .background(Circle().fill(ColorTokens.surface).frame(width: 14, height: 14))
-                        .offset(x: 4, y: 4)
-                }
+            // Week theme
+            if let theme = viewModel.dashboard?.currentWeek?.theme {
+                Text(theme)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textSecondary)
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(content.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+            // Week strip
+            WeekStrip(
+                days: viewModel.weekDays,
+                currentDay: viewModel.currentDayOfWeek
+            ) { _ in }
 
-                HStack(spacing: 6) {
-                    if let duration = content.duration {
-                        Text(formatDuration(duration))
+            // Goals (inline, not separate section)
+            if !viewModel.weekGoals.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "target")
                             .font(.system(size: 11))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-
-                    if isInProgress {
-                        Text("\(progressPct)%")
-                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("Goals")
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(ColorTokens.gold)
                     }
 
-                    if let topic = content.topics?.first {
-                        Text(topic)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(ColorTokens.gold)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(ColorTokens.gold.opacity(0.1))
-                            .clipShape(Capsule())
-                    }
-                }
-
-                // Progress bar for in-progress items
-                if isInProgress && progressPct > 0 {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(ColorTokens.surfaceElevated)
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(ColorTokens.gold)
-                                .frame(width: geo.size.width * CGFloat(progressPct) / 100)
+                    ForEach(viewModel.weekGoals, id: \.self) { goal in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "circle")
+                                .font(.system(size: 5))
+                                .foregroundStyle(ColorTokens.gold)
+                                .padding(.top, 5)
+                            Text(goal)
+                                .font(.system(size: 12))
+                                .foregroundStyle(ColorTokens.textSecondary)
                         }
                     }
-                    .frame(height: 3)
                 }
-            }
-
-            Spacer()
-
-            if isCompleted {
-                Image(systemName: "checkmark")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(ColorTokens.success)
-            } else {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                .padding(.top, 4)
             }
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(ColorTokens.surface)
-        )
-    }
-
-    private var restDayCard: some View {
-        VStack(spacing: Spacing.sm) {
-            Image(systemName: "moon.stars.fill")
-                .font(.system(size: 28))
-                .foregroundStyle(ColorTokens.gold)
-            Text("Rest Day")
-                .font(Typography.titleMedium)
-                .foregroundStyle(.white)
-            Text("Take a break and recharge!")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(Spacing.xl)
+        .padding(Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: 14)
                 .fill(ColorTokens.surface)
         )
     }
 
-    // MARK: - 6. Week Strip
+    // MARK: - 4. Your Journey (phase + next milestone — merged)
 
-    private var weekStripSection: some View {
+    private var journeySection: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack {
-                Text("This Week")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(ColorTokens.textSecondary)
+                Image(systemName: "map.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Your Journey")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
 
-                if let theme = viewModel.dashboard?.currentWeek?.theme {
-                    Text("· \(theme)")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.textTertiary)
+                Spacer()
+
+                NavigationLink(value: MilestonesDestination()) {
+                    Text("All milestones")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Phase roadmap — visual timeline
+            if !viewModel.phases.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    // Phase dots with labels
+                    HStack(spacing: 0) {
+                        ForEach(Array(viewModel.phases.enumerated()), id: \.element.id) { index, phase in
+                            let isCurrent = phase.status == "active"
+                            let isCompleted = phase.status == "completed"
+
+                            HStack(spacing: 0) {
+                                // Dot
+                                VStack(spacing: 4) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(isCompleted ? ColorTokens.success : isCurrent ? ColorTokens.gold : ColorTokens.textTertiary.opacity(0.3))
+                                            .frame(width: isCurrent ? 14 : 10, height: isCurrent ? 14 : 10)
+
+                                        if isCompleted {
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 6, weight: .bold))
+                                                .foregroundStyle(.white)
+                                        }
+                                    }
+
+                                    Text(phase.name)
+                                        .font(.system(size: isCurrent ? 10 : 9, weight: isCurrent ? .bold : .regular))
+                                        .foregroundStyle(isCurrent ? .white : ColorTokens.textTertiary)
+                                        .lineLimit(2)
+                                        .multilineTextAlignment(.center)
+                                        .frame(width: 70)
+                                }
+
+                                // Connector line
+                                if index < viewModel.phases.count - 1 {
+                                    Rectangle()
+                                        .fill(isCompleted ? ColorTokens.success : ColorTokens.textTertiary.opacity(0.2))
+                                        .frame(height: 2)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.bottom, 30) // Align with dots, not labels
+                                }
+                            }
+                        }
+                    }
+
+                    // Current phase focus
+                    if let phase = viewModel.currentPhase, let topics = phase.focusTopics, !topics.isEmpty {
+                        HStack(spacing: 6) {
+                            Text("Focus:")
+                                .font(.system(size: 11))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                            ForEach(topics, id: \.self) { topic in
+                                Text(topic)
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(ColorTokens.gold)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(ColorTokens.gold.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
                 }
             }
 
-            WeekStrip(
-                days: viewModel.weekDays,
-                currentDay: viewModel.currentDayOfWeek
-            ) { _ in }
-        }
-    }
+            // Next milestone — inline, compact
+            if let milestone = viewModel.nextMilestone {
+                Divider()
+                    .background(ColorTokens.textTertiary.opacity(0.2))
 
-    // MARK: - Week Goals
+                HStack(spacing: 10) {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 32, height: 32)
+                        .background(ColorTokens.gold.opacity(0.1))
+                        .clipShape(Circle())
 
-    private var weekGoalsSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
-                Image(systemName: "target")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Week Goals")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-            }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Next Milestone")
+                            .font(.system(size: 9, weight: .heavy))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .textCase(.uppercase)
 
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(viewModel.weekGoals, id: \.self) { goal in
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "circle")
-                            .font(.system(size: 6))
-                            .foregroundStyle(ColorTokens.gold)
-                            .padding(.top, 5)
-                        Text(goal)
-                            .font(.system(size: 13))
-                            .foregroundStyle(ColorTokens.textSecondary)
+                        Text(milestone.title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+
+                        if let detail = viewModel.milestoneDetail(milestone) {
+                            Text(detail)
+                                .font(.system(size: 11))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if let week = milestone.scheduledWeek {
+                        Text("Week \(week)")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(ColorTokens.surfaceElevated)
+                            .clipShape(Capsule())
                     }
                 }
             }
@@ -796,26 +753,42 @@ struct MyPlanView: View {
         .padding(Spacing.md)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(ColorTokens.gold.opacity(0.06))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
-                )
+                .fill(ColorTokens.surface)
         )
     }
 
-    // MARK: - 7. Competency Mastery (AI Skills)
+    // MARK: - 5. Skills Section (compact + actionable)
 
-    private var competencyMasterySection: some View {
-        let sorted = viewModel.objectiveCompetencies.sorted { ($0.weight ?? 0) > ($1.weight ?? 0) }
-        let top6 = Array(sorted.prefix(6))
+    private var skillsSection: some View {
+        let competencies = viewModel.objectiveCompetencies
+        let topicMastery = viewModel.topicMastery
+
+        // Use competencies if available, otherwise topic mastery
+        let hasCompetencies = !competencies.isEmpty
+        let hasTopics = !topicMastery.isEmpty
+
+        return Group {
+            if hasCompetencies {
+                competencySkillsCard(competencies)
+            } else if hasTopics {
+                topicSkillsCard(topicMastery)
+            }
+        }
+    }
+
+    private func competencySkillsCard(_ competencies: [ObjectiveCompetency]) -> some View {
+        let sorted = competencies.sorted { ($0.weight ?? 0) > ($1.weight ?? 0) }
+        let overallReadiness = viewModel.overallReadiness
+        let assessedCount = sorted.filter { ($0.currentScore ?? 0) > 0 }.count
+        let needsAttention = sorted.filter { ($0.currentScore ?? 0) < 50 }.prefix(3)
 
         return VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
+            // Header
+            HStack {
                 Image(systemName: "brain.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.gold)
-                Text("Skill Readiness")
+                Text("Skills You Need")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(.white)
 
@@ -823,7 +796,7 @@ struct MyPlanView: View {
 
                 if let objId = viewModel.objectiveId {
                     NavigationLink(value: ObjectiveBriefDestination(objectiveId: objId)) {
-                        Text("View Brief")
+                        Text("See all \(sorted.count) skills")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(ColorTokens.gold)
                     }
@@ -831,42 +804,77 @@ struct MyPlanView: View {
                 }
             }
 
-            VStack(spacing: 8) {
-                ForEach(top6) { comp in
-                    if let objId = viewModel.objectiveId {
-                        NavigationLink(value: ObjectiveBriefDestination(objectiveId: objId)) {
-                            HStack {
-                                CompetencyScoreBar(
-                                    name: comp.name,
-                                    score: Int(comp.currentScore ?? 0),
-                                    category: comp.category,
-                                    weight: comp.weight,
-                                    trend: comp.trend
-                                )
-                                Image(systemName: "chevron.right")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(ColorTokens.textTertiary)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        CompetencyScoreBar(
-                            name: comp.name,
-                            score: Int(comp.currentScore ?? 0),
-                            category: comp.category,
-                            weight: comp.weight,
-                            trend: comp.trend
-                        )
+            // Overall readiness bar
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("Overall Readiness")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                    Spacer()
+                    Text("\(overallReadiness)%")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(readinessColor(overallReadiness))
+                }
+
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(ColorTokens.surfaceElevated)
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(readinessColor(overallReadiness))
+                            .frame(width: geo.size.width * CGFloat(overallReadiness) / 100)
                     }
                 }
+                .frame(height: 6)
+
+                Text("\(assessedCount) of \(sorted.count) skills assessed")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
             }
 
-            if sorted.count > 6 {
-                HStack {
-                    Spacer()
-                    Text("+\(sorted.count - 6) more skills")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.textTertiary)
+            // Needs attention — top 3 weakest
+            if !needsAttention.isEmpty {
+                Divider()
+                    .background(ColorTokens.textTertiary.opacity(0.2))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Needs attention")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.orange)
+
+                    ForEach(Array(needsAttention)) { comp in
+                        HStack(spacing: 8) {
+                            // Category dot
+                            Circle()
+                                .fill(categoryColor(comp.category))
+                                .frame(width: 6, height: 6)
+
+                            Text(comp.name)
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+
+                            Spacer()
+
+                            let score = Int(comp.currentScore ?? 0)
+                            if score == 0 {
+                                NavigationLink(value: ObjectiveBriefDestination(objectiveId: viewModel.objectiveId ?? "")) {
+                                    Text("Assess")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(ColorTokens.gold)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(ColorTokens.gold.opacity(0.15))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            } else {
+                                Text("\(score)%")
+                                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.orange)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -877,11 +885,12 @@ struct MyPlanView: View {
         )
     }
 
-    // MARK: - 7b. Topic Mastery (Fallback)
+    private func topicSkillsCard(_ topics: [KnowledgeSnapshot]) -> some View {
+        let sorted = topics.sorted { $0.score > $1.score }
+        let needsWork = sorted.filter { $0.score < 50 }.prefix(3)
 
-    private var topicMasterySection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
+        return VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.gold)
@@ -891,7 +900,7 @@ struct MyPlanView: View {
             }
 
             VStack(spacing: 8) {
-                ForEach(viewModel.topicMastery) { topic in
+                ForEach(Array(sorted.prefix(5))) { topic in
                     NavigationLink(value: TopicDetailDestination(topic: topic.topic)) {
                         HStack {
                             ScoreBar(
@@ -908,6 +917,18 @@ struct MyPlanView: View {
                     .buttonStyle(.plain)
                 }
             }
+
+            if !needsWork.isEmpty {
+                HStack {
+                    Spacer()
+                    NavigationLink(value: QuizListDestination()) {
+                        Text("Take a quiz to improve scores")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
         .padding(Spacing.md)
         .background(
@@ -916,60 +937,45 @@ struct MyPlanView: View {
         )
     }
 
-    // MARK: - 8. Milestones
+    // MARK: - Helpers
 
-    private var milestonesSection: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack {
-                Image(systemName: "flag.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Milestones")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
+    private func readinessColor(_ score: Int) -> Color {
+        if score >= 70 { return ColorTokens.success }
+        if score >= 40 { return ColorTokens.gold }
+        if score > 0 { return .orange }
+        return ColorTokens.textTertiary
+    }
 
-                Spacer()
-
-                Button {
-                    viewModel.showAddMilestone = true
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(ColorTokens.gold)
-                }
-
-                NavigationLink(value: MilestonesDestination()) {
-                    Text("See All")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.gold)
-                }
-            }
-            .sheet(isPresented: $viewModel.showAddMilestone) {
-                AddMilestoneSheet(viewModel: viewModel)
-            }
-
-            VStack(spacing: 0) {
-                ForEach(Array(viewModel.milestones.prefix(4).enumerated()), id: \.element.id) { _, milestone in
-                    if let topic = milestone.targetCriteria?.targetTopic {
-                        NavigationLink(value: TopicDetailDestination(topic: topic)) {
-                            MilestoneCard(
-                                milestone: milestone,
-                                isNext: milestone.id == viewModel.nextMilestone?.id
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        MilestoneCard(
-                            milestone: milestone,
-                            isNext: milestone.id == viewModel.nextMilestone?.id
-                        )
-                    }
-                }
-            }
+    private func categoryColor(_ category: String?) -> Color {
+        switch category {
+        case "core": return ColorTokens.gold
+        case "advanced": return .purple
+        case "soft_skill": return .cyan
+        default: return ColorTokens.gold
         }
     }
 
-    // MARK: - Helpers
+    private func statBadge(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+    }
+
+    private func miniStat(value: String, label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+    }
 
     private var loadingState: some View {
         VStack(spacing: Spacing.lg) {

@@ -68,6 +68,31 @@ final class MyPlanViewModel {
         }
     }
 
+    /// Human-readable pace label (e.g., "On pace for Apr 15" or "2 weeks behind")
+    var paceLabel: String {
+        if let estDate = pace?.estimatedCompletionDate {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "MMM d"
+            let dateStr = formatter.string(from: estDate)
+            switch pace?.status {
+            case "ahead": return "Finishing early (\(dateStr))"
+            case "on_track": return "On pace for \(dateStr)"
+            case "behind": return "Slipping to \(dateStr)"
+            case "at_risk": return "At risk — \(dateStr)"
+            default: return "Est. \(dateStr)"
+            }
+        }
+        return paceStatus
+    }
+
+    /// Human-readable progress summary (e.g., "7 of 14 lessons done")
+    var progressSummary: String {
+        let consumed = dashboard?.progress?.contentConsumed ?? 0
+        let assigned = dashboard?.progress?.contentAssigned ?? 0
+        if assigned == 0 { return "Getting started" }
+        return "\(consumed) of \(assigned) lessons done"
+    }
+
     // MARK: - Phase
 
     var currentPhase: JourneyPhaseSnapshot? { dashboard?.currentPhase }
@@ -121,6 +146,35 @@ final class MyPlanViewModel {
         }
     }
 
+    /// Inline detail for a milestone (e.g., "3/4 lessons done" or "Target: 80%")
+    func milestoneDetail(_ milestone: Milestone) -> String? {
+        switch milestone.type {
+        case "phase_completion":
+            if let phase = matchingPhase(for: milestone) {
+                let consumed = phase.contentConsumed ?? 0
+                let assigned = phase.contentAssigned ?? 0
+                if assigned > 0 {
+                    return "\(consumed)/\(assigned) lessons done"
+                }
+            }
+            return nil
+        case "score_target":
+            if let score = milestone.targetCriteria?.targetScore {
+                return "Target: \(score)%"
+            }
+            return nil
+        case "topic_completion":
+            if let topic = milestone.targetCriteria?.targetTopic {
+                return "Complete all \(topic) content"
+            }
+            return nil
+        case "streak":
+            return "Build a consistent learning habit"
+        default:
+            return nil
+        }
+    }
+
     var overallProgress: Double {
         Double(dashboard?.progress?.overallPercentage ?? 0) / 100.0
     }
@@ -152,6 +206,46 @@ final class MyPlanViewModel {
     var currentDayOfWeek: Int {
         let weekday = Calendar.current.component(.weekday, from: Date())
         return weekday == 1 ? 7 : weekday - 1
+    }
+
+    /// Today's date as a friendly string (e.g., "Saturday, Mar 22")
+    var todayDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d"
+        return formatter.string(from: Date())
+    }
+
+    /// Message about when the next lesson is (for rest days)
+    var nextLessonMessage: String {
+        let dayNames = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+        let currentDay = currentDayOfWeek
+
+        // Look forward through the week for the next day with content
+        if let week = dashboard?.currentWeek?.daysSummary {
+            for offset in 1...7 {
+                let checkDay = ((currentDay - 1 + offset) % 7) + 1
+                if let daySummary = week.first(where: { $0.day == checkDay }),
+                   (daySummary.contentCount ?? 0) > 0 {
+                    if offset == 1 {
+                        return "Your next lesson is tomorrow (\(dayNames[checkDay]))."
+                    }
+                    return "Your next lesson is \(dayNames[checkDay])."
+                }
+            }
+        }
+        return "Use today to review or take a quiz."
+    }
+
+    /// Whether the user has any completed content in the journey
+    var hasCompletedContent: Bool {
+        (dashboard?.progress?.contentConsumed ?? 0) > 0
+    }
+
+    /// Overall readiness percentage across all competencies
+    var overallReadiness: Int {
+        guard !objectiveCompetencies.isEmpty else { return 0 }
+        let total = objectiveCompetencies.reduce(0.0) { $0 + ($1.currentScore ?? 0) }
+        return Int(total / Double(objectiveCompetencies.count))
     }
 
     var weekDays: [WeekStrip.DayState] {

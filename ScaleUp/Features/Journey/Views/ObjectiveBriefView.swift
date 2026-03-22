@@ -764,7 +764,7 @@ struct ObjectiveBriefView: View {
             ProgressView()
                 .scaleEffect(1.5)
                 .tint(ColorTokens.gold)
-            Text("Loading objective brief...")
+            Text("Loading skill map...")
                 .font(.system(size: 14))
                 .foregroundStyle(ColorTokens.textSecondary)
         }
