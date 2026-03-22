@@ -62,8 +62,9 @@ struct MyPlanView: View {
                 await viewModel.loadDashboard()
                 objectiveContext.updateFromDashboard(viewModel.allObjectives)
             }
-            .onChange(of: objectiveContext.activeObjective?.id) { _, _ in
-                viewModel.activeObjectiveId = objectiveContext.activeObjectiveId
+            .onChange(of: objectiveContext.activeObjective?.id) { oldId, newId in
+                guard newId != oldId, newId != nil else { return }
+                viewModel.activeObjectiveId = newId
                 Task {
                     await viewModel.loadDashboard()
                 }

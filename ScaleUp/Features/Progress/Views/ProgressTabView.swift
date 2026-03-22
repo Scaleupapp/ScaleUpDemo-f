@@ -44,7 +44,8 @@ struct ProgressTabView: View {
             .task {
                 await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
             }
-            .onChange(of: objectiveContext.activeObjective?.id) { _, _ in
+            .onChange(of: objectiveContext.activeObjective?.id) { oldId, newId in
+                guard newId != oldId, newId != nil else { return }
                 Task {
                     await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
                 }

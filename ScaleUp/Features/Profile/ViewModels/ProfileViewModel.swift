@@ -110,12 +110,19 @@ final class ProfileViewModel {
         do {
             let result = try await objectiveService.activate(id: id)
             Haptics.success()
-            objectives = (try? await objectiveService.list()) ?? objectives
+            print("[Profile] activate succeeded, switched=\(result.switched ?? false), needsGen=\(result.needsGeneration ?? false)")
+            // Refresh objectives from backend to get updated isPrimary values
+            let refreshed = try? await objectiveService.list()
+            if let refreshed, !refreshed.isEmpty {
+                objectives = refreshed
+                print("[Profile] refreshed \(refreshed.count) objectives, primary=\(refreshed.first(where: { $0.isPrimary == true })?.specificTitle ?? "none")")
+            }
             context.didActivateObjective(id: id)
             if result.needsGeneration == true {
                 context.needsJourneyGeneration = true
             }
         } catch {
+            print("[Profile] activate FAILED: \(error)")
             Haptics.error()
         }
     }

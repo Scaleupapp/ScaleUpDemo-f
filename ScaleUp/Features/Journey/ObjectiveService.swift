@@ -134,10 +134,12 @@ struct AssessmentRecommendation: Codable, Sendable, Identifiable {
 }
 
 struct ActivateObjectiveResponse: Codable, Sendable {
-    let objective: UserObjective?
-    let journey: Journey?
-    let switched: Bool
+    let switched: Bool?
     let needsGeneration: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case switched, needsGeneration
+    }
 }
 
 // MARK: - Brief Response (enriched with user progress)

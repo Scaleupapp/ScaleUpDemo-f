@@ -291,18 +291,10 @@ final class MyPlanViewModel {
         isLoading = true
         errorMessage = nil
 
-        // Always fetch the main dashboard (for the real objective) alongside the journey dashboard
-        async let mainDashTask: Dashboard? = {
-            try? await self.dashboardService.fetchDashboard()
-        }()
-        async let journeyDashTask: JourneyDashboard? = {
-            try? await self.journeyService.getDashboard(objectiveId: self.activeObjectiveId)
-        }()
-        async let actionsTask: NextActionsResponse? = {
-            try? await self.recommendationService.getNextActions()
-        }()
-
-        let (mainDash, journeyDash, actions) = await (mainDashTask, journeyDashTask, actionsTask)
+        // Fetch all three in a task group (avoids async let deallocation crash)
+        let mainDash: Dashboard? = try? await dashboardService.fetchDashboard()
+        let journeyDash: JourneyDashboard? = try? await journeyService.getDashboard(objectiveId: activeObjectiveId)
+        let actions: NextActionsResponse? = try? await recommendationService.getNextActions()
 
         // Store the real user objective from the main dashboard
         allObjectives = mainDash?.objectives

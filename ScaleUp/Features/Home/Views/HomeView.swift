@@ -54,7 +54,8 @@ struct HomeView: View {
             await quizViewModel.loadQuizzes()
             await notificationVM.refreshUnreadCount()
         }
-        .onChange(of: objectiveContext.activeObjective?.id) { _, _ in
+        .onChange(of: objectiveContext.activeObjective?.id) { oldId, newId in
+            guard newId != oldId, newId != nil else { return }
             Task {
                 await viewModel.loadDashboard(objectiveId: objectiveContext.activeObjectiveId)
                 objectiveContext.updateFromDashboard(viewModel.dashboard?.objectives)
