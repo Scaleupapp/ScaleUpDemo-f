@@ -93,12 +93,12 @@ final class HomeViewModel {
 
     // MARK: - Load
 
-    func loadDashboard() async {
+    func loadDashboard(objectiveId: String? = nil) async {
         isLoading = true
         errorMessage = nil
 
         async let dashboardTask: Dashboard? = {
-            try? await self.dashboardService.fetchDashboard()
+            try? await self.dashboardService.fetchDashboard(objectiveId: objectiveId)
         }()
 
         async let watchingTask: [ContentProgress] = {

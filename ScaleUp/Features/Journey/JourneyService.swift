@@ -3,8 +3,8 @@ import Foundation
 actor JourneyService {
     private let api = APIClient.shared
 
-    func getDashboard() async throws -> JourneyDashboard {
-        try await api.request(JourneyEndpoints.dashboard)
+    func getDashboard(objectiveId: String? = nil) async throws -> JourneyDashboard {
+        try await api.request(JourneyEndpoints.dashboard(objectiveId: objectiveId))
     }
 
     func getJourney() async throws -> Journey {
@@ -77,7 +77,7 @@ private struct MilestoneTargetRequest: Encodable, Sendable {
 
 private enum JourneyEndpoints: Endpoint {
     case journey
-    case dashboard
+    case dashboard(objectiveId: String? = nil)
     case today
     case week(number: Int)
     case completeAssignment
@@ -102,6 +102,18 @@ private enum JourneyEndpoints: Endpoint {
         case .generate: return "/journey/generate"
         case .pause: return "/journey/pause"
         case .resume: return "/journey/resume"
+        }
+    }
+
+    var queryItems: [URLQueryItem]? {
+        switch self {
+        case .dashboard(let objectiveId):
+            if let objectiveId {
+                return [URLQueryItem(name: "objectiveId", value: objectiveId)]
+            }
+            return nil
+        default:
+            return nil
         }
     }
 

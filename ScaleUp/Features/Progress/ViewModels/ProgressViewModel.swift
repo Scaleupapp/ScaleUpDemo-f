@@ -16,6 +16,7 @@ final class ProgressViewModel {
     var timelineEvents: [TimelineEvent] = []
     var isLoading = false
     var errorMessage: String?
+    var showAllObjectives = false
 
     private let knowledgeService = KnowledgeService()
     private let recommendationService = RecommendationService()
@@ -74,18 +75,18 @@ final class ProgressViewModel {
 
     // MARK: - Load
 
-    func loadProfile() async {
+    func loadProfile(objectiveId: String? = nil) async {
         isLoading = true
         errorMessage = nil
 
         async let profileTask: FullKnowledgeProfile? = {
-            try? await self.knowledgeService.getProfile()
+            try? await self.knowledgeService.getProfile(objectiveId: objectiveId)
         }()
         async let gapsTask: [KnowledgeGap]? = {
-            try? await self.knowledgeService.getGaps()
+            try? await self.knowledgeService.getGaps(objectiveId: objectiveId)
         }()
         async let statsTask: ConsumptionStats? = {
-            try? await self.knowledgeService.getConsumptionStats()
+            try? await self.knowledgeService.getConsumptionStats(objectiveId: objectiveId)
         }()
         async let dashTask: Dashboard? = {
             try? await self.dashboardService.fetchDashboard()
@@ -97,10 +98,10 @@ final class ProgressViewModel {
             try? await self.quizService.fetchQuizHistory()
         }()
         async let heatmapTask: [ActivityDay]? = {
-            try? await self.knowledgeService.getActivityHeatmap(days: 90)
+            try? await self.knowledgeService.getActivityHeatmap(days: 90, objectiveId: objectiveId)
         }()
         async let timelineTask: [TimelineEvent]? = {
-            try? await self.knowledgeService.getTimeline(limit: 20)
+            try? await self.knowledgeService.getTimeline(limit: 20, objectiveId: objectiveId)
         }()
 
         let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline) =

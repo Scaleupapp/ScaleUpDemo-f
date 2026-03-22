@@ -7,6 +7,7 @@ struct ScaleUpApp: App {
     @State private var coachMarkManager = CoachMarkManager()
     @State private var pushManager = PushNotificationManager()
     @State private var uploadManager = UploadManager()
+    @State private var objectiveContext = ObjectiveContext()
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +19,7 @@ struct ScaleUpApp: App {
                 .environment(coachMarkManager)
                 .environment(pushManager)
                 .environment(uploadManager)
+                .environment(objectiveContext)
                 .preferredColorScheme(.dark)
                 .task {
                     // Wire up push manager to app delegate

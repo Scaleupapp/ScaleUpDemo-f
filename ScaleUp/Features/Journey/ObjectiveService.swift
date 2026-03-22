@@ -43,6 +43,10 @@ actor ObjectiveService {
     func setPrimary(id: String) async throws {
         _ = try await api.requestRaw(ObjectiveEndpoints.setPrimary(id: id))
     }
+
+    func activate(id: String) async throws -> ActivateObjectiveResponse {
+        try await api.request(ObjectiveEndpoints.activate(id: id))
+    }
 }
 
 // MARK: - Response Models
@@ -129,6 +133,13 @@ struct AssessmentRecommendation: Codable, Sendable, Identifiable {
     let reasoning: String?
 }
 
+struct ActivateObjectiveResponse: Codable, Sendable {
+    let objective: UserObjective?
+    let journey: Journey?
+    let switched: Bool
+    let needsGeneration: Bool?
+}
+
 // MARK: - Brief Response (enriched with user progress)
 
 struct ObjectiveBriefResponse: Codable, Sendable {
@@ -211,6 +222,7 @@ private enum ObjectiveEndpoints: Endpoint {
     case pause(id: String)
     case resume(id: String)
     case setPrimary(id: String)
+    case activate(id: String)
 
     var path: String {
         switch self {
@@ -221,6 +233,7 @@ private enum ObjectiveEndpoints: Endpoint {
         case .pause(let id): return "/objectives/\(id)/pause"
         case .resume(let id): return "/objectives/\(id)/resume"
         case .setPrimary(let id): return "/objectives/\(id)/set-primary"
+        case .activate(let id): return "/objectives/\(id)/activate"
         }
     }
 
@@ -228,7 +241,7 @@ private enum ObjectiveEndpoints: Endpoint {
         switch self {
         case .analyze, .create: return .post
         case .brief, .list: return .get
-        case .update, .pause, .resume, .setPrimary: return .put
+        case .update, .pause, .resume, .setPrimary, .activate: return .put
         }
     }
 }

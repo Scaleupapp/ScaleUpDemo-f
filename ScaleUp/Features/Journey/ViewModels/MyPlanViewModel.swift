@@ -8,6 +8,7 @@ final class MyPlanViewModel {
 
     var dashboard: JourneyDashboard?
     var userObjective: Objective?
+    var allObjectives: [Objective]?
     var nextActions: [NextActionItem] = []
     var objectiveCompetencies: [ObjectiveCompetency] = []
     var isLoading = false
@@ -15,6 +16,7 @@ final class MyPlanViewModel {
     var hasActiveJourney = false
     var isGenerating = false
     var showAddMilestone = false
+    var activeObjectiveId: String?
 
     // Week detail
     var selectedWeek: Int?
@@ -294,7 +296,7 @@ final class MyPlanViewModel {
             try? await self.dashboardService.fetchDashboard()
         }()
         async let journeyDashTask: JourneyDashboard? = {
-            try? await self.journeyService.getDashboard()
+            try? await self.journeyService.getDashboard(objectiveId: self.activeObjectiveId)
         }()
         async let actionsTask: NextActionsResponse? = {
             try? await self.recommendationService.getNextActions()
@@ -303,6 +305,7 @@ final class MyPlanViewModel {
         let (mainDash, journeyDash, actions) = await (mainDashTask, journeyDashTask, actionsTask)
 
         // Store the real user objective from the main dashboard
+        allObjectives = mainDash?.objectives
         userObjective = mainDash?.objectives?.first(where: { $0.isPrimary == true }) ?? mainDash?.objectives?.first
 
         dashboard = journeyDash

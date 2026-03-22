@@ -22,6 +22,7 @@ struct ObjectiveBriefDestination: Hashable {
 
 struct MyPlanView: View {
     @State private var viewModel = MyPlanViewModel()
+    @Environment(ObjectiveContext.self) private var objectiveContext
 
     var body: some View {
         NavigationStack {
@@ -57,7 +58,23 @@ struct MyPlanView: View {
                 ObjectiveBriefView(objectiveId: dest.objectiveId)
             }
             .task {
+                viewModel.activeObjectiveId = objectiveContext.activeObjectiveId
                 await viewModel.loadDashboard()
+                objectiveContext.updateFromDashboard(viewModel.allObjectives)
+            }
+            .onChange(of: objectiveContext.activeObjective?.id) { _, _ in
+                viewModel.activeObjectiveId = objectiveContext.activeObjectiveId
+                Task {
+                    await viewModel.loadDashboard()
+                }
+            }
+            .onChange(of: objectiveContext.needsJourneyGeneration) { _, needsGen in
+                if needsGen, let id = objectiveContext.activeObjectiveId {
+                    Task {
+                        await viewModel.generateJourney(objectiveId: id)
+                        objectiveContext.needsJourneyGeneration = false
+                    }
+                }
             }
         }
     }
@@ -121,6 +138,8 @@ struct MyPlanView: View {
                     .foregroundStyle(.white)
 
                 Spacer()
+
+                ObjectiveSwitcherView()
 
                 if viewModel.streak > 0 {
                     HStack(spacing: 4) {

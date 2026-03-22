@@ -6,8 +6,8 @@ actor DashboardService {
 
     private let api = APIClient.shared
 
-    func fetchDashboard() async throws -> Dashboard {
-        try await api.request(DashboardEndpoints.dashboard)
+    func fetchDashboard(objectiveId: String? = nil) async throws -> Dashboard {
+        try await api.request(DashboardEndpoints.dashboard(objectiveId: objectiveId))
     }
 
     func fetchTodayPlan() async throws -> DailyPlan {
@@ -22,7 +22,7 @@ actor DashboardService {
 // MARK: - Endpoints
 
 private enum DashboardEndpoints: Endpoint {
-    case dashboard
+    case dashboard(objectiveId: String?)
     case todayPlan
     case progressHistory(limit: Int)
 
@@ -38,6 +38,9 @@ private enum DashboardEndpoints: Endpoint {
 
     var queryItems: [URLQueryItem]? {
         switch self {
+        case .dashboard(let objectiveId):
+            guard let objectiveId else { return nil }
+            return [URLQueryItem(name: "objectiveId", value: objectiveId)]
         case .progressHistory(let limit):
             return [URLQueryItem(name: "limit", value: "\(limit)")]
         default:

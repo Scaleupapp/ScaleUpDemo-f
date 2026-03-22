@@ -11,6 +11,7 @@ struct NotificationDestination: Hashable {}
 
 struct HomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(ObjectiveContext.self) private var objectiveContext
     @State private var viewModel = HomeViewModel()
     @State private var quizViewModel = QuizListViewModel()
     @State private var notificationVM = NotificationViewModel()
@@ -48,9 +49,16 @@ struct HomeView: View {
             }
         }
         .task {
-            await viewModel.loadDashboard()
+            await viewModel.loadDashboard(objectiveId: objectiveContext.activeObjectiveId)
+            objectiveContext.updateFromDashboard(viewModel.dashboard?.objectives)
             await quizViewModel.loadQuizzes()
             await notificationVM.refreshUnreadCount()
+        }
+        .onChange(of: objectiveContext.activeObjective?.id) { _, _ in
+            Task {
+                await viewModel.loadDashboard(objectiveId: objectiveContext.activeObjectiveId)
+                objectiveContext.updateFromDashboard(viewModel.dashboard?.objectives)
+            }
         }
         .coachMark(
             .tabHome,
@@ -118,7 +126,8 @@ struct HomeView: View {
             }
         }
         .refreshable {
-            await viewModel.loadDashboard()
+            await viewModel.loadDashboard(objectiveId: objectiveContext.activeObjectiveId)
+            objectiveContext.updateFromDashboard(viewModel.dashboard?.objectives)
         }
     }
 
@@ -139,6 +148,8 @@ struct HomeView: View {
             }
 
             Spacer()
+
+            ObjectiveSwitcherView()
 
             // Score badge — only when user has a score
             if viewModel.readinessScore > 0 {

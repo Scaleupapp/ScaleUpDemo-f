@@ -20,7 +20,7 @@ struct Dashboard: Codable, Sendable {
 
 // MARK: - Objective
 
-struct Objective: Codable, Sendable, Identifiable {
+struct Objective: Codable, Sendable, Identifiable, Equatable {
     let id: String
     let objectiveType: String?
     let specifics: DashboardObjectiveSpecifics?
@@ -42,7 +42,7 @@ struct Objective: Codable, Sendable, Identifiable {
     }
 }
 
-struct DashboardObjectiveSpecifics: Codable, Sendable {
+struct DashboardObjectiveSpecifics: Codable, Sendable, Equatable {
     let targetRole: String?
     let targetSkill: String?
 }

@@ -9,6 +9,7 @@ struct GapsDestination: Hashable {}
 struct ProgressTabView: View {
     @State private var viewModel = ProgressViewModel()
     @State private var showDetailedAnalytics = false
+    @Environment(ObjectiveContext.self) private var objectiveContext
 
     var body: some View {
         NavigationStack {
@@ -41,7 +42,12 @@ struct ProgressTabView: View {
                 ConsumptionHistoryView()
             }
             .task {
-                await viewModel.loadProfile()
+                await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
+            }
+            .onChange(of: objectiveContext.activeObjective?.id) { _, _ in
+                Task {
+                    await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
+                }
             }
         }
         .coachMark(
@@ -100,7 +106,7 @@ struct ProgressTabView: View {
             .padding(.top, Spacing.md)
         }
         .refreshable {
-            await viewModel.loadProfile()
+            await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
         }
     }
 
@@ -112,7 +118,25 @@ struct ProgressTabView: View {
                 Text("Progress")
                     .font(Typography.titleLarge)
                     .foregroundStyle(.white)
+
                 Spacer()
+
+                if objectiveContext.canSwitch {
+                    Button {
+                        viewModel.showAllObjectives.toggle()
+                        Task { await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId) }
+                    } label: {
+                        Text(viewModel.showAllObjectives ? "All" : "Filtered")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(viewModel.showAllObjectives ? ColorTokens.gold : ColorTokens.textSecondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(viewModel.showAllObjectives ? ColorTokens.gold.opacity(0.15) : ColorTokens.card)
+                            .clipShape(Capsule())
+                    }
+                }
+
+                ObjectiveSwitcherView()
             }
 
             HStack(spacing: Spacing.xl) {
