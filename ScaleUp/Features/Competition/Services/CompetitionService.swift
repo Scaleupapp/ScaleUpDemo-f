@@ -9,8 +9,9 @@ enum CompetitionEndpoints: Endpoint {
     case submitAnswer(id: String)
     case completeChallenge(id: String)
     case challengeResults(id: String)
-    case weeklyLeaderboard
-    case allTimeLeaderboard
+    case weeklyLeaderboard(topic: String?)
+    case allTimeLeaderboard(topic: String?)
+    case primaryObjectiveTopic
     case competitionProfile
     case competitionStats
     case upcomingEvents
@@ -32,6 +33,7 @@ enum CompetitionEndpoints: Endpoint {
         case .challengeResults(let id): return "/competition/challenges/\(id)/results"
         case .weeklyLeaderboard: return "/competition/leaderboard/weekly"
         case .allTimeLeaderboard: return "/competition/leaderboard/alltime"
+        case .primaryObjectiveTopic: return "/competition/objective-topic"
         case .competitionProfile: return "/competition/profile"
         case .competitionStats: return "/competition/stats"
         case .upcomingEvents: return "/competition/live-events/upcoming"
@@ -60,6 +62,12 @@ enum CompetitionEndpoints: Endpoint {
         switch self {
         case .questionResults(_, let qi):
             return [URLQueryItem(name: "questionIndex", value: "\(qi)")]
+        case .weeklyLeaderboard(let topic):
+            if let t = topic { return [URLQueryItem(name: "topic", value: t)] }
+            return nil
+        case .allTimeLeaderboard(let topic):
+            if let t = topic { return [URLQueryItem(name: "topic", value: t)] }
+            return nil
         default:
             return nil
         }
@@ -99,7 +107,17 @@ actor CompetitionService {
 
     // Leaderboard
     func fetchWeeklyLeaderboard(topic: String? = nil) async throws -> WeeklyLeaderboard {
-        try await api.request(CompetitionEndpoints.weeklyLeaderboard)
+        try await api.request(CompetitionEndpoints.weeklyLeaderboard(topic: topic))
+    }
+
+    func fetchAllTimeLeaderboard(topic: String? = nil) async throws -> AllTimeLeaderboardResponse {
+        try await api.request(CompetitionEndpoints.allTimeLeaderboard(topic: topic))
+    }
+
+    func fetchPrimaryObjectiveTopic() async throws -> String? {
+        struct ObjectiveResponse: Codable { let topic: String? }
+        let result: ObjectiveResponse = try await api.request(CompetitionEndpoints.primaryObjectiveTopic)
+        return result.topic
     }
 
     // Profile & Stats

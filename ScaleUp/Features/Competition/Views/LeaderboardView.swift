@@ -3,18 +3,12 @@ import SwiftUI
 struct LeaderboardView: View {
     @State private var viewModel = LeaderboardViewModel()
     @State private var selectedScope: LeaderboardScope = .thisWeek
-    @State private var selectedFilter: LeaderboardFilter = .global
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
     enum LeaderboardScope: String, CaseIterable {
         case thisWeek = "This Week"
         case allTime = "All Time"
-    }
-
-    enum LeaderboardFilter: String, CaseIterable {
-        case global = "Global"
-        case byTopic = "By Topic"
     }
 
     var body: some View {
@@ -68,14 +62,12 @@ struct LeaderboardView: View {
 
     private var filterControls: some View {
         VStack(spacing: Spacing.sm) {
-            // Global / By Topic segmented control
-            Picker("Filter", selection: $selectedFilter) {
-                ForEach(LeaderboardFilter.allCases, id: \.self) { filter in
-                    Text(filter.rawValue).tag(filter)
-                }
+            // Show which objective this leaderboard is for
+            if let topic = viewModel.userObjectiveTopic {
+                Text(topic.capitalized)
+                    .font(Typography.bodySmallBold)
+                    .foregroundStyle(ColorTokens.gold)
             }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, Spacing.lg)
 
             // This Week / All Time
             Picker("Scope", selection: $selectedScope) {
@@ -85,6 +77,15 @@ struct LeaderboardView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, Spacing.lg)
+            .onChange(of: selectedScope) { _, newScope in
+                Task {
+                    if newScope == .thisWeek {
+                        await viewModel.loadWeekly()
+                    } else {
+                        await viewModel.loadAllTime()
+                    }
+                }
+            }
         }
         .padding(.bottom, Spacing.md)
     }
@@ -93,10 +94,12 @@ struct LeaderboardView: View {
 
     private var leaderboardContent: some View {
         Group {
-            if viewModel.isLoading && viewModel.weeklyBoard == nil {
+            if viewModel.isLoading && viewModel.weeklyBoard == nil && viewModel.allTimeEntries == nil {
                 loadingState
-            } else if let board = viewModel.weeklyBoard {
+            } else if selectedScope == .thisWeek, let board = viewModel.weeklyBoard {
                 leaderboardList(board)
+            } else if selectedScope == .allTime, let entries = viewModel.allTimeEntries {
+                allTimeList(entries)
             } else if let error = viewModel.error {
                 errorState(error)
             } else {
@@ -134,6 +137,45 @@ struct LeaderboardView: View {
         }
         .refreshable {
             await viewModel.loadAll()
+        }
+    }
+
+    // MARK: - All Time List
+
+    private func allTimeList(_ entries: [AllTimeEntry]) -> some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVStack(spacing: 0) {
+                ForEach(entries) { entry in
+                    HStack(spacing: Spacing.sm) {
+                        rankBadge(entry.rank)
+                        avatarView(user: entry.userId, size: 36)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(entry.userId.id == appState.currentUser?.id ? "You" : entry.userId.displayName)
+                                .font(Typography.bodySmallBold)
+                                .foregroundStyle(entry.userId.id == appState.currentUser?.id ? ColorTokens.gold : .white)
+                                .lineLimit(1)
+                            Text("\(entry.totalChallenges) challenges")
+                                .font(Typography.caption)
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+
+                        Spacer()
+
+                        Text("\(Int(entry.totalScore))")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(entry.rank <= 3 ? ColorTokens.gold : .white)
+                    }
+                    .padding(.vertical, Spacing.sm)
+                    .padding(.horizontal, Spacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(entry.userId.id == appState.currentUser?.id ? ColorTokens.gold.opacity(0.06) : Color.clear)
+                    )
+                    .padding(.horizontal, Spacing.lg)
+                }
+            }
+            .padding(.bottom, Spacing.xxxl)
         }
     }
 

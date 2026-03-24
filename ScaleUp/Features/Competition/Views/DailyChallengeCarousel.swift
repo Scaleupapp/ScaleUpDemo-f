@@ -15,19 +15,40 @@ struct DailyChallengeCarousel: View {
 
     var body: some View {
         if totalPages > 0 {
-            TabView(selection: $currentPage) {
-                ForEach(Array(challenges.enumerated()), id: \.element.id) { index, challenge in
-                    challengeCard(challenge)
-                        .tag(index)
-                }
+            VStack(spacing: 8) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 0) {
+                        ForEach(Array(challenges.enumerated()), id: \.element.id) { index, challenge in
+                            challengeCard(challenge)
+                                .containerRelativeFrame(.horizontal)
+                                .id(index)
+                        }
 
-                ForEach(Array(upcomingEvents.enumerated()), id: \.element.id) { index, event in
-                    liveEventCard(event)
-                        .tag(challenges.count + index)
+                        ForEach(Array(upcomingEvents.enumerated()), id: \.element.id) { index, event in
+                            liveEventCard(event)
+                                .containerRelativeFrame(.horizontal)
+                                .id(challenges.count + index)
+                        }
+                    }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.paging)
+                .scrollPosition(id: Binding(
+                    get: { currentPage as Int? },
+                    set: { currentPage = $0 ?? 0 }
+                ))
+                .frame(height: 170)
+
+                if totalPages > 1 {
+                    HStack(spacing: 6) {
+                        ForEach(0..<totalPages, id: \.self) { index in
+                            Circle()
+                                .fill(index == currentPage ? Color.white : Color.white.opacity(0.3))
+                                .frame(width: 6, height: 6)
+                        }
+                    }
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .frame(height: 195)
         }
     }
 
@@ -77,7 +98,7 @@ struct DailyChallengeCarousel: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
 
-            Text("10 Qs \u{00B7} \(challenge.participantCount) playing \u{00B7} Ends midnight")
+            Text("15 Qs \u{00B7} \(challenge.participantCount) playing \u{00B7} Ends midnight")
                 .font(.system(size: 12))
                 .foregroundStyle(ColorTokens.textSecondary)
 
