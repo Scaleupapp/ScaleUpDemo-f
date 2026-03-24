@@ -43,7 +43,7 @@ struct ChallengeOption: Codable, Sendable, Hashable {
 
 // MARK: - Challenge Results
 
-struct ChallengeResult: Codable, Sendable {
+struct ChallengeResult: Codable, Sendable, Equatable {
     let rawScore: Double
     let handicappedScore: Double
     let timeTaken: Double

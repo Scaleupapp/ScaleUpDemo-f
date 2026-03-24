@@ -399,19 +399,52 @@ struct ChallengeSessionView: View {
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.white)
 
-            VStack(spacing: 8) {
-                ProgressView()
-                    .tint(goldColor)
+            if viewModel.result != nil {
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .tint(goldColor)
+                    Text("Loading results...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+            } else if viewModel.error != nil {
+                VStack(spacing: Spacing.md) {
+                    Text("Could not load results")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
 
-                Text("Calculating your score...")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(ColorTokens.textSecondary)
+                    Button {
+                        Task { await viewModel.completeChallenge() }
+                    } label: {
+                        Text("Retry")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 12)
+                            .background(goldColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+
+                    Button { dismiss() } label: {
+                        Text("Go Back")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+            } else {
+                VStack(spacing: 8) {
+                    ProgressView()
+                        .tint(goldColor)
+                    Text("Calculating your score...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
             }
 
             Spacer()
         }
-        .onChange(of: viewModel.isComplete) { _, isComplete in
-            if isComplete && viewModel.result != nil {
+        .onChange(of: viewModel.result) { _, result in
+            if result != nil {
                 Task {
                     try? await Task.sleep(for: .milliseconds(800))
                     navigateToResults = true
@@ -419,7 +452,7 @@ struct ChallengeSessionView: View {
             }
         }
         .onAppear {
-            if viewModel.isComplete && viewModel.result != nil {
+            if viewModel.result != nil {
                 Task {
                     try? await Task.sleep(for: .milliseconds(800))
                     navigateToResults = true
