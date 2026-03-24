@@ -10,6 +10,7 @@ final class ChallengeViewModel {
     var questions: [ChallengeQuestion] = []
     var currentQuestionIndex = 0
     var timeRemaining: Double = 0
+    private var timeLimitSeconds: Int = 720
     var selectedAnswer: String? = nil
     var isLoading = false
     var isComplete = false
@@ -63,6 +64,7 @@ final class ChallengeViewModel {
         do {
             let response = try await service.startChallenge(id: challengeId)
             questions = response.questions
+            timeLimitSeconds = response.timeLimitSeconds ?? 720
             currentQuestionIndex = 0
             selectedAnswer = nil
             isComplete = false
@@ -96,10 +98,9 @@ final class ChallengeViewModel {
         if isLastQuestion {
             await completeChallenge()
         } else {
-            stopTimer()
             currentQuestionIndex += 1
             selectedAnswer = nil
-            startTimer()
+            questionStartTime = Date()
         }
     }
 
@@ -122,8 +123,7 @@ final class ChallengeViewModel {
 
     private func startTimer() {
         stopTimer()
-        let limit = Double(currentQuestion?.timeLimit ?? 60)
-        timeRemaining = limit
+        timeRemaining = Double(timeLimitSeconds)
         questionStartTime = Date()
 
         timerTask = Task {
@@ -132,10 +132,9 @@ final class ChallengeViewModel {
                 guard !Task.isCancelled else { return }
                 timeRemaining -= 1
             }
-            // Auto-submit on timeout
+            // Auto-complete on total time expiry
             if timeRemaining <= 0 && !Task.isCancelled {
-                selectedAnswer = nil
-                await submitAnswer()
+                await completeChallenge()
             }
         }
     }

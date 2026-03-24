@@ -154,11 +154,6 @@ struct ChallengeSessionView: View {
                 .foregroundStyle(.white)
 
             Spacer()
-
-            // Difficulty badge
-            if let question = viewModel.currentQuestion {
-                difficultyBadge(question.difficulty)
-            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -331,8 +326,7 @@ struct ChallengeSessionView: View {
     // MARK: - Timer Helpers
 
     private var timerProgress: Double {
-        guard let question = viewModel.currentQuestion else { return 0 }
-        let limit = Double(question.timeLimit)
+        let limit = 720.0 // Total challenge time limit in seconds
         guard limit > 0 else { return 0 }
         return max(0, min(1, viewModel.timeRemaining / limit))
     }

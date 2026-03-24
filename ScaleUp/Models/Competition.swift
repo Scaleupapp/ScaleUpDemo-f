@@ -8,12 +8,13 @@ struct DailyChallenge: Codable, Sendable, Identifiable, Hashable {
     let date: String
     let status: String
     let participantCount: Int
+    let timeLimitSeconds: Int?
     let activatesAt: String?
     let closesAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case topic, date, status, participantCount, activatesAt, closesAt
+        case topic, date, status, participantCount, timeLimitSeconds, activatesAt, closesAt
     }
 }
 
@@ -22,16 +23,15 @@ struct DailyChallenge: Codable, Sendable, Identifiable, Hashable {
 struct ChallengeStartResponse: Codable, Sendable {
     let attemptId: String
     let questions: [ChallengeQuestion]
+    let timeLimitSeconds: Int?
 }
 
 struct ChallengeQuestion: Codable, Sendable, Identifiable {
     let questionIndex: Int
     let questionText: String
     let questionType: String
-    let difficulty: String
     let concept: String?
     let options: [ChallengeOption]
-    let timeLimit: Int
 
     var id: Int { questionIndex }
 }
@@ -213,4 +213,20 @@ struct LiveEventAttemptResult: Codable, Sendable {
     let handicappedScore: Double?
     let timeTaken: Double?
     let rank: Int?
+}
+
+// MARK: - All-Time Leaderboard
+
+struct AllTimeEntry: Codable, Sendable, Identifiable {
+    let userId: LeaderboardUser
+    let totalScore: Double
+    let totalChallenges: Int
+    let rank: Int
+
+    var id: String { userId.id }
+}
+
+struct AllTimeLeaderboardResponse: Codable, Sendable {
+    let entries: [AllTimeEntry]
+    let topic: String
 }
