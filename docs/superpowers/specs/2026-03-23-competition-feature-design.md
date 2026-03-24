@@ -101,6 +101,46 @@ finalized: Boolean (locked after week ends)
 participantCount: Number
 ```
 
+#### LiveEvent
+```
+topic: String (required, indexed)
+scheduledAt: Date (required — Mon/Wed/Fri 8:00 PM IST)
+questions: [ChallengeQuestion] (10 questions — separate from daily challenge)
+status: String (scheduled | lobby | live | completed)
+participantCount: Number (denormalized, users who joined lobby)
+startedAt: Date (actual start time)
+completedAt: Date
+duration: Number (total event duration in seconds)
+leaderboard: [{
+  userId: ObjectId (ref: User)
+  handicappedScore: Number
+  rawScore: Number
+  timeTaken: Number
+  rank: Number
+  completedAt: Date
+}]
+```
+
+#### LiveEventAttempt
+```
+userId: ObjectId (ref: User, required, indexed)
+eventId: ObjectId (ref: LiveEvent, required, indexed)
+answers: [{
+  questionIndex: Number
+  selectedAnswer: String (A/B/C/D)
+  timeSpent: Number (seconds)
+  answeredAt: Date
+}]
+rawScore: Number (0-100)
+handicappedScore: Number
+timeTaken: Number (total seconds)
+rank: Number (assigned after event completes)
+completedAt: Date
+questionOrder: [Number]
+optionOrders: [[String]]
+```
+**Unique constraint**: `(userId, eventId)` — one attempt per user per event.
+
 #### CompetitionProfile (subdocument on User or standalone)
 ```
 userId: ObjectId (ref: User, unique)
@@ -143,10 +183,11 @@ titlesEarned: [{
 **Cron**: Sunday 23:00 IST
 
 For each active topic (topics where ≥1 user has mastery data):
-1. Call GPT-4o with `CHALLENGE_GENERATION_PROMPT` to generate 100 candidate questions per topic in batches of 20
+1. Call GPT-4o with `CHALLENGE_GENERATION_PROMPT` to generate **130 candidate questions** per topic in batches of 20 (100 for daily challenges = 10/day × 7 days + 30 surplus, plus 30 for live events = 10/event × 3 events/week)
 2. Questions are standardized: clear single correct answer, no ambiguity, fair for all levels
 3. Difficulty mix: 30% easy, 40% medium, 30% hard
 4. Store as `ChallengeCandidateBank` with `status: pending_review`
+5. Daily and live event questions are drawn from the same bank but **never overlap** — curation assigns each question to either a daily challenge date or a live event date
 
 ### CHALLENGE_GENERATION_PROMPT
 ```
@@ -219,11 +260,13 @@ handicappedScore = rawScore × questionDifficultyScore × levelBonus + (speedBon
 
 A beginner improving fast can outscore a coasting expert. Growth is rewarded.
 
-### Anti-Gaming Protections
+### Anti-Gaming & Anti-Cheating Protections
 - **One attempt per challenge per user** — no retakes
 - **Question order randomized** per user
 - **Option order randomized** per user (A/B/C/D shuffled)
-- **90-second time cap per question** — auto-submits as wrong if exceeded
+- **Tiered time caps per question** — Easy: 20s, Medium: 35s, Hard: 45s. Too fast for screenshot → ChatGPT → answer round-trip.
+- **App background detection** — If user leaves the app (switches to ChatGPT, camera, etc.), auto-submit current question as wrong and advance to next. iOS `scenePhase` / `UIApplication.didEnterBackgroundNotification` triggers this.
+- **Speed-weighted scoring** — Answers in <10s get maximum speed credit. 10-20s normal. 20s+ diminishing. Someone using AI assistance consistently answers 30-40s (screenshot + AI latency), tanking their speed score.
 - **Speed bonus calculated post-hoc** — can't game it by knowing the median
 - **No back button** — can't revisit previous questions
 
@@ -319,14 +362,15 @@ Horizontally scrolling chips (matching existing Progress tab style):
 ### Quiz Flow — Challenge Mode
 
 #### Pre-Challenge Screen
-- Topic, date, rules ("10 questions, 90s each, one attempt")
+- Topic, date, rules ("10 questions, 20-45s each, one attempt")
 - Personal best for this topic (if exists)
 - "Begin Challenge" CTA
 
 #### During Challenge
 - Reuses `QuizSessionView` layout with modifications:
   - No skip button
-  - 90-second timer per question (auto-submit on expiry = wrong)
+  - Tiered timer per question: Easy 20s, Medium 35s, Hard 45s (auto-submit on expiry = wrong)
+  - App background detection: leaving the app auto-submits current question as wrong
   - No back button
   - Gold accent on timer bar
   - Question counter: "Q 4/10"
@@ -438,7 +482,146 @@ Both displayed separately. A user doing only challenges is not "learning" and vi
 
 ---
 
-## 10. Technical Considerations
+## 10. Live Events
+
+### Overview
+Mon/Wed/Fri at 8:00 PM IST — a scheduled live quiz event. Separate question set from the daily challenge (users can do both). Strict start — miss 8:00 PM, you miss the event entirely. Creates "appointment TV" urgency on top of the daily async challenge.
+
+### Schedule
+- **Days**: Monday, Wednesday, Friday
+- **Time**: 8:00 PM IST (14:30 UTC)
+- **Duration**: ~8-12 minutes (10 questions with tiered timers + lobby)
+- **Topic**: Rotates across active topics. Schedule announced in advance (e.g., Mon=PM, Wed=Finance, Fri=Data Science)
+
+### Event Lifecycle
+
+#### 1. Scheduled (created by cron)
+- `LiveEvent` record created with `status: scheduled`
+- Questions pre-assigned from the candidate bank (separate pool from daily)
+- Push notification at 7:30 PM IST: "Live Event in 30 minutes! {topic} — be there at 8 PM"
+
+#### 2. Lobby (7:55 PM - 8:00 PM)
+- 5-minute lobby opens at 7:55 PM
+- `status: lobby`
+- Users enter the lobby screen — see participant count rising, topic, countdown timer
+- Push notification at 7:55 PM: "Lobby is open! {count} players waiting for tonight's {topic} event"
+- **Strict cutoff**: At 8:00 PM, lobby closes. No new entrants after this point.
+
+#### 3. Live (8:00 PM)
+- `status: live`
+- All participants receive Question 1 simultaneously
+- Same tiered timers as daily challenge (Easy 20s, Medium 35s, Hard 45s)
+- Same anti-cheating: background detection, randomized order, no back button
+- **Real-time progress**: After each question, show:
+  - Your answer (correct/wrong)
+  - How many got it right (percentage)
+  - Your current position (rank among participants)
+- Questions advance on a **fixed timer** — everyone moves to the next question at the same time, regardless of when they answered. This keeps everyone in sync.
+  - If timer expires before answering: auto-submit as wrong
+  - If answered early: wait screen until timer advances everyone
+
+#### 4. Completed
+- `status: completed`
+- Final leaderboard revealed with animation
+- Top 3 highlighted (gold/silver/bronze)
+- Your rank, score, and question-by-question breakdown
+- "Share Results" with special live event share card
+- Same handicapped scoring as daily challenges
+
+### iOS Integration
+
+#### Home Tab — Live Event Card
+- Appears in the challenge carousel but with distinct styling:
+  - Purple/violet gradient border (vs gold for daily challenges)
+  - "LIVE EVENT" badge instead of "LIVE"
+  - Countdown timer: "Starts in 2h 34m" or "Lobby Open — Join Now!"
+  - After event: "Completed — You finished #4" with green border
+- Takes priority position in carousel (appears first, before daily challenges)
+
+#### Live Event Screens
+
+**Lobby Screen** (pushed from card):
+- Topic name, participant count (updating in real-time)
+- Countdown: "Starting in 3:42"
+- Participant avatars scrolling in (like a waiting room)
+- Rules reminder: "10 questions, strict timer, no going back"
+- "Leave Lobby" option
+
+**Live Quiz Screen**:
+- Similar to challenge mode but with additions:
+  - "LIVE" indicator with pulse animation
+  - Participant count: "47 playing"
+  - After each question: brief results overlay (2-3s) showing correct %, your rank so far
+  - Synced question timer (everyone sees same countdown)
+
+**Results Screen**:
+- Full leaderboard (all participants)
+- Your highlighted row
+- Question-by-question review
+- "Share Live Results" — special share card with "LIVE EVENT" branding
+- "Next Live Event: Wednesday 8 PM — Finance"
+
+### Backend — Live Event Specifics
+
+#### API Endpoints (under `/api/v1/competition/`)
+```
+GET  /live-events/upcoming        → next scheduled live events
+GET  /live-events/:id             → event details + status
+POST /live-events/:id/join        → join lobby (only during lobby phase)
+GET  /live-events/:id/lobby       → lobby state (participant count, countdown)
+POST /live-events/:id/start       → (system only) transitions from lobby to live
+GET  /live-events/:id/question    → current question for the event (synced by server time)
+PUT  /live-events/:id/answer      → submit answer for current question
+GET  /live-events/:id/results     → final results + leaderboard
+GET  /live-events/:id/question-results → after each question: correct %, your rank
+```
+
+#### Cron Jobs (additions)
+| Schedule (IST) | Job | Description |
+|---|---|---|
+| Mon/Wed/Fri 19:30 | `liveEventReminder` | Push notification: "Live event in 30 minutes" |
+| Mon/Wed/Fri 19:55 | `openLiveEventLobby` | Set event status to `lobby`, send "lobby open" push |
+| Mon/Wed/Fri 20:00 | `startLiveEvent` | Close lobby, set status to `live`, begin question sequence |
+
+#### Real-Time Communication
+- **Polling-based** (not WebSocket) for Phase 1 — simpler, works with existing Express stack
+- Lobby: poll `/lobby` every 3s for participant count
+- During event: poll `/question` every 2s for current question + timer state
+- After each question: poll `/question-results` for correct % and rank
+- **Phase 2 upgrade path**: Replace polling with Socket.IO/WebSocket for true real-time feel
+
+#### Question Synchronization
+- Server is the source of truth for timing
+- Each question has a `startsAt` and `endsAt` timestamp (calculated from event start + cumulative timer)
+- Client requests current question → server returns the question active at `now()`
+- If client is slightly behind (network lag), they get less time on that question — acceptable tradeoff for simplicity
+
+### Push Notifications (additions)
+
+| Trigger | Title | Body | Timing |
+|---|---|---|---|
+| 30min before event | "Live Event Tonight! 🎯" | "{topic} starts at 8 PM — don't miss it!" | 19:30 IST |
+| Lobby opens | "Lobby is Open! 🏟️" | "{count} players waiting — join now before it starts" | 19:55 IST |
+| Event completed | "Live Event Results! 🏆" | "You finished #{rank} out of {total} in {topic}" | Immediate |
+| Missed event (was active in last 24h) | "You Missed Tonight's Event 😢" | "{total} players competed in {topic} — next one is {nextDay}" | 20:30 IST |
+
+### Live Event vs Daily Challenge Comparison
+
+| Aspect | Daily Challenge | Live Event |
+|---|---|---|
+| Frequency | Every day | Mon/Wed/Fri |
+| Time window | All day (midnight to midnight IST) | Strict 8:00 PM start, ~10 min |
+| Question set | Separate pool | Separate pool (neither shares with the other) |
+| Entry | Anytime during the day | Must join lobby by 8:00 PM |
+| Experience | Solo, async | Synchronized, see others' progress |
+| Scoring | Same handicapped formula | Same handicapped formula |
+| Leaderboard | Daily + weekly rollup | Per-event only (does NOT feed into weekly board) |
+| Weekly board impact | Yes — daily scores sum into weekly | No — live events are bonus, standalone |
+| Share card | Gold theme | Purple/violet "LIVE EVENT" theme |
+
+---
+
+## 11. Technical Considerations
 
 ### Question Randomization
 When `/challenges/:id/start` is called:
@@ -482,7 +665,7 @@ When `/challenges/:id/start` is called:
 
 ---
 
-## 11. UI Card Design
+## 12. UI Card Design
 
 ### Daily Challenge Card (Swipeable Carousel)
 - Style: compact card, dark background (#111), rounded corners (16px)
@@ -500,6 +683,17 @@ When `/challenges/:id/start` is called:
 - Stats bar: Score (gold) | Rank/Percentile (white) | Accuracy (white)
 - "🏆 New Best!" badge when applicable
 - CTAs: Share Score (gold fill) | View Board (outline) | Link icon (outline)
+
+### Live Event Card (in carousel)
+- Style: compact card, dark background (#111), rounded corners (16px)
+- **Purple/violet gradient border** (distinct from gold daily challenge)
+- "LIVE EVENT" badge: purple background pill, top-right
+- Trophy emoji as visual anchor
+- Topic name: 16px bold white
+- Countdown: "Starts in 2h 34m" or "Lobby Open!" in purple accent
+- CTA: purple gradient "Join →" button
+- Takes first position in carousel (before daily challenges)
+- After completion: green border, "You finished #4" result
 
 ### Share Card (generated image)
 - Dark gradient background with gold accents
