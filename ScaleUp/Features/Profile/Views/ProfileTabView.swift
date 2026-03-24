@@ -74,6 +74,15 @@ struct ProfileTabView: View {
             .sheet(isPresented: $showCreateContent) {
                 CreateContentView()
             }
+            .navigationDestination(for: DailyChallenge.self) { challenge in
+                ChallengeSessionView(challengeId: challenge.id, topic: challenge.topic)
+            }
+            .navigationDestination(for: LiveEvent.self) { event in
+                LiveEventLobbyView(event: event)
+            }
+            .navigationDestination(for: LeaderboardDestination.self) { _ in
+                LeaderboardView()
+            }
         }
         .coachMark(
             .tabProfile,

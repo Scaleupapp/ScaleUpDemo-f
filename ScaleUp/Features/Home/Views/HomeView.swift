@@ -80,9 +80,9 @@ struct HomeView: View {
 
     // MARK: - Main Content
 
-    private var myObjectiveChallenge: DailyChallenge? {
+    private var myObjectiveChallenges: [DailyChallenge] {
         let obj = objectiveContext.activeObjective
-        return viewModel.todayChallenges.first { challenge in
+        return viewModel.todayChallenges.filter { challenge in
             let topic = challenge.topic.lowercased()
             return obj?.targetRole?.lowercased() == topic
                 || obj?.targetSkill?.lowercased() == topic
@@ -106,13 +106,14 @@ struct HomeView: View {
                         .padding(.bottom, Spacing.md)
                 }
 
-                // Daily Challenge — show only the user's objective-matching challenge
-                if let myChallenge = myObjectiveChallenge {
-                    DailyChallengeCarousel(
-                        challenges: [myChallenge],
-                        upcomingEvents: [],
-                        stats: viewModel.competitionStats
-                    )
+                // Daily Challenge — compact card(s) for objective-matching challenges
+                if !myObjectiveChallenges.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(myObjectiveChallenges) { challenge in
+                            homeChallengeCard(challenge)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, Spacing.sm)
                 }
 
@@ -224,6 +225,118 @@ struct HomeView: View {
         .frame(width: 44, height: 44)
         .background(ColorTokens.gold.opacity(0.12))
         .clipShape(Circle())
+    }
+
+    // MARK: - Home Challenge Card (Compact)
+
+    private func homeChallengeCard(_ challenge: DailyChallenge) -> some View {
+        let isCompleted = challenge.isCompletedByUser
+        let gold = Color(hex: 0xFFD700)
+        let green = Color(hex: 0x22C55E)
+        let streak = viewModel.competitionStats?.challengeStreak ?? 0
+
+        return Group {
+            if isCompleted {
+                // Completed — single-line compact card
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(green)
+
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(challenge.topic.capitalized)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+
+                        HStack(spacing: 8) {
+                            if let score = challenge.userScore {
+                                Text("\(Int(score)) pts")
+                                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                                    .foregroundStyle(gold)
+                            }
+                            if streak > 0 {
+                                HStack(spacing: 2) {
+                                    Image(systemName: "flame.fill")
+                                        .font(.system(size: 9))
+                                    Text("\(streak)d")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundStyle(.orange)
+                            }
+                        }
+                    }
+
+                    Spacer()
+
+                    NavigationLink(value: LeaderboardDestination()) {
+                        Text("Results")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(green)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(ColorTokens.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(green.opacity(0.3), lineWidth: 1)
+                        )
+                )
+            } else {
+                // Active — compact action card
+                NavigationLink(value: challenge) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(gold)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(challenge.topic.capitalized)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+
+                            Text("\(challenge.participantCount) playing")
+                                .font(.system(size: 11))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 4) {
+                            Text("Play")
+                                .font(.system(size: 11, weight: .bold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(gold)
+                        .clipShape(Capsule())
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(ColorTokens.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(gold.opacity(0.25), lineWidth: 1)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
     }
 
     // MARK: - Welcome Card (New Users)
