@@ -87,6 +87,25 @@ struct HomeView: View {
                         .padding(.bottom, Spacing.md)
                 }
 
+                // Daily Challenge Carousel
+                if !viewModel.todayChallenges.isEmpty || !viewModel.upcomingEvents.isEmpty {
+                    DailyChallengeCarousel(
+                        challenges: viewModel.todayChallenges,
+                        upcomingEvents: viewModel.upcomingEvents,
+                        stats: viewModel.competitionStats,
+                        onStartChallenge: { _ in
+                            Haptics.selection()
+                        },
+                        onViewLeaderboard: {
+                            Haptics.selection()
+                        },
+                        onJoinEvent: { _ in
+                            Haptics.selection()
+                        }
+                    )
+                    .padding(.bottom, Spacing.sm)
+                }
+
                 // Next action (slim)
                 if let action = viewModel.firstNextAction {
                     if action.type == "quiz" {

@@ -12,8 +12,14 @@ final class HomeViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    // Competition
+    var todayChallenges: [DailyChallenge] = []
+    var upcomingEvents: [LiveEvent] = []
+    var competitionStats: CompetitionStats? = nil
+
     private let dashboardService = DashboardService()
     private let contentService = ContentService()
+    private let competitionService = CompetitionService()
 
     // MARK: - Computed
 
@@ -117,13 +123,28 @@ final class HomeViewModel {
             (try? await self.contentService.explore(page: 1, limit: 20)) ?? []
         }()
 
-        let (dash, watching, recs, trend, explore) = await (dashboardTask, watchingTask, recsTask, trendingTask, exploreTask)
+        async let challengesTask: [DailyChallenge] = {
+            (try? await self.competitionService.fetchTodayChallenges()) ?? []
+        }()
+
+        async let eventsTask: [LiveEvent] = {
+            (try? await self.competitionService.fetchUpcomingEvents()) ?? []
+        }()
+
+        async let statsTask: CompetitionStats? = {
+            try? await self.competitionService.fetchCompetitionStats()
+        }()
+
+        let (dash, watching, recs, trend, explore, challenges, events, compStats) = await (dashboardTask, watchingTask, recsTask, trendingTask, exploreTask, challengesTask, eventsTask, statsTask)
 
         dashboard = dash
         continueWatching = watching.filter { $0.isCompleted != true && ($0.percentageCompleted ?? 0) > 0 }
         recommendations = recs
         trending = trend
         allContent = explore
+        todayChallenges = challenges
+        upcomingEvents = events
+        competitionStats = compStats
 
         isLoading = false
     }
