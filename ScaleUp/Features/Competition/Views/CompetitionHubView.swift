@@ -148,6 +148,25 @@ struct CompetitionHubView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .buttonStyle(.plain)
+
+                    NavigationLink {
+                        ChallengeReviewView(challengeId: challenge.id, topic: challenge.topic)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "doc.text.magnifyingglass")
+                                .font(.system(size: 11))
+                            Text("Review Answers")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundStyle(Color(hex: 0x22C55E))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(hex: 0x22C55E).opacity(0.4), lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(Spacing.md)
                 .background(
@@ -258,10 +277,19 @@ struct CompetitionHubView: View {
                 .padding(.horizontal, Spacing.lg)
 
             ForEach(filteredOtherChallenges) { challenge in
-                NavigationLink(value: challenge) {
-                    challengeRow(challenge)
+                if challenge.isCompletedByUser {
+                    NavigationLink {
+                        ChallengeReviewView(challengeId: challenge.id, topic: challenge.topic)
+                    } label: {
+                        challengeRow(challenge)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    NavigationLink(value: challenge) {
+                        challengeRow(challenge)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }

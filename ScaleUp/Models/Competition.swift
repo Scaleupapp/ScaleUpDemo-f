@@ -240,3 +240,29 @@ struct AllTimeLeaderboardResponse: Codable, Sendable {
     let entries: [AllTimeEntry]
     let topic: String
 }
+
+// MARK: - Challenge Review
+
+struct ChallengeReview: Codable, Sendable {
+    let topic: String
+    let totalQuestions: Int
+    let correctCount: Int
+    let totalTimeTaken: Double?
+    let handicappedScore: Double?
+    let rawScore: Double?
+    let questions: [ReviewQuestion]
+}
+
+struct ReviewQuestion: Codable, Sendable, Identifiable {
+    let questionIndex: Int
+    let questionText: String
+    let concept: String?
+    let options: [ChallengeOption]
+    let selectedAnswer: String?
+    let correctAnswer: String
+    let isCorrect: Bool
+    let explanation: String?
+    let timeSpent: Double
+
+    var id: Int { questionIndex }
+}

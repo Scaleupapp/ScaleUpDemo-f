@@ -123,6 +123,7 @@
 		9E9505E410700AAA623DD9ED /* CreatorApplicationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E28C33417A31691D35E8217 /* CreatorApplicationView.swift */; };
 		9FD85FD410B6640C1B17DAF4 /* ShareScoreCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6732B74BC0532E5BFC51E493 /* ShareScoreCardView.swift */; };
 		A150DAF648A01157AF3942C6 /* UserObjective.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9D49F86A25007138C2AA75 /* UserObjective.swift */; };
+		A3FFC38CBFF9891564E7436C /* ChallengeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E362E314447D6CCCDE1023A /* ChallengeReviewView.swift */; };
 		A4E1D6F6E88B0AA7180CA8B7 /* AITutorTypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A9DD6FC8946940AE8F458D /* AITutorTypingIndicator.swift */; };
 		A9895314335F03C298A82A95 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6345CA87F28CAB287DBE9463 /* Assets.xcassets */; };
 		ABD51A9D77C9927139CD9784 /* ConsumptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BA0A748861879E69F594E8 /* ConsumptionHistoryView.swift */; };
@@ -257,6 +258,7 @@
 		591C706B18BB45DA7ECCC2FF /* CompetencyScoreBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetencyScoreBar.swift; sourceTree = "<group>"; };
 		5B40B74C4604610CBD9A5184 /* ContentCreationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentCreationService.swift; sourceTree = "<group>"; };
 		5D989D59400C3C9E8233B8BD /* AdminDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDashboardView.swift; sourceTree = "<group>"; };
+		5E362E314447D6CCCDE1023A /* ChallengeReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeReviewView.swift; sourceTree = "<group>"; };
 		6345CA87F28CAB287DBE9463 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		636132594A373ED3F6732DEA /* LiveEventViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventViewModel.swift; sourceTree = "<group>"; };
 		6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorHistoryView.swift; sourceTree = "<group>"; };
@@ -1060,6 +1062,7 @@
 			isa = PBXGroup;
 			children = (
 				7DC257BE3138B8CC144A06A8 /* ChallengeResultsView.swift */,
+				5E362E314447D6CCCDE1023A /* ChallengeReviewView.swift */,
 				B715C441F6F5176EC9490185 /* ChallengeSessionView.swift */,
 				25FC9CCAE67C8A65F89EE0B3 /* CompetitionHubView.swift */,
 				F5AEE9AA6ACA95F3BFBE005A /* CompetitionStatsSection.swift */,
@@ -1341,6 +1344,7 @@
 				B6ED59A0CFC09D084D274578 /* AuthViewModel.swift in Sources */,
 				6A508A4E6329B8FAD1D90D3D /* BackgroundStepView.swift in Sources */,
 				9068688861614CE4EFD5593B /* ChallengeResultsView.swift in Sources */,
+				A3FFC38CBFF9891564E7436C /* ChallengeReviewView.swift in Sources */,
 				30E6033D26769AE094A12831 /* ChallengeSessionView.swift in Sources */,
 				BDA3F6A07473E732E80F2BB8 /* ChallengeViewModel.swift in Sources */,
 				FB2704BAAD5D188AA37C05B9 /* CoachMarkManager.swift in Sources */,
@@ -1580,7 +1584,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1656,7 +1660,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 39;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

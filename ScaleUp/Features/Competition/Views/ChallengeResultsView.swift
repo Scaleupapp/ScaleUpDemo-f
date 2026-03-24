@@ -257,6 +257,25 @@ struct ChallengeResultsView: View {
                 )
             }
 
+            // Review Answers
+            NavigationLink {
+                ChallengeReviewView(challengeId: challengeId, topic: topic)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Review Answers")
+                        .font(.system(size: 15, weight: .bold))
+                }
+                .foregroundStyle(goldColor)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(goldColor.opacity(0.5), lineWidth: 1)
+                )
+            }
+
             // Done
             Button {
                 NotificationCenter.default.post(name: .dismissChallengeSession, object: nil)

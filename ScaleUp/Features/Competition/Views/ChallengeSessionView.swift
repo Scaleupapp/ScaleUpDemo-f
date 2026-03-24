@@ -96,7 +96,7 @@ struct ChallengeSessionView: View {
                 // Challenge info
                 VStack(spacing: 8) {
                     infoRow(icon: "questionmark.circle", text: "15 Questions")
-                    infoRow(icon: "infinity", text: "No time limit")
+                    infoRow(icon: "timer", text: "12 minutes total")
                     infoRow(icon: "checkmark.shield", text: "No going back once answered")
                     infoRow(icon: "trophy", text: "Score against other players")
                 }
@@ -161,6 +161,7 @@ struct ChallengeSessionView: View {
     private var challengeContent: some View {
         VStack(spacing: 0) {
             topBar
+            timerBar
             questionCounter
 
             ScrollView(.vertical, showsIndicators: false) {
@@ -200,6 +201,56 @@ struct ChallengeSessionView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.sm)
+    }
+
+    // MARK: - Timer Bar
+
+    private var timerBar: some View {
+        VStack(spacing: 6) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(ColorTokens.surfaceElevated)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(timerColor)
+                        .frame(width: geo.size.width * timerProgress)
+                        .animation(.linear(duration: 1), value: viewModel.timeRemaining)
+                }
+            }
+            .frame(height: 5)
+
+            HStack {
+                HStack(spacing: 4) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(timerColor)
+                    Text(viewModel.timeRemainingFormatted)
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(timerColor)
+                }
+                Spacer()
+                if viewModel.timeRemaining <= 60 && viewModel.timeRemaining > 0 {
+                    Text("Hurry!")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.red)
+                        .transition(.opacity)
+                }
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.sm)
+    }
+
+    private var timerProgress: Double {
+        let limit = 720.0
+        guard limit > 0 else { return 0 }
+        return max(0, min(1, viewModel.timeRemaining / limit))
+    }
+
+    private var timerColor: Color {
+        if viewModel.timeRemaining <= 60 { return .red }
+        if viewModel.timeRemaining <= 120 { return .orange }
+        return goldColor
     }
 
     // MARK: - Question Counter

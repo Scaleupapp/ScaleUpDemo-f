@@ -164,6 +164,17 @@ struct DailyChallengeCarousel: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
 
+            if let stats = stats, stats.challengeStreak > 0 {
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.orange)
+                    Text("\(stats.challengeStreak) day streak")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.orange)
+                }
+            }
+
             Spacer()
 
             NavigationLink(value: LeaderboardDestination()) {

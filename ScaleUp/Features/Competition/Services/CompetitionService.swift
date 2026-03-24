@@ -22,6 +22,7 @@ enum CompetitionEndpoints: Endpoint {
     case submitLiveAnswer(id: String)
     case questionResults(id: String, questionIndex: Int)
     case eventResults(id: String)
+    case challengeReview(id: String)
 
     var path: String {
         switch self {
@@ -44,6 +45,7 @@ enum CompetitionEndpoints: Endpoint {
         case .submitLiveAnswer(let id): return "/competition/live-events/\(id)/answer"
         case .questionResults(let id, _): return "/competition/live-events/\(id)/question-results"
         case .eventResults(let id): return "/competition/live-events/\(id)/results"
+        case .challengeReview(let id): return "/competition/challenges/\(id)/review"
         }
     }
 
@@ -161,5 +163,9 @@ actor CompetitionService {
 
     func fetchEventResults(eventId: String) async throws -> LiveEventResults {
         try await api.request(CompetitionEndpoints.eventResults(id: eventId))
+    }
+
+    func fetchChallengeReview(challengeId: String) async throws -> ChallengeReview {
+        try await api.request(CompetitionEndpoints.challengeReview(id: challengeId))
     }
 }

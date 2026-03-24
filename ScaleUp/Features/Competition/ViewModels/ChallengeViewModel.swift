@@ -19,6 +19,11 @@ final class ChallengeViewModel {
     private var backgroundObserver: NSObjectProtocol? = nil
     private var questionStartTime: Date?
 
+    // Timer
+    var timeRemaining: Double = 0
+    private var timeLimitSeconds: Int = 720
+    private var timerTask: Task<Void, Never>? = nil
+
     private let service = CompetitionService()
 
     // MARK: - Computed
@@ -37,6 +42,13 @@ final class ChallengeViewModel {
 
     var isLastQuestion: Bool {
         currentQuestionIndex >= totalQuestions - 1
+    }
+
+    var timeRemainingFormatted: String {
+        let secs = Int(timeRemaining)
+        let mins = secs / 60
+        let rem = secs % 60
+        return String(format: "%d:%02d", mins, rem)
     }
 
     // MARK: - Init
@@ -59,6 +71,8 @@ final class ChallengeViewModel {
             isComplete = false
             result = nil
             questionStartTime = Date()
+            timeLimitSeconds = response.timeLimitSeconds ?? 720
+            startTimer()
             setupBackgroundDetection()
         } catch {
             self.error = error.localizedDescription
@@ -96,6 +110,7 @@ final class ChallengeViewModel {
     // MARK: - Complete Challenge
 
     func completeChallenge() async {
+        stopTimer()
         do {
             let challengeResult = try await service.completeChallenge(id: challengeId)
             result = challengeResult
@@ -122,9 +137,32 @@ final class ChallengeViewModel {
         }
     }
 
+    // MARK: - Timer
+
+    private func startTimer() {
+        stopTimer()
+        timeRemaining = Double(timeLimitSeconds)
+        timerTask = Task {
+            while timeRemaining > 0 && !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                timeRemaining -= 1
+            }
+            if timeRemaining <= 0 && !Task.isCancelled {
+                await completeChallenge()
+            }
+        }
+    }
+
+    private func stopTimer() {
+        timerTask?.cancel()
+        timerTask = nil
+    }
+
     // MARK: - Cleanup
 
     func cleanup() {
+        stopTimer()
         if let observer = backgroundObserver {
             NotificationCenter.default.removeObserver(observer)
             backgroundObserver = nil
