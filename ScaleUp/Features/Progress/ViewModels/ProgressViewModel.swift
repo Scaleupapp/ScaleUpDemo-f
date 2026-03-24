@@ -14,6 +14,8 @@ final class ProgressViewModel {
     var quizHistory: [QuizAttempt] = []
     var activityHeatmap: [ActivityDay] = []
     var timelineEvents: [TimelineEvent] = []
+    var competitionStats: CompetitionStats? = nil
+    var weeklyBoard: WeeklyLeaderboard? = nil
     var isLoading = false
     var errorMessage: String?
     var showAllObjectives = false
@@ -22,6 +24,7 @@ final class ProgressViewModel {
     private let recommendationService = RecommendationService()
     private let dashboardService = DashboardService()
     private let quizService = QuizService()
+    private let competitionService = CompetitionService()
 
     // MARK: - Computed
 
@@ -103,9 +106,15 @@ final class ProgressViewModel {
         async let timelineTask: [TimelineEvent]? = {
             try? await self.knowledgeService.getTimeline(limit: 20, objectiveId: objectiveId)
         }()
+        async let compStatsTask: CompetitionStats? = {
+            try? await self.competitionService.fetchCompetitionStats()
+        }()
+        async let compBoardTask: WeeklyLeaderboard? = {
+            try? await self.competitionService.fetchWeeklyLeaderboard()
+        }()
 
-        let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline) =
-            await (profileTask, gapsTask, statsTask, dashTask, gapContentTask, quizTask, heatmapTask, timelineTask)
+        let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline, compStats, compBoard) =
+            await (profileTask, gapsTask, statsTask, dashTask, gapContentTask, quizTask, heatmapTask, timelineTask, compStatsTask, compBoardTask)
 
         knowledgeProfile = profile
         gaps = gapsResult ?? []
@@ -115,6 +124,8 @@ final class ProgressViewModel {
         quizHistory = quizzes ?? []
         activityHeatmap = heatmap ?? []
         timelineEvents = timeline ?? []
+        competitionStats = compStats
+        weeklyBoard = compBoard
 
         isLoading = false
     }

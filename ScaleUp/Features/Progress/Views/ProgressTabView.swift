@@ -41,6 +41,9 @@ struct ProgressTabView: View {
             .navigationDestination(for: ConsumptionHistoryDestination.self) { _ in
                 ConsumptionHistoryView()
             }
+            .navigationDestination(for: LeaderboardDestination.self) { _ in
+                LeaderboardView()
+            }
             .task {
                 await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
             }
@@ -64,6 +67,14 @@ struct ProgressTabView: View {
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Spacing.xl) {
+                // 0. Competition Stats
+                if viewModel.competitionStats != nil || viewModel.weeklyBoard != nil {
+                    CompetitionStatsSection(
+                        stats: viewModel.competitionStats,
+                        weeklyBoard: viewModel.weeklyBoard
+                    )
+                }
+
                 // 1. Knowledge Score Hero (with explanatory labels)
                 scoreHeroSection
 
