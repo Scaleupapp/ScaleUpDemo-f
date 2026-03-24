@@ -80,6 +80,16 @@ struct HomeView: View {
 
     // MARK: - Main Content
 
+    private var myObjectiveChallenge: DailyChallenge? {
+        let obj = objectiveContext.activeObjective
+        return viewModel.todayChallenges.first { challenge in
+            let topic = challenge.topic.lowercased()
+            return obj?.targetRole?.lowercased() == topic
+                || obj?.targetSkill?.lowercased() == topic
+                || obj?.objectiveType?.lowercased() == topic
+        }
+    }
+
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: 0) {
@@ -96,11 +106,11 @@ struct HomeView: View {
                         .padding(.bottom, Spacing.md)
                 }
 
-                // Daily Challenge Carousel
-                if !viewModel.todayChallenges.isEmpty || !viewModel.upcomingEvents.isEmpty {
+                // Daily Challenge — show only the user's objective-matching challenge
+                if let myChallenge = myObjectiveChallenge {
                     DailyChallengeCarousel(
-                        challenges: viewModel.todayChallenges,
-                        upcomingEvents: viewModel.upcomingEvents,
+                        challenges: [myChallenge],
+                        upcomingEvents: [],
                         stats: viewModel.competitionStats
                     )
                     .padding(.bottom, Spacing.sm)

@@ -37,7 +37,7 @@ struct DailyChallengeCarousel: View {
                     get: { currentPage as Int? },
                     set: { currentPage = $0 ?? 0 }
                 ))
-                .frame(height: 170)
+                .frame(height: 190)
 
                 if totalPages > 1 {
                     HStack(spacing: 6) {

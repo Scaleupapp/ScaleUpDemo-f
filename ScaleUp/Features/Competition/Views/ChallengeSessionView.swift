@@ -19,30 +19,28 @@ struct ChallengeSessionView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                ColorTokens.background.ignoresSafeArea()
+        ZStack {
+            ColorTokens.background.ignoresSafeArea()
 
-                if viewModel.isLoading {
-                    startingState
-                } else if viewModel.isComplete {
-                    completedTransition
-                } else if viewModel.error != nil {
-                    errorState
-                } else if !viewModel.questions.isEmpty {
-                    challengeContent
-                }
+            if viewModel.isLoading {
+                startingState
+            } else if viewModel.isComplete {
+                completedTransition
+            } else if viewModel.error != nil {
+                errorState
+            } else if !viewModel.questions.isEmpty {
+                challengeContent
             }
-            .navigationBarBackButtonHidden()
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(isPresented: $navigateToResults) {
-                if let result = viewModel.result {
-                    ChallengeResultsView(
-                        result: result,
-                        topic: topic,
-                        challengeId: challengeId
-                    )
-                }
+        }
+        .navigationBarBackButtonHidden()
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $navigateToResults) {
+            if let result = viewModel.result {
+                ChallengeResultsView(
+                    result: result,
+                    topic: topic,
+                    challengeId: challengeId
+                )
             }
         }
         .task {
