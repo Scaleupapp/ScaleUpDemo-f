@@ -294,13 +294,17 @@ struct CompetitionHubView: View {
 
                 Spacer()
 
-                Text("Join")
+                Text(event.isJoinedByUser ? "Joined" : "Join")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(event.isJoinedByUser ? purple : .white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(purple)
+                    .background(event.isJoinedByUser ? purple.opacity(0.15) : purple)
                     .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .stroke(event.isJoinedByUser ? purple.opacity(0.4) : Color.clear, lineWidth: 1)
+                    )
             }
             .padding(12)
             .background(ColorTokens.surface)

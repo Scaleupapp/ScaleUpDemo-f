@@ -151,14 +151,17 @@ struct LiveEvent: Codable, Sendable, Identifiable, Hashable {
     let participantCount: Int
     let startedAt: String?
     let completedAt: String?
+    let userJoined: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case topic, scheduledAt, status, participantCount, startedAt, completedAt
+        case topic, scheduledAt, status, participantCount, startedAt, completedAt, userJoined
     }
 
     static func == (lhs: LiveEvent, rhs: LiveEvent) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+
+    var isJoinedByUser: Bool { userJoined == true }
 }
 
 struct LobbyJoinResponse: Codable, Sendable {

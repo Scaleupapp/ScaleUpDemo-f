@@ -7,29 +7,33 @@ struct LiveEventLobbyView: View {
     @State private var navigateToSession = false
     @Environment(\.dismiss) private var dismiss
 
-    private let purpleAccent = Color(red: 139.0/255.0, green: 92.0/255.0, blue: 246.0/255.0) // #8B5CF6
+    private let purpleAccent = Color(red: 139.0/255.0, green: 92.0/255.0, blue: 246.0/255.0)
 
     init(event: LiveEvent) {
         self.event = event
         self._viewModel = State(initialValue: LiveEventViewModel(event: event))
     }
 
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                ColorTokens.background.ignoresSafeArea()
+    private var isLobbyOpen: Bool {
+        // Lobby is open 5 min before scheduled time
+        guard let date = parseISO(event.scheduledAt) else { return false }
+        return date.timeIntervalSinceNow <= 5 * 60
+    }
 
-                if viewModel.error != nil {
-                    errorState
-                } else {
-                    lobbyContent
-                }
+    var body: some View {
+        ZStack {
+            ColorTokens.background.ignoresSafeArea()
+
+            if viewModel.error != nil {
+                errorState
+            } else {
+                lobbyContent
             }
-            .navigationBarBackButtonHidden()
-            .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(isPresented: $navigateToSession) {
-                LiveEventSessionView(viewModel: viewModel)
-            }
+        }
+        .navigationBarBackButtonHidden()
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationDestination(isPresented: $navigateToSession) {
+            LiveEventSessionView(viewModel: viewModel)
         }
         .task {
             await viewModel.joinLobby()
@@ -48,30 +52,56 @@ struct LiveEventLobbyView: View {
 
     private var lobbyContent: some View {
         VStack(spacing: 0) {
+            // Back button
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Circle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.sm)
+
             Spacer()
 
             VStack(spacing: Spacing.xl) {
                 // LIVE EVENT badge
-                Text("LIVE EVENT")
-                    .font(.system(size: 11, weight: .bold))
-                    .tracking(2)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 7)
-                    .background(purpleAccent)
-                    .clipShape(Capsule())
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(purpleAccent)
+                        .frame(width: 6, height: 6)
+                    Text("LIVE EVENT")
+                        .font(.system(size: 11, weight: .bold))
+                        .tracking(2)
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 7)
+                .background(purpleAccent.opacity(0.2))
+                .clipShape(Capsule())
 
                 // Topic name
                 Text(event.topic)
-                    .font(.system(size: 32, weight: .black, design: .rounded))
+                    .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
 
-                // Participant count
-                participantCounter
+                // Status indicator
+                if viewModel.isInLobby {
+                    // Participant count
+                    participantCounter
 
-                // Countdown timer
-                countdownSection
+                    // Countdown timer
+                    countdownSection
+                } else {
+                    // Registered / waiting state
+                    registeredState
+                }
 
                 // Rules reminder
                 rulesCard
@@ -80,9 +110,57 @@ struct LiveEventLobbyView: View {
 
             Spacer()
 
-            // Leave Lobby
-            leaveLobbyButton
+            // Bottom button
+            if viewModel.isInLobby {
+                leaveLobbyButton
+            } else {
+                registeredFooter
+            }
         }
+    }
+
+    // MARK: - Registered State (before lobby opens)
+
+    private var registeredState: some View {
+        VStack(spacing: Spacing.md) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 32))
+                .foregroundStyle(.green)
+
+            Text("You're registered!")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.white)
+
+            if let date = parseISO(event.scheduledAt) {
+                let remaining = max(0, date.timeIntervalSinceNow)
+                if remaining > 5 * 60 {
+                    Text("Lobby opens 5 minutes before start")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.textTertiary)
+
+                    Text(formatEventDate(date))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(purpleAccent)
+                } else {
+                    Text("Lobby is opening...")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(purpleAccent)
+                }
+            }
+
+            Text("\(viewModel.participantCount) registered")
+                .font(.system(size: 13))
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.green.opacity(0.2), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Participant Counter
@@ -99,7 +177,7 @@ struct LiveEventLobbyView: View {
                 .contentTransition(.numericText())
                 .animation(.easeOut(duration: 0.3), value: viewModel.participantCount)
 
-            Text("participants")
+            Text("in lobby")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(ColorTokens.textSecondary)
         }
@@ -148,9 +226,10 @@ struct LiveEventLobbyView: View {
 
     private var rulesCard: some View {
         VStack(spacing: 10) {
-            ruleRow(icon: "questionmark.circle.fill", text: "10 questions")
-            ruleRow(icon: "timer", text: "Tiered timers")
-            ruleRow(icon: "person.3.fill", text: "Everyone plays at once")
+            ruleRow(icon: "questionmark.circle.fill", text: "10 questions, tiered difficulty")
+            ruleRow(icon: "timer", text: "Timed per question (20-45s)")
+            ruleRow(icon: "person.3.fill", text: "Everyone plays at the same time")
+            ruleRow(icon: "trophy.fill", text: "Rankings calculated at the end")
         }
         .padding(Spacing.md)
         .background(
@@ -178,7 +257,7 @@ struct LiveEventLobbyView: View {
         }
     }
 
-    // MARK: - Leave Lobby
+    // MARK: - Bottom Buttons
 
     private var leaveLobbyButton: some View {
         Button {
@@ -189,6 +268,24 @@ struct LiveEventLobbyView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(ColorTokens.textTertiary)
                 .padding(.vertical, 14)
+        }
+        .padding(.bottom, Spacing.lg)
+    }
+
+    private var registeredFooter: some View {
+        VStack(spacing: 8) {
+            Text("You'll be notified when the lobby opens")
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textTertiary)
+
+            Button {
+                dismiss()
+            } label: {
+                Text("Go Back")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .padding(.vertical, 14)
+            }
         }
         .padding(.bottom, Spacing.lg)
     }
@@ -230,14 +327,29 @@ struct LiveEventLobbyView: View {
 
     // MARK: - Helpers
 
-    private func countdownRemaining(from scheduledAt: String) -> TimeInterval {
+    private func parseISO(_ string: String) -> Date? {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        guard let date = formatter.date(from: scheduledAt) else {
-            formatter.formatOptions = [.withInternetDateTime]
-            guard let date = formatter.date(from: scheduledAt) else { return 0 }
-            return max(0, date.timeIntervalSinceNow)
+        if let date = formatter.date(from: string) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: string)
+    }
+
+    private func formatEventDate(_ date: Date) -> String {
+        let df = DateFormatter()
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) {
+            df.dateFormat = "'Today at' h:mm a"
+        } else if calendar.isDateInTomorrow(date) {
+            df.dateFormat = "'Tomorrow at' h:mm a"
+        } else {
+            df.dateFormat = "EEE, MMM d 'at' h:mm a"
         }
+        return df.string(from: date)
+    }
+
+    private func countdownRemaining(from scheduledAt: String) -> TimeInterval {
+        guard let date = parseISO(scheduledAt) else { return 0 }
         return max(0, date.timeIntervalSinceNow)
     }
 
