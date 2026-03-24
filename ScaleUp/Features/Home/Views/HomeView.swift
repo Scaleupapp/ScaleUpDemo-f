@@ -47,6 +47,15 @@ struct HomeView: View {
             .navigationDestination(for: NotificationDestination.self) { _ in
                 NotificationListView()
             }
+            .navigationDestination(for: DailyChallenge.self) { challenge in
+                ChallengeSessionView(challengeId: challenge.id, topic: challenge.topic)
+            }
+            .navigationDestination(for: LiveEvent.self) { event in
+                LiveEventLobbyView(event: event)
+            }
+            .navigationDestination(for: LeaderboardDestination.self) { _ in
+                LeaderboardView()
+            }
         }
         .task {
             await viewModel.loadDashboard(objectiveId: objectiveContext.activeObjectiveId)
@@ -92,16 +101,7 @@ struct HomeView: View {
                     DailyChallengeCarousel(
                         challenges: viewModel.todayChallenges,
                         upcomingEvents: viewModel.upcomingEvents,
-                        stats: viewModel.competitionStats,
-                        onStartChallenge: { _ in
-                            Haptics.selection()
-                        },
-                        onViewLeaderboard: {
-                            Haptics.selection()
-                        },
-                        onJoinEvent: { _ in
-                            Haptics.selection()
-                        }
+                        stats: viewModel.competitionStats
                     )
                     .padding(.bottom, Spacing.sm)
                 }

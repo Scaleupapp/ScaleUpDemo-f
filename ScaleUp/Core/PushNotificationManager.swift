@@ -58,6 +58,36 @@ final class PushNotificationManager: NSObject {
            let deepLink = data["deepLink"] as? String {
             return deepLink
         }
+
+        // Extract type-based deep link for competition notifications
+        let type = userInfo["type"] as? String
+            ?? (userInfo["data"] as? [String: Any])?["type"] as? String
+        let data = userInfo["data"] as? [String: Any] ?? [:]
+
+        switch type {
+        case "challenge_live":
+            if let challengeId = data["challengeId"] as? String {
+                return "challenge://\(challengeId)"
+            }
+        case "weekly_results":
+            if let topic = data["topic"] as? String {
+                return "leaderboard://\(topic)"
+            }
+            return "leaderboard://"
+        case "live_event_reminder":
+            if let eventId = data["eventId"] as? String {
+                return "live_event://\(eventId)"
+            }
+        case "streak_reminder":
+            return "home://competition"
+        case "live_event_results":
+            if let eventId = data["eventId"] as? String {
+                return "live_event_results://\(eventId)"
+            }
+        default:
+            break
+        }
+
         return nil
     }
 

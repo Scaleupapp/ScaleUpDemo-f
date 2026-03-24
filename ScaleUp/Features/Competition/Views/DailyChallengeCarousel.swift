@@ -4,9 +4,6 @@ struct DailyChallengeCarousel: View {
     let challenges: [DailyChallenge]
     let upcomingEvents: [LiveEvent]
     let stats: CompetitionStats?
-    let onStartChallenge: (DailyChallenge) -> Void
-    let onViewLeaderboard: () -> Void
-    let onJoinEvent: (LiveEvent) -> Void
 
     @Environment(ObjectiveContext.self) private var objectiveContext
 
@@ -86,9 +83,7 @@ struct DailyChallengeCarousel: View {
 
             Spacer()
 
-            Button {
-                onStartChallenge(challenge)
-            } label: {
+            NavigationLink(value: challenge) {
                 HStack(spacing: 6) {
                     Text("Take the Challenge")
                         .font(.system(size: 13, weight: .bold))
@@ -172,9 +167,7 @@ struct DailyChallengeCarousel: View {
                 }
                 .buttonStyle(.plain)
 
-                Button {
-                    onViewLeaderboard()
-                } label: {
+                NavigationLink(value: LeaderboardDestination()) {
                     Text("View Board")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.black)
@@ -234,9 +227,7 @@ struct DailyChallengeCarousel: View {
 
             Spacer()
 
-            Button {
-                onJoinEvent(event)
-            } label: {
+            NavigationLink(value: event) {
                 HStack(spacing: 6) {
                     Text("Join")
                         .font(.system(size: 13, weight: .bold))
