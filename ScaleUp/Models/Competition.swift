@@ -11,10 +11,17 @@ struct DailyChallenge: Codable, Sendable, Identifiable, Hashable {
     let timeLimitSeconds: Int?
     let activatesAt: String?
     let closesAt: String?
+    let userCompleted: Bool?
+    let userScore: Double?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case topic, date, status, participantCount, timeLimitSeconds, activatesAt, closesAt
+        case userCompleted, userScore
+    }
+
+    var isCompletedByUser: Bool {
+        userCompleted == true
     }
 }
 

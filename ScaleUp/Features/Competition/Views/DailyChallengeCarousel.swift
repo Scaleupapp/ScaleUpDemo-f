@@ -55,7 +55,7 @@ struct DailyChallengeCarousel: View {
     // MARK: - Active Challenge Card
 
     private func challengeCard(_ challenge: DailyChallenge) -> some View {
-        let isCompleted = challenge.status == "completed"
+        let isCompleted = challenge.isCompletedByUser
 
         return Group {
             if isCompleted {

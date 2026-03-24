@@ -10,6 +10,8 @@ struct ChallengeSessionView: View {
 
     @State private var viewModel: ChallengeViewModel
     @State private var navigateToResults = false
+    @State private var showWelcome = true
+    @State private var countdown = 3
     @Environment(\.dismiss) private var dismiss
 
     init(challengeId: String, topic: String) {
@@ -22,7 +24,9 @@ struct ChallengeSessionView: View {
         ZStack {
             ColorTokens.background.ignoresSafeArea()
 
-            if viewModel.isLoading {
+            if showWelcome {
+                welcomeScreen
+            } else if viewModel.isLoading {
                 startingState
             } else if viewModel.isComplete {
                 completedTransition
@@ -43,14 +47,112 @@ struct ChallengeSessionView: View {
                 )
             }
         }
-        .task {
-            await viewModel.startChallenge()
-        }
         .onDisappear {
             viewModel.cleanup()
         }
         .onReceive(NotificationCenter.default.publisher(for: .dismissChallengeSession)) { _ in
             dismiss()
+        }
+    }
+
+    // MARK: - Welcome Screen
+
+    private var welcomeScreen: some View {
+        VStack(spacing: 0) {
+            // Back button
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Circle())
+                }
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.sm)
+
+            Spacer()
+
+            VStack(spacing: Spacing.xl) {
+                // Trophy icon
+                ZStack {
+                    Circle()
+                        .fill(goldColor.opacity(0.12))
+                        .frame(width: 100, height: 100)
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 44))
+                        .foregroundStyle(goldColor)
+                }
+
+                // Topic
+                Text(topic)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+
+                // Challenge info
+                VStack(spacing: 8) {
+                    infoRow(icon: "questionmark.circle", text: "15 Questions")
+                    infoRow(icon: "timer", text: "12 minutes total")
+                    infoRow(icon: "checkmark.shield", text: "No going back once answered")
+                    infoRow(icon: "trophy", text: "Score against other players")
+                }
+
+                // Countdown or Start button
+                if countdown > 0 && !showWelcome {
+                    Text("\(countdown)")
+                        .font(.system(size: 72, weight: .bold, design: .rounded))
+                        .foregroundStyle(goldColor)
+                } else {
+                    Button {
+                        startCountdown()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 14))
+                            Text("Start Challenge")
+                                .font(.system(size: 16, weight: .bold))
+                        }
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(goldColor)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal, Spacing.xl)
+                }
+            }
+
+            Spacer()
+
+            // Tip at bottom
+            Text("Tip: Read each question carefully before answering")
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .padding(.bottom, Spacing.xl)
+        }
+    }
+
+    private func infoRow(icon: String, text: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(goldColor)
+                .frame(width: 20)
+            Text(text)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+    }
+
+    private func startCountdown() {
+        Haptics.medium()
+        showWelcome = false
+        Task {
+            await viewModel.startChallenge()
         }
     }
 

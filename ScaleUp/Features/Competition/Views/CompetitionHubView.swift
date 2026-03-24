@@ -121,13 +121,13 @@ struct CompetitionHubView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 11))
-                        Text(challenge.status == "completed" ? "Completed" : "Take the Challenge")
+                        Text(challenge.isCompletedByUser ? "Completed" : "Take the Challenge")
                             .font(.system(size: 14, weight: .bold))
                     }
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 11)
-                    .background(challenge.status == "completed" ? Color(hex: 0x22C55E) : gold)
+                    .background(challenge.isCompletedByUser ? Color(hex: 0x22C55E) : gold)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .padding(Spacing.md)
@@ -214,7 +214,7 @@ struct CompetitionHubView: View {
     }
 
     private func challengeRow(_ challenge: DailyChallenge) -> some View {
-        let isCompleted = challenge.status == "completed"
+        let isCompleted = challenge.isCompletedByUser
         return HStack(spacing: Spacing.md) {
             Image(systemName: isCompleted ? "checkmark.circle.fill" : "bolt.fill")
                 .font(.system(size: 18))
