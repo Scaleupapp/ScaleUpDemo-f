@@ -113,6 +113,9 @@ struct ProfileTabView: View {
                 // AI Tutor History
                 aiTutorHistoryLink
 
+                // Competition
+                competitionLink
+
                 // Objectives section (all users)
                 objectivesSection
 
@@ -478,6 +481,44 @@ struct ProfileTabView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.medium)
                     .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.md)
+    }
+
+    // MARK: - Competition Link
+
+    private var competitionLink: some View {
+        NavigationLink {
+            CompetitionHubView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(Color(hex: 0xFFD700))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Daily Challenges")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Compete, climb the leaderboard")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.md)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(Color(hex: 0xFFD700).opacity(0.15), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
