@@ -37,7 +37,7 @@ struct DailyChallengeCarousel: View {
                     get: { currentPage as Int? },
                     set: { currentPage = $0 ?? 0 }
                 ))
-                .frame(height: 190)
+                .frame(height: 180)
 
                 if totalPages > 1 {
                     HStack(spacing: 6) {
@@ -49,6 +49,7 @@ struct DailyChallengeCarousel: View {
                     }
                 }
             }
+            .padding(.horizontal, Spacing.lg)
         }
     }
 
@@ -141,15 +142,21 @@ struct DailyChallengeCarousel: View {
     private func completedChallengeCard(_ challenge: DailyChallenge) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 12))
+                        .font(.system(size: 14))
                     Text("Completed")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                 }
                 .foregroundStyle(Color(hex: 0x22C55E))
 
                 Spacer()
+
+                if let score = challenge.userScore {
+                    Text("\(Int(score)) pts")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color(hex: 0xFFD700))
+                }
             }
 
             Text(challenge.topic)
@@ -157,48 +164,22 @@ struct DailyChallengeCarousel: View {
                 .foregroundStyle(.white)
                 .lineLimit(1)
 
-            // Stats row
-            if let stats = stats {
-                HStack(spacing: 16) {
-                    statItem(label: "Score", value: "\(stats.todayCompleted)/\(stats.todayTotal)")
-                    if let pct = stats.percentile {
-                        statItem(label: "Percentile", value: "Top \(Int(pct))%")
-                    }
-                    statItem(label: "Streak", value: "\(stats.challengeStreak)d")
-                }
-            }
-
             Spacer()
 
-            HStack(spacing: 10) {
-                Button {
-                    // Share functionality placeholder
-                } label: {
-                    Text("Share Score")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(ColorTokens.surfaceElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.small)
-                                .stroke(Color(hex: 0x22C55E).opacity(0.3), lineWidth: 1)
-                        )
+            NavigationLink(value: LeaderboardDestination()) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 11))
+                    Text("View Results")
+                        .font(.system(size: 13, weight: .bold))
                 }
-                .buttonStyle(.plain)
-
-                NavigationLink(value: LeaderboardDestination()) {
-                    Text("View Board")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 9)
-                        .background(Color(hex: 0x22C55E))
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-                }
-                .buttonStyle(.plain)
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color(hex: 0x22C55E))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
             }
+            .buttonStyle(.plain)
         }
         .padding(Spacing.md)
         .background(

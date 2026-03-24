@@ -7,6 +7,7 @@ struct CompetitionHubView: View {
     @State private var objectiveTopic: String? = nil
     @State private var isLoading = true
     @State private var searchText = ""
+    @State private var joiningEventId: String?
 
     private let service = CompetitionService()
     private let gold = Color(hex: 0xFFD700)
@@ -108,27 +109,45 @@ struct CompetitionHubView: View {
             }
             .padding(.horizontal, Spacing.lg)
 
-            NavigationLink(value: challenge) {
+            if challenge.isCompletedByUser {
+                // Completed state - show score, link to leaderboard
                 VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 14))
+                            Text("Completed")
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundStyle(Color(hex: 0x22C55E))
+                        Spacer()
+                        if let score = challenge.userScore {
+                            Text("\(Int(score)) pts")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundStyle(gold)
+                        }
+                    }
+
                     Text(titleCase(challenge.topic))
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(.white)
 
-                    Text("15 Questions \u{00B7} 12 min \u{00B7} \(challenge.participantCount) playing")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.textSecondary)
-
-                    HStack(spacing: 6) {
-                        Image(systemName: "play.fill")
-                            .font(.system(size: 11))
-                        Text(challenge.isCompletedByUser ? "Completed" : "Take the Challenge")
-                            .font(.system(size: 14, weight: .bold))
+                    NavigationLink {
+                        LeaderboardView()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chart.bar.fill")
+                                .font(.system(size: 11))
+                            Text("View Leaderboard")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(Color(hex: 0x22C55E))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(challenge.isCompletedByUser ? Color(hex: 0x22C55E) : gold)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .buttonStyle(.plain)
                 }
                 .padding(Spacing.md)
                 .background(
@@ -136,12 +155,46 @@ struct CompetitionHubView: View {
                         .fill(ColorTokens.surface)
                         .overlay(
                             RoundedRectangle(cornerRadius: 14)
-                                .stroke(gold.opacity(0.4), lineWidth: 1.5)
+                                .stroke(Color(hex: 0x22C55E).opacity(0.4), lineWidth: 1.5)
                         )
                 )
+                .padding(.horizontal, Spacing.lg)
+            } else {
+                NavigationLink(value: challenge) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(titleCase(challenge.topic))
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        Text("15 Questions \u{00B7} \(challenge.participantCount) playing")
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.textSecondary)
+
+                        HStack(spacing: 6) {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 11))
+                            Text("Take the Challenge")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 11)
+                        .background(gold)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .padding(Spacing.md)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(ColorTokens.surface)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(gold.opacity(0.4), lineWidth: 1.5)
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, Spacing.lg)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, Spacing.lg)
 
             // My live event (if exists)
             if let event = myEvent {
@@ -265,53 +318,87 @@ struct CompetitionHubView: View {
     }
 
     private func eventRow(_ event: LiveEvent, isMyObjective: Bool) -> some View {
-        NavigationLink(value: event) {
-            HStack(spacing: Spacing.md) {
-                Image(systemName: "antenna.radiowaves.left.and.right")
-                    .font(.system(size: 18))
-                    .foregroundStyle(purple)
-                    .frame(width: 28)
+        HStack(spacing: Spacing.md) {
+            Image(systemName: "antenna.radiowaves.left.and.right")
+                .font(.system(size: 18))
+                .foregroundStyle(purple)
+                .frame(width: 28)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(titleCase(event.topic))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                        if isMyObjective {
-                            Text("Your Goal")
-                                .font(.system(size: 8, weight: .black))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(gold)
-                                .clipShape(Capsule())
-                        }
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(titleCase(event.topic))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                    if isMyObjective {
+                        Text("Your Goal")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(gold)
+                            .clipShape(Capsule())
                     }
-                    Text(eventDateLabel(event))
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.textSecondary)
                 }
-
-                Spacer()
-
-                Text(event.isJoinedByUser ? "Joined" : "Join")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(event.isJoinedByUser ? purple : .white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 5)
-                    .background(event.isJoinedByUser ? purple.opacity(0.15) : purple)
-                    .clipShape(Capsule())
-                    .overlay(
-                        Capsule()
-                            .stroke(event.isJoinedByUser ? purple.opacity(0.4) : Color.clear, lineWidth: 1)
-                    )
+                Text(eventDateLabel(event))
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textSecondary)
             }
-            .padding(12)
-            .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Spacer()
+
+            if event.isJoinedByUser {
+                NavigationLink(value: event) {
+                    Text("Joined")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(purple)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 5)
+                        .background(purple.opacity(0.15))
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(purple.opacity(0.4), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    Task { await joinEvent(event) }
+                } label: {
+                    if joiningEventId == event.id {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(width: 40)
+                            .padding(.vertical, 5)
+                    } else {
+                        Text("Join")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                    }
+                }
+                .background(purple)
+                .clipShape(Capsule())
+                .buttonStyle(.plain)
+                .disabled(joiningEventId == event.id)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(12)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .padding(.horizontal, Spacing.lg)
+    }
+
+    private func joinEvent(_ event: LiveEvent) async {
+        joiningEventId = event.id
+        do {
+            _ = try await service.joinLiveEvent(id: event.id)
+            events = (try? await service.fetchUpcomingEvents()) ?? events
+        } catch {
+            // Silently fail — user can try again
+        }
+        joiningEventId = nil
     }
 
     // MARK: - Empty

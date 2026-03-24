@@ -9,16 +9,13 @@ final class ChallengeViewModel {
     let challengeId: String
     var questions: [ChallengeQuestion] = []
     var currentQuestionIndex = 0
-    var timeRemaining: Double = 0
-    private var timeLimitSeconds: Int = 720
     var selectedAnswer: String? = nil
     var isLoading = false
     var isComplete = false
     var result: ChallengeResult? = nil
     var error: String? = nil
 
-    // Timer & Background
-    private var timerTask: Task<Void, Never>? = nil
+    // Background
     private var backgroundObserver: NSObjectProtocol? = nil
     private var questionStartTime: Date?
 
@@ -42,13 +39,6 @@ final class ChallengeViewModel {
         currentQuestionIndex >= totalQuestions - 1
     }
 
-    var timeRemainingFormatted: String {
-        let secs = Int(timeRemaining)
-        let mins = secs / 60
-        let rem = secs % 60
-        return String(format: "%d:%02d", mins, rem)
-    }
-
     // MARK: - Init
 
     init(challengeId: String) {
@@ -64,13 +54,12 @@ final class ChallengeViewModel {
         do {
             let response = try await service.startChallenge(id: challengeId)
             questions = response.questions
-            timeLimitSeconds = response.timeLimitSeconds ?? 720
             currentQuestionIndex = 0
             selectedAnswer = nil
             isComplete = false
             result = nil
+            questionStartTime = Date()
             setupBackgroundDetection()
-            startTimer()
         } catch {
             self.error = error.localizedDescription
         }
@@ -107,8 +96,6 @@ final class ChallengeViewModel {
     // MARK: - Complete Challenge
 
     func completeChallenge() async {
-        stopTimer()
-
         do {
             let challengeResult = try await service.completeChallenge(id: challengeId)
             result = challengeResult
@@ -117,31 +104,6 @@ final class ChallengeViewModel {
             self.error = error.localizedDescription
             isComplete = true
         }
-    }
-
-    // MARK: - Timer
-
-    private func startTimer() {
-        stopTimer()
-        timeRemaining = Double(timeLimitSeconds)
-        questionStartTime = Date()
-
-        timerTask = Task {
-            while timeRemaining > 0 && !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1))
-                guard !Task.isCancelled else { return }
-                timeRemaining -= 1
-            }
-            // Auto-complete on total time expiry
-            if timeRemaining <= 0 && !Task.isCancelled {
-                await completeChallenge()
-            }
-        }
-    }
-
-    private func stopTimer() {
-        timerTask?.cancel()
-        timerTask = nil
     }
 
     // MARK: - Background Detection
@@ -163,7 +125,6 @@ final class ChallengeViewModel {
     // MARK: - Cleanup
 
     func cleanup() {
-        stopTimer()
         if let observer = backgroundObserver {
             NotificationCenter.default.removeObserver(observer)
             backgroundObserver = nil

@@ -138,6 +138,10 @@ actor CompetitionService {
         try await api.request(CompetitionEndpoints.joinLobby(id: eventId))
     }
 
+    func joinLiveEvent(id: String) async throws -> LobbyJoinResponse {
+        try await api.request(CompetitionEndpoints.joinLobby(id: id))
+    }
+
     func fetchLobbyState(eventId: String) async throws -> LobbyState {
         try await api.request(CompetitionEndpoints.lobbyState(id: eventId))
     }
