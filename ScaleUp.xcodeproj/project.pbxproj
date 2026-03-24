@@ -166,6 +166,7 @@
 		E561E0AB3EBA30A56DC39D4E /* QuizResultsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1ACE8C4510AA089E07AFB106 /* QuizResultsViewModel.swift */; };
 		E5815BB51A4C6112EC819D75 /* LiveEventViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 636132594A373ED3F6732DEA /* LiveEventViewModel.swift */; };
 		E5BF813F0281CE194D7A6056 /* MyPlanViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A06055AB1A5ADA4C00B203B2 /* MyPlanViewModel.swift */; };
+		E6C6D52D9EDDE8194896BA0B /* CompetitionHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25FC9CCAE67C8A65F89EE0B3 /* CompetitionHubView.swift */; };
 		EA72478A26CFA7D4FF0FA2CE /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C622582C0FBDFAC253E4D7D1 /* DiscoverViewModel.swift */; };
 		EB46C7E88F7448327E4869B1 /* TopicDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3D7C1AC4A84A7509B0931BB /* TopicDetailView.swift */; };
 		EBC695378A33F7D812EE0A28 /* Content.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E642F5E366FF9FB869CD92 /* Content.swift */; };
@@ -221,6 +222,7 @@
 		213B2C3CB92A4EE770323F7C /* InterestsStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestsStepView.swift; sourceTree = "<group>"; };
 		2354CCCC2CACBFFFB12EC92C /* CreatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorViewModel.swift; sourceTree = "<group>"; };
 		25A10244004AFF5CCBED32EC /* PreferencesStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStepView.swift; sourceTree = "<group>"; };
+		25FC9CCAE67C8A65F89EE0B3 /* CompetitionHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetitionHubView.swift; sourceTree = "<group>"; };
 		27E642F5E366FF9FB869CD92 /* Content.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Content.swift; sourceTree = "<group>"; };
 		2853F8DEAE333FE16C95F943 /* Competition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Competition.swift; sourceTree = "<group>"; };
 		28EF8042193FAED3EDE6E782 /* ProgressViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressViewModel.swift; sourceTree = "<group>"; };
@@ -1059,6 +1061,7 @@
 			children = (
 				7DC257BE3138B8CC144A06A8 /* ChallengeResultsView.swift */,
 				B715C441F6F5176EC9490185 /* ChallengeSessionView.swift */,
+				25FC9CCAE67C8A65F89EE0B3 /* CompetitionHubView.swift */,
 				F5AEE9AA6ACA95F3BFBE005A /* CompetitionStatsSection.swift */,
 				4BB707A3DC976EB2862BD5DA /* DailyChallengeCarousel.swift */,
 				3A018DBD209C4B935F106CB8 /* LeaderboardView.swift */,
@@ -1346,6 +1349,7 @@
 				7C3772FFA78186E3726E7186 /* Comment.swift in Sources */,
 				D8B4DBB7AB675F1AB77883E6 /* CompetencyScoreBar.swift in Sources */,
 				0CA0CAB53AB35909E1475155 /* Competition.swift in Sources */,
+				E6C6D52D9EDDE8194896BA0B /* CompetitionHubView.swift in Sources */,
 				C6B4BEF19E688756C8C16819 /* CompetitionService.swift in Sources */,
 				86833A64633C884770CF9B66 /* CompetitionStatsSection.swift in Sources */,
 				B257805CAF001B75D840D31B /* CompletionStepView.swift in Sources */,
