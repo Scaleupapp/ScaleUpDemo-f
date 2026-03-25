@@ -80,6 +80,10 @@ struct HomeView: View {
 
     // MARK: - Main Content
 
+    private var joinedLiveEvents: [LiveEvent] {
+        viewModel.upcomingEvents.filter { $0.isJoinedByUser }
+    }
+
     private var myObjectiveChallenges: [DailyChallenge] {
         let obj = objectiveContext.activeObjective
         let role = obj?.targetRole?.lowercased() ?? ""
@@ -116,6 +120,17 @@ struct HomeView: View {
                     VStack(spacing: 8) {
                         ForEach(myObjectiveChallenges) { challenge in
                             homeChallengeCard(challenge)
+                        }
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.sm)
+                }
+
+                // Joined Live Events
+                if !joinedLiveEvents.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(joinedLiveEvents) { event in
+                            homeEventCard(event)
                         }
                     }
                     .padding(.horizontal, Spacing.lg)
@@ -249,7 +264,7 @@ struct HomeView: View {
                         .foregroundStyle(green)
 
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(challenge.topic.capitalized)
+                        Text(challenge.formattedTitle)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
@@ -304,7 +319,7 @@ struct HomeView: View {
                             .foregroundStyle(gold)
 
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(challenge.topic.capitalized)
+                            Text(challenge.formattedTitle)
                                 .font(.system(size: 14, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .lineLimit(1)
@@ -342,6 +357,85 @@ struct HomeView: View {
                 .buttonStyle(.plain)
             }
         }
+    }
+
+    // MARK: - Home Event Card (Joined Live Events)
+
+    private func homeEventCard(_ event: LiveEvent) -> some View {
+        let purple = Color(hex: 0x8B5CF6)
+
+        return NavigationLink(value: event) {
+            HStack(spacing: 10) {
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.system(size: 16))
+                    .foregroundStyle(purple)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.formattedTitle)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+
+                    Text(eventTimeLabel(event))
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                HStack(spacing: 4) {
+                    Text("Joined")
+                        .font(.system(size: 11, weight: .bold))
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9, weight: .bold))
+                }
+                .foregroundStyle(purple)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(purple.opacity(0.15))
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(purple.opacity(0.4), lineWidth: 1))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(ColorTokens.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(purple.opacity(0.25), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func titleCase(_ text: String) -> String {
+        text.split(separator: " ").map { word in
+            let lower = word.lowercased()
+            return String(lower.prefix(1).uppercased() + lower.dropFirst())
+        }.joined(separator: " ")
+    }
+
+    private func eventTimeLabel(_ event: LiveEvent) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: event.scheduledAt)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: event.scheduledAt)
+        }
+        guard let eventDate = date else { return "\(event.participantCount) joined" }
+        let calendar = Calendar.current
+        let displayFormatter = DateFormatter()
+        if calendar.isDateInToday(eventDate) {
+            displayFormatter.dateFormat = "'Today at' h:mm a"
+        } else if calendar.isDateInTomorrow(eventDate) {
+            displayFormatter.dateFormat = "'Tomorrow at' h:mm a"
+        } else {
+            displayFormatter.dateFormat = "EEE, MMM d 'at' h:mm a"
+        }
+        return displayFormatter.string(from: eventDate) + " \u{00B7} \(event.participantCount) joined"
     }
 
     // MARK: - Welcome Card (New Users)

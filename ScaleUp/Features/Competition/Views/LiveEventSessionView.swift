@@ -118,7 +118,7 @@ struct LiveEventSessionView: View {
             Spacer()
 
             // Topic badge
-            Text(viewModel.event.topic.uppercased())
+            Text(viewModel.event.formattedTitle.uppercased())
                 .font(.system(size: 10, weight: .bold))
                 .tracking(1.5)
                 .foregroundStyle(purpleAccent)

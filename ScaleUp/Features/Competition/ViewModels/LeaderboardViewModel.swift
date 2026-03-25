@@ -10,23 +10,30 @@ final class LeaderboardViewModel {
     var weeklyBoard: WeeklyLeaderboard? = nil
     var allTimeEntries: [AllTimeEntry]? = nil
     var userObjectiveTopic: String? = nil
+    var selectedTopic: String? = nil // nil = "All Topics" (global)
+    var availableTopics: [String] = []
     var isLoading = false
     var error: String? = nil
 
     private let service = CompetitionService()
 
-    // MARK: - Load All (default: user's objective topic)
+    // MARK: - Load All (default: global leaderboard)
 
     func loadAll() async {
         isLoading = true
         error = nil
 
-        // Load user's primary objective topic first
+        // Load user's primary objective topic
         if userObjectiveTopic == nil {
             userObjectiveTopic = try? await service.fetchPrimaryObjectiveTopic()
         }
 
-        let topic = userObjectiveTopic
+        // Build available topics from today's challenges
+        let challenges = (try? await service.fetchTodayChallenges()) ?? []
+        availableTopics = challenges.map { $0.formattedTitle }
+
+        // Default to global (nil = no topic filter)
+        let topic = selectedTopic
 
         async let statsTask: CompetitionStats? = {
             try? await self.service.fetchCompetitionStats()
@@ -42,12 +49,26 @@ final class LeaderboardViewModel {
         isLoading = false
     }
 
+    // MARK: - Switch Topic
+
+    func switchTopic(_ topic: String?) async {
+        selectedTopic = topic
+        isLoading = true
+        do {
+            weeklyBoard = try await service.fetchWeeklyLeaderboard(topic: topic)
+            allTimeEntries = nil // reset all-time when switching topics
+        } catch {
+            self.error = error.localizedDescription
+        }
+        isLoading = false
+    }
+
     // MARK: - Load Weekly
 
     func loadWeekly() async {
         isLoading = true
         do {
-            weeklyBoard = try await service.fetchWeeklyLeaderboard(topic: userObjectiveTopic)
+            weeklyBoard = try await service.fetchWeeklyLeaderboard(topic: selectedTopic)
         } catch {
             self.error = error.localizedDescription
         }
@@ -59,11 +80,20 @@ final class LeaderboardViewModel {
     func loadAllTime() async {
         isLoading = true
         do {
-            let result = try await service.fetchAllTimeLeaderboard(topic: userObjectiveTopic)
+            let result = try await service.fetchAllTimeLeaderboard(topic: selectedTopic)
             allTimeEntries = result.entries
         } catch {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+
+    // MARK: - Helper
+
+    private func titleCase(_ text: String) -> String {
+        text.split(separator: " ").map { word in
+            let lower = word.lowercased()
+            return String(lower.prefix(1).uppercased() + lower.dropFirst())
+        }.joined(separator: " ")
     }
 }

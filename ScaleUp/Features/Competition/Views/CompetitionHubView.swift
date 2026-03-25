@@ -88,12 +88,6 @@ struct CompetitionHubView: View {
         }
         .navigationTitle("Competitions")
         .navigationBarTitleDisplayMode(.large)
-        .navigationDestination(for: DailyChallenge.self) { challenge in
-            ChallengeSessionView(challengeId: challenge.id, topic: challenge.topic)
-        }
-        .navigationDestination(for: LiveEvent.self) { event in
-            LiveEventLobbyView(event: event)
-        }
         .task { await loadData() }
     }
 
@@ -131,7 +125,7 @@ struct CompetitionHubView: View {
                         }
                     }
 
-                    Text(titleCase(challenge.topic))
+                    Text(challenge.formattedTitle)
                         .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(.white)
 
@@ -184,7 +178,7 @@ struct CompetitionHubView: View {
             } else {
                 NavigationLink(value: challenge) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text(titleCase(challenge.topic))
+                        Text(challenge.formattedTitle)
                             .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(.white)
 
@@ -306,7 +300,7 @@ struct CompetitionHubView: View {
                 .frame(width: 28)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(titleCase(challenge.topic))
+                Text(challenge.formattedTitle)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                 Text(isCompleted ? "Completed" : "\(challenge.participantCount) playing")
@@ -357,7 +351,7 @@ struct CompetitionHubView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(titleCase(event.topic))
+                    Text(event.formattedTitle)
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                     if isMyObjective {
@@ -450,14 +444,6 @@ struct CompetitionHubView: View {
     }
 
     // MARK: - Helpers
-
-    private func titleCase(_ text: String) -> String {
-        text.split(separator: " ").map { word in
-            let lower = word.lowercased()
-            // Keep small words lowercase unless first
-            return String(lower.prefix(1).uppercased() + lower.dropFirst())
-        }.joined(separator: " ")
-    }
 
     private func eventDateLabel(_ event: LiveEvent) -> String {
         let formatter = ISO8601DateFormatter()

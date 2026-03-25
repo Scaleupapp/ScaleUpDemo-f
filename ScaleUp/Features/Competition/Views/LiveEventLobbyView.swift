@@ -86,7 +86,7 @@ struct LiveEventLobbyView: View {
                 .clipShape(Capsule())
 
                 // Topic name
-                Text(event.topic)
+                Text(event.formattedTitle)
                     .font(.system(size: 28, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)

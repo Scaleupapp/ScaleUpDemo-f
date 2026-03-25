@@ -62,11 +62,19 @@ struct LeaderboardView: View {
 
     private var filterControls: some View {
         VStack(spacing: Spacing.sm) {
-            // Show which objective this leaderboard is for
-            if let topic = viewModel.userObjectiveTopic {
-                Text(topic.capitalized)
-                    .font(Typography.bodySmallBold)
-                    .foregroundStyle(ColorTokens.gold)
+            // Topic filter chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    topicChip("All Topics", isSelected: viewModel.selectedTopic == nil) {
+                        Task { await viewModel.switchTopic(nil) }
+                    }
+                    ForEach(viewModel.availableTopics, id: \.self) { topic in
+                        topicChip(topic, isSelected: viewModel.selectedTopic?.lowercased() == topic.lowercased()) {
+                            Task { await viewModel.switchTopic(topic.lowercased()) }
+                        }
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
             }
 
             // This Week / All Time
@@ -88,6 +96,23 @@ struct LeaderboardView: View {
             }
         }
         .padding(.bottom, Spacing.md)
+    }
+
+    private func topicChip(_ label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .black : .white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(isSelected ? ColorTokens.gold : ColorTokens.surfaceElevated)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? Color.clear : ColorTokens.gold.opacity(0.2), lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Content

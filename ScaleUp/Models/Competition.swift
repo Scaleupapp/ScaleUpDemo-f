@@ -5,6 +5,7 @@ import Foundation
 struct DailyChallenge: Codable, Sendable, Identifiable, Hashable {
     let id: String
     let topic: String
+    let displayTitle: String?
     let date: String
     let status: String
     let participantCount: Int
@@ -16,12 +17,21 @@ struct DailyChallenge: Codable, Sendable, Identifiable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case topic, date, status, participantCount, timeLimitSeconds, activatesAt, closesAt
+        case topic, displayTitle, date, status, participantCount, timeLimitSeconds, activatesAt, closesAt
         case userCompleted, userScore
     }
 
     var isCompletedByUser: Bool {
         userCompleted == true
+    }
+
+    /// Returns displayTitle if available, otherwise title-cased topic
+    var formattedTitle: String {
+        if let title = displayTitle, !title.isEmpty { return title }
+        return topic.split(separator: " ").map { word in
+            let lower = word.lowercased()
+            return String(lower.prefix(1).uppercased() + lower.dropFirst())
+        }.joined(separator: " ")
     }
 }
 
@@ -146,6 +156,7 @@ struct CompetitionStats: Codable, Sendable {
 struct LiveEvent: Codable, Sendable, Identifiable, Hashable {
     let id: String
     let topic: String
+    let displayTitle: String?
     let scheduledAt: String
     let status: String
     let participantCount: Int
@@ -155,13 +166,21 @@ struct LiveEvent: Codable, Sendable, Identifiable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case topic, scheduledAt, status, participantCount, startedAt, completedAt, userJoined
+        case topic, displayTitle, scheduledAt, status, participantCount, startedAt, completedAt, userJoined
     }
 
     static func == (lhs: LiveEvent, rhs: LiveEvent) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     var isJoinedByUser: Bool { userJoined == true }
+
+    var formattedTitle: String {
+        if let title = displayTitle, !title.isEmpty { return title }
+        return topic.split(separator: " ").map { word in
+            let lower = word.lowercased()
+            return String(lower.prefix(1).uppercased() + lower.dropFirst())
+        }.joined(separator: " ")
+    }
 }
 
 struct LobbyJoinResponse: Codable, Sendable {
