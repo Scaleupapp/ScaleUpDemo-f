@@ -11,7 +11,7 @@ final class LeaderboardViewModel {
     var allTimeEntries: [AllTimeEntry]? = nil
     var userObjectiveTopic: String? = nil
     var selectedTopic: String? = nil // nil = "All Topics" (global)
-    var availableTopics: [String] = []
+    var availableTopics: [(raw: String, display: String)] = []
     var isLoading = false
     var error: String? = nil
 
@@ -30,7 +30,7 @@ final class LeaderboardViewModel {
 
         // Build available topics from today's challenges
         let challenges = (try? await service.fetchTodayChallenges()) ?? []
-        availableTopics = challenges.map { $0.formattedTitle }
+        availableTopics = challenges.map { (raw: $0.topic, display: $0.formattedTitle) }
 
         // Default to global (nil = no topic filter)
         let topic = selectedTopic

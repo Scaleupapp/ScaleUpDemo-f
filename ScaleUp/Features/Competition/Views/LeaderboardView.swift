@@ -68,9 +68,9 @@ struct LeaderboardView: View {
                     topicChip("All Topics", isSelected: viewModel.selectedTopic == nil) {
                         Task { await viewModel.switchTopic(nil) }
                     }
-                    ForEach(viewModel.availableTopics, id: \.self) { topic in
-                        topicChip(topic, isSelected: viewModel.selectedTopic?.lowercased() == topic.lowercased()) {
-                            Task { await viewModel.switchTopic(topic.lowercased()) }
+                    ForEach(viewModel.availableTopics, id: \.raw) { topic in
+                        topicChip(topic.display, isSelected: viewModel.selectedTopic == topic.raw) {
+                            Task { await viewModel.switchTopic(topic.raw) }
                         }
                     }
                 }

@@ -8,6 +8,8 @@ struct CompetitionHubView: View {
     @State private var isLoading = true
     @State private var searchText = ""
     @State private var joiningEventId: String?
+    @State private var selectedChallenge: DailyChallenge?
+    @State private var selectedEvent: LiveEvent?
 
     private let service = CompetitionService()
     private let gold = Color(hex: 0xFFD700)
@@ -74,6 +76,8 @@ struct CompetitionHubView: View {
                         // Live Events
                         if !events.isEmpty {
                             liveEventsSection
+                        } else {
+                            nextLiveEventInfo
                         }
 
                         if challenges.isEmpty && events.isEmpty {
@@ -88,6 +92,12 @@ struct CompetitionHubView: View {
         }
         .navigationTitle("Competitions")
         .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(item: $selectedChallenge) { challenge in
+            ChallengeSessionView(challengeId: challenge.id, topic: challenge.topic)
+        }
+        .navigationDestination(item: $selectedEvent) { event in
+            LiveEventLobbyView(event: event)
+        }
         .task { await loadData() }
     }
 
@@ -176,7 +186,9 @@ struct CompetitionHubView: View {
                 )
                 .padding(.horizontal, Spacing.lg)
             } else {
-                NavigationLink(value: challenge) {
+                Button {
+                    selectedChallenge = challenge
+                } label: {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(challenge.formattedTitle)
                             .font(.system(size: 20, weight: .bold))
@@ -282,7 +294,9 @@ struct CompetitionHubView: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    NavigationLink(value: challenge) {
+                    Button {
+                        selectedChallenge = challenge
+                    } label: {
                         challengeRow(challenge)
                     }
                     .buttonStyle(.plain)
@@ -372,7 +386,7 @@ struct CompetitionHubView: View {
             Spacer()
 
             if event.isJoinedByUser {
-                NavigationLink(value: event) {
+                Button { selectedEvent = event } label: {
                     Text("Joined")
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(purple)
@@ -424,6 +438,65 @@ struct CompetitionHubView: View {
             // Silently fail — user can try again
         }
         joiningEventId = nil
+    }
+
+    // MARK: - Next Live Event Info
+
+    private var nextLiveEventInfo: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 16))
+                .foregroundStyle(purple)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("LIVE EVENTS")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(0.8)
+                    .foregroundStyle(purple)
+                Text("Next live quizzes: \(nextLiveEventDay)")
+                    .font(.system(size: 13))
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
+
+            Spacer()
+        }
+        .padding(12)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    private var nextLiveEventDay: String {
+        let calendar = Calendar.current
+        var components = DateComponents()
+        components.timeZone = TimeZone(secondsFromGMT: 19800) // IST
+        let today = calendar.component(.weekday, from: Date()) // 1=Sun, 2=Mon...
+        // Events created on Sun(1)/Tue(3)/Thu(5) for next day at 8:30 PM IST
+        // So live events happen Mon(2)/Wed(4)/Fri(6)
+        let liveEventDays = [2, 4, 6] // Mon, Wed, Fri
+        let daysFromNow: Int = {
+            for offset in 1...7 {
+                let futureWeekday = ((today - 1 + offset) % 7) + 1
+                if liveEventDays.contains(futureWeekday) {
+                    return offset
+                }
+            }
+            return 1
+        }()
+        guard let nextDate = calendar.date(byAdding: .day, value: daysFromNow, to: Date()) else {
+            return "this week"
+        }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE 'at' h:mm a"
+        // Set to 8:30 PM IST
+        var dateComps = calendar.dateComponents([.year, .month, .day], from: nextDate)
+        dateComps.hour = 20
+        dateComps.minute = 30
+        dateComps.timeZone = TimeZone(secondsFromGMT: 19800)
+        if let scheduled = calendar.date(from: dateComps) {
+            return formatter.string(from: scheduled)
+        }
+        return formatter.string(from: nextDate)
     }
 
     // MARK: - Empty
