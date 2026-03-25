@@ -179,13 +179,13 @@ struct ChallengeResultsView: View {
 
     @ViewBuilder
     private var previousBestComparison: some View {
-        if result.previousBest > 0 {
+        if let previousBest = result.previousBest, previousBest > 0 {
             HStack(spacing: Spacing.sm) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Previous Best")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(ColorTokens.textTertiary)
-                    Text("\(Int(result.previousBest))")
+                    Text("\(Int(previousBest))")
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .foregroundStyle(ColorTokens.textSecondary)
                 }
@@ -193,7 +193,7 @@ struct ChallengeResultsView: View {
                 Spacer()
 
                 // Difference indicator
-                let diff = result.handicappedScore - result.previousBest
+                let diff = result.handicappedScore - previousBest
                 HStack(spacing: 4) {
                     Image(systemName: diff >= 0 ? "arrow.up.right" : "arrow.down.right")
                         .font(.system(size: 12, weight: .bold))

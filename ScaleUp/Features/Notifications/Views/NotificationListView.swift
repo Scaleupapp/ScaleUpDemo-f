@@ -130,30 +130,30 @@ struct NotificationListView: View {
 
     private func iconBackground(_ type: NotificationType) -> Color {
         switch type {
-        case .quizAvailable, .milestoneReached:
+        case .quizAvailable, .milestoneReached, .competitionChallenge:
             return ColorTokens.gold.opacity(0.15)
-        case .streakReminder:
+        case .streakReminder, .competitionReminder:
             return Color.orange.opacity(0.15)
-        case .journeyUpdate:
+        case .journeyUpdate, .creatorApplication:
             return Color.blue.opacity(0.15)
         case .socialFollow:
             return Color.purple.opacity(0.15)
-        case .socialComment:
+        case .socialComment, .competitionResults:
             return Color.green.opacity(0.15)
         }
     }
 
     private func iconForeground(_ type: NotificationType) -> Color {
         switch type {
-        case .quizAvailable, .milestoneReached:
+        case .quizAvailable, .milestoneReached, .competitionChallenge:
             return ColorTokens.gold
-        case .streakReminder:
+        case .streakReminder, .competitionReminder:
             return .orange
-        case .journeyUpdate:
+        case .journeyUpdate, .creatorApplication:
             return .blue
         case .socialFollow:
             return .purple
-        case .socialComment:
+        case .socialComment, .competitionResults:
             return .green
         }
     }

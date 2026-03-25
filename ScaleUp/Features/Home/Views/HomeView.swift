@@ -82,11 +82,16 @@ struct HomeView: View {
 
     private var myObjectiveChallenges: [DailyChallenge] {
         let obj = objectiveContext.activeObjective
+        let role = obj?.targetRole?.lowercased() ?? ""
+        let skill = obj?.targetSkill?.lowercased() ?? ""
+        let objType = obj?.objectiveType?.lowercased() ?? ""
+
         return viewModel.todayChallenges.filter { challenge in
             let topic = challenge.topic.lowercased()
-            return obj?.targetRole?.lowercased() == topic
-                || obj?.targetSkill?.lowercased() == topic
-                || obj?.objectiveType?.lowercased() == topic
+            // Exact match or contains-based fuzzy match
+            return (!role.isEmpty && (topic == role || topic.contains(role) || role.contains(topic)))
+                || (!skill.isEmpty && (topic == skill || topic.contains(skill) || skill.contains(topic)))
+                || (!objType.isEmpty && (topic == objType || topic.contains(objType) || objType.contains(topic)))
         }
     }
 

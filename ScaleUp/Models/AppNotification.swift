@@ -28,6 +28,10 @@ enum NotificationType: String, Codable, Sendable {
     case journeyUpdate = "journey_update"
     case socialFollow = "social_follow"
     case socialComment = "social_comment"
+    case competitionChallenge = "competition_challenge"
+    case competitionResults = "competition_results"
+    case competitionReminder = "competition_reminder"
+    case creatorApplication = "creator_application"
 
     var icon: String {
         switch self {
@@ -37,6 +41,10 @@ enum NotificationType: String, Codable, Sendable {
         case .journeyUpdate: return "map.fill"
         case .socialFollow: return "person.fill.badge.plus"
         case .socialComment: return "bubble.left.fill"
+        case .competitionChallenge: return "bolt.fill"
+        case .competitionResults: return "chart.bar.fill"
+        case .competitionReminder: return "bell.badge.fill"
+        case .creatorApplication: return "person.crop.circle.badge.checkmark"
         }
     }
 
@@ -48,6 +56,10 @@ enum NotificationType: String, Codable, Sendable {
         case .journeyUpdate: return "blue"
         case .socialFollow: return "purple"
         case .socialComment: return "green"
+        case .competitionChallenge: return "gold"
+        case .competitionResults: return "green"
+        case .competitionReminder: return "orange"
+        case .creatorApplication: return "blue"
         }
     }
 }

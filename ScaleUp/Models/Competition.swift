@@ -51,13 +51,13 @@ struct ChallengeOption: Codable, Sendable, Hashable {
 // MARK: - Challenge Results
 
 struct ChallengeResult: Codable, Sendable, Equatable {
-    let rawScore: Double
+    let rawScore: Double?
     let handicappedScore: Double
     let timeTaken: Double
     let isPersonalBest: Bool
     let correct: Int
     let total: Int
-    let previousBest: Double
+    let previousBest: Double?
 }
 
 // MARK: - Weekly Leaderboard

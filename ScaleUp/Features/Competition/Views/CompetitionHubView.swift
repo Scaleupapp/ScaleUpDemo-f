@@ -17,12 +17,15 @@ struct CompetitionHubView: View {
 
     private var myChallenge: DailyChallenge? {
         guard let topic = objectiveTopic?.lowercased() else { return nil }
-        return challenges.first { $0.topic.lowercased() == topic }
+        return challenges.first { ch in
+            let t = ch.topic.lowercased()
+            return t == topic || t.contains(topic) || topic.contains(t)
+        }
     }
 
     private var otherChallenges: [DailyChallenge] {
-        let myTopic = objectiveTopic?.lowercased()
-        return challenges.filter { $0.topic.lowercased() != myTopic }
+        guard let myId = myChallenge?.id else { return challenges }
+        return challenges.filter { $0.id != myId }
     }
 
     private var filteredOtherChallenges: [DailyChallenge] {
