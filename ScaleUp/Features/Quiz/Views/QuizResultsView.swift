@@ -609,7 +609,10 @@ struct QuizResultsView: View {
 
     private var bottomActions: some View {
         VStack(spacing: 10) {
-            Button { dismiss() } label: {
+            Button {
+                // Dismiss the fullScreenCover to return to QuizDetail/QuizList
+                NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
+            } label: {
                 Text("Back to Quizzes")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(.black)
@@ -620,8 +623,11 @@ struct QuizResultsView: View {
             }
 
             Button {
+                // Switch to home tab and dismiss the quiz session
                 appState.selectedTab = .home
-                NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
+                }
             } label: {
                 Text("Back to Home")
                     .font(.system(size: 14, weight: .semibold))

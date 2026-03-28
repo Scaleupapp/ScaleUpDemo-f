@@ -291,9 +291,28 @@ final class MyPlanViewModel {
         isLoading = true
         errorMessage = nil
 
-        // Fetch all three in a task group (avoids async let deallocation crash)
-        let mainDash: Dashboard? = try? await dashboardService.fetchDashboard()
-        let journeyDash: JourneyDashboard? = try? await journeyService.getDashboard(objectiveId: activeObjectiveId)
+        // Fetch main dashboard (for objectives)
+        var mainDash: Dashboard?
+        do {
+            mainDash = try await dashboardService.fetchDashboard()
+        } catch {
+            print("[MyPlan] Main dashboard fetch failed: \(error)")
+        }
+
+        // Fetch journey dashboard — this is the critical call
+        var journeyDash: JourneyDashboard?
+        do {
+            journeyDash = try await journeyService.getDashboard(objectiveId: activeObjectiveId)
+        } catch {
+            let desc = "\(error)"
+            // 404 is expected when no journey exists — not an error
+            if !desc.contains("404") && !desc.contains("notFound") {
+                print("[MyPlan] Journey dashboard fetch failed: \(error)")
+                errorMessage = "Could not load your plan. Tap to retry."
+            }
+        }
+
+        // Next actions — OK to fail silently
         let actions: NextActionsResponse? = try? await recommendationService.getNextActions()
 
         // Store the real user objective from the main dashboard

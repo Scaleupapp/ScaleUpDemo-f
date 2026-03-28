@@ -103,10 +103,20 @@ final class HomeViewModel {
         isLoading = true
         errorMessage = nil
 
+        // Dashboard is critical — track if it fails so we can show an error
+        var dashboardFailed = false
+
         async let dashboardTask: Dashboard? = {
-            try? await self.dashboardService.fetchDashboard(objectiveId: objectiveId)
+            do {
+                return try await self.dashboardService.fetchDashboard(objectiveId: objectiveId)
+            } catch {
+                print("[HomeViewModel] Dashboard fetch failed: \(error)")
+                dashboardFailed = true
+                return nil
+            }
         }()
 
+        // Secondary data — OK to fail silently
         async let watchingTask: [ContentProgress] = {
             (try? await self.dashboardService.fetchContinueWatching()) ?? []
         }()
@@ -145,6 +155,10 @@ final class HomeViewModel {
         todayChallenges = challenges
         upcomingEvents = events
         competitionStats = compStats
+
+        if dashboardFailed && dash == nil && recs.isEmpty && explore.isEmpty {
+            errorMessage = "Could not load your dashboard. Pull down to retry."
+        }
 
         isLoading = false
     }

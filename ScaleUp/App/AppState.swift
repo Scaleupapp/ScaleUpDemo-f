@@ -77,6 +77,8 @@ final class AppState {
 
     func logout() async {
         try? await authService.logout()
+        await KeychainManager.shared.clearTokens()
+        URLCache.shared.removeAllCachedResponses()
         currentUser = nil
         launchState = .welcome
     }
