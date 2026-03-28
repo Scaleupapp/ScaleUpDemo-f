@@ -394,7 +394,13 @@ struct ChallengeSessionView: View {
                     Task { await viewModel.submitAnswer() }
                 } label: {
                     HStack(spacing: 6) {
-                        if viewModel.isLastQuestion {
+                        if viewModel.isSubmitting {
+                            ProgressView()
+                                .tint(.black)
+                                .scaleEffect(0.8)
+                            Text(viewModel.isLastQuestion ? "Getting Results..." : "Submitting...")
+                                .font(.system(size: 14, weight: .bold))
+                        } else if viewModel.isLastQuestion {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 14))
                             Text("Finish Challenge")
@@ -409,9 +415,10 @@ struct ChallengeSessionView: View {
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(goldColor)
+                    .background(viewModel.isSubmitting ? goldColor.opacity(0.6) : goldColor)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .disabled(viewModel.isSubmitting)
             } else {
                 // Placeholder — must select an answer (no skip)
                 Text("Select an answer to continue")

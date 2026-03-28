@@ -11,6 +11,7 @@ final class ChallengeViewModel {
     var currentQuestionIndex = 0
     var selectedAnswer: String? = nil
     var isLoading = false
+    var isSubmitting = false
     var isComplete = false
     var result: ChallengeResult? = nil
     var error: String? = nil
@@ -84,6 +85,9 @@ final class ChallengeViewModel {
     // MARK: - Submit Answer
 
     func submitAnswer() async {
+        guard !isSubmitting else { return }
+        isSubmitting = true
+
         let timeSpent = questionStartTime.map { Date().timeIntervalSince($0) } ?? 0
         let answer = selectedAnswer ?? ""
 
@@ -104,6 +108,7 @@ final class ChallengeViewModel {
             currentQuestionIndex += 1
             selectedAnswer = nil
             questionStartTime = Date()
+            isSubmitting = false
         }
     }
 
