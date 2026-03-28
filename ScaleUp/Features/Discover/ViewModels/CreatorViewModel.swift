@@ -25,7 +25,7 @@ final class CreatorViewModel {
             isFollowing = c.isFollowing ?? false
             localFollowersCount = c.followersCount ?? 0
         } catch {
-            errorMessage = "ID: \(id)\n\(error)"
+            errorMessage = "Could not load creator profile"
         }
 
         if let items = try? await contentService.fetchCreatorContent(creatorId: id) {
@@ -52,8 +52,22 @@ final class CreatorViewModel {
             } else {
                 try await userService.follow(userId: creator.id)
             }
+        } catch let error as APIError {
+            switch error {
+            case .conflict(_):
+                // Already following — correct state
+                isFollowing = true
+                if !wasFollowing { /* count already incremented */ }
+            case .notFound where wasFollowing:
+                // Not following — correct state
+                isFollowing = false
+                if wasFollowing { /* count already decremented */ }
+            default:
+                isFollowing = wasFollowing
+                localFollowersCount += wasFollowing ? 1 : -1
+                Haptics.error()
+            }
         } catch {
-            // Revert on failure
             isFollowing = wasFollowing
             localFollowersCount += wasFollowing ? 1 : -1
             Haptics.error()

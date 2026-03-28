@@ -302,8 +302,15 @@ final class PlayerViewModel {
                 try await userService.follow(userId: creatorId)
             }
         } catch {
-            isFollowingCreator = wasFollowing
-            Haptics.error()
+            let desc = "\(error)"
+            if desc.contains("Already following") || desc.contains("conflict") {
+                isFollowingCreator = true
+            } else if desc.contains("Not following") && wasFollowing {
+                isFollowingCreator = false
+            } else {
+                isFollowingCreator = wasFollowing
+                Haptics.error()
+            }
         }
 
         isFollowLoading = false
