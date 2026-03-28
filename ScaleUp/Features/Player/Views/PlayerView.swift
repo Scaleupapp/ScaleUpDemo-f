@@ -175,6 +175,9 @@ struct PlayerView: View {
         .navigationDestination(for: Content.self) { content in
             PlayerView(contentId: content.id)
         }
+        .navigationDestination(for: Creator.self) { creator in
+            CreatorProfileView(creatorId: creator.id)
+        }
         .task {
             await viewModel.loadContent(id: contentId)
             // Load AI Tutor status after content loads
@@ -813,39 +816,56 @@ struct PlayerView: View {
 
     private func creatorRow(_ creator: Creator) -> some View {
         HStack(spacing: Spacing.sm) {
-            CreatorAvatar(creator: creator, size: 40)
+            NavigationLink(value: creator) {
+                HStack(spacing: Spacing.sm) {
+                    CreatorAvatar(creator: creator, size: 40)
 
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: Spacing.xs) {
-                    Text(creator.displayName)
-                        .font(Typography.bodyBold)
-                        .foregroundStyle(ColorTokens.textPrimary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: Spacing.xs) {
+                            Text(creator.displayName)
+                                .font(Typography.bodyBold)
+                                .foregroundStyle(ColorTokens.textPrimary)
 
-                    if let tier = creator.tier {
-                        TierBadge(tier: tier)
+                            if let tier = creator.tier {
+                                TierBadge(tier: tier)
+                            }
+                        }
+
+                        if let followers = creator.followersCount, followers > 0 {
+                            Text("\(formatCount(followers)) followers")
+                                .font(Typography.caption)
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
                     }
                 }
-
-                if let followers = creator.followersCount, followers > 0 {
-                    Text("\(formatCount(followers)) followers")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
             }
+            .buttonStyle(.plain)
 
             Spacer()
 
             Button {
-                Haptics.light()
+                Task { await viewModel.toggleFollowCreator() }
             } label: {
-                Text("Follow")
-                    .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.buttonPrimaryText)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, 6)
-                    .background(ColorTokens.gold)
-                    .clipShape(Capsule())
+                HStack(spacing: 4) {
+                    if viewModel.isFollowingCreator {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    Text(viewModel.isFollowingCreator ? "Following" : "Follow")
+                        .font(Typography.caption)
+                }
+                .foregroundStyle(viewModel.isFollowingCreator ? ColorTokens.gold : ColorTokens.buttonPrimaryText)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, 6)
+                .background(viewModel.isFollowingCreator ? ColorTokens.surface : ColorTokens.gold)
+                .overlay(
+                    viewModel.isFollowingCreator
+                        ? Capsule().stroke(ColorTokens.gold, lineWidth: 1)
+                        : nil
+                )
+                .clipShape(Capsule())
             }
+            .disabled(viewModel.isFollowLoading)
         }
     }
 

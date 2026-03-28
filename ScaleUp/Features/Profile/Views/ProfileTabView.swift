@@ -74,6 +74,9 @@ struct ProfileTabView: View {
             .sheet(isPresented: $showCreateContent) {
                 CreateContentView()
             }
+            .navigationDestination(for: Content.self) { content in
+                PlayerView(contentId: content.id)
+            }
             .navigationDestination(for: DailyChallenge.self) { challenge in
                 ChallengeSessionView(challengeId: challenge.id, topic: challenge.topic)
             }
@@ -818,7 +821,10 @@ struct ProfileTabView: View {
         } else {
             LazyVGrid(columns: gridColumns, spacing: Spacing.sm) {
                 ForEach(items) { content in
-                    contentGridCell(content)
+                    NavigationLink(value: content) {
+                        contentGridCell(content)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, Spacing.md)
@@ -895,7 +901,14 @@ struct ProfileTabView: View {
         } else {
             LazyVGrid(columns: gridColumns, spacing: Spacing.sm) {
                 ForEach(viewModel.viewHistory) { progress in
-                    historyGridCell(progress)
+                    if let content = progress.content {
+                        NavigationLink(value: content) {
+                            historyGridCell(progress)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        historyGridCell(progress)
+                    }
                 }
             }
             .padding(.horizontal, Spacing.md)

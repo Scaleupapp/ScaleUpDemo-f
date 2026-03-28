@@ -16,6 +16,15 @@ struct CreatorProfileView: View {
 
             if viewModel.isLoading && viewModel.creator == nil {
                 ProgressView().tint(ColorTokens.gold)
+            } else if let error = viewModel.errorMessage, viewModel.creator == nil {
+                VStack(spacing: Spacing.md) {
+                    Image(systemName: "person.slash")
+                        .font(.system(size: 36))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text(error)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
             } else if let creator = viewModel.creator {
                 ScrollView {
                     VStack(spacing: Spacing.lg) {
@@ -38,6 +47,9 @@ struct CreatorProfileView: View {
 
                         // Domain & Specializations
                         domainSection(creator)
+
+                        // Background (Education, Work, Skills)
+                        backgroundSection(creator)
 
                         // Content grid
                         if !viewModel.content.isEmpty {
@@ -113,7 +125,6 @@ struct CreatorProfileView: View {
 
             // Follow button
             Button {
-                Haptics.light()
                 Task { await viewModel.toggleFollow() }
             } label: {
                 HStack(spacing: 6) {
@@ -141,6 +152,7 @@ struct CreatorProfileView: View {
             }
             .disabled(viewModel.isFollowLoading)
             .opacity(viewModel.isFollowLoading ? 0.6 : 1)
+
         }
     }
 
@@ -252,6 +264,117 @@ struct CreatorProfileView: View {
                             }
                         }
                     }
+                }
+            }
+            .padding(.horizontal, Spacing.lg)
+        }
+    }
+
+    // MARK: - Background (Education, Work, Skills)
+
+    @ViewBuilder
+    private func backgroundSection(_ creator: Creator) -> some View {
+        let hasEdu = creator.education != nil && !(creator.education?.isEmpty ?? true)
+        let hasWork = creator.workExperience != nil && !(creator.workExperience?.isEmpty ?? true)
+        let hasSkills = creator.skills != nil && !(creator.skills?.isEmpty ?? true)
+
+        if hasEdu || hasWork || hasSkills {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                if let education = creator.education, !education.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Education", systemImage: "graduationcap")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        ForEach(education) { edu in
+                            HStack(spacing: 6) {
+                                Circle().fill(ColorTokens.info).frame(width: 6, height: 6)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(edu.degree)
+                                        .font(Typography.bodySmall)
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                    HStack(spacing: 4) {
+                                        Text(edu.institution)
+                                            .font(Typography.micro)
+                                            .foregroundStyle(ColorTokens.textTertiary)
+                                        if let year = edu.yearOfCompletion {
+                                            Text("· \(String(year))")
+                                                .font(Typography.micro)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                        }
+                                        if edu.currentlyPursuing == true {
+                                            Text("(Current)")
+                                                .font(Typography.micro)
+                                                .foregroundStyle(ColorTokens.gold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(Spacing.sm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ColorTokens.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                }
+
+                if let work = creator.workExperience, !work.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Work Experience", systemImage: "briefcase")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        ForEach(work) { exp in
+                            HStack(spacing: 6) {
+                                Circle().fill(ColorTokens.gold).frame(width: 6, height: 6)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(exp.role)
+                                        .font(Typography.bodySmall)
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                    HStack(spacing: 4) {
+                                        Text(exp.company)
+                                            .font(Typography.micro)
+                                            .foregroundStyle(ColorTokens.textTertiary)
+                                        if let years = exp.years {
+                                            Text("· \(years) yr\(years == 1 ? "" : "s")")
+                                                .font(Typography.micro)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                        }
+                                        if exp.currentlyWorking == true {
+                                            Text("(Current)")
+                                                .font(Typography.micro)
+                                                .foregroundStyle(ColorTokens.gold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    .padding(Spacing.sm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ColorTokens.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                }
+
+                if let skills = creator.skills, !skills.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("Skills", systemImage: "lightbulb")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        FlowLayout(spacing: 6) {
+                            ForEach(skills, id: \.self) { skill in
+                                Text(skill.capitalized)
+                                    .font(Typography.micro)
+                                    .foregroundStyle(ColorTokens.textPrimary)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(ColorTokens.surfaceElevated)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    .padding(Spacing.sm)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ColorTokens.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
                 }
             }
             .padding(.horizontal, Spacing.lg)

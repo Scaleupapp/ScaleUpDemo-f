@@ -71,7 +71,7 @@ enum AuthProvider: String, Codable, Sendable {
 
 // MARK: - Sub-models
 
-struct Education: Codable, Sendable, Identifiable {
+struct Education: Codable, Sendable, Identifiable, Hashable {
     var id: String { "\(degree)-\(institution)" }
     let degree: String
     let institution: String
@@ -79,7 +79,7 @@ struct Education: Codable, Sendable, Identifiable {
     let currentlyPursuing: Bool?
 }
 
-struct WorkExperience: Codable, Sendable, Identifiable {
+struct WorkExperience: Codable, Sendable, Identifiable, Hashable {
     var id: String { "\(role)-\(company)" }
     let role: String
     let company: String

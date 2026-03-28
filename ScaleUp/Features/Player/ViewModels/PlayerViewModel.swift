@@ -42,6 +42,10 @@ final class PlayerViewModel {
     var commentError: String?
     var commentCount: Int = 0
 
+    // Follow
+    var isFollowingCreator = false
+    var isFollowLoading = false
+
     // Playlists
     var playlists: [Playlist] = []
     var showPlaylistSheet = false
@@ -62,6 +66,7 @@ final class PlayerViewModel {
 
     private let playerService = PlayerService()
     private let contentService = ContentService()
+    private let userService = UserService()
 
     // MARK: - Load Content
 
@@ -86,6 +91,13 @@ final class PlayerViewModel {
             likeCount = fetchedContent.likeCount ?? 0
             saveCount = fetchedContent.saveCount ?? 0
             commentCount = fetchedContent.commentCount ?? 0
+
+            // Check follow status for the creator
+            if let creatorId = fetchedContent.creatorId?.id {
+                if let creator = try? await contentService.fetchCreator(id: creatorId) {
+                    isFollowingCreator = creator.isFollowing ?? false
+                }
+            }
         } else {
             loadMockContent(id: id)
         }
@@ -272,6 +284,29 @@ final class PlayerViewModel {
             isSaved = response.saved
             saveCount = response.saveCount
         }
+    }
+
+    func toggleFollowCreator() async {
+        guard let creatorId = content?.creatorId?.id, !isFollowLoading else { return }
+        isFollowLoading = true
+        let wasFollowing = isFollowingCreator
+
+        // Optimistic update
+        isFollowingCreator.toggle()
+        Haptics.light()
+
+        do {
+            if wasFollowing {
+                try await userService.unfollow(userId: creatorId)
+            } else {
+                try await userService.follow(userId: creatorId)
+            }
+        } catch {
+            isFollowingCreator = wasFollowing
+            Haptics.error()
+        }
+
+        isFollowLoading = false
     }
 
     func rate(_ value: Int) async {

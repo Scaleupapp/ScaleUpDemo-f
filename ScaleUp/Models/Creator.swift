@@ -27,6 +27,9 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
     let isFollowing: Bool?
     let totalViews: Int?
     let mutualFollowers: MutualFollowersInfo?
+    let education: [Education]?
+    let workExperience: [WorkExperience]?
+    let skills: [String]?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
@@ -34,6 +37,7 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         case tier, followersCount, contentCount, averageRating
         case domain, specializations, isVerified, createdAt
         case isFollowing, totalViews, mutualFollowers
+        case education, workExperience, skills
         case creatorProfile
     }
 
@@ -78,6 +82,9 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         contentCount = try container.decodeIfPresent(Int.self, forKey: .contentCount) ?? nested?.stats?.totalContent
         averageRating = try container.decodeIfPresent(Double.self, forKey: .averageRating) ?? nested?.stats?.averageRating
         followersCount = try container.decodeIfPresent(Int.self, forKey: .followersCount) ?? nested?.stats?.totalFollowers
+        education = try container.decodeIfPresent([Education].self, forKey: .education)
+        workExperience = try container.decodeIfPresent([WorkExperience].self, forKey: .workExperience)
+        skills = try container.decodeIfPresent([String].self, forKey: .skills)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -99,6 +106,9 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         try container.encodeIfPresent(isFollowing, forKey: .isFollowing)
         try container.encodeIfPresent(totalViews, forKey: .totalViews)
         try container.encodeIfPresent(mutualFollowers, forKey: .mutualFollowers)
+        try container.encodeIfPresent(education, forKey: .education)
+        try container.encodeIfPresent(workExperience, forKey: .workExperience)
+        try container.encodeIfPresent(skills, forKey: .skills)
     }
 
     // Manual init for mock/fallback
@@ -109,7 +119,9 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         domain: String? = nil, specializations: [String]? = nil,
         isVerified: Bool? = nil, createdAt: Date? = nil,
         isFollowing: Bool? = nil, totalViews: Int? = nil,
-        mutualFollowers: MutualFollowersInfo? = nil
+        mutualFollowers: MutualFollowersInfo? = nil,
+        education: [Education]? = nil, workExperience: [WorkExperience]? = nil,
+        skills: [String]? = nil
     ) {
         self.id = id
         self.firstName = firstName
@@ -128,6 +140,9 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         self.isFollowing = isFollowing
         self.totalViews = totalViews
         self.mutualFollowers = mutualFollowers
+        self.education = education
+        self.workExperience = workExperience
+        self.skills = skills
     }
 
     var displayName: String {
