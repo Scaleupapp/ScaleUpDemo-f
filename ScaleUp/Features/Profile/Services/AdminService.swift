@@ -58,9 +58,13 @@ actor AdminService {
         _ = try await api.requestRaw(AdminEndpoints.moderateContent(id: id), body: body)
     }
 
-    func promoteCreator(userId: String, tier: String) async throws {
-        let body = PromoteRequest(tier: tier)
+    func promoteCreator(userId: String, tier: String, reason: String? = nil) async throws {
+        let body = PromoteRequest(tier: tier, reason: reason)
         _ = try await api.requestRaw(AdminEndpoints.promoteCreator(userId: userId), body: body)
+    }
+
+    func fetchCreators(search: String? = nil, page: Int = 1) async throws -> [Creator] {
+        try await api.request(AdminEndpoints.creators(search: search, page: page))
     }
 
     // MARK: - Content Moderation
@@ -166,6 +170,7 @@ private struct ModerateRequest: Encodable, Sendable {
 
 private struct PromoteRequest: Encodable, Sendable {
     let tier: String
+    let reason: String?
 }
 
 private struct RemoveContentRequest: Encodable, Sendable {
@@ -183,6 +188,7 @@ private enum AdminEndpoints: Endpoint {
     case rejectApplication(id: String)
     case moderateContent(id: String)
     case promoteCreator(userId: String)
+    case creators(search: String?, page: Int)
     case content(status: String?, minReports: Int?, search: String?, page: Int)
     case removeContent(id: String)
     case dismissReports(id: String)
@@ -198,6 +204,7 @@ private enum AdminEndpoints: Endpoint {
         case .rejectApplication(let id): return "/admin/applications/\(id)/reject"
         case .moderateContent(let id): return "/admin/content/\(id)/moderate"
         case .promoteCreator(let id): return "/admin/creators/\(id)/promote"
+        case .creators: return "/admin/creators"
         case .content: return "/admin/content"
         case .removeContent(let id): return "/admin/content/\(id)/remove"
         case .dismissReports(let id): return "/admin/content/\(id)/dismiss"
@@ -207,7 +214,7 @@ private enum AdminEndpoints: Endpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .stats, .users, .applications, .content, .contentReports: return .get
+        case .stats, .users, .applications, .content, .contentReports, .creators: return .get
         case .ban, .unban, .moderateContent, .promoteCreator, .removeContent, .dismissReports: return .put
         case .rejectApplication: return .post
         }
@@ -222,6 +229,10 @@ private enum AdminEndpoints: Endpoint {
             return items
         case .applications(let page):
             return [URLQueryItem(name: "page", value: "\(page)"), URLQueryItem(name: "limit", value: "20")]
+        case .creators(let search, let page):
+            var items = [URLQueryItem(name: "page", value: "\(page)"), URLQueryItem(name: "limit", value: "50")]
+            if let search { items.append(URLQueryItem(name: "search", value: search)) }
+            return items
         case .content(let status, let minReports, let search, let page):
             var items = [URLQueryItem(name: "page", value: "\(page)"), URLQueryItem(name: "limit", value: "20")]
             if let status { items.append(URLQueryItem(name: "status", value: status)) }

@@ -41,6 +41,22 @@ struct User: Codable, Sendable, Identifiable {
         }
         return firstName
     }
+
+    init(partial: PartialUser) {
+        self.id = partial.id
+        self.firstName = partial.firstName ?? "Unknown"
+        self.lastName = partial.lastName
+        self.email = partial.email
+        self.profilePicture = partial.profilePicture
+        self.education = partial.education
+        self.workExperience = partial.workExperience
+        self.skills = partial.skills
+        self.role = .consumer
+        self.phone = nil; self.username = nil; self.bio = nil
+        self.authProvider = nil; self.onboardingComplete = nil; self.onboardingStep = nil
+        self.followersCount = nil; self.followingCount = nil; self.isActive = nil
+        self.location = nil; self.dateOfBirth = nil; self.createdAt = nil
+    }
 }
 
 // MARK: - Enums

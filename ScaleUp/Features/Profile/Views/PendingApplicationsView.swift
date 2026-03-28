@@ -12,7 +12,13 @@ final class PendingApplicationsViewModel {
 
     func loadApplications() async {
         isLoading = true
-        applications = (try? await adminService.fetchApplications()) ?? []
+        errorMessage = nil
+        do {
+            applications = try await adminService.fetchApplications()
+        } catch {
+            errorMessage = "\(error)"
+            applications = []
+        }
         isLoading = false
     }
 
@@ -94,10 +100,17 @@ struct PendingApplicationsView: View {
             Text("No pending applications")
                 .font(Typography.bodyBold)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text("Check back later for new applications in your domain")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textTertiary)
-                .multilineTextAlignment(.center)
+            if let error = viewModel.errorMessage {
+                Text(error)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.error)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Check back later for new applications in your domain")
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(Spacing.xl)
     }
@@ -201,7 +214,124 @@ struct ApplicationReviewSheet: View {
                                 .foregroundStyle(ColorTokens.gold)
                         }
 
-                        // Details
+                        // Applicant Background
+                        if let user = application.applicant {
+                            let hasBackground = (user.education != nil && !user.education!.isEmpty) ||
+                                (user.workExperience != nil && !user.workExperience!.isEmpty) ||
+                                (user.skills != nil && !user.skills!.isEmpty)
+                            if hasBackground {
+                                VStack(alignment: .leading, spacing: Spacing.sm) {
+                                    Text("Applicant Background")
+                                        .font(Typography.bodyBold)
+                                        .foregroundStyle(ColorTokens.textSecondary)
+
+                                    if let education = user.education, !education.isEmpty {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Education")
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                            ForEach(education) { edu in
+                                                HStack(spacing: 6) {
+                                                    Image(systemName: "graduationcap")
+                                                        .font(.system(size: 11))
+                                                        .foregroundStyle(ColorTokens.info)
+                                                    VStack(alignment: .leading, spacing: 1) {
+                                                        Text(edu.degree)
+                                                            .font(Typography.bodySmall)
+                                                            .foregroundStyle(ColorTokens.textPrimary)
+                                                        HStack(spacing: 4) {
+                                                            Text(edu.institution)
+                                                                .font(Typography.micro)
+                                                                .foregroundStyle(ColorTokens.textTertiary)
+                                                            if let year = edu.yearOfCompletion {
+                                                                Text("· \(String(year))")
+                                                                    .font(Typography.micro)
+                                                                    .foregroundStyle(ColorTokens.textTertiary)
+                                                            }
+                                                            if edu.currentlyPursuing == true {
+                                                                Text("(Current)")
+                                                                    .font(Typography.micro)
+                                                                    .foregroundStyle(ColorTokens.gold)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(Spacing.sm)
+                                        .background(ColorTokens.surface)
+                                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                                    }
+
+                                    if let work = user.workExperience, !work.isEmpty {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Work Experience")
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                            ForEach(work) { exp in
+                                                HStack(spacing: 6) {
+                                                    Image(systemName: "briefcase")
+                                                        .font(.system(size: 11))
+                                                        .foregroundStyle(ColorTokens.gold)
+                                                    VStack(alignment: .leading, spacing: 1) {
+                                                        Text(exp.role)
+                                                            .font(Typography.bodySmall)
+                                                            .foregroundStyle(ColorTokens.textPrimary)
+                                                        HStack(spacing: 4) {
+                                                            Text(exp.company)
+                                                                .font(Typography.micro)
+                                                                .foregroundStyle(ColorTokens.textTertiary)
+                                                            if let years = exp.years {
+                                                                Text("· \(years) yr\(years == 1 ? "" : "s")")
+                                                                    .font(Typography.micro)
+                                                                    .foregroundStyle(ColorTokens.textTertiary)
+                                                            }
+                                                            if exp.currentlyWorking == true {
+                                                                Text("(Current)")
+                                                                    .font(Typography.micro)
+                                                                    .foregroundStyle(ColorTokens.gold)
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(Spacing.sm)
+                                        .background(ColorTokens.surface)
+                                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                                    }
+
+                                    if let skills = user.skills, !skills.isEmpty {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Skills")
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                            FlowLayout(spacing: 6) {
+                                                ForEach(skills, id: \.self) { skill in
+                                                    Text(skill.capitalized)
+                                                        .font(Typography.micro)
+                                                        .foregroundStyle(ColorTokens.textPrimary)
+                                                        .padding(.horizontal, 8)
+                                                        .padding(.vertical, 4)
+                                                        .background(ColorTokens.surfaceElevated)
+                                                        .clipShape(Capsule())
+                                                }
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(Spacing.sm)
+                                        .background(ColorTokens.surface)
+                                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                                    }
+                                }
+
+                                Divider().overlay(ColorTokens.divider)
+                            }
+                        }
+
+                        // Application Details
                         if let specs = application.specializations, !specs.isEmpty {
                             detailSection(title: "Specializations", value: specs.joined(separator: ", "))
                         }
@@ -212,7 +342,56 @@ struct ApplicationReviewSheet: View {
                             detailSection(title: "Motivation", value: mot)
                         }
                         if let links = application.sampleContentLinks, !links.isEmpty {
-                            detailSection(title: "Sample Content", value: links.joined(separator: "\n"))
+                            linksSection(title: "Sample Content", links: links)
+                        }
+                        if let url = application.portfolioUrl, !url.isEmpty {
+                            linksSection(title: "Portfolio", links: [url])
+                        }
+                        if let social = application.socialLinks {
+                            let socialLinks: [(String, String)] = [
+                                ("LinkedIn", social.linkedin),
+                                ("Twitter", social.twitter),
+                                ("YouTube", social.youtube),
+                                ("Website", social.website),
+                            ].compactMap { label, val in
+                                guard let v = val, !v.isEmpty else { return nil }
+                                return (label, v)
+                            }
+                            if !socialLinks.isEmpty {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("Social Links")
+                                        .font(Typography.caption)
+                                        .foregroundStyle(ColorTokens.textTertiary)
+                                    ForEach(socialLinks, id: \.0) { label, url in
+                                        if let linkURL = URL(string: url.hasPrefix("http") ? url : "https://\(url)") {
+                                            Link(destination: linkURL) {
+                                                HStack(spacing: 6) {
+                                                    Image(systemName: socialIcon(for: label))
+                                                        .font(.system(size: 12))
+                                                    Text(label)
+                                                        .font(Typography.bodySmall)
+                                                    Spacer()
+                                                    Image(systemName: "arrow.up.right.square")
+                                                        .font(.system(size: 11))
+                                                }
+                                                .foregroundStyle(ColorTokens.info)
+                                            }
+                                        } else {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: socialIcon(for: label))
+                                                    .font(.system(size: 12))
+                                                Text("\(label): \(url)")
+                                                    .font(Typography.bodySmall)
+                                                    .foregroundStyle(ColorTokens.textPrimary)
+                                            }
+                                        }
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(Spacing.sm)
+                                .background(ColorTokens.surface)
+                                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                            }
                         }
 
                         Divider().overlay(ColorTokens.divider)
@@ -307,5 +486,46 @@ struct ApplicationReviewSheet: View {
         .padding(Spacing.sm)
         .background(ColorTokens.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+    }
+
+    private func linksSection(title: String, links: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textTertiary)
+            ForEach(links, id: \.self) { link in
+                if let url = URL(string: link.hasPrefix("http") ? link : "https://\(link)") {
+                    Link(destination: url) {
+                        HStack(spacing: 6) {
+                            Text(link)
+                                .font(Typography.bodySmall)
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.system(size: 11))
+                        }
+                        .foregroundStyle(ColorTokens.info)
+                    }
+                } else {
+                    Text(link)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(Spacing.sm)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+    }
+
+    private func socialIcon(for label: String) -> String {
+        switch label {
+        case "LinkedIn": return "link"
+        case "Twitter": return "at"
+        case "YouTube": return "play.rectangle"
+        case "Website": return "globe"
+        default: return "link"
+        }
     }
 }

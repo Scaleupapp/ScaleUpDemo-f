@@ -46,12 +46,15 @@ struct CreatorApplication: Codable, Sendable, Identifiable {
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
 
-        // userId can be a string or populated User object
+        // userId can be a string or populated User object (partial — may lack role)
         if let userObj = try? container.decode(User.self, forKey: .userId) {
             applicant = userObj
             userId = userObj.id
+        } else if let partial = try? container.decode(PartialUser.self, forKey: .userId) {
+            applicant = User(partial: partial)
+            userId = partial.id
         } else {
-            userId = try container.decodeIfPresent(String.self, forKey: .userId)
+            userId = try? container.decode(String.self, forKey: .userId)
             applicant = try container.decodeIfPresent(User.self, forKey: .applicant)
         }
     }
@@ -128,6 +131,25 @@ private struct EndorsementCreator: Decodable, Sendable {
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case firstName, lastName, username
+    }
+}
+
+// MARK: - Partial User (populated without all fields like role)
+
+struct PartialUser: Decodable, Sendable {
+    let id: String
+    let firstName: String?
+    let lastName: String?
+    let email: String?
+    let profilePicture: String?
+    let education: [Education]?
+    let workExperience: [WorkExperience]?
+    let skills: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case firstName, lastName, email, profilePicture
+        case education, workExperience, skills
     }
 }
 
