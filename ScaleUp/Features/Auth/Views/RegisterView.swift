@@ -85,13 +85,15 @@ struct RegisterView: View {
                     ) {
                         Task {
                             if let authData = await viewModel.register() {
+                                // Record consent
+                                _ = try? await APIClient.shared.requestRaw(ConsentEndpoint(), body: ConsentBody(terms: true, privacy: true))
                                 await appState.handleAuthSuccess(authData)
                             }
                         }
                     }
 
                     // Terms
-                    Text("By creating an account, you agree to our\nTerms of Service and Privacy Policy")
+                    Text("By creating an account, you agree to our **Terms of Service** and **Privacy Policy**")
                         .font(Typography.caption)
                         .foregroundStyle(ColorTokens.textTertiary)
                         .multilineTextAlignment(.center)
@@ -131,4 +133,16 @@ struct RegisterView: View {
         .background(ColorTokens.error.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }
+}
+
+// MARK: - Consent Endpoint (shared)
+
+struct ConsentEndpoint: Endpoint {
+    let path = "/privacy/consent"
+    let method = HTTPMethod.put
+}
+
+struct ConsentBody: Encodable, Sendable {
+    let terms: Bool
+    let privacy: Bool
 }

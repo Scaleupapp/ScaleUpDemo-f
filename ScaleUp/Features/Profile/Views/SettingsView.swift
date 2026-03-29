@@ -8,8 +8,11 @@ struct SettingsView: View {
     @State private var isDeactivating = false
     @State private var showClearCacheAlert = false
     @State private var cacheCleared = false
+    @State private var isExportingData = false
+    @State private var showExportSuccess = false
 
     private let userService = UserService()
+    private let api = APIClient.shared
 
     var body: some View {
         ZStack {
@@ -18,6 +21,7 @@ struct SettingsView: View {
             List {
                 accountSection
                 preferencesSection
+                privacySection
                 appSection
                 aboutSection
                 dangerSection
@@ -123,17 +127,73 @@ struct SettingsView: View {
         .listRowBackground(ColorTokens.surface)
     }
 
+    // MARK: - Privacy & Data
+
+    private var privacySection: some View {
+        Section {
+            NavigationLink {
+                LegalPageView(type: .privacyPolicy)
+            } label: {
+                HStack {
+                    Image(systemName: "hand.raised.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+                    Text("Privacy Policy")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Spacer()
+                }
+            }
+
+            NavigationLink {
+                LegalPageView(type: .termsOfService)
+            } label: {
+                HStack {
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+                    Text("Terms of Service")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Spacer()
+                }
+            }
+
+            Button {
+                Task { await exportData() }
+            } label: {
+                HStack {
+                    Image(systemName: "square.and.arrow.down")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+                    Text("Download My Data")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Spacer()
+                    if isExportingData {
+                        ProgressView().tint(ColorTokens.gold)
+                    } else if showExportSuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(ColorTokens.success)
+                            .font(.system(size: 14))
+                    }
+                }
+            }
+            .disabled(isExportingData)
+        } header: {
+            sectionHeader("Privacy & Data")
+        }
+        .listRowBackground(ColorTokens.surface)
+    }
+
     // MARK: - About
 
     private var aboutSection: some View {
         Section {
             settingsInfoRow(icon: "info.circle.fill", title: "Version", value: "1.0.0")
-
-            settingsLinkRow(icon: "doc.text.fill", title: "Terms of Service",
-                          urlString: "https://scaleup.io/terms")
-
-            settingsLinkRow(icon: "hand.raised.fill", title: "Privacy Policy",
-                          urlString: "https://scaleup.io/privacy")
         } header: {
             sectionHeader("About")
         }
@@ -276,6 +336,32 @@ struct SettingsView: View {
         }
     }
 
+    private func exportData() async {
+        isExportingData = true
+        do {
+            let data = try await api.requestRaw(ExportEndpoint())
+            // Save to documents directory
+            let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            let fileURL = docsURL.appendingPathComponent("ScaleUp_Data_Export.json")
+            try data.write(to: fileURL)
+
+            // Share via system share sheet
+            await MainActor.run {
+                let activityVC = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let rootVC = windowScene.windows.first?.rootViewController {
+                    rootVC.present(activityVC, animated: true)
+                }
+            }
+            showExportSuccess = true
+            Haptics.success()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { showExportSuccess = false }
+        } catch {
+            Haptics.error()
+        }
+        isExportingData = false
+    }
+
     private func deactivateAccount() async {
         isDeactivating = true
         do {
@@ -285,6 +371,105 @@ struct SettingsView: View {
             // Silently fail — user stays logged in
         }
         isDeactivating = false
+    }
+}
+
+// MARK: - Export Endpoint
+
+private struct ExportEndpoint: Endpoint {
+    let path = "/privacy/export"
+    let method = HTTPMethod.get
+}
+
+// MARK: - Legal Page View
+
+enum LegalPageType {
+    case privacyPolicy
+    case termsOfService
+
+    var endpoint: String {
+        switch self {
+        case .privacyPolicy: return "/legal/privacy-policy"
+        case .termsOfService: return "/legal/terms-of-service"
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .privacyPolicy: return "Privacy Policy"
+        case .termsOfService: return "Terms of Service"
+        }
+    }
+}
+
+struct LegalSection: Codable {
+    let heading: String
+    let body: String
+}
+
+struct LegalDocument: Codable {
+    let version: String
+    let lastUpdated: String
+    let title: String
+    let sections: [LegalSection]
+}
+
+private struct LegalEndpoint: Endpoint {
+    let path: String
+    let method = HTTPMethod.get
+    var requiresAuth: Bool { false }
+}
+
+struct LegalPageView: View {
+    let type: LegalPageType
+    @State private var document: LegalDocument?
+    @State private var isLoading = true
+
+    var body: some View {
+        ZStack {
+            ColorTokens.background.ignoresSafeArea()
+
+            if isLoading {
+                ProgressView().tint(ColorTokens.gold)
+            } else if let doc = document {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Spacing.lg) {
+                        Text("Last updated: \(doc.lastUpdated) | Version \(doc.version)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .padding(.bottom, Spacing.sm)
+
+                        ForEach(doc.sections, id: \.heading) { section in
+                            VStack(alignment: .leading, spacing: Spacing.sm) {
+                                Text(section.heading)
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(ColorTokens.textPrimary)
+
+                                Text(.init(section.body)) // Supports **bold** markdown
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(ColorTokens.textSecondary)
+                                    .lineSpacing(4)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.vertical, Spacing.md)
+                }
+            } else {
+                Text("Could not load document.")
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .navigationTitle(type.title)
+        .navigationBarTitleDisplayMode(.large)
+        .task {
+            do {
+                document = try await APIClient.shared.request(LegalEndpoint(path: type.endpoint))
+                isLoading = false
+            } catch {
+                isLoading = false
+            }
+        }
     }
 }
 
