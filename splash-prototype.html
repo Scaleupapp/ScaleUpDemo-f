@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ScaleUp Splash Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  .label {
+    color: rgba(255,255,255,0.4);
+    font-size: 13px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .phone {
+    width: 300px;
+    height: 650px;
+    background: #ffffff;
+    border-radius: 40px;
+    border: 3px solid #333;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .phone video {
+    position: absolute;
+    top: 42%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 240px;
+    height: 240px;
+    object-fit: contain;
+  }
+  .tagline {
+    position: absolute;
+    top: 49.5%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #17354A;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+  }
+  .tagline.show {
+    opacity: 1;
+  }
+  .replay-btn {
+    margin-top: 24px;
+    padding: 10px 28px;
+    background: #E8B84B;
+    color: #0f1923;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .replay-btn:hover { transform: scale(1.05); }
+</style>
+</head>
+<body>
+
+<div class="label">Splash Preview — Click to replay</div>
+
+<div class="phone" onclick="replay()">
+  <video id="vid" muted playsinline>
+    <source src="ScaleUp/Resources/splash_animation.mp4" type="video/mp4">
+  </video>
+  <div class="tagline" id="tagline">Learn with purpose. Achieve your goals.</div>
+</div>
+
+<button class="replay-btn" onclick="replay()">Replay</button>
+
+<script>
+  const vid = document.getElementById('vid');
+  const tag = document.getElementById('tagline');
+
+  function replay() {
+    tag.classList.remove('show');
+    vid.currentTime = 0;
+    vid.play();
+  }
+
+  vid.addEventListener('timeupdate', () => {
+    if (vid.currentTime > vid.duration - 0.4) {
+      tag.classList.add('show');
+    }
+  });
+
+  vid.addEventListener('ended', () => {
+    tag.classList.add('show');
+  });
+
+  setTimeout(replay, 400);
+</script>
+
+</body>
+</html>

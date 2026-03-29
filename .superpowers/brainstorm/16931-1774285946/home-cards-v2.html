@@ -1,0 +1,197 @@
+<h2>Home Tab — Card Style Options</h2>
+<p class="subtitle">Three card design directions for the daily challenge. Pick the one that feels right.</p>
+
+<div class="cards">
+  <!-- Option A: Compact Info Card -->
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0a0a0a;padding:16px;font-family:system-ui;border-radius:8px 8px 0 0;">
+        <!-- Card A: Compact -->
+        <div style="background:linear-gradient(135deg,#1a1500,#0d0d0d);border:1.5px solid rgba(255,215,0,0.3);border-radius:20px;padding:20px;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:radial-gradient(circle,rgba(255,215,0,0.1),transparent);border-radius:50%;"></div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+            <div>
+              <div style="color:#FFD700;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">⚡ Daily Challenge</div>
+              <div style="color:#fff;font-size:18px;font-weight:700;">Product Management</div>
+            </div>
+            <div style="background:rgba(255,215,0,0.15);border-radius:12px;padding:6px 10px;">
+              <div style="color:#FFD700;font-size:11px;font-weight:600;">23 playing</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:4px;color:#888;font-size:12px;">
+              <span style="color:#FFD700;">◷</span> 10 min
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;color:#888;font-size:12px;">
+              <span style="color:#FFD700;">◆</span> 10 Qs
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;color:#888;font-size:12px;">
+              <span style="color:#FFD700;">◑</span> Closes 11:59 PM
+            </div>
+          </div>
+          <div style="background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:12px;padding:12px;text-align:center;font-weight:700;font-size:14px;color:#000;">Take the Challenge →</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Compact Info Card</h3>
+      <p>Dense but clean. All info visible at once. Gold gradient border. Single prominent CTA.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Hero Card with Stats -->
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0a0a0a;padding:16px;font-family:system-ui;border-radius:8px 8px 0 0;">
+        <div style="background:linear-gradient(160deg,#1a1200 0%,#0a0a0a 40%,#0a0a0a 60%,#0f0a00 100%);border-radius:20px;padding:24px;position:relative;overflow:hidden;border:1px solid rgba(255,215,0,0.15);">
+          <!-- Decorative elements -->
+          <div style="position:absolute;top:0;right:0;width:150px;height:150px;background:radial-gradient(circle at top right,rgba(255,165,0,0.12),transparent 70%);"></div>
+          <div style="position:absolute;bottom:0;left:0;width:100px;height:100px;background:radial-gradient(circle at bottom left,rgba(255,215,0,0.06),transparent 70%);"></div>
+
+          <div style="color:#FFD700;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">⚡ Today's Challenge</div>
+          <div style="color:#fff;font-size:22px;font-weight:800;margin-bottom:4px;">Product Management</div>
+          <div style="color:#777;font-size:13px;margin-bottom:20px;">Test your skills against other learners</div>
+
+          <!-- Stats row -->
+          <div style="display:flex;gap:1px;margin-bottom:20px;">
+            <div style="flex:1;background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:10px 0 0 10px;">
+              <div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Questions</div>
+              <div style="color:#fff;font-size:18px;font-weight:700;">10</div>
+            </div>
+            <div style="flex:1;background:rgba(255,255,255,0.04);padding:10px 12px;">
+              <div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Time</div>
+              <div style="color:#fff;font-size:18px;font-weight:700;">~10m</div>
+            </div>
+            <div style="flex:1;background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:0 10px 10px 0;">
+              <div style="color:#666;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;">Playing</div>
+              <div style="color:#FFD700;font-size:18px;font-weight:700;">23</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;">
+            <div style="flex:2;background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:12px;padding:13px;text-align:center;font-weight:700;font-size:14px;color:#000;">Take the Challenge</div>
+            <div style="flex:1;background:rgba(255,255,255,0.06);border-radius:12px;padding:13px;text-align:center;font-weight:600;font-size:13px;color:#888;">Leaderboard</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Hero Card with Stats Bar</h3>
+      <p>Bigger presence. Stats in segmented bar. Two CTAs (challenge + leaderboard). More visual weight on Home.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Minimal Swipeable -->
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;">
+      <div style="background:#0a0a0a;padding:16px;font-family:system-ui;border-radius:8px 8px 0 0;">
+        <!-- Shows two cards side by side to imply swiping -->
+        <div style="display:flex;gap:10px;overflow:hidden;">
+          <!-- Primary card -->
+          <div style="min-width:75%;background:#111;border-radius:16px;padding:18px;border:1px solid rgba(255,215,0,0.2);position:relative;">
+            <div style="position:absolute;top:14px;right:14px;background:rgba(255,215,0,0.15);border-radius:20px;padding:4px 10px;">
+              <span style="color:#FFD700;font-size:11px;font-weight:600;">LIVE</span>
+            </div>
+            <div style="color:#FFD700;font-size:22px;margin-bottom:8px;">🏆</div>
+            <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:3px;">Product Management</div>
+            <div style="color:#888;font-size:12px;margin-bottom:16px;">10 Qs · 23 playing · Ends midnight</div>
+            <div style="background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:10px;padding:11px;text-align:center;font-weight:700;font-size:13px;color:#000;">Challenge →</div>
+          </div>
+          <!-- Peeking second card -->
+          <div style="min-width:75%;background:#111;border-radius:16px;padding:18px;border:1px solid #222;opacity:0.6;">
+            <div style="position:absolute;top:14px;right:14px;background:rgba(255,215,0,0.15);border-radius:20px;padding:4px 10px;">
+              <span style="color:#FFD700;font-size:11px;font-weight:600;">LIVE</span>
+            </div>
+            <div style="color:#FFD700;font-size:22px;margin-bottom:8px;">🏆</div>
+            <div style="color:#fff;font-size:16px;font-weight:700;margin-bottom:3px;">Finance</div>
+            <div style="color:#888;font-size:12px;margin-bottom:16px;">10 Qs · 8 playing</div>
+            <div style="border:1.5px solid #FFD700;border-radius:10px;padding:11px;text-align:center;font-weight:600;font-size:13px;color:#FFD700;">Challenge →</div>
+          </div>
+        </div>
+        <!-- Page dots -->
+        <div style="display:flex;justify-content:center;gap:6px;margin-top:12px;">
+          <div style="width:8px;height:8px;border-radius:4px;background:#FFD700;"></div>
+          <div style="width:8px;height:8px;border-radius:4px;background:#333;"></div>
+          <div style="width:8px;height:8px;border-radius:4px;background:#333;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Swipeable Carousel Cards</h3>
+      <p>Compact per card. Horizontal swipe to see other topics. LIVE badge. Less vertical space on Home, scales well with many topics.</p>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:20px;">
+  <h3>Completed State (applies to any card style)</h3>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">After Completing Challenge</div>
+    <div class="mockup-body" style="background:#0a0a0a;padding:16px;font-family:system-ui;">
+      <div style="background:linear-gradient(160deg,#001a00 0%,#0a0a0a 50%,#0a0a00 100%);border-radius:20px;padding:22px;border:1px solid rgba(34,197,94,0.2);position:relative;overflow:hidden;">
+        <div style="position:absolute;top:-30px;right:-30px;width:120px;height:120px;background:radial-gradient(circle,rgba(34,197,94,0.1),transparent);border-radius:50%;"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+          <div>
+            <div style="color:#22c55e;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;">✓ Completed</div>
+            <div style="color:#fff;font-size:18px;font-weight:700;">Product Management</div>
+          </div>
+          <div style="background:rgba(34,197,94,0.12);border-radius:12px;padding:4px 10px;">
+            <div style="color:#22c55e;font-size:11px;font-weight:600;">🏆 New Best!</div>
+          </div>
+        </div>
+
+        <!-- Score display -->
+        <div style="display:flex;gap:1px;margin-bottom:16px;">
+          <div style="flex:1;background:rgba(255,255,255,0.04);padding:12px;border-radius:10px 0 0 10px;text-align:center;">
+            <div style="color:#666;font-size:10px;text-transform:uppercase;">Score</div>
+            <div style="color:#FFD700;font-size:24px;font-weight:800;">88.3</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.04);padding:12px;text-align:center;">
+            <div style="color:#666;font-size:10px;text-transform:uppercase;">Rank</div>
+            <div style="color:#fff;font-size:24px;font-weight:800;">Top 15%</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.04);padding:12px;border-radius:0 10px 10px 0;text-align:center;">
+            <div style="color:#666;font-size:10px;text-transform:uppercase;">Accuracy</div>
+            <div style="color:#fff;font-size:24px;font-weight:800;">8/10</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:12px;padding:12px;text-align:center;font-weight:700;font-size:13px;color:#000;">Share Score</div>
+          <div style="flex:1;background:rgba(255,255,255,0.06);border-radius:12px;padding:12px;text-align:center;font-weight:600;font-size:13px;color:#aaa;">View Board</div>
+          <div style="width:46px;background:rgba(255,255,255,0.06);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;">🔗</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">Share Card Preview</div>
+    <div class="mockup-body" style="background:#0a0a0a;padding:16px;font-family:system-ui;">
+      <div style="background:linear-gradient(160deg,#1a1200,#0a0a0a,#0f0a00);border-radius:20px;padding:24px;border:1px solid rgba(255,215,0,0.2);text-align:center;">
+        <!-- App logo area -->
+        <div style="color:#FFD700;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;">ScaleUp</div>
+
+        <div style="color:#888;font-size:12px;margin-bottom:4px;">Daily Challenge · Mar 23, 2026</div>
+        <div style="color:#fff;font-size:20px;font-weight:700;margin-bottom:20px;">Product Management</div>
+
+        <!-- Score circle -->
+        <div style="width:90px;height:90px;border-radius:45px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.05));border:2.5px solid #FFD700;margin:0 auto 16px;display:flex;align-items:center;justify-content:center;">
+          <div>
+            <div style="color:#FFD700;font-size:28px;font-weight:800;">88.3</div>
+          </div>
+        </div>
+
+        <div style="color:#fff;font-size:15px;font-weight:600;margin-bottom:4px;">Top 15% · 8/10 correct</div>
+        <div style="color:#888;font-size:13px;margin-bottom:20px;">🏆 New Personal Best!</div>
+
+        <div style="background:linear-gradient(135deg,#FFD700,#FFA500);border-radius:12px;padding:12px;font-weight:700;font-size:14px;color:#000;">Can you beat my score? →</div>
+        <div style="color:#555;font-size:11px;margin-top:10px;">scaleup.app/challenge</div>
+      </div>
+    </div>
+  </div>
+</div>
