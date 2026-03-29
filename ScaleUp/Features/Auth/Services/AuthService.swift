@@ -22,7 +22,7 @@ actor AuthService {
 
     func login(email: String, password: String) async throws -> AuthData {
         let body = LoginRequest(email: email, password: password)
-        let data = try await api.requestRaw(AuthEndpoints.login, body: body)
+        let data = try await api.requestRawData(AuthEndpoints.login, body: body)
         return try parseAuthResponse(data)
     }
 
@@ -30,7 +30,7 @@ actor AuthService {
 
     func googleAuth(idToken: String) async throws -> AuthData {
         let body = GoogleAuthRequest(idToken: idToken)
-        let data = try await api.requestRaw(AuthEndpoints.google, body: body)
+        let data = try await api.requestRawData(AuthEndpoints.google, body: body)
         return try parseAuthResponse(data)
     }
 

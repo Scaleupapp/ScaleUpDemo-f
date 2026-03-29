@@ -339,7 +339,7 @@ struct SettingsView: View {
     private func exportData() async {
         isExportingData = true
         do {
-            let data = try await api.requestRaw(ExportEndpoint())
+            let data = try await api.requestRawData(ExportEndpoint())
             // Save to documents directory
             let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
             let fileURL = docsURL.appendingPathComponent("ScaleUp_Data_Export.json")

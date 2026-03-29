@@ -101,7 +101,7 @@ struct LoginView: View {
 
             VStack(spacing: Spacing.sm) {
                 Text("Account Deactivated")
-                    .font(Typography.displaySmall)
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(ColorTokens.textPrimary)
 
                 if let info = viewModel.reactivationInfo {
