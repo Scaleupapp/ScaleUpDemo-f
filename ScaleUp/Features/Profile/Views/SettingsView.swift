@@ -41,7 +41,7 @@ struct SettingsView: View {
                 Task { await deactivateAccount() }
             }
         } message: {
-            Text("This will deactivate your account. You can reactivate by logging in again within 30 days.")
+            Text("Your profile, progress, and content will be hidden. You have 30 days to log back in and reactivate before permanent deletion.")
         }
         .alert("Clear Cache", isPresented: $showClearCacheAlert) {
             Button("Cancel", role: .cancel) { }

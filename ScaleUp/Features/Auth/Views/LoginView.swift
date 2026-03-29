@@ -84,6 +84,63 @@ struct LoginView: View {
                 backButton
             }
         }
+        .sheet(isPresented: $viewModel.needsReactivation) {
+            reactivationSheet
+        }
+    }
+
+    // MARK: - Reactivation Sheet
+
+    private var reactivationSheet: some View {
+        VStack(spacing: Spacing.xl) {
+            Spacer().frame(height: Spacing.lg)
+
+            Image(systemName: "person.crop.circle.badge.clock")
+                .font(.system(size: 56))
+                .foregroundStyle(ColorTokens.gold)
+
+            VStack(spacing: Spacing.sm) {
+                Text("Account Deactivated")
+                    .font(Typography.displaySmall)
+                    .foregroundStyle(ColorTokens.textPrimary)
+
+                if let info = viewModel.reactivationInfo {
+                    Text("Your account was deactivated. You have **\(info.daysRemaining) days** left to reactivate before it is permanently deleted.")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+
+            if let error = viewModel.errorMessage {
+                errorBanner(error)
+            }
+
+            VStack(spacing: Spacing.sm) {
+                PrimaryButton(
+                    title: "Reactivate My Account",
+                    isLoading: viewModel.isLoading
+                ) {
+                    Task {
+                        if let authData = await viewModel.reactivateAccount() {
+                            await appState.handleAuthSuccess(authData)
+                        }
+                    }
+                }
+
+                Button("Cancel") {
+                    viewModel.cancelReactivation()
+                }
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textTertiary)
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.lg)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+        .background(ColorTokens.background)
     }
 
     // MARK: - Components

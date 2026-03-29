@@ -22,14 +22,46 @@ actor AuthService {
 
     func login(email: String, password: String) async throws -> AuthData {
         let body = LoginRequest(email: email, password: password)
-        return try await api.request(AuthEndpoints.login, body: body)
+        let data = try await api.requestRaw(AuthEndpoints.login, body: body)
+        return try parseAuthResponse(data)
     }
 
     // MARK: - Google Auth
 
     func googleAuth(idToken: String) async throws -> AuthData {
         let body = GoogleAuthRequest(idToken: idToken)
-        return try await api.request(AuthEndpoints.google, body: body)
+        let data = try await api.requestRaw(AuthEndpoints.google, body: body)
+        return try parseAuthResponse(data)
+    }
+
+    // MARK: - Reactivation
+
+    func reactivate(email: String, password: String) async throws -> AuthData {
+        let body = ReactivateRequest(email: email, password: password)
+        return try await api.request(AuthEndpoints.reactivate, body: body)
+    }
+
+    func reactivateWithGoogle(idToken: String) async throws -> AuthData {
+        let body = ReactivateGoogleRequest(googleIdToken: idToken)
+        return try await api.request(AuthEndpoints.reactivate, body: body)
+    }
+
+    // MARK: - Response Parsing
+
+    private func parseAuthResponse(_ data: Data) throws -> AuthData {
+        let decoder = JSONDecoder()
+        // Try parsing as standard API wrapper: { success, data: { ... } }
+        struct Wrapper<T: Decodable>: Decodable { let success: Bool; let data: T }
+
+        // Check if this is a reactivation response
+        if let wrapper = try? decoder.decode(Wrapper<ReactivationNeeded>.self, from: data),
+           wrapper.data.needsReactivation {
+            throw ReactivationRequiredError(info: wrapper.data)
+        }
+
+        // Normal auth response
+        let wrapper = try decoder.decode(Wrapper<AuthData>.self, from: data)
+        return wrapper.data
     }
 
     // MARK: - Phone OTP
@@ -69,10 +101,17 @@ actor AuthService {
 
 // MARK: - Endpoints
 
+// MARK: - Reactivation Error
+
+struct ReactivationRequiredError: Error, Sendable {
+    let info: ReactivationNeeded
+}
+
 private enum AuthEndpoints: Endpoint {
     case register, login, google
     case sendOTP, verifyOTP
     case forgotPassword, resetPassword
+    case reactivate
     case logout
 
     var path: String {
@@ -84,6 +123,7 @@ private enum AuthEndpoints: Endpoint {
         case .verifyOTP: return "/auth/phone/verify-otp"
         case .forgotPassword: return "/auth/forgot-password"
         case .resetPassword: return "/auth/reset-password"
+        case .reactivate: return "/auth/reactivate"
         case .logout: return "/auth/logout"
         }
     }
@@ -134,4 +174,13 @@ private struct ResetPasswordRequest: Encodable, Sendable {
     let email: String
     let otp: String
     let newPassword: String
+}
+
+private struct ReactivateRequest: Encodable, Sendable {
+    let email: String
+    let password: String
+}
+
+private struct ReactivateGoogleRequest: Encodable, Sendable {
+    let googleIdToken: String
 }

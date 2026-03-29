@@ -20,6 +20,10 @@ final class AuthViewModel {
     var otpSent = false
     var otpCooldown = 0
 
+    // Reactivation
+    var needsReactivation = false
+    var reactivationInfo: ReactivationNeeded?
+
     // MARK: - Dependencies
 
     private let authService = AuthService()
@@ -52,6 +56,7 @@ final class AuthViewModel {
         guard isLoginValid else { return nil }
         isLoading = true
         errorMessage = nil
+        needsReactivation = false
 
         do {
             let result = try await authService.login(
@@ -61,6 +66,11 @@ final class AuthViewModel {
             isLoading = false
             Haptics.success()
             return result
+        } catch let error as ReactivationRequiredError {
+            reactivationInfo = error.info
+            needsReactivation = true
+            isLoading = false
+            return nil
         } catch let error as APIError {
             errorMessage = error.errorDescription
             isLoading = false
@@ -72,6 +82,38 @@ final class AuthViewModel {
             Haptics.error()
             return nil
         }
+    }
+
+    func reactivateAccount() async -> AuthData? {
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let result = try await authService.reactivate(
+                email: email.trimmingCharacters(in: .whitespaces).lowercased(),
+                password: password
+            )
+            needsReactivation = false
+            reactivationInfo = nil
+            isLoading = false
+            Haptics.success()
+            return result
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+            isLoading = false
+            Haptics.error()
+            return nil
+        } catch {
+            errorMessage = "Could not reactivate. Please try again."
+            isLoading = false
+            Haptics.error()
+            return nil
+        }
+    }
+
+    func cancelReactivation() {
+        needsReactivation = false
+        reactivationInfo = nil
     }
 
     func register() async -> AuthData? {

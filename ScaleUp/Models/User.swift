@@ -94,4 +94,12 @@ struct AuthData: Codable, Sendable {
     let accessToken: String
     let refreshToken: String
     let isNewUser: Bool?
+    let reactivated: Bool?
+}
+
+struct ReactivationNeeded: Codable, Sendable {
+    let needsReactivation: Bool
+    let deactivatedAt: String
+    let daysRemaining: Int
+    let userId: String
 }
