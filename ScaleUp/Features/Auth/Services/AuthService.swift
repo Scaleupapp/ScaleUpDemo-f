@@ -50,6 +50,16 @@ actor AuthService {
 
     private func parseAuthResponse(_ data: Data) throws -> AuthData {
         let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let dateString = try container.decode(String.self)
+            let iso = ISO8601DateFormatter()
+            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = iso.date(from: dateString) { return date }
+            iso.formatOptions = [.withInternetDateTime]
+            if let date = iso.date(from: dateString) { return date }
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode date: \(dateString)")
+        }
         // Try parsing as standard API wrapper: { success, data: { ... } }
         struct Wrapper<T: Decodable>: Decodable { let success: Bool; let data: T }
 
