@@ -70,43 +70,13 @@ struct ActionBar: View {
         .padding(.vertical, Spacing.sm)
         .background(ColorTokens.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-        .overlay(alignment: .bottom) {
-            if showRatingPicker {
-                ratingPicker
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
-    }
-
-    // MARK: - Rating Picker
-
-    private var ratingPicker: some View {
-        VStack(spacing: Spacing.sm) {
-            Text("Rate this content")
-                .font(Typography.caption)
-                .foregroundStyle(ColorTokens.textSecondary)
-
-            HStack(spacing: Spacing.sm) {
-                ForEach(1...5, id: \.self) { star in
-                    Button {
-                        onRate(star)
-                        withAnimation {
-                            showRatingPicker = false
-                        }
-                    } label: {
-                        Image(systemName: star <= userRating ? "star.fill" : "star")
-                            .font(.system(size: 28))
-                            .foregroundStyle(star <= userRating ? ColorTokens.gold : ColorTokens.textTertiary)
-                    }
+        .confirmationDialog("Rate this content", isPresented: $showRatingPicker) {
+            ForEach(1...5, id: \.self) { star in
+                Button(String(repeating: "★", count: star) + String(repeating: "☆", count: 5 - star)) {
+                    onRate(star)
                 }
             }
         }
-        .padding(Spacing.md)
-        .background(ColorTokens.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-        .shadow(color: .black.opacity(0.3), radius: 8, y: -4)
-        .offset(y: 70)
-        .zIndex(10)
     }
 
     // MARK: - Action Button

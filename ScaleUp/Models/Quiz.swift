@@ -95,7 +95,7 @@ struct QuizQuestion: Codable, Sendable, Identifiable {
     }
 
     var stableId: String { id ?? questionText }
-    var effectiveTimeLimit: Int { timeLimit ?? 60 }
+    var effectiveTimeLimit: Int? { timeLimit }
 }
 
 struct QuizOption: Codable, Sendable, Identifiable {

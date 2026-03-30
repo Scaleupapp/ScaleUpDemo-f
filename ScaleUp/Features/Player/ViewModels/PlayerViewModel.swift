@@ -92,11 +92,23 @@ final class PlayerViewModel {
             saveCount = fetchedContent.saveCount ?? 0
             commentCount = fetchedContent.commentCount ?? 0
 
-            // Check follow status for the creator
-            if let creatorId = fetchedContent.creatorId?.id {
-                if let creator = try? await contentService.fetchCreator(id: creatorId) {
-                    isFollowingCreator = creator.isFollowing ?? false
-                }
+            // Fetch user's interaction status (liked/saved/rated) + follow status
+            async let interactionTask: InteractionStatus? = {
+                try? await self.contentService.fetchInteractionStatus(contentId: id)
+            }()
+            async let creatorTask: Creator? = {
+                guard let creatorId = fetchedContent.creatorId?.id else { return nil }
+                return try? await self.contentService.fetchCreator(id: creatorId)
+            }()
+
+            let (interaction, creator) = await (interactionTask, creatorTask)
+            if let interaction {
+                isLiked = interaction.isLiked
+                isSaved = interaction.isSaved
+                userRating = interaction.userRating
+            }
+            if let creator {
+                isFollowingCreator = creator.isFollowing ?? false
             }
         } else {
             loadMockContent(id: id)
@@ -377,6 +389,15 @@ final class PlayerViewModel {
                 try? await Task.sleep(for: .seconds(2))
                 playlistAddedMessage = nil
             }
+        } catch let error as APIError {
+            if case .conflict(let msg) = error {
+                Haptics.light()
+                playlistError = msg.contains("already") ? "Content already added in this playlist" : msg
+            } else {
+                Haptics.error()
+                playlistError = "Failed to add to playlist"
+            }
+            print("[Playlist] addToPlaylist failed: \(error)")
         } catch {
             print("[Playlist] addToPlaylist failed: \(error)")
             Haptics.error()

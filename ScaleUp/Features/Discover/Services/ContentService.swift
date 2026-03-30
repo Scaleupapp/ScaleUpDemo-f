@@ -65,6 +65,10 @@ actor ContentService {
         _ = try await api.requestRaw(ContentEndpoints.rate(id: contentId), body: body)
     }
 
+    func fetchInteractionStatus(contentId: String) async throws -> InteractionStatus {
+        try await api.request(ContentEndpoints.interactionStatus(id: contentId))
+    }
+
     func reportContent(contentId: String, reason: String, description: String?) async throws {
         let body = ReportRequest(reason: reason, description: description)
         _ = try await api.requestRaw(ContentEndpoints.report(id: contentId), body: body)
@@ -123,6 +127,12 @@ struct SaveResponse: Codable, Sendable {
     let saveCount: Int
 }
 
+struct InteractionStatus: Codable, Sendable {
+    let isLiked: Bool
+    let isSaved: Bool
+    let userRating: Int
+}
+
 private struct RateRequest: Encodable, Sendable {
     let value: Int
 }
@@ -142,6 +152,7 @@ private enum ContentEndpoints: Endpoint {
     case gaps(limit: Int)
     case forObjective(id: String, limit: Int)
     case similar(id: String, limit: Int)
+    case interactionStatus(id: String)
     case like(id: String)
     case save(id: String)
     case rate(id: String)
@@ -153,6 +164,7 @@ private enum ContentEndpoints: Endpoint {
 
     var path: String {
         switch self {
+        case .interactionStatus(let id): return "/content/\(id)/interaction-status"
         case .detail(let id): return "/content/\(id)"
         case .explore: return "/content/explore"
         case .recommendations: return "/recommendations/feed"

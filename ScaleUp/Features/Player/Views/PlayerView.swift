@@ -245,7 +245,9 @@ struct PlayerView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             if let content = viewModel.content {
-                ShareActivityView(items: ["Check out \"\(content.title)\" on ScaleUp!"])
+                ShareActivityView(items: [
+                    "Check out \"\(content.title)\" on ScaleUp!\n\nhttps://scaleupapp.club/content/\(content.id)"
+                ])
                     .presentationDetents([.medium])
             }
         }
