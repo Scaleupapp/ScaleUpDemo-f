@@ -610,11 +610,7 @@ struct QuizResultsView: View {
     private var bottomActions: some View {
         VStack(spacing: 10) {
             Button {
-                // Dismiss fullScreenCover, then pop QuizDetail back to QuizList
-                NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    NotificationCenter.default.post(name: .popToQuizList, object: nil)
-                }
+                goBackToQuizzes()
             } label: {
                 Text("Back to Quizzes")
                     .font(.system(size: 15, weight: .bold))
@@ -626,12 +622,7 @@ struct QuizResultsView: View {
             }
 
             Button {
-                // Dismiss fullScreenCover, pop navigation, switch to home tab
-                NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    NotificationCenter.default.post(name: .popToQuizList, object: nil)
-                    appState.selectedTab = .home
-                }
+                goBackToHome()
             } label: {
                 Text("Back to Home")
                     .font(.system(size: 14, weight: .semibold))
@@ -641,6 +632,33 @@ struct QuizResultsView: View {
             }
         }
         .opacity(showDetails ? 1 : 0)
+    }
+
+    // MARK: - Navigation Helpers
+
+    /// Whether this view is inside a QuizSession fullScreenCover or navigated directly
+    private var isInsideQuizSession: Bool {
+        attempt != nil && attempt?.status == "completed" && attempt?.completedAt != nil ? false : true
+    }
+
+    private func goBackToQuizzes() {
+        // Try dismissing quiz session first (works when inside fullScreenCover)
+        NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            NotificationCenter.default.post(name: .popToQuizList, object: nil)
+        }
+        // Also dismiss self (works when navigated directly from quiz history)
+        dismiss()
+    }
+
+    private func goBackToHome() {
+        NotificationCenter.default.post(name: .dismissQuizSession, object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            NotificationCenter.default.post(name: .popToQuizList, object: nil)
+            appState.selectedTab = .home
+        }
+        dismiss()
+        appState.selectedTab = .home
     }
 
     // MARK: - Competency Breakdown
