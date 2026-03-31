@@ -140,14 +140,14 @@ struct PhoneVerificationView: View {
                 viewModel.firstName = userName
                 Task {
                     if let authData = await viewModel.verifyOTP() {
-                        // Phone verified — save new tokens and go to onboarding
+                        // Phone verified — save new tokens and go to onboarding step 1
                         await KeychainManager.shared.saveTokens(
                             access: authData.accessToken,
                             refresh: authData.refreshToken
                         )
                         appState.currentUser = authData.user
-                        let step = max(1, authData.user.onboardingStep ?? 1)
-                        appState.launchState = .onboarding(step: step)
+                        // Always start from step 1 — this is a fresh registration
+                        appState.launchState = .onboarding(step: 1)
                     }
                 }
             }
@@ -167,8 +167,8 @@ struct PhoneVerificationView: View {
     // MARK: - Skip
 
     private func skipToOnboarding() {
-        let step = max(1, appState.currentUser?.onboardingStep ?? 1)
-        appState.launchState = .onboarding(step: step)
+        // Always start from step 1 — this is a fresh registration
+        appState.launchState = .onboarding(step: 1)
     }
 
     // MARK: - Error Banner
