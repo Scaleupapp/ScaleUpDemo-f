@@ -260,7 +260,7 @@ struct BackgroundStepView: View {
                         Button {
                             value.wrappedValue = (value.wrappedValue == year) ? nil : year
                         } label: {
-                            Text("\(year)")
+                            Text(verbatim: "\(year)")
                                 .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(value.wrappedValue == year ? .white : ColorTokens.textSecondary)
                                 .padding(.horizontal, 12)
