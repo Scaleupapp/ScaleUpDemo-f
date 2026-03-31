@@ -2,6 +2,7 @@ import SwiftUI
 
 extension Notification.Name {
     static let dismissQuizSession = Notification.Name("dismissQuizSession")
+    static let popToQuizList = Notification.Name("popToQuizList")
 }
 
 struct QuizSessionView: View {

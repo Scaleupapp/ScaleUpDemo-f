@@ -44,6 +44,9 @@ struct QuizDetailView: View {
         .fullScreenCover(isPresented: $showSession) {
             QuizSessionView(quiz: quiz)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .popToQuizList)) { _ in
+            dismiss()
+        }
     }
 
     // MARK: - Hero
