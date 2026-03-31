@@ -254,25 +254,36 @@ struct BackgroundStepView: View {
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(ColorTokens.textTertiary)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach((2010...2030).reversed(), id: \.self) { year in
-                        Button {
-                            value.wrappedValue = (value.wrappedValue == year) ? nil : year
-                        } label: {
-                            Text(verbatim: "\(year)")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(value.wrappedValue == year ? .white : ColorTokens.textSecondary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(
-                                    Capsule()
-                                        .fill(value.wrappedValue == year ? ColorTokens.gold : ColorTokens.surface)
-                                )
+            Menu {
+                ForEach((2010...2030).reversed(), id: \.self) { year in
+                    Button {
+                        value.wrappedValue = year
+                    } label: {
+                        if value.wrappedValue == year {
+                            Label(String(year), systemImage: "checkmark")
+                        } else {
+                            Text(String(year))
                         }
-                        .buttonStyle(.plain)
                     }
                 }
+            } label: {
+                HStack {
+                    Text(value.wrappedValue != nil ? String(value.wrappedValue!) : "Select year")
+                        .font(Typography.body)
+                        .foregroundStyle(value.wrappedValue != nil ? ColorTokens.textPrimary : ColorTokens.textTertiary)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, 12)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.small)
+                        .stroke(ColorTokens.border, lineWidth: 1)
+                )
             }
         }
     }
