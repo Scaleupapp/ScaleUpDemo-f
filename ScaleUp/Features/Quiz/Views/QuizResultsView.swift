@@ -412,7 +412,7 @@ struct QuizResultsView: View {
             HStack(spacing: Spacing.md) {
                 // Level badge
                 VStack(spacing: 4) {
-                    Text(competency.level?.capitalized ?? "—")
+                    Text((competency.level ?? "—").replacingOccurrences(of: "_", with: " ").capitalized)
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(ColorTokens.gold)
                     Text("Level")

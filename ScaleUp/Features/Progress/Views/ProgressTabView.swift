@@ -357,7 +357,7 @@ struct ProgressTabView: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.white)
 
-                        Text("Score: \(gap.scoreValue)% · \(gap.level?.capitalized ?? "Beginner")")
+                        Text("Score: \(gap.scoreValue)% · \((gap.level ?? "beginner").replacingOccurrences(of: "_", with: " ").capitalized)")
                             .font(.system(size: 11))
                             .foregroundStyle(ColorTokens.textTertiary)
                     }
