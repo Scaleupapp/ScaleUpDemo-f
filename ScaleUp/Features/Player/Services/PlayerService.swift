@@ -58,6 +58,23 @@ actor PlayerService {
         let body = CreatePlaylistRequest(title: title, description: description)
         return try await api.request(PlayerEndpoints.createPlaylist, body: body)
     }
+
+    func fetchPlaylistDetail(playlistId: String) async throws -> Playlist {
+        try await api.request(PlayerEndpoints.playlistDetail(playlistId: playlistId))
+    }
+
+    func updatePlaylist(playlistId: String, title: String?, description: String?) async throws -> Playlist {
+        let body = UpdatePlaylistRequest(title: title, description: description)
+        return try await api.request(PlayerEndpoints.updatePlaylist(playlistId: playlistId), body: body)
+    }
+
+    func removeFromPlaylist(playlistId: String, contentId: String) async throws {
+        _ = try await api.requestRaw(PlayerEndpoints.removeFromPlaylist(playlistId: playlistId, contentId: contentId))
+    }
+
+    func deletePlaylist(playlistId: String) async throws {
+        _ = try await api.requestRaw(PlayerEndpoints.deletePlaylist(playlistId: playlistId))
+    }
 }
 
 // MARK: - Response Types
@@ -91,6 +108,11 @@ private struct CreatePlaylistRequest: Encodable, Sendable {
     let description: String?
 }
 
+private struct UpdatePlaylistRequest: Encodable, Sendable {
+    let title: String?
+    let description: String?
+}
+
 // MARK: - Endpoints
 
 private enum PlayerEndpoints: Endpoint {
@@ -102,6 +124,10 @@ private enum PlayerEndpoints: Endpoint {
     case myPlaylists
     case addToPlaylist(playlistId: String)
     case createPlaylist
+    case playlistDetail(playlistId: String)
+    case updatePlaylist(playlistId: String)
+    case removeFromPlaylist(playlistId: String, contentId: String)
+    case deletePlaylist(playlistId: String)
 
     var path: String {
         switch self {
@@ -113,14 +139,19 @@ private enum PlayerEndpoints: Endpoint {
         case .myPlaylists: return "/social/playlists"
         case .addToPlaylist(let id): return "/social/playlists/\(id)/items"
         case .createPlaylist: return "/social/playlists"
+        case .playlistDetail(let id): return "/social/playlists/\(id)"
+        case .updatePlaylist(let id): return "/social/playlists/\(id)"
+        case .removeFromPlaylist(let id, let cId): return "/social/playlists/\(id)/items/\(cId)"
+        case .deletePlaylist(let id): return "/social/playlists/\(id)"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .stream, .comments, .myPlaylists: return .get
-        case .updateProgress: return .put
+        case .stream, .comments, .myPlaylists, .playlistDetail: return .get
+        case .updateProgress, .updatePlaylist: return .put
         case .complete, .addComment, .addToPlaylist, .createPlaylist: return .post
+        case .removeFromPlaylist, .deletePlaylist: return .delete
         }
     }
 

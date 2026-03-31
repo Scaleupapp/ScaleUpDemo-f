@@ -754,7 +754,8 @@ struct ProfileTabView: View {
                 HStack(spacing: Spacing.sm) {
                     contentTabChip("Liked", tab: 0, icon: "heart.fill")
                     contentTabChip("Saved", tab: 1, icon: "bookmark.fill")
-                    contentTabChip("History", tab: 2, icon: "clock.fill")
+                    contentTabChip("Playlists", tab: 2, icon: "list.star")
+                    contentTabChip("History", tab: 3, icon: "clock.fill")
                 }
                 .padding(.horizontal, Spacing.md)
             }
@@ -768,6 +769,9 @@ struct ProfileTabView: View {
                 contentList(items: viewModel.savedContent, emptyMessage: "No saved content yet")
                     .task { await viewModel.loadSavedContent() }
             case 2:
+                playlistsList
+                    .task { await viewModel.loadPlaylists() }
+            case 3:
                 historyList
                     .task { await viewModel.loadViewHistory() }
             default:
@@ -970,6 +974,95 @@ struct ProfileTabView: View {
         }
         .background(ColorTokens.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+    }
+
+    // MARK: - Playlists List
+
+    @ViewBuilder
+    private var playlistsList: some View {
+        if viewModel.isLoadingPlaylists && viewModel.playlists.isEmpty {
+            ProgressView().tint(ColorTokens.gold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.xl)
+        } else if viewModel.playlists.isEmpty {
+            VStack(spacing: Spacing.sm) {
+                Image(systemName: "list.star")
+                    .font(.system(size: 28))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Text("No playlists yet")
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Text("Create one from any video's action bar")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Spacing.xl)
+        } else {
+            VStack(spacing: Spacing.sm) {
+                ForEach(viewModel.playlists) { playlist in
+                    NavigationLink {
+                        PlaylistDetailView(playlistId: playlist.id)
+                    } label: {
+                        playlistRow(playlist)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+        }
+    }
+
+    private func playlistRow(_ playlist: Playlist) -> some View {
+        HStack(spacing: Spacing.md) {
+            // Icon
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(ColorTokens.surfaceElevated)
+                    .frame(width: 50, height: 50)
+                Image(systemName: "music.note.list")
+                    .font(.system(size: 20))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(playlist.title)
+                    .font(Typography.bodySmall)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .lineLimit(1)
+
+                HStack(spacing: Spacing.xs) {
+                    Text("\(playlist.itemCount ?? 0) items")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+
+                    if !playlist.formattedDuration.isEmpty {
+                        Text("·")
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text(playlist.formattedDuration)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+        .padding(Spacing.md)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                Task { await viewModel.deletePlaylist(playlist) }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Loading / Empty States

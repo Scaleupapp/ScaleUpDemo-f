@@ -13,6 +13,8 @@ final class ProfileViewModel {
     var likedContent: [Content] = []
     var savedContent: [Content] = []
     var viewHistory: [ContentProgress] = []
+    var playlists: [Playlist] = []
+    var isLoadingPlaylists = false
     var isLoading = false
     var errorMessage: String?
 
@@ -24,6 +26,7 @@ final class ProfileViewModel {
     private let userService = UserService()
     private let objectiveService = ObjectiveService()
     private let creatorService = CreatorService()
+    private let playerService = PlayerService()
 
     // MARK: - Computed
 
@@ -82,6 +85,22 @@ final class ProfileViewModel {
 
     func loadViewHistory() async {
         viewHistory = (try? await userService.fetchViewHistory()) ?? []
+    }
+
+    func loadPlaylists() async {
+        isLoadingPlaylists = true
+        playlists = (try? await playerService.fetchMyPlaylists()) ?? []
+        isLoadingPlaylists = false
+    }
+
+    func deletePlaylist(_ playlist: Playlist) async {
+        do {
+            try await playerService.deletePlaylist(playlistId: playlist.id)
+            playlists.removeAll { $0.id == playlist.id }
+            Haptics.success()
+        } catch {
+            Haptics.error()
+        }
     }
 
     // MARK: - Objective Actions
