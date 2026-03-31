@@ -255,7 +255,7 @@ struct BackgroundStepView: View {
                 .foregroundStyle(ColorTokens.textTertiary)
 
             Menu {
-                ForEach((2010...2030).reversed(), id: \.self) { year in
+                ForEach((1960...2030).reversed(), id: \.self) { year in
                     Button {
                         value.wrappedValue = year
                     } label: {
