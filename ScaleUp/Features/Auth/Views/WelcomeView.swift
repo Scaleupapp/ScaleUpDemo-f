@@ -43,7 +43,10 @@ struct WelcomeView: View {
 
                     // Logo + Tagline
                     VStack(spacing: Spacing.xl) {
-                        ScaleUpLogo(fontSize: 42)
+                        Image("ScaleUpLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 80)
                             .opacity(appeared ? 1 : 0)
                             .scaleEffect(appeared ? 1 : 0.8)
 

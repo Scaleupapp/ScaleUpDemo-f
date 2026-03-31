@@ -6,6 +6,10 @@ struct PhoneVerificationView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = AuthViewModel()
 
+    private var userName: String {
+        appState.currentUser?.firstName ?? ""
+    }
+
     var body: some View {
         ZStack {
             ColorTokens.background.ignoresSafeArea()
@@ -132,6 +136,8 @@ struct PhoneVerificationView: View {
                 isLoading: viewModel.isLoading,
                 isDisabled: !viewModel.isOTPValid
             ) {
+                // Pass firstName so backend doesn't reject "new user" phone verification
+                viewModel.firstName = userName
                 Task {
                     if let authData = await viewModel.verifyOTP() {
                         // Phone verified — save new tokens and go to onboarding
