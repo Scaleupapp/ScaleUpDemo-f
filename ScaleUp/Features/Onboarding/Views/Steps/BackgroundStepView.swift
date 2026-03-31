@@ -4,6 +4,9 @@ struct BackgroundStepView: View {
     @Bindable var viewModel: OnboardingViewModel
 
     @State private var appeared = false
+    @State private var collegeSearchResults: [CollegeSearchResult] = []
+    @State private var collegeSearchTask: Task<Void, Never>?
+    @State private var activeInstitutionEntryId: UUID?
 
     var body: some View {
         ScrollView {
@@ -112,19 +115,8 @@ struct BackgroundStepView: View {
                 autocapitalization: .words
             )
 
-            ScaleUpTextField(
-                label: "Institution",
-                icon: "building.columns.fill",
-                text: Binding(
-                    get: { viewModel.educationEntries.first(where: { $0.id == entry.id })?.institution ?? "" },
-                    set: { newValue in
-                        if let idx = viewModel.educationEntries.firstIndex(where: { $0.id == entry.id }) {
-                            viewModel.educationEntries[idx].institution = newValue
-                        }
-                    }
-                ),
-                autocapitalization: .words
-            )
+            // Institution autocomplete
+            institutionField(entry: entry)
 
             HStack(spacing: Spacing.sm) {
                 Toggle("Currently Pursuing", isOn: Binding(
@@ -319,6 +311,108 @@ struct BackgroundStepView: View {
         }
     }
 
+    // MARK: - Institution Autocomplete
+
+    private func institutionField(entry: EducationEntry) -> some View {
+        let isActive = activeInstitutionEntryId == entry.id
+        let currentText = viewModel.educationEntries.first(where: { $0.id == entry.id })?.institution ?? ""
+
+        return VStack(alignment: .leading, spacing: 0) {
+            ScaleUpTextField(
+                label: "Institution",
+                icon: "building.columns.fill",
+                text: Binding(
+                    get: { currentText },
+                    set: { newValue in
+                        if let idx = viewModel.educationEntries.firstIndex(where: { $0.id == entry.id }) {
+                            viewModel.educationEntries[idx].institution = newValue
+                        }
+                        activeInstitutionEntryId = entry.id
+                        searchColleges(query: newValue)
+                    }
+                ),
+                autocapitalization: .words
+            )
+
+            // Dropdown suggestions
+            if isActive && !collegeSearchResults.isEmpty && !currentText.isEmpty {
+                VStack(spacing: 0) {
+                    ForEach(collegeSearchResults.prefix(5)) { college in
+                        Button {
+                            selectCollege(college, for: entry)
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "building.columns")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(ColorTokens.gold)
+
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(college.name)
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                        .lineLimit(1)
+
+                                    if !college.subtitle.isEmpty {
+                                        Text(college.subtitle)
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(ColorTokens.textTertiary)
+                                            .lineLimit(1)
+                                    }
+                                }
+
+                                Spacer()
+                            }
+                            .padding(.horizontal, Spacing.md)
+                            .padding(.vertical, 8)
+                        }
+
+                        if college.id != collegeSearchResults.prefix(5).last?.id {
+                            Divider().background(ColorTokens.border)
+                        }
+                    }
+                }
+                .background(ColorTokens.surfaceElevated)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.small)
+                        .stroke(ColorTokens.border, lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+            }
+        }
+    }
+
+    private func selectCollege(_ college: CollegeSearchResult, for entry: EducationEntry) {
+        if let idx = viewModel.educationEntries.firstIndex(where: { $0.id == entry.id }) {
+            viewModel.educationEntries[idx].institution = college.name
+        }
+        activeInstitutionEntryId = nil
+        collegeSearchResults = []
+        Haptics.selection()
+    }
+
+    private func searchColleges(query: String) {
+        collegeSearchTask?.cancel()
+        guard query.count >= 2 else {
+            collegeSearchResults = []
+            return
+        }
+        collegeSearchTask = Task {
+            try? await Task.sleep(for: .milliseconds(300)) // debounce
+            guard !Task.isCancelled else { return }
+            do {
+                let results: [CollegeSearchResult] = try await APIClient.shared.request(CollegeSearchEndpoint(query: query))
+                if !Task.isCancelled {
+                    collegeSearchResults = results
+                }
+            } catch {
+                if !Task.isCancelled {
+                    collegeSearchResults = []
+                }
+            }
+        }
+    }
+
     // MARK: - Add Button
 
     private func addButton(title: String, action: @escaping () -> Void) -> some View {
@@ -344,5 +438,34 @@ struct BackgroundStepView: View {
                     .stroke(ColorTokens.gold.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
             )
         }
+    }
+}
+
+// MARK: - College Search Models
+
+struct CollegeSearchResult: Codable, Sendable, Identifiable {
+    let id: String
+    let name: String
+    let fullName: String?
+    let district: String?
+    let state: String?
+    let type: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case name, fullName, district, state, type
+    }
+
+    var subtitle: String {
+        [district, state, type?.capitalized].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+}
+
+private struct CollegeSearchEndpoint: Endpoint {
+    let query: String
+    var path: String { "/colleges/search" }
+    var method: HTTPMethod { .get }
+    var queryItems: [URLQueryItem]? {
+        [URLQueryItem(name: "q", value: query), URLQueryItem(name: "limit", value: "10")]
     }
 }
