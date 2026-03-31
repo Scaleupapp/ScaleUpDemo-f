@@ -18,6 +18,7 @@ struct VideoPlayerView: View {
     @State private var showControls = true
     @State private var hideControlsTask: Task<Void, Never>?
     @State private var isScrubbing = false
+    @State private var scrubPosition: Double?  // Separate scrub tracking
 
     var body: some View {
         if isFullscreen {
@@ -27,11 +28,18 @@ struct VideoPlayerView: View {
         } else {
             videoContent
                 .aspectRatio(16/9, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 0))
         }
     }
 
     // MARK: - Video Content
+
+    private var displayTime: Double {
+        scrubPosition ?? currentTime
+    }
+
+    private var displayProgress: Double {
+        duration > 0 ? displayTime / duration : 0
+    }
 
     private var videoContent: some View {
         ZStack {
@@ -52,7 +60,6 @@ struct VideoPlayerView: View {
             if !isVideoReady || isBuffering {
                 ZStack {
                     if !isVideoReady {
-                        // Initial load — show prominent spinner
                         Color.black.opacity(0.6)
                         VStack(spacing: 8) {
                             ProgressView()
@@ -63,7 +70,6 @@ struct VideoPlayerView: View {
                                 .foregroundStyle(.white.opacity(0.7))
                         }
                     } else if isBuffering {
-                        // Mid-playback buffering — subtle spinner
                         ProgressView()
                             .scaleEffect(1.2)
                             .tint(.white)
@@ -72,158 +78,222 @@ struct VideoPlayerView: View {
             }
 
             // Controls overlay (only when video is ready)
-            if showControls && isVideoReady {
-                controlsOverlay
-                    .transition(.opacity)
+            if isVideoReady {
+                controlsLayer
             }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.easeOut(duration: 0.2)) {
-                showControls.toggle()
-            }
-            if showControls { scheduleHideControls() }
         }
     }
 
-    // MARK: - Controls Overlay
+    // MARK: - Controls Layer
 
-    private var controlsOverlay: some View {
+    private var controlsLayer: some View {
         ZStack {
-            Color.black.opacity(0.45)
+            // Tap area to show/hide controls — only the center area
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        showControls.toggle()
+                    }
+                    if showControls { scheduleHideControls() }
+                }
 
-            // Top bar - speed control
-            VStack {
-                HStack {
+            if showControls {
+                // Dimmed background
+                Color.black.opacity(0.45)
+                    .allowsHitTesting(false)
+
+                // Top bar
+                topBar
+
+                // Center playback controls
+                centerControls
+
+                // Bottom progress bar — always interactive
+                bottomBar
+            } else {
+                // Even when controls hidden, show thin progress line
+                VStack {
                     Spacer()
-
-                    // Speed button
-                    Button {
-                        onSpeedTap()
-                    } label: {
-                        Text(speedLabel)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(.white.opacity(0.2))
-                            .clipShape(Capsule())
-                    }
+                    progressBarMinimal
                 }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, isFullscreen ? Spacing.lg : Spacing.sm)
-
-                Spacer()
-            }
-
-            // Center controls - skip back / play / skip forward
-            HStack(spacing: Spacing.xxl) {
-                // Skip back 10s
-                Button {
-                    onSeekRelative(-10)
-                    scheduleHideControls()
-                } label: {
-                    Image(systemName: "gobackward.10")
-                        .font(.system(size: isFullscreen ? 34 : 28))
-                        .foregroundStyle(.white.opacity(0.9))
-                }
-
-                // Play/Pause
-                Button {
-                    isPlaying.toggle()
-                    scheduleHideControls()
-                } label: {
-                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: isFullscreen ? 54 : 44))
-                        .foregroundStyle(.white)
-                }
-
-                // Skip forward 10s
-                Button {
-                    onSeekRelative(10)
-                    scheduleHideControls()
-                } label: {
-                    Image(systemName: "goforward.10")
-                        .font(.system(size: isFullscreen ? 34 : 28))
-                        .foregroundStyle(.white.opacity(0.9))
-                }
-            }
-
-            // Bottom progress bar
-            VStack {
-                Spacer()
-
-                HStack(spacing: Spacing.sm) {
-                    Text(formatTime(currentTime))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .monospacedDigit()
-                        .frame(width: 40, alignment: .leading)
-
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            // Track
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(.white.opacity(0.25))
-                                .frame(height: isScrubbing ? 5 : 3)
-
-                            // Progress
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill(ColorTokens.gold)
-                                .frame(
-                                    width: geo.size.width * (duration > 0 ? currentTime / duration : 0),
-                                    height: isScrubbing ? 5 : 3
-                                )
-
-                            // Scrub handle
-                            if isScrubbing {
-                                Circle()
-                                    .fill(ColorTokens.gold)
-                                    .frame(width: 14, height: 14)
-                                    .offset(x: geo.size.width * (duration > 0 ? currentTime / duration : 0) - 7)
-                            }
-                        }
-                        .frame(height: 20)
-                        .contentShape(Rectangle())
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    isScrubbing = true
-                                    let fraction = max(0, min(1, value.location.x / geo.size.width))
-                                    onSeek(fraction)
-                                }
-                                .onEnded { _ in
-                                    isScrubbing = false
-                                    scheduleHideControls()
-                                }
-                        )
-                    }
-                    .frame(height: 20)
-
-                    Text(formatTime(duration))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.85))
-                        .monospacedDigit()
-                        .frame(width: 40, alignment: .trailing)
-
-                    // Fullscreen toggle button
-                    if let onFullscreen {
-                        Button {
-                            onFullscreen()
-                        } label: {
-                            Image(systemName: isFullscreen
-                                  ? "arrow.down.right.and.arrow.up.left"
-                                  : "arrow.up.left.and.arrow.down.right")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .frame(width: 28, height: 28)
-                        }
-                    }
-                }
-                .padding(.horizontal, Spacing.md)
-                .padding(.bottom, isFullscreen ? Spacing.lg : Spacing.sm)
             }
         }
+        .animation(.easeOut(duration: 0.2), value: showControls)
+    }
+
+    // MARK: - Top Bar
+
+    private var topBar: some View {
+        VStack {
+            HStack {
+                Spacer()
+                Button {
+                    onSpeedTap()
+                    scheduleHideControls()
+                } label: {
+                    Text(speedLabel)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(.white.opacity(0.2))
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.top, isFullscreen ? Spacing.lg : Spacing.sm)
+            Spacer()
+        }
+    }
+
+    // MARK: - Center Controls
+
+    private var centerControls: some View {
+        HStack(spacing: Spacing.xxl) {
+            Button {
+                onSeekRelative(-10)
+                scheduleHideControls()
+            } label: {
+                Image(systemName: "gobackward.10")
+                    .font(.system(size: isFullscreen ? 34 : 28))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+
+            Button {
+                isPlaying.toggle()
+                scheduleHideControls()
+            } label: {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: isFullscreen ? 54 : 44))
+                    .foregroundStyle(.white)
+            }
+
+            Button {
+                onSeekRelative(10)
+                scheduleHideControls()
+            } label: {
+                Image(systemName: "goforward.10")
+                    .font(.system(size: isFullscreen ? 34 : 28))
+                    .foregroundStyle(.white.opacity(0.9))
+            }
+        }
+    }
+
+    // MARK: - Bottom Bar (Progress + Time)
+
+    private var bottomBar: some View {
+        VStack {
+            Spacer()
+            HStack(spacing: Spacing.sm) {
+                Text(formatTime(displayTime))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .monospacedDigit()
+                    .frame(width: 40, alignment: .leading)
+
+                scrubBar
+
+                Text(formatTime(duration))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .monospacedDigit()
+                    .frame(width: 40, alignment: .trailing)
+
+                if let onFullscreen {
+                    Button {
+                        onFullscreen()
+                    } label: {
+                        Image(systemName: isFullscreen
+                              ? "arrow.down.right.and.arrow.up.left"
+                              : "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.bottom, isFullscreen ? Spacing.lg : Spacing.sm)
+        }
+    }
+
+    // MARK: - Scrub Bar
+
+    private var scrubBar: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                // Track background
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(.white.opacity(0.25))
+                    .frame(height: isScrubbing ? 6 : 3)
+
+                // Progress fill
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(ColorTokens.gold)
+                    .frame(
+                        width: max(0, geo.size.width * displayProgress),
+                        height: isScrubbing ? 6 : 3
+                    )
+
+                // Scrub handle (always visible, bigger when scrubbing)
+                Circle()
+                    .fill(ColorTokens.gold)
+                    .frame(width: isScrubbing ? 16 : 10, height: isScrubbing ? 16 : 10)
+                    .offset(x: max(0, min(geo.size.width - 10, geo.size.width * displayProgress - 5)))
+            }
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle().size(width: geo.size.width, height: 44))
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        isScrubbing = true
+                        let fraction = max(0, min(1, value.location.x / geo.size.width))
+                        scrubPosition = fraction * duration
+                        // Cancel auto-hide while scrubbing
+                        hideControlsTask?.cancel()
+                    }
+                    .onEnded { value in
+                        let fraction = max(0, min(1, value.location.x / geo.size.width))
+                        onSeek(fraction)
+                        isScrubbing = false
+                        scrubPosition = nil
+                        scheduleHideControls()
+                    }
+            )
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        isScrubbing = true
+                        let fraction = max(0, min(1, value.location.x / geo.size.width))
+                        scrubPosition = fraction * duration
+                        hideControlsTask?.cancel()
+                    }
+                    .onEnded { value in
+                        let fraction = max(0, min(1, value.location.x / geo.size.width))
+                        onSeek(fraction)
+                        isScrubbing = false
+                        scrubPosition = nil
+                        scheduleHideControls()
+                    }
+            )
+        }
+        .frame(height: 44)
+    }
+
+    // MARK: - Minimal progress (when controls hidden)
+
+    private var progressBarMinimal: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(.white.opacity(0.15))
+                Rectangle()
+                    .fill(ColorTokens.gold)
+                    .frame(width: geo.size.width * displayProgress)
+            }
+        }
+        .frame(height: 2)
     }
 
     // MARK: - Helpers

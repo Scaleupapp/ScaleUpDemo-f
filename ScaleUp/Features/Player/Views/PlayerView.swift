@@ -46,22 +46,29 @@ struct PlayerView: View {
             } else if let content = viewModel.content {
                 VStack(spacing: 0) {
                     // Video player
-                    VideoPlayerView(
-                        player: isFullscreen ? nil : viewModel.player,
-                        isPlaying: Binding(
-                            get: { viewModel.isPlaying },
-                            set: { _ in viewModel.togglePlayPause() }
-                        ),
-                        isVideoReady: viewModel.isVideoReady,
-                        isBuffering: viewModel.isBuffering,
-                        currentTime: viewModel.currentTime,
-                        duration: viewModel.duration,
-                        playbackSpeed: viewModel.playbackSpeed,
-                        onSeek: { viewModel.seek(to: $0) },
-                        onSeekRelative: { viewModel.seekRelative(seconds: $0) },
-                        onSpeedTap: { viewModel.showSpeedPicker = true },
-                        onFullscreen: { isFullscreen = true }
-                    )
+                    ZStack {
+                        VideoPlayerView(
+                            player: isFullscreen ? nil : viewModel.player,
+                            isPlaying: Binding(
+                                get: { viewModel.isPlaying },
+                                set: { _ in viewModel.togglePlayPause() }
+                            ),
+                            isVideoReady: viewModel.isVideoReady,
+                            isBuffering: viewModel.isBuffering,
+                            currentTime: viewModel.currentTime,
+                            duration: viewModel.duration,
+                            playbackSpeed: viewModel.playbackSpeed,
+                            onSeek: { viewModel.seek(to: $0) },
+                            onSeekRelative: { viewModel.seekRelative(seconds: $0) },
+                            onSpeedTap: { viewModel.showSpeedPicker = true },
+                            onFullscreen: { isFullscreen = true }
+                        )
+
+                        // Up Next overlay
+                        if viewModel.videoDidFinish, let nextContent = viewModel.relatedContent.first {
+                            upNextOverlay(nextContent)
+                        }
+                    }
 
                     // Content details
                     ScrollView {
@@ -514,6 +521,93 @@ struct PlayerView: View {
             }
 
             Spacer()
+        }
+    }
+
+    // MARK: - Up Next Overlay
+
+    @State private var navigateToNextId: String?
+
+    private func upNextOverlay(_ nextContent: Content) -> some View {
+        ZStack {
+            Color.black.opacity(0.85)
+
+            VStack(spacing: Spacing.md) {
+                Text("Up Next in \(viewModel.upNextCountdown)s")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+
+                // Next video card
+                HStack(spacing: Spacing.md) {
+                    if let thumb = nextContent.thumbnailURL, let url = URL(string: thumb) {
+                        AsyncImage(url: url) { phase in
+                            if let image = phase.image {
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } else {
+                                ColorTokens.surfaceElevated
+                            }
+                        }
+                        .frame(width: 120, height: 68)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(nextContent.title)
+                            .font(Typography.caption)
+                            .foregroundStyle(.white)
+                            .lineLimit(2)
+                        if let creator = nextContent.creatorId {
+                            Text(creator.displayName)
+                                .font(Typography.micro)
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                    }
+                }
+                .padding(Spacing.sm)
+
+                HStack(spacing: Spacing.md) {
+                    // Play Now
+                    Button {
+                        viewModel.cancelUpNext()
+                        navigateToNextId = nextContent.id
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "play.fill")
+                            Text("Play Now")
+                        }
+                        .font(Typography.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(ColorTokens.buttonPrimaryText)
+                        .padding(.horizontal, Spacing.lg)
+                        .padding(.vertical, Spacing.sm)
+                        .background(ColorTokens.gold)
+                        .clipShape(Capsule())
+                    }
+
+                    // Cancel
+                    Button {
+                        viewModel.cancelUpNext()
+                    } label: {
+                        Text("Cancel")
+                            .font(Typography.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                            .padding(.horizontal, Spacing.lg)
+                            .padding(.vertical, Spacing.sm)
+                            .background(.white.opacity(0.15))
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+        }
+        .aspectRatio(16/9, contentMode: .fit)
+        .navigationDestination(item: $navigateToNextId) { id in
+            PlayerView(contentId: id)
+        }
+        .onChange(of: viewModel.upNextCountdown) { _, newValue in
+            if newValue <= 0 {
+                viewModel.cancelUpNext()
+                navigateToNextId = nextContent.id
+            }
         }
     }
 

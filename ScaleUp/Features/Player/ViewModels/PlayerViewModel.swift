@@ -30,6 +30,11 @@ final class PlayerViewModel {
     // Related
     var relatedContent: [Content] = []
 
+    // Up Next
+    var videoDidFinish = false
+    var upNextCountdown: Int = 5
+    private var upNextTimer: Task<Void, Never>?
+
     // Description
     var isDescriptionExpanded = false
     var isAISummaryExpanded = false
@@ -150,6 +155,7 @@ final class PlayerViewModel {
     private var statusObservation: NSKeyValueObservation?
     private var bufferObservation: NSKeyValueObservation?
     private var bufferEmptyObservation: NSKeyValueObservation?
+    private var endObserver: NSObjectProtocol?
 
     private func setupPlayer(url: URL) {
         let playerItem = AVPlayerItem(url: url)
@@ -209,7 +215,41 @@ final class PlayerViewModel {
             }
         }
 
+        // Observe video end for "Up Next"
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.handleVideoEnd()
+            }
+        }
+
         startProgressTracking()
+    }
+
+    private func handleVideoEnd() {
+        isPlaying = false
+        videoDidFinish = true
+
+        guard !relatedContent.isEmpty else { return }
+
+        // Start countdown for auto-play next
+        upNextCountdown = 5
+        upNextTimer?.cancel()
+        upNextTimer = Task { @MainActor [weak self] in
+            while let self, self.upNextCountdown > 0, !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(1))
+                guard !Task.isCancelled else { return }
+                self.upNextCountdown -= 1
+            }
+        }
+    }
+
+    func cancelUpNext() {
+        upNextTimer?.cancel()
+        videoDidFinish = false
     }
 
     // MARK: - Playback Controls
@@ -448,17 +488,23 @@ final class PlayerViewModel {
         if let observer = timeObserver {
             player?.removeTimeObserver(observer)
         }
+        if let endObserver {
+            NotificationCenter.default.removeObserver(endObserver)
+        }
         statusObservation?.invalidate()
         bufferObservation?.invalidate()
         bufferEmptyObservation?.invalidate()
         statusObservation = nil
         bufferObservation = nil
         bufferEmptyObservation = nil
+        endObserver = nil
         player?.pause()
         player = nil
         progressTimer?.cancel()
+        upNextTimer?.cancel()
         isVideoReady = false
         isBuffering = false
+        videoDidFinish = false
     }
 
     // MARK: - Mock
