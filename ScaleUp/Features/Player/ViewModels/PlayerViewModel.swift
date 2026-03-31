@@ -46,6 +46,12 @@ final class PlayerViewModel {
     var isPostingComment = false
     var commentError: String?
     var commentCount: Int = 0
+    var commentPage: Int = 1
+    var hasMoreComments = false
+    var replyingTo: Comment? = nil
+    var editingComment: Comment? = nil
+    var expandedReplies: [String: [Comment]] = [:]  // parentId -> replies
+    var loadingReplies: Set<String> = []
 
     // Follow
     var isFollowingCreator = false
@@ -140,14 +146,28 @@ final class PlayerViewModel {
     private func loadComments(id: String) async {
         isLoadingComments = true
         commentError = nil
+        commentPage = 1
         do {
-            let response = try await playerService.fetchComments(contentId: id)
+            let response = try await playerService.fetchComments(contentId: id, page: 1)
             comments = response.comments
+            hasMoreComments = response.pagination?.hasNextPage ?? false
         } catch {
             print("[Comments] loadComments failed: \(error)")
             commentError = "Could not load comments"
         }
         isLoadingComments = false
+    }
+
+    func loadMoreComments() async {
+        guard hasMoreComments, let id = content?.id else { return }
+        commentPage += 1
+        do {
+            let response = try await playerService.fetchComments(contentId: id, page: commentPage)
+            comments.append(contentsOf: response.comments)
+            hasMoreComments = response.pagination?.hasNextPage ?? false
+        } catch {
+            commentPage -= 1
+        }
     }
 
     // MARK: - Player Setup
@@ -384,9 +404,32 @@ final class PlayerViewModel {
         Haptics.light()
 
         do {
-            let comment = try await playerService.addComment(contentId: id, text: newCommentText)
-            comments.insert(comment, at: 0)
-            commentCount += 1
+            if let editing = editingComment {
+                // Edit existing comment
+                let updated = try await playerService.editComment(commentId: editing.id, text: newCommentText)
+                if let idx = comments.firstIndex(where: { $0.id == editing.id }) {
+                    comments[idx] = updated
+                }
+                editingComment = nil
+            } else {
+                // New comment or reply
+                let parentId = replyingTo?.id
+                let comment = try await playerService.addComment(contentId: id, text: newCommentText, parentId: parentId)
+
+                if let parentId, var replies = expandedReplies[parentId] {
+                    replies.append(comment)
+                    expandedReplies[parentId] = replies
+                    // Update reply count on parent
+                    if let idx = comments.firstIndex(where: { $0.id == parentId }) {
+                        let old = comments[idx]
+                        comments[idx] = Comment(id: old.id, userId: old.userId, contentId: old.contentId, parentId: old.parentId, text: old.text, likeCount: old.likeCount, isEdited: old.isEdited, replyCount: (old.replyCount ?? 0) + 1, createdAt: old.createdAt, updatedAt: old.updatedAt)
+                    }
+                } else {
+                    comments.insert(comment, at: 0)
+                }
+                commentCount += 1
+                replyingTo = nil
+            }
             newCommentText = ""
             Haptics.success()
         } catch {
@@ -396,6 +439,68 @@ final class PlayerViewModel {
         }
 
         isPostingComment = false
+    }
+
+    func deleteComment(_ comment: Comment) async {
+        do {
+            try await playerService.deleteComment(commentId: comment.id)
+            comments.removeAll { $0.id == comment.id }
+            // Also remove from replies
+            for (key, var replies) in expandedReplies {
+                replies.removeAll { $0.id == comment.id }
+                expandedReplies[key] = replies
+            }
+            commentCount = max(0, commentCount - 1)
+            Haptics.success()
+        } catch {
+            commentError = "Could not delete comment"
+            Haptics.error()
+        }
+    }
+
+    func toggleCommentLike(_ comment: Comment) async {
+        do {
+            let response = try await playerService.toggleCommentLike(commentId: comment.id)
+            if let idx = comments.firstIndex(where: { $0.id == comment.id }) {
+                var updated = comments[idx]
+                updated.isLikedByMe = response.liked
+                comments[idx] = Comment(id: updated.id, userId: updated.userId, contentId: updated.contentId, parentId: updated.parentId, text: updated.text, likeCount: response.likeCount, isEdited: updated.isEdited, replyCount: updated.replyCount, createdAt: updated.createdAt, updatedAt: updated.updatedAt)
+                comments[idx].isLikedByMe = response.liked
+            }
+            Haptics.light()
+        } catch {
+            Haptics.error()
+        }
+    }
+
+    func loadReplies(for comment: Comment) async {
+        guard !loadingReplies.contains(comment.id) else { return }
+        loadingReplies.insert(comment.id)
+        do {
+            let response = try await playerService.fetchReplies(commentId: comment.id)
+            expandedReplies[comment.id] = response.replies
+        } catch {
+            print("[Comments] loadReplies failed: \(error)")
+        }
+        loadingReplies.remove(comment.id)
+    }
+
+    func startReply(to comment: Comment) {
+        replyingTo = comment
+        editingComment = nil
+        newCommentText = ""
+    }
+
+    func startEdit(_ comment: Comment) {
+        editingComment = comment
+        replyingTo = nil
+        newCommentText = comment.text
+    }
+
+    func cancelReplyOrEdit() {
+        replyingTo = nil
+        editingComment = nil
+        newCommentText = ""
     }
 
     // MARK: - Playlists

@@ -10,13 +10,17 @@ struct Comment: Codable, Sendable, Identifiable {
     let text: String
     let likeCount: Int?
     let isEdited: Bool?
+    let replyCount: Int?
     let createdAt: Date?
     let updatedAt: Date?
+
+    // Mutable state for UI
+    var isLikedByMe: Bool = false
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case userId, contentId, parentId, text
-        case likeCount, isEdited, createdAt, updatedAt
+        case likeCount, isEdited, replyCount, createdAt, updatedAt
     }
 
     // Custom decoder: userId can be either a populated CommentUser object or a plain string (ObjectId)
@@ -28,6 +32,7 @@ struct Comment: Codable, Sendable, Identifiable {
         text = try container.decode(String.self, forKey: .text)
         likeCount = try container.decodeIfPresent(Int.self, forKey: .likeCount)
         isEdited = try container.decodeIfPresent(Bool.self, forKey: .isEdited)
+        replyCount = try container.decodeIfPresent(Int.self, forKey: .replyCount)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
 
@@ -50,12 +55,13 @@ struct Comment: Codable, Sendable, Identifiable {
         try container.encode(text, forKey: .text)
         try container.encodeIfPresent(likeCount, forKey: .likeCount)
         try container.encodeIfPresent(isEdited, forKey: .isEdited)
+        try container.encodeIfPresent(replyCount, forKey: .replyCount)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
     }
 
     // Memberwise init for mock data and manual creation
-    init(id: String, userId: CommentUser?, contentId: String?, parentId: String?, text: String, likeCount: Int?, isEdited: Bool?, createdAt: Date?, updatedAt: Date?) {
+    init(id: String, userId: CommentUser?, contentId: String?, parentId: String?, text: String, likeCount: Int?, isEdited: Bool?, replyCount: Int? = nil, createdAt: Date?, updatedAt: Date?) {
         self.id = id
         self.userId = userId
         self.contentId = contentId
@@ -63,6 +69,7 @@ struct Comment: Codable, Sendable, Identifiable {
         self.text = text
         self.likeCount = likeCount
         self.isEdited = isEdited
+        self.replyCount = replyCount
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }
@@ -111,6 +118,16 @@ struct CommentUser: Codable, Sendable {
 struct CommentsResponse: Codable, Sendable {
     let comments: [Comment]
     let pagination: CommentPagination?
+}
+
+struct RepliesResponse: Codable, Sendable {
+    let replies: [Comment]
+    let pagination: CommentPagination?
+}
+
+struct CommentLikeResponse: Codable, Sendable {
+    let liked: Bool
+    let likeCount: Int
 }
 
 struct CommentPagination: Codable, Sendable {

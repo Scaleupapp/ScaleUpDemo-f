@@ -43,6 +43,23 @@ actor PlayerService {
         return try await api.request(PlayerEndpoints.addComment(id: contentId), body: body)
     }
 
+    func editComment(commentId: String, text: String) async throws -> Comment {
+        let body = EditCommentRequest(text: text)
+        return try await api.request(PlayerEndpoints.editComment(commentId: commentId), body: body)
+    }
+
+    func deleteComment(commentId: String) async throws {
+        _ = try await api.requestRaw(PlayerEndpoints.deleteComment(commentId: commentId))
+    }
+
+    func toggleCommentLike(commentId: String) async throws -> CommentLikeResponse {
+        try await api.request(PlayerEndpoints.likeComment(commentId: commentId))
+    }
+
+    func fetchReplies(commentId: String, page: Int = 1) async throws -> RepliesResponse {
+        try await api.request(PlayerEndpoints.replies(commentId: commentId, page: page))
+    }
+
     // MARK: - Playlists
 
     func fetchMyPlaylists() async throws -> [Playlist] {
@@ -99,6 +116,10 @@ private struct AddCommentRequest: Encodable, Sendable {
     let parentId: String?
 }
 
+private struct EditCommentRequest: Encodable, Sendable {
+    let text: String
+}
+
 private struct AddToPlaylistRequest: Encodable, Sendable {
     let contentId: String
 }
@@ -124,6 +145,10 @@ private enum PlayerEndpoints: Endpoint {
     case myPlaylists
     case addToPlaylist(playlistId: String)
     case createPlaylist
+    case editComment(commentId: String)
+    case deleteComment(commentId: String)
+    case likeComment(commentId: String)
+    case replies(commentId: String, page: Int)
     case playlistDetail(playlistId: String)
     case updatePlaylist(playlistId: String)
     case removeFromPlaylist(playlistId: String, contentId: String)
@@ -136,6 +161,10 @@ private enum PlayerEndpoints: Endpoint {
         case .complete(let id): return "/progress/\(id)/complete"
         case .comments(let id, _): return "/content/\(id)/comments"
         case .addComment(let id): return "/content/\(id)/comments"
+        case .editComment(let id): return "/social/comments/\(id)"
+        case .deleteComment(let id): return "/social/comments/\(id)"
+        case .likeComment(let id): return "/social/comments/\(id)/like"
+        case .replies(let id, _): return "/social/comments/\(id)/replies"
         case .myPlaylists: return "/social/playlists"
         case .addToPlaylist(let id): return "/social/playlists/\(id)/items"
         case .createPlaylist: return "/social/playlists"
@@ -148,10 +177,10 @@ private enum PlayerEndpoints: Endpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .stream, .comments, .myPlaylists, .playlistDetail: return .get
-        case .updateProgress, .updatePlaylist: return .put
-        case .complete, .addComment, .addToPlaylist, .createPlaylist: return .post
-        case .removeFromPlaylist, .deletePlaylist: return .delete
+        case .stream, .comments, .myPlaylists, .playlistDetail, .replies: return .get
+        case .updateProgress, .updatePlaylist, .editComment: return .put
+        case .complete, .addComment, .addToPlaylist, .createPlaylist, .likeComment: return .post
+        case .removeFromPlaylist, .deletePlaylist, .deleteComment: return .delete
         }
     }
 
@@ -161,6 +190,11 @@ private enum PlayerEndpoints: Endpoint {
             return [
                 URLQueryItem(name: "page", value: "\(page)"),
                 URLQueryItem(name: "limit", value: "20")
+            ]
+        case .replies(_, let page):
+            return [
+                URLQueryItem(name: "page", value: "\(page)"),
+                URLQueryItem(name: "limit", value: "10")
             ]
         default:
             return nil

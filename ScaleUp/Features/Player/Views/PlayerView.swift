@@ -3,6 +3,7 @@ import SwiftUI
 struct PlayerView: View {
     let contentId: String
 
+    @Environment(AppState.self) private var appState
     @State private var viewModel = PlayerViewModel()
     @State private var selectedTab: PlayerTab = .about
     @State private var showReportSheet = false
@@ -392,11 +393,18 @@ struct PlayerView: View {
 
     private var commentsSection: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
+            // Reply/Edit context banner
+            if let replying = viewModel.replyingTo {
+                replyBanner("Replying to \(replying.userId?.displayName ?? "comment")")
+            } else if viewModel.editingComment != nil {
+                replyBanner("Editing comment")
+            }
+
             // Comment input
             commentInputBar
                 .padding(.horizontal, Spacing.lg)
 
-            // Comment error
+            // Error
             if let error = viewModel.commentError {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "exclamationmark.circle.fill")
@@ -414,13 +422,8 @@ struct PlayerView: View {
 
             // Comments list
             if viewModel.isLoadingComments {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .tint(ColorTokens.gold)
-                    Spacer()
-                }
-                .padding(.vertical, Spacing.xl)
+                HStack { Spacer(); ProgressView().tint(ColorTokens.gold); Spacer() }
+                    .padding(.vertical, Spacing.xl)
             } else if viewModel.comments.isEmpty {
                 VStack(spacing: Spacing.sm) {
                     Image(systemName: "bubble.left.and.bubble.right")
@@ -436,9 +439,52 @@ struct PlayerView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.xl)
             } else {
-                LazyVStack(spacing: Spacing.md) {
+                LazyVStack(spacing: 0) {
                     ForEach(viewModel.comments) { comment in
-                        commentRow(comment)
+                        VStack(alignment: .leading, spacing: 0) {
+                            commentRow(comment, isReply: false)
+
+                            // Replies section
+                            if let replies = viewModel.expandedReplies[comment.id], !replies.isEmpty {
+                                ForEach(replies) { reply in
+                                    commentRow(reply, isReply: true)
+                                        .padding(.leading, 40)
+                                }
+                            }
+
+                            // Show replies button
+                            if let replyCount = comment.replyCount, replyCount > 0, viewModel.expandedReplies[comment.id] == nil {
+                                Button {
+                                    Task { await viewModel.loadReplies(for: comment) }
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        if viewModel.loadingReplies.contains(comment.id) {
+                                            ProgressView().scaleEffect(0.6).tint(ColorTokens.gold)
+                                        }
+                                        Image(systemName: "arrowtriangle.down.fill")
+                                            .font(.system(size: 7))
+                                        Text("\(replyCount) \(replyCount == 1 ? "reply" : "replies")")
+                                            .font(.system(size: 11, weight: .semibold))
+                                    }
+                                    .foregroundStyle(ColorTokens.gold)
+                                    .padding(.leading, 44)
+                                    .padding(.vertical, 4)
+                                }
+                            }
+                        }
+                    }
+
+                    // Load more
+                    if viewModel.hasMoreComments {
+                        Button {
+                            Task { await viewModel.loadMoreComments() }
+                        } label: {
+                            Text("Load more comments")
+                                .font(Typography.caption)
+                                .foregroundStyle(ColorTokens.gold)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, Spacing.md)
+                        }
                     }
                 }
                 .padding(.horizontal, Spacing.lg)
@@ -446,9 +492,30 @@ struct PlayerView: View {
         }
     }
 
+    private func replyBanner(_ text: String) -> some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "arrowshape.turn.up.left.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.gold)
+            Text(text)
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textSecondary)
+            Spacer()
+            Button {
+                viewModel.cancelReplyOrEdit()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.vertical, 6)
+        .background(ColorTokens.surfaceElevated)
+    }
+
     private var commentInputBar: some View {
         HStack(spacing: Spacing.sm) {
-            // User avatar placeholder
             Circle()
                 .fill(ColorTokens.surfaceElevated)
                 .frame(width: 32, height: 32)
@@ -458,21 +525,25 @@ struct PlayerView: View {
                         .foregroundStyle(ColorTokens.textTertiary)
                 }
 
-            TextField("Add a comment...", text: $viewModel.newCommentText, axis: .vertical)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textPrimary)
-                .tint(ColorTokens.gold)
-                .lineLimit(1...4)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, 8)
-                .background(ColorTokens.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+            TextField(
+                viewModel.replyingTo != nil ? "Write a reply..." : viewModel.editingComment != nil ? "Edit comment..." : "Add a comment...",
+                text: $viewModel.newCommentText,
+                axis: .vertical
+            )
+            .font(Typography.bodySmall)
+            .foregroundStyle(ColorTokens.textPrimary)
+            .tint(ColorTokens.gold)
+            .lineLimit(1...4)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, 8)
+            .background(ColorTokens.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
 
             if !viewModel.newCommentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Button {
                     Task { await viewModel.postComment() }
                 } label: {
-                    Image(systemName: "arrow.up.circle.fill")
+                    Image(systemName: viewModel.editingComment != nil ? "checkmark.circle.fill" : "arrow.up.circle.fill")
                         .font(.system(size: 28))
                         .foregroundStyle(ColorTokens.gold)
                 }
@@ -481,15 +552,14 @@ struct PlayerView: View {
         }
     }
 
-    private func commentRow(_ comment: Comment) -> some View {
+    private func commentRow(_ comment: Comment, isReply: Bool) -> some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
-            // Avatar
             Circle()
                 .fill(ColorTokens.surfaceElevated)
-                .frame(width: 32, height: 32)
+                .frame(width: isReply ? 24 : 32, height: isReply ? 24 : 32)
                 .overlay {
                     Text(comment.userId?.initials ?? "?")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: isReply ? 9 : 12, weight: .semibold))
                         .foregroundStyle(ColorTokens.textSecondary)
                 }
 
@@ -503,25 +573,76 @@ struct PlayerView: View {
                     Text(comment.timeAgo)
                         .font(Typography.micro)
                         .foregroundStyle(ColorTokens.textTertiary)
+
+                    if comment.isEdited == true {
+                        Text("(edited)")
+                            .font(Typography.micro)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
                 }
 
                 Text(comment.text)
                     .font(Typography.bodySmall)
                     .foregroundStyle(ColorTokens.textSecondary)
 
-                if let likes = comment.likeCount, likes > 0 {
-                    HStack(spacing: 4) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 10))
-                        Text("\(likes)")
-                            .font(Typography.micro)
+                // Action buttons
+                HStack(spacing: Spacing.lg) {
+                    // Like
+                    Button {
+                        Task { await viewModel.toggleCommentLike(comment) }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: comment.isLikedByMe ? "heart.fill" : "heart")
+                                .font(.system(size: 11))
+                            if let likes = comment.likeCount, likes > 0 {
+                                Text(verbatim: "\(likes)")
+                                    .font(Typography.micro)
+                            }
+                        }
+                        .foregroundStyle(comment.isLikedByMe ? ColorTokens.gold : ColorTokens.textTertiary)
                     }
-                    .foregroundStyle(ColorTokens.textTertiary)
-                }
-            }
 
-            Spacer()
+                    // Reply (only on top-level)
+                    if !isReply {
+                        Button {
+                            viewModel.startReply(to: comment)
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrowshape.turn.up.left")
+                                    .font(.system(size: 11))
+                                Text("Reply")
+                                    .font(Typography.micro)
+                            }
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                    }
+
+                    Spacer()
+
+                    // More actions (own comments only)
+                    if comment.userId?.id == appState.currentUser?.id {
+                        Menu {
+                            Button {
+                                viewModel.startEdit(comment)
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                Task { await viewModel.deleteComment(comment) }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 12))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
+        .padding(.vertical, 8)
     }
 
     // MARK: - Up Next Overlay
