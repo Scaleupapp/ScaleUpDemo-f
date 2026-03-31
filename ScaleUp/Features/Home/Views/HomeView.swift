@@ -137,8 +137,8 @@ struct HomeView: View {
                     .padding(.bottom, Spacing.sm)
                 }
 
-                // Next action (slim)
-                if let action = viewModel.firstNextAction {
+                // Next action (slim) — only if no objective status bar
+                if viewModel.objectiveTitle == nil, let action = viewModel.firstNextAction {
                     if action.type == "quiz" {
                         NavigationLink(value: QuizListDestination()) {
                             nextActionBanner(action)
@@ -185,32 +185,121 @@ struct HomeView: View {
     // MARK: - Compact Header
 
     private var compactHeader: some View {
-        HStack(spacing: Spacing.sm) {
-            // Greeting
-            VStack(alignment: .leading, spacing: 1) {
-                Text(viewModel.greeting)
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.textTertiary)
-                if let name = appState.currentUser?.firstName {
-                    Text(name)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(.white)
+        VStack(spacing: 6) {
+            HStack(spacing: Spacing.sm) {
+                // Greeting + Name
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(viewModel.greeting)
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    if let name = appState.currentUser?.firstName {
+                        Text(name)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                Spacer()
+
+                // Profile avatar
+                Button {
+                    appState.selectedTab = .profile
+                } label: {
+                    profileAvatar
+                }
+
+                // Notification bell
+                NavigationLink(value: NotificationDestination()) {
+                    notificationBell
+                }
+                .buttonStyle(.plain)
+            }
+
+            // Objective status bar
+            if let title = viewModel.objectiveTitle {
+                objectiveStatusBar(title: title)
+            }
+        }
+    }
+
+    private func objectiveStatusBar(title: String) -> some View {
+        let status = viewModel.objectiveStatus
+
+        return Button {
+            appState.selectedTab = .journey
+        } label: {
+            HStack(spacing: Spacing.md) {
+                VStack(alignment: .leading, spacing: 6) {
+                    // Title + status
+                    HStack {
+                        Text(title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+
+                        Spacer()
+
+                        Text(status.rawValue)
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(status.color)
+                    }
+
+                    // Progress bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(.white.opacity(0.08))
+                            Capsule()
+                                .fill(status.color)
+                                .frame(width: max(4, geo.size.width * viewModel.objectiveProgressFraction))
+                        }
+                    }
+                    .frame(height: 4)
+
+                    // CTA
+                    HStack(spacing: 4) {
+                        Text("Continue today's plan")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
                 }
             }
-
-            Spacer()
-
-            // Score badge — only when user has a score
-            if viewModel.readinessScore > 0 {
-                scoreBadge
-            }
-
-            // Notification bell
-            NavigationLink(value: NotificationDestination()) {
-                notificationBell
-            }
-            .buttonStyle(.plain)
+            .padding(Spacing.md)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
+    }
+
+    private var profileAvatar: some View {
+        Group {
+            if let pic = appState.currentUser?.profilePicture, let url = URL(string: pic) {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } else {
+                        avatarPlaceholder
+                    }
+                }
+                .frame(width: 36, height: 36)
+                .clipShape(Circle())
+            } else {
+                avatarPlaceholder
+            }
+        }
+    }
+
+    private var avatarPlaceholder: some View {
+        Circle()
+            .fill(ColorTokens.surfaceElevated)
+            .frame(width: 36, height: 36)
+            .overlay {
+                Text(appState.currentUser?.firstName.prefix(1).uppercased() ?? "?")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
     }
 
     private var notificationBell: some View {
@@ -233,19 +322,6 @@ struct HomeView: View {
         }
     }
 
-    private var scoreBadge: some View {
-        VStack(spacing: 1) {
-            Text("\(viewModel.readinessScore)")
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundStyle(ColorTokens.gold)
-            Text("Score")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(ColorTokens.gold.opacity(0.7))
-        }
-        .frame(width: 44, height: 44)
-        .background(ColorTokens.gold.opacity(0.12))
-        .clipShape(Circle())
-    }
 
     // MARK: - Home Challenge Card (Compact)
 

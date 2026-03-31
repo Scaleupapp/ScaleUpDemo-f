@@ -50,6 +50,63 @@ final class HomeViewModel {
         dashboard?.readinessScore ?? 0
     }
 
+    // MARK: - Objective Status
+
+    var objectiveTitle: String? {
+        primaryObjective?.targetRole ?? primaryObjective?.targetSkill ?? journey?.title
+    }
+
+    enum ObjectiveStatus: String {
+        case onTrack = "On Track"
+        case ahead = "Ahead"
+        case fallingBehind = "Speed Up"
+        case justStarted = "Just Started"
+
+        var color: Color {
+            switch self {
+            case .onTrack: return Color(hex: 0x4CAF50)
+            case .ahead: return Color(hex: 0xE8B84B)
+            case .fallingBehind: return .orange
+            case .justStarted: return Color(hex: 0x4A9FD9)
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .onTrack: return "checkmark.circle.fill"
+            case .ahead: return "flame.fill"
+            case .fallingBehind: return "exclamationmark.triangle.fill"
+            case .justStarted: return "sparkles"
+            }
+        }
+    }
+
+    var objectiveStatus: ObjectiveStatus {
+        guard let progress = journey?.progress else { return .justStarted }
+
+        let assigned = progress.contentAssigned ?? 0
+        let consumed = progress.contentConsumed ?? 0
+        let streak = progress.currentStreak ?? 0
+
+        // Not enough data yet
+        if assigned == 0 && consumed == 0 { return .justStarted }
+
+        // Completion ratio
+        let ratio: Double = assigned > 0 ? Double(consumed) / Double(assigned) : 0
+
+        if ratio >= 1.0 || streak >= 7 { return .ahead }
+        if ratio >= 0.5 || streak >= 3 { return .onTrack }
+        return .fallingBehind
+    }
+
+    var objectiveProgressFraction: Double {
+        guard let progress = journey?.progress else { return 0 }
+        let assigned = progress.contentAssigned ?? 0
+        let consumed = progress.contentConsumed ?? 0
+        if assigned == 0 { return 0 }
+        return min(1, Double(consumed) / Double(assigned))
+    }
+
     var weeklyStats: WeeklyStats? {
         dashboard?.weeklyStats
     }
