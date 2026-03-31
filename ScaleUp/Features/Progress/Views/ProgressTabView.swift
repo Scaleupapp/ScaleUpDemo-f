@@ -207,6 +207,9 @@ struct ProgressTabView: View {
 
     // MARK: - Competition Performance
 
+    @State private var showCompInfoBanner = !UserDefaults.standard.bool(forKey: "competitionInfoDismissed")
+    @State private var isCompInfoExpanded = false
+
     private var competitionPerformanceSection: some View {
         VStack(spacing: Spacing.md) {
             HStack(spacing: 6) {
@@ -229,22 +232,48 @@ struct ProgressTabView: View {
                 }
             }
 
+            // One-time info banner
+            if showCompInfoBanner {
+                HStack(spacing: 10) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+
+                    Text("Competitions are for fun & ranking. They don't count toward your learning progress above.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textSecondary)
+
+                    Button {
+                        withAnimation {
+                            showCompInfoBanner = false
+                            UserDefaults.standard.set(true, forKey: "competitionInfoDismissed")
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+                .padding(Spacing.sm)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(ColorTokens.gold.opacity(0.06))
+                )
+            }
+
             HStack(spacing: Spacing.md) {
-                // Rounds played
                 compStatBox(
                     value: "\(viewModel.competitionProfile?.totalChallengesCompleted ?? viewModel.competitionStats?.challengesThisWeek ?? 0)",
                     label: "Rounds Played",
                     icon: "flag.checkered"
                 )
 
-                // Win streak
                 compStatBox(
                     value: "\(viewModel.competitionProfile?.currentChallengeStreak ?? viewModel.competitionStats?.challengeStreak ?? 0)",
                     label: "Current Streak",
                     icon: "flame.fill"
                 )
 
-                // Best streak
                 compStatBox(
                     value: "\(viewModel.competitionProfile?.longestChallengeStreak ?? 0)",
                     label: "Best Streak",
@@ -252,7 +281,7 @@ struct ProgressTabView: View {
                 )
             }
 
-            // Percentile if available
+            // Percentile
             if let percentile = viewModel.competitionStats?.percentile, percentile > 0 {
                 HStack(spacing: 8) {
                     Image(systemName: "chart.bar.fill")
@@ -266,11 +295,17 @@ struct ProgressTabView: View {
                 .padding(.top, 4)
             }
 
-            // Explanation
-            scoreExplanation(
-                icon: "info.circle",
-                text: "Competition rounds are tracked here. They don't affect your learning knowledge score."
-            )
+            // Subtle note after banner dismissed
+            if !showCompInfoBanner {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 9))
+                    Text("For fun & ranking only — doesn't affect learning progress")
+                        .font(.system(size: 10))
+                    Spacer()
+                }
+                .foregroundStyle(ColorTokens.textTertiary)
+            }
         }
         .padding(Spacing.lg)
         .background(

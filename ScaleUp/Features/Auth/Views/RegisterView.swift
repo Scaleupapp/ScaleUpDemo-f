@@ -87,7 +87,14 @@ struct RegisterView: View {
                             if let authData = await viewModel.register() {
                                 // Record consent
                                 _ = try? await APIClient.shared.requestRaw(ConsentEndpoint(), body: ConsentBody(terms: true, privacy: true))
-                                await appState.handleAuthSuccess(authData)
+                                // Save tokens and user
+                                await KeychainManager.shared.saveTokens(
+                                    access: authData.accessToken,
+                                    refresh: authData.refreshToken
+                                )
+                                appState.currentUser = authData.user
+                                // Go to phone verification (not directly to onboarding)
+                                appState.launchState = .phoneVerification
                             }
                         }
                     }

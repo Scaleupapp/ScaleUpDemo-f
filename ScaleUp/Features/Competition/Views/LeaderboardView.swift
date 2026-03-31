@@ -45,13 +45,52 @@ struct LeaderboardView: View {
 
             Spacer()
 
-            Text("Leaderboard")
-                .font(Typography.titleLarge)
-                .foregroundStyle(.white)
+            // Title + topic filter dropdown
+            Menu {
+                Button {
+                    Task { await viewModel.switchTopic(nil) }
+                } label: {
+                    HStack {
+                        Text("All Topics")
+                        if viewModel.selectedTopic == nil {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+
+                ForEach(viewModel.availableTopics, id: \.raw) { topic in
+                    Button {
+                        Task { await viewModel.switchTopic(topic.raw) }
+                    } label: {
+                        HStack {
+                            Text(topic.display)
+                            if viewModel.selectedTopic == topic.raw {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                VStack(spacing: 2) {
+                    HStack(spacing: 4) {
+                        Text("Leaderboard")
+                            .font(Typography.titleLarge)
+                            .foregroundStyle(.white)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+
+                    Text(viewModel.selectedTopic != nil
+                         ? (viewModel.availableTopics.first(where: { $0.raw == viewModel.selectedTopic })?.display ?? viewModel.selectedTopic!)
+                         : "All Topics")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ColorTokens.gold.opacity(0.8))
+                }
+            }
 
             Spacer()
 
-            // Balance spacer
             Color.clear.frame(width: 36, height: 36)
         }
         .padding(.horizontal, Spacing.lg)

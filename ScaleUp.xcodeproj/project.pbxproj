@@ -154,6 +154,7 @@
 		CA54324E92E46019276544D7 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6C9EA77B531964E5E49362 /* Typography.swift */; };
 		D0AECD8CC98476147DAD769C /* ContentRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAD65A3BDC6810EEEA013026 /* ContentRow.swift */; };
 		D2EEE08B61917E00443D4FDA /* AdminService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F897C3D8F750F25666C0F4 /* AdminService.swift */; };
+		D3CA90648F7BF8057EC23966 /* PhoneVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5EA9E01A5DD5E8577ED5CAF /* PhoneVerificationView.swift */; };
 		D5F8B1BF306718132E5E10CC /* ProfileStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91A395DB118F51FC07A29A6 /* ProfileStepView.swift */; };
 		D67C4C2CA197F041F1D9C115 /* Journey.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA107548E1AC3D003991C6E5 /* Journey.swift */; };
 		D802F9003C1F887FB38C45F0 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1647243F39A6C50AFA3E64 /* Endpoint.swift */; };
@@ -350,6 +351,7 @@
 		D17141FD37287891A9725EA6 /* LiveEventResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventResultsView.swift; sourceTree = "<group>"; };
 		D22F18DCCE58CE3B311003EF /* CreatorApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorApplication.swift; sourceTree = "<group>"; };
 		D3D7C1AC4A84A7509B0931BB /* TopicDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicDetailView.swift; sourceTree = "<group>"; };
+		D5EA9E01A5DD5E8577ED5CAF /* PhoneVerificationView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PhoneVerificationView.swift; sourceTree = "<group>"; };
 		D7D651438987D7C3AD1FBC34 /* PlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerService.swift; sourceTree = "<group>"; };
 		DB6BEB862CBF686A005C2DF4 /* ExploreGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExploreGridView.swift; sourceTree = "<group>"; };
 		DBBFCAB5849606EA89B48A3F /* Spacing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Spacing.swift; sourceTree = "<group>"; };
@@ -829,6 +831,7 @@
 				511D86511F9230F82D5C71AA /* PhoneAuthView.swift */,
 				DBDA1EA66E812B6D410C89F6 /* RegisterView.swift */,
 				B1EEABD841199E7E343C5DB4 /* WelcomeView.swift */,
+				D5EA9E01A5DD5E8577ED5CAF /* PhoneVerificationView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -1492,6 +1495,7 @@
 				3815A3DA60F0828083374969 /* WelcomeCarouselView.swift in Sources */,
 				761C16D907CD23D228AD9F15 /* WelcomeView.swift in Sources */,
 				121FA1A1B33D6BF4DD751681 /* PlaylistDetailView.swift in Sources */,
+				D3CA90648F7BF8057EC23966 /* PhoneVerificationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

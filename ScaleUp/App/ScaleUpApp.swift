@@ -58,6 +58,10 @@ struct ScaleUpApp: App {
             WelcomeView()
                 .transition(.opacity)
 
+        case .phoneVerification:
+            PhoneVerificationView()
+                .transition(.opacity)
+
         case .onboarding(let step):
             OnboardingContainerView(initialStep: step, appState: appState)
                 .transition(.opacity)

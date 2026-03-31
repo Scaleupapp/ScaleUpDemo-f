@@ -5,6 +5,7 @@ import SwiftUI
 enum AppLaunchState: Equatable {
     case splash
     case welcome
+    case phoneVerification
     case onboarding(step: Int)
     case home
 }
