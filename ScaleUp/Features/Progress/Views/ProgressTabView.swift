@@ -67,16 +67,13 @@ struct ProgressTabView: View {
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Spacing.xl) {
-                // 0. Competition Stats
-                if viewModel.competitionStats != nil || viewModel.weeklyBoard != nil {
-                    CompetitionStatsSection(
-                        stats: viewModel.competitionStats,
-                        weeklyBoard: viewModel.weeklyBoard
-                    )
-                }
-
                 // 1. Knowledge Score Hero (with explanatory labels)
                 scoreHeroSection
+
+                // 1b. Competition Performance Stats
+                if viewModel.competitionProfile != nil || viewModel.competitionStats != nil {
+                    competitionPerformanceSection
+                }
 
                 // 2. Streaks & Activity
                 if viewModel.currentStreak > 0 || !viewModel.activityHeatmap.isEmpty {
@@ -126,11 +123,13 @@ struct ProgressTabView: View {
 
     private var scoreHeroSection: some View {
         VStack(spacing: Spacing.md) {
-            HStack {
-                Text("Progress")
+            HStack(spacing: 6) {
+                Image(systemName: "book.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Learning Progress")
                     .font(Typography.titleLarge)
                     .foregroundStyle(.white)
-
                 Spacer()
             }
 
@@ -155,8 +154,8 @@ struct ProgressTabView: View {
             // Explanatory labels
             VStack(spacing: 4) {
                 scoreExplanation(
-                    icon: "brain.head.profile",
-                    text: "Knowledge Score is based on your quiz performance across all topics"
+                    icon: "info.circle",
+                    text: "Based on learning quizzes only. Competitions are tracked separately below."
                 )
                 if viewModel.readinessScore > 0 {
                     scoreExplanation(
@@ -204,6 +203,103 @@ struct ProgressTabView: View {
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
         }
+    }
+
+    // MARK: - Competition Performance
+
+    private var competitionPerformanceSection: some View {
+        VStack(spacing: Spacing.md) {
+            HStack(spacing: 6) {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Competition Stats")
+                    .font(Typography.titleLarge)
+                    .foregroundStyle(.white)
+                Spacer()
+
+                NavigationLink(value: LeaderboardDestination()) {
+                    HStack(spacing: 3) {
+                        Text("Leaderboard")
+                            .font(.system(size: 11, weight: .semibold))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                    }
+                    .foregroundStyle(ColorTokens.gold)
+                }
+            }
+
+            HStack(spacing: Spacing.md) {
+                // Rounds played
+                compStatBox(
+                    value: "\(viewModel.competitionProfile?.totalChallengesCompleted ?? viewModel.competitionStats?.challengesThisWeek ?? 0)",
+                    label: "Rounds Played",
+                    icon: "flag.checkered"
+                )
+
+                // Win streak
+                compStatBox(
+                    value: "\(viewModel.competitionProfile?.currentChallengeStreak ?? viewModel.competitionStats?.challengeStreak ?? 0)",
+                    label: "Current Streak",
+                    icon: "flame.fill"
+                )
+
+                // Best streak
+                compStatBox(
+                    value: "\(viewModel.competitionProfile?.longestChallengeStreak ?? 0)",
+                    label: "Best Streak",
+                    icon: "crown.fill"
+                )
+            }
+
+            // Percentile if available
+            if let percentile = viewModel.competitionStats?.percentile, percentile > 0 {
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("Top \(Int(percentile))% this week")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                    Spacer()
+                }
+                .padding(.top, 4)
+            }
+
+            // Explanation
+            scoreExplanation(
+                icon: "info.circle",
+                text: "Competition rounds are tracked here. They don't affect your learning knowledge score."
+            )
+        }
+        .padding(Spacing.lg)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(ColorTokens.surface)
+        )
+    }
+
+    private func compStatBox(value: String, label: String, icon: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundStyle(ColorTokens.gold)
+
+            Text(value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+
+            Text(label)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.md)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(ColorTokens.surfaceElevated)
+        )
     }
 
     // MARK: - Focus This Week

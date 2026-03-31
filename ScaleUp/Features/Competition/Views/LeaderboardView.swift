@@ -62,21 +62,6 @@ struct LeaderboardView: View {
 
     private var filterControls: some View {
         VStack(spacing: Spacing.sm) {
-            // Topic filter chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    topicChip("All Topics", isSelected: viewModel.selectedTopic == nil) {
-                        Task { await viewModel.switchTopic(nil) }
-                    }
-                    ForEach(viewModel.availableTopics, id: \.raw) { topic in
-                        topicChip(topic.display, isSelected: viewModel.selectedTopic == topic.raw) {
-                            Task { await viewModel.switchTopic(topic.raw) }
-                        }
-                    }
-                }
-                .padding(.horizontal, Spacing.lg)
-            }
-
             // This Week / All Time
             Picker("Scope", selection: $selectedScope) {
                 ForEach(LeaderboardScope.allCases, id: \.self) { scope in
@@ -282,27 +267,29 @@ struct LeaderboardView: View {
 
     // MARK: - Rank Badge
 
+    @ViewBuilder
     private func rankBadge(_ rank: Int) -> some View {
-        Group {
-            if rank <= 3 {
-                Text(rankEmoji(rank))
-                    .font(.system(size: 22))
-                    .frame(width: 32)
-            } else {
-                Text("\(rank)")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .frame(width: 32)
-            }
-        }
-    }
-
-    private func rankEmoji(_ rank: Int) -> String {
         switch rank {
-        case 1: return "\u{1F947}"  // gold medal
-        case 2: return "\u{1F948}"  // silver medal
-        case 3: return "\u{1F949}"  // bronze medal
-        default: return "\(rank)"
+        case 1:
+            Image(systemName: "medal.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Color(hex: 0xFFD700))
+                .frame(width: 32)
+        case 2:
+            Image(systemName: "medal.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Color(hex: 0xC0C0C0))
+                .frame(width: 32)
+        case 3:
+            Image(systemName: "medal.fill")
+                .font(.system(size: 20))
+                .foregroundStyle(Color(hex: 0xCD7F32))
+                .frame(width: 32)
+        default:
+            Text("\(rank)")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .frame(width: 32)
         }
     }
 

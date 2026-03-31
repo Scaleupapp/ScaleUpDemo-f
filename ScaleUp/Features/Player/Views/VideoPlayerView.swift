@@ -141,7 +141,7 @@ struct VideoPlayerView: View {
                         .clipShape(Capsule())
                 }
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, isFullscreen ? 48 : Spacing.md)
             .padding(.top, isFullscreen ? Spacing.lg : Spacing.sm)
             Spacer()
         }
@@ -213,7 +213,7 @@ struct VideoPlayerView: View {
                     }
                 }
             }
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, isFullscreen ? 48 : Spacing.md)
             .padding(.bottom, isFullscreen ? Spacing.lg : Spacing.sm)
         }
     }

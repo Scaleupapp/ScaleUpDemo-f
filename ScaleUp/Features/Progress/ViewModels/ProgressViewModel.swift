@@ -15,6 +15,7 @@ final class ProgressViewModel {
     var activityHeatmap: [ActivityDay] = []
     var timelineEvents: [TimelineEvent] = []
     var competitionStats: CompetitionStats? = nil
+    var competitionProfile: CompetitionProfile? = nil
     var weeklyBoard: WeeklyLeaderboard? = nil
     var isLoading = false
     var errorMessage: String?
@@ -112,9 +113,12 @@ final class ProgressViewModel {
         async let compBoardTask: WeeklyLeaderboard? = {
             try? await self.competitionService.fetchWeeklyLeaderboard()
         }()
+        async let compProfileTask: CompetitionProfile? = {
+            try? await self.competitionService.fetchCompetitionProfile()
+        }()
 
-        let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline, compStats, compBoard) =
-            await (profileTask, gapsTask, statsTask, dashTask, gapContentTask, quizTask, heatmapTask, timelineTask, compStatsTask, compBoardTask)
+        let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline, compStats, compBoard, compProfile) =
+            await (profileTask, gapsTask, statsTask, dashTask, gapContentTask, quizTask, heatmapTask, timelineTask, compStatsTask, compBoardTask, compProfileTask)
 
         knowledgeProfile = profile
         gaps = gapsResult ?? []
@@ -126,6 +130,7 @@ final class ProgressViewModel {
         timelineEvents = timeline ?? []
         competitionStats = compStats
         weeklyBoard = compBoard
+        competitionProfile = compProfile
 
         isLoading = false
     }

@@ -130,8 +130,7 @@ struct CompetitionStatsSection: View {
         return VStack(spacing: 0) {
             ForEach(Array(topEntries.enumerated()), id: \.element.id) { index, entry in
                 HStack(spacing: 8) {
-                    Text(rankEmoji(index + 1))
-                        .font(.system(size: 13))
+                    rankBadge(index + 1)
                         .frame(width: 20)
 
                     Circle()
@@ -171,12 +170,25 @@ struct CompetitionStatsSection: View {
         )
     }
 
-    private func rankEmoji(_ rank: Int) -> String {
+    @ViewBuilder
+    private func rankBadge(_ rank: Int) -> some View {
         switch rank {
-        case 1: return "\u{1F947}"
-        case 2: return "\u{1F948}"
-        case 3: return "\u{1F949}"
-        default: return "\(rank)"
+        case 1:
+            Image(systemName: "medal.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color(hex: 0xFFD700))
+        case 2:
+            Image(systemName: "medal.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color(hex: 0xC0C0C0))
+        case 3:
+            Image(systemName: "medal.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color(hex: 0xCD7F32))
+        default:
+            Text("\(rank)")
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(ColorTokens.textSecondary)
         }
     }
 }
