@@ -4,11 +4,13 @@ struct PlaylistDetailView: View {
     let playlistId: String
 
     @State private var playlist: Playlist?
+    @State private var contentItems: [Content] = []
     @State private var isLoading = true
-    @State private var isEditing = false
     @State private var editTitle = ""
     @State private var showRenameAlert = false
     @State private var showDeleteConfirm = false
+    @State private var navigateToContentId: String?
+    @State private var playlistQueue: [String] = []  // For auto-play
     @Environment(\.dismiss) private var dismiss
 
     private let playerService = PlayerService()
@@ -19,69 +21,68 @@ struct PlaylistDetailView: View {
 
             if isLoading {
                 ProgressView().tint(ColorTokens.gold)
-            } else if let playlist {
-                contentView(playlist)
+            } else if contentItems.isEmpty {
+                emptyState
+            } else {
+                mainList
             }
         }
         .navigationTitle(playlist?.title ?? "Playlist")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Menu {
-                    Button {
-                        editTitle = playlist?.title ?? ""
-                        showRenameAlert = true
-                    } label: {
-                        Label("Rename", systemImage: "pencil")
-                    }
-
-                    Button(role: .destructive) {
-                        showDeleteConfirm = true
-                    } label: {
-                        Label("Delete Playlist", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundStyle(ColorTokens.gold)
-                }
-            }
-        }
+        .toolbar { toolbarContent }
         .alert("Rename Playlist", isPresented: $showRenameAlert) {
             TextField("Playlist name", text: $editTitle)
             Button("Cancel", role: .cancel) {}
-            Button("Save") {
-                Task { await renamePlaylist() }
-            }
+            Button("Save") { Task { await renamePlaylist() } }
         }
         .alert("Delete Playlist?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
-                Task { await deletePlaylist() }
-            }
+            Button("Delete", role: .destructive) { Task { await deletePlaylist() } }
         } message: {
             Text("This will permanently delete this playlist.")
         }
-        .task {
-            await loadPlaylist()
+        .navigationDestination(item: $navigateToContentId) { id in
+            PlayerView(contentId: id)
+        }
+        .task { await loadPlaylist() }
+    }
+
+    // MARK: - Toolbar
+
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .primaryAction) {
+            Menu {
+                Button {
+                    editTitle = playlist?.title ?? ""
+                    showRenameAlert = true
+                } label: {
+                    Label("Rename", systemImage: "pencil")
+                }
+
+                Button {
+                    shuffleItems()
+                } label: {
+                    Label("Shuffle", systemImage: "shuffle")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    showDeleteConfirm = true
+                } label: {
+                    Label("Delete Playlist", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .foregroundStyle(ColorTokens.gold)
+            }
         }
     }
 
-    // MARK: - Content
+    // MARK: - Empty State
 
-    private var resolvedContentItems: [Content] {
-        (playlist?.items ?? []).compactMap { $0.contentId?.contentValue }
-    }
-
-    @ViewBuilder
-    private func contentView(_ playlist: Playlist) -> some View {
-        if resolvedContentItems.isEmpty {
-            emptyPlaylistView
-        } else {
-            playlistListView(playlist)
-        }
-    }
-
-    private var emptyPlaylistView: some View {
+    private var emptyState: some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "music.note.list")
                 .font(.system(size: 40))
@@ -92,60 +93,76 @@ struct PlaylistDetailView: View {
         }
     }
 
-    private func playlistListView(_ playlist: Playlist) -> some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                headerRow(playlist)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
+    // MARK: - Main List
 
-                ForEach(resolvedContentItems) { content in
-                    NavigationLink {
-                        PlayerView(contentId: content.id)
+    private var mainList: some View {
+        List {
+            // Header
+            headerSection
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: Spacing.md, bottom: Spacing.sm, trailing: Spacing.md))
+                .listRowSeparator(.hidden)
+
+            // Content rows — long press to drag reorder
+            ForEach(Array(contentItems.enumerated()), id: \.element.id) { index, content in
+                Button {
+                    navigateToContentId = content.id
+                } label: {
+                    contentRow(content, index: index)
+                }
+                .listRowBackground(ColorTokens.surface)
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        Task { await removeItem(content) }
                     } label: {
-                        contentRow(content, index: resolvedContentItems.firstIndex(where: { $0.id == content.id }) ?? 0)
+                        Label("Remove", systemImage: "trash")
                     }
-                    .buttonStyle(.plain)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, 6)
                 }
             }
+            .onMove(perform: moveItems)
         }
+        .scrollContentBackground(.hidden)
+        .listStyle(.plain)
     }
 
+    // MARK: - Header
 
-    private func headerRow(_ playlist: Playlist) -> some View {
+    private var headerSection: some View {
         HStack(spacing: Spacing.sm) {
-            Text("\(resolvedContentItems.count) items")
+            Text("\(contentItems.count) items")
                 .font(Typography.caption)
                 .foregroundStyle(ColorTokens.textSecondary)
-            if !playlist.formattedDuration.isEmpty {
+
+            if let playlist, !playlist.formattedDuration.isEmpty {
                 Text("·").foregroundStyle(ColorTokens.textTertiary)
                 Text(playlist.formattedDuration)
                     .font(Typography.caption)
                     .foregroundStyle(ColorTokens.textSecondary)
             }
+
             Spacer()
-            if !isEditing, let first = resolvedContentItems.first {
-                NavigationLink {
-                    PlayerView(contentId: first.id)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "play.fill")
-                        Text("Play All")
-                    }
-                    .font(Typography.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(ColorTokens.buttonPrimaryText)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.vertical, Spacing.sm)
-                    .background(ColorTokens.gold)
-                    .clipShape(Capsule())
+
+            // Play All button
+            Button {
+                guard let first = contentItems.first else { return }
+                navigateToContentId = first.id
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "play.fill")
+                    Text("Play All")
                 }
-                .buttonStyle(.plain)
+                .font(Typography.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(ColorTokens.buttonPrimaryText)
+                .padding(.horizontal, Spacing.md)
+                .padding(.vertical, Spacing.sm)
+                .background(ColorTokens.gold)
+                .clipShape(Capsule())
             }
         }
     }
+
+    // MARK: - Content Row
 
     private func contentRow(_ content: Content, index: Int) -> some View {
         HStack(spacing: Spacing.md) {
@@ -155,34 +172,32 @@ struct PlaylistDetailView: View {
                 .foregroundStyle(ColorTokens.textTertiary)
                 .frame(width: 20)
 
-            // Thumbnail
-            ZStack(alignment: .bottomTrailing) {
-                if let thumb = content.thumbnailURL, let url = URL(string: thumb) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        default:
-                            ColorTokens.surfaceElevated
-                        }
-                    }
-                    .frame(width: 80, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                } else {
-                    ColorTokens.surfaceElevated
+            // Thumbnail with watched indicator
+            ZStack(alignment: .topLeading) {
+                ZStack(alignment: .bottomTrailing) {
+                    thumbnailImage(content)
                         .frame(width: 80, height: 50)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    if !content.formattedDuration.isEmpty {
+                        Text(content.formattedDuration)
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 3)
+                            .padding(.vertical, 1)
+                            .background(.black.opacity(0.7))
+                            .clipShape(RoundedRectangle(cornerRadius: 2))
+                            .padding(3)
+                    }
                 }
 
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
-                        .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 3)
-                        .padding(.vertical, 1)
-                        .background(.black.opacity(0.7))
-                        .clipShape(RoundedRectangle(cornerRadius: 2))
-                        .padding(3)
+                // Watched checkmark
+                if content._progress?.isCompleted == true {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.green)
+                        .background(Circle().fill(.black.opacity(0.5)).frame(width: 12, height: 12))
+                        .offset(x: 3, y: 3)
                 }
             }
 
@@ -190,7 +205,7 @@ struct PlaylistDetailView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(content.title)
                     .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.textPrimary)
+                    .foregroundStyle(content._progress?.isCompleted == true ? ColorTokens.textTertiary : ColorTokens.textPrimary)
                     .lineLimit(2)
                 if let creator = content.creatorId {
                     Text(creator.displayName)
@@ -201,6 +216,26 @@ struct PlaylistDetailView: View {
             }
 
             Spacer()
+
+            // Drag handle indicator
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textTertiary.opacity(0.5))
+        }
+    }
+
+    @ViewBuilder
+    private func thumbnailImage(_ content: Content) -> some View {
+        if let thumb = content.thumbnailURL, let url = URL(string: thumb) {
+            AsyncImage(url: url) { phase in
+                if let image = phase.image {
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } else {
+                    ColorTokens.surfaceElevated
+                }
+            }
+        } else {
+            ColorTokens.surfaceElevated
         }
     }
 
@@ -209,6 +244,7 @@ struct PlaylistDetailView: View {
     private func loadPlaylist() async {
         isLoading = true
         playlist = try? await playerService.fetchPlaylistDetail(playlistId: playlistId)
+        contentItems = (playlist?.items ?? []).compactMap { $0.contentId?.contentValue }
         isLoading = false
     }
 
@@ -227,15 +263,27 @@ struct PlaylistDetailView: View {
         dismiss()
     }
 
-    private func removeItems(at offsets: IndexSet) {
-        guard let items = playlist?.items else { return }
-        for index in offsets {
-            let contentId = items[index].contentId?.idValue ?? ""
-            Task {
-                try? await playerService.removeFromPlaylist(playlistId: playlistId, contentId: contentId)
-                await loadPlaylist()
-            }
-        }
+    private func removeItem(_ content: Content) async {
+        contentItems.removeAll { $0.id == content.id }
+        Haptics.success()
+        try? await playerService.removeFromPlaylist(playlistId: playlistId, contentId: content.id)
+        await loadPlaylist()
     }
 
+    private func moveItems(from source: IndexSet, to destination: Int) {
+        contentItems.move(fromOffsets: source, toOffset: destination)
+        Haptics.light()
+    }
+
+    private func shuffleItems() {
+        withAnimation {
+            contentItems.shuffle()
+        }
+        Haptics.light()
+    }
+}
+
+// Make String usable with navigationDestination(item:)
+extension String: @retroactive Identifiable {
+    public var id: String { self }
 }
