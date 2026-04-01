@@ -103,10 +103,31 @@ struct FlashcardListResponse: Codable, Sendable {
 }
 
 struct FlashcardPagination: Codable, Sendable {
-    let page: Int
-    let limit: Int
-    let total: Int
-    let totalPages: Int
+    let page: FlexInt
+    let limit: FlexInt
+    let total: FlexInt
+    let totalPages: FlexInt
+}
+
+/// Handles JSON values that can be either Int or String
+struct FlexInt: Codable, Sendable {
+    let value: Int
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let intVal = try? container.decode(Int.self) {
+            value = intVal
+        } else if let strVal = try? container.decode(String.self), let parsed = Int(strVal) {
+            value = parsed
+        } else {
+            value = 0
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(value)
+    }
 }
 
 struct FlashcardGenerateResponse: Codable, Sendable {
