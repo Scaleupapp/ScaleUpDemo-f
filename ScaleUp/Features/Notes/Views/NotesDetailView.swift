@@ -310,11 +310,19 @@ struct NotesDetailView: View {
             }
         }
         if let sets = try? await notesService.fetchMyFlashcards() {
-            flashcardSetId = sets.items.first(where: {
-                if case .content(let info) = $0.contentId { return info.id == contentId }
-                if case .id(let id) = $0.contentId { return id == contentId }
-                return false
-            })?.id
+            for set in sets.items {
+                if let ref = set.contentId {
+                    let matchId: String
+                    switch ref {
+                    case .content(let info): matchId = info.id
+                    case .id(let id): matchId = id
+                    }
+                    if matchId == contentId && set.isReady {
+                        flashcardSetId = set.id
+                        break
+                    }
+                }
+            }
         }
         isLoading = false
     }
@@ -342,19 +350,32 @@ struct NotesDetailView: View {
     }
 
     private func handleFlashcards() async {
-        if let id = flashcardSetId { flashcardSetId = nil; flashcardSetId = id; return }
+        if let id = flashcardSetId {
+            // Navigate to existing flashcard set
+            flashcardSetId = nil
+            try? await Task.sleep(for: .milliseconds(100))
+            flashcardSetId = id
+            return
+        }
         isGeneratingFlashcards = true; Haptics.light()
         do {
             _ = try await notesService.generateFlashcards(contentId: contentId)
             for _ in 0..<12 {
                 try? await Task.sleep(for: .seconds(5))
                 if let sets = try? await notesService.fetchMyFlashcards() {
-                    if let set = sets.items.first(where: {
-                        if case .id(let id) = $0.contentId { return id == contentId }
-                        if case .content(let info) = $0.contentId { return info.id == contentId }
-                        return false
-                    }), set.status == "ready" {
-                        flashcardSetId = set.id; Haptics.success(); break
+                    for set in sets.items {
+                        if let ref = set.contentId {
+                            let matchId: String
+                            switch ref {
+                            case .content(let info): matchId = info.id
+                            case .id(let id): matchId = id
+                            }
+                            if matchId == contentId && set.isReady {
+                                flashcardSetId = set.id; Haptics.success()
+                                isGeneratingFlashcards = false
+                                return
+                            }
+                        }
                     }
                 }
             }
