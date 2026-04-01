@@ -17,6 +17,7 @@ struct NotesDetailView: View {
     @State private var isGeneratingFlashcards = false
     @State private var isGeneratingQuiz = false
     @State private var showShareSheet = false
+    @State private var showContributorCard = false
     @State private var readStartTime = Date()
     @Environment(AppState.self) private var appState
 
@@ -72,6 +73,12 @@ struct NotesDetailView: View {
                 .presentationDetents([.medium])
             }
         }
+        .sheet(isPresented: $showContributorCard) {
+            if let creatorId = content?.creatorId?.id {
+                ContributorCardView(userId: creatorId)
+                    .presentationDetents([.medium, .large])
+            }
+        }
         .navigationDestination(item: $flashcardSetId) { id in
             FlashcardStudyView(flashcardSetId: id)
         }
@@ -119,7 +126,9 @@ struct NotesDetailView: View {
 
             HStack(spacing: Spacing.sm) {
                 if let creator = content.creatorId {
-                    Text(creator.displayName).font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
+                    Button { showContributorCard = true } label: {
+                        Text(creator.displayName).font(Typography.caption).foregroundStyle(ColorTokens.gold).underline()
+                    }
                 }
                 if let domain = content.domain {
                     Text("·").foregroundStyle(ColorTokens.textTertiary)
