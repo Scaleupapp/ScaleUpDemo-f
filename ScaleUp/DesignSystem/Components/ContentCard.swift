@@ -114,7 +114,7 @@ struct ContentCard: View {
     private var thumbnailPlaceholder: some View {
         ZStack {
             ColorTokens.surfaceElevated
-            Image(systemName: content.contentType == .video ? "play.rectangle.fill" : "doc.text.fill")
+            Image(systemName: content.contentType == .video ? "play.rectangle.fill" : content.contentType == .notes ? "doc.text.image.fill" : "doc.text.fill")
                 .font(.system(size: 28))
                 .foregroundStyle(ColorTokens.textTertiary)
         }

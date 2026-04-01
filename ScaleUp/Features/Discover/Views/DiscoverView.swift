@@ -158,6 +158,7 @@ struct DiscoverView: View {
             filterRow(label: "Type") {
                 typeChip(nil, label: "All")
                 typeChip(.video, label: "Videos")
+                typeChip(.notes, label: "Notes")
                 typeChip(.article, label: "Articles")
                 typeChip(.infographic, label: "Infographics")
             }

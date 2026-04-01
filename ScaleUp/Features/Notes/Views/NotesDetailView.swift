@@ -6,7 +6,12 @@ struct NotesDetailView: View {
 
     @State private var content: Content?
     @State private var isLoading = true
-    @State private var pdfURL: URL?
+    @State private var pdfDocument: PDFDocument?
+    @State private var pdfLoadError = false
+    @State private var isLiked = false
+    @State private var isSaved = false
+    @State private var likeCount = 0
+    @State private var saveCount = 0
     @State private var flashcardStatus: String?
     @State private var showShareSheet = false
     @State private var readStartTime = Date()
@@ -21,12 +26,22 @@ struct NotesDetailView: View {
             ColorTokens.background.ignoresSafeArea()
 
             if isLoading {
-                ProgressView().tint(ColorTokens.gold)
+                VStack(spacing: Spacing.md) {
+                    ProgressView().tint(ColorTokens.gold)
+                    Text("Loading notes...")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
             } else if let content {
                 VStack(spacing: 0) {
-                    // PDF viewer
-                    if let pdfURL {
-                        PDFViewerView(url: pdfURL)
+                    // Content area
+                    if let pdfDocument {
+                        PDFKitView(document: pdfDocument)
+                    } else if pdfLoadError {
+                        // Show AI summary as fallback
+                        ScrollView {
+                            notesSummaryView(content)
+                        }
                     } else {
                         VStack(spacing: Spacing.md) {
                             ProgressView().tint(ColorTokens.gold)
@@ -37,8 +52,8 @@ struct NotesDetailView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
 
-                    // Bottom action bar
-                    notesActionBar(content)
+                    // Action bar
+                    notesActionBar
                 }
             }
         }
@@ -46,7 +61,7 @@ struct NotesDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showShareSheet) {
             if let content {
-                NotesShareSheet(items: [
+                NotesShareView(items: [
                     "Check out \"\(content.title)\" on ScaleUp!\n\nhttps://scaleupapp.club/content/\(content.id)"
                 ])
                 .presentationDetents([.medium])
@@ -57,35 +72,118 @@ struct NotesDetailView: View {
         .onDisappear { trackReadingProgress() }
     }
 
+    // MARK: - Summary Fallback View
+
+    private func notesSummaryView(_ content: Content) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+            // Title card
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text(content.title)
+                    .font(Typography.titleLarge)
+                    .foregroundStyle(.white)
+
+                if let desc = content.description, !desc.isEmpty {
+                    Text(desc)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                HStack(spacing: Spacing.sm) {
+                    if let domain = content.domain {
+                        Text(domain.capitalized)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(ColorTokens.surfaceElevated)
+                            .clipShape(Capsule())
+                    }
+                    if let pages = content.pageCount {
+                        Text("\(pages) pages")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    if let college = content.collegeName, !college.isEmpty {
+                        Text(college)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+            }
+            .padding(Spacing.lg)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+
+            // AI Summary
+            if let aiData = content.aiData {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "brain.head.profile")
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("AI Summary")
+                            .font(Typography.bodyBold)
+                            .foregroundStyle(.white)
+                    }
+
+                    if let summary = aiData.summary, !summary.isEmpty {
+                        Text(summary)
+                            .font(Typography.body)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+
+                    if let concepts = aiData.keyConcepts, !concepts.isEmpty {
+                        VStack(alignment: .leading, spacing: Spacing.sm) {
+                            Text("Key Concepts")
+                                .font(Typography.captionBold)
+                                .foregroundStyle(ColorTokens.textTertiary)
+
+                            ForEach(concepts, id: \.concept) { kc in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Circle().fill(ColorTokens.gold).frame(width: 6, height: 6).padding(.top, 6)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(kc.concept)
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(.white)
+                                        if let desc = kc.description, !desc.isEmpty {
+                                            Text(desc)
+                                                .font(Typography.caption)
+                                                .foregroundStyle(ColorTokens.textTertiary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(Spacing.lg)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .padding(Spacing.lg)
+    }
+
     // MARK: - Action Bar
 
-    private func notesActionBar(_ content: Content) -> some View {
+    private var notesActionBar: some View {
         HStack(spacing: 0) {
-            // Like
-            actionButton(icon: "heart", label: "\(content.likeCount ?? 0)") {
-                Task { _ = try? await contentService.toggleLike(contentId: content.id) }
+            actionButton(icon: isLiked ? "heart.fill" : "heart", label: "\(likeCount)", isActive: isLiked) {
+                Task { await toggleLike() }
             }
 
-            // Save
-            actionButton(icon: "bookmark", label: "\(content.saveCount ?? 0)") {
-                Task { _ = try? await contentService.toggleSave(contentId: content.id) }
+            actionButton(icon: isSaved ? "bookmark.fill" : "bookmark", label: "\(saveCount)", isActive: isSaved) {
+                Task { await toggleSave() }
             }
 
-            // Flashcards
-            actionButton(
-                icon: "rectangle.on.rectangle.angled",
-                label: flashcardStatus ?? "Flashcards"
-            ) {
+            actionButton(icon: "rectangle.on.rectangle.angled", label: flashcardStatus ?? "Flashcards", isActive: false) {
                 Task { await generateFlashcards() }
             }
 
-            // Quiz
-            actionButton(icon: "brain.head.profile", label: "Quiz") {
-                // TODO: trigger on-demand quiz generation
+            actionButton(icon: "brain.head.profile", label: "Quiz", isActive: false) {
+                // Quiz generation — uses same flow as video content
             }
 
-            // Share
-            actionButton(icon: "square.and.arrow.up", label: "Share") {
+            actionButton(icon: "square.and.arrow.up", label: "Share", isActive: false) {
                 showShareSheet = true
             }
         }
@@ -93,15 +191,15 @@ struct NotesDetailView: View {
         .background(ColorTokens.surface)
     }
 
-    private func actionButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
+    private func actionButton(icon: String, label: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: icon)
                     .font(.system(size: 18))
-                    .foregroundStyle(ColorTokens.textSecondary)
+                    .foregroundStyle(isActive ? ColorTokens.gold : ColorTokens.textSecondary)
                 Text(label)
                     .font(Typography.micro)
-                    .foregroundStyle(ColorTokens.textTertiary)
+                    .foregroundStyle(isActive ? ColorTokens.gold : ColorTokens.textTertiary)
             }
             .frame(maxWidth: .infinity)
         }
@@ -114,20 +212,75 @@ struct NotesDetailView: View {
         isLoading = true
         content = try? await contentService.fetchContent(id: contentId)
 
-        // Load PDF via stream URL
+        if let content {
+            likeCount = content.likeCount ?? 0
+            saveCount = content.saveCount ?? 0
+
+            // Load interaction status
+            if let status = try? await contentService.fetchInteractionStatus(contentId: contentId) {
+                isLiked = status.isLiked
+                isSaved = status.isSaved
+            }
+        }
+
+        // Load PDF
         if let stream: StreamResponse = try? await playerService.fetchStreamURL(contentId: contentId),
            let urlStr = stream.resolvedURL, let url = URL(string: urlStr) {
-            pdfURL = url
+            // Download and create PDFDocument
+            if let data = try? await URLSession.shared.data(from: url).0 {
+                pdfDocument = PDFDocument(data: data)
+                if pdfDocument == nil {
+                    pdfLoadError = true
+                }
+            } else {
+                pdfLoadError = true
+            }
+        } else {
+            pdfLoadError = true
         }
 
         isLoading = false
     }
 
+    // MARK: - Actions
+
+    private func toggleLike() async {
+        isLiked.toggle()
+        likeCount += isLiked ? 1 : -1
+        Haptics.light()
+        if let response = try? await contentService.toggleLike(contentId: contentId) {
+            isLiked = response.liked
+            likeCount = response.likeCount
+        }
+    }
+
+    private func toggleSave() async {
+        isSaved.toggle()
+        saveCount += isSaved ? 1 : -1
+        Haptics.light()
+        if let response = try? await contentService.toggleSave(contentId: contentId) {
+            isSaved = response.saved
+            saveCount = response.saveCount
+        }
+    }
+
+    private func generateFlashcards() async {
+        flashcardStatus = "Generating..."
+        Haptics.light()
+        do {
+            _ = try await notesService.generateFlashcards(contentId: contentId)
+            flashcardStatus = "Created!"
+            Haptics.success()
+        } catch {
+            flashcardStatus = "Flashcards"
+            Haptics.error()
+        }
+    }
+
     private func trackReadingProgress() {
         let timeSpent = Int(Date().timeIntervalSince(readStartTime))
-        guard timeSpent > 5 else { return } // Only track if spent > 5 seconds
+        guard timeSpent > 5 else { return }
         Task {
-            // Mark progress — treat any reading > 30s as complete
             let _ = try? await playerService.updateProgress(
                 contentId: contentId,
                 currentPosition: timeSpent,
@@ -139,41 +292,20 @@ struct NotesDetailView: View {
             }
         }
     }
-
-    private func generateFlashcards() async {
-        flashcardStatus = "Generating..."
-        do {
-            _ = try await notesService.generateFlashcards(contentId: contentId)
-            flashcardStatus = "Created!"
-            Haptics.success()
-        } catch {
-            flashcardStatus = "Flashcards"
-            Haptics.error()
-        }
-    }
 }
 
-// MARK: - PDF Viewer
+// MARK: - PDFKit View
 
-struct PDFViewerView: UIViewRepresentable {
-    let url: URL
+private struct PDFKitView: UIViewRepresentable {
+    let document: PDFDocument
 
     func makeUIView(context: Context) -> PDFView {
         let pdfView = PDFView()
+        pdfView.document = document
         pdfView.autoScales = true
         pdfView.displayMode = .singlePageContinuous
         pdfView.displayDirection = .vertical
         pdfView.backgroundColor = UIColor(ColorTokens.background)
-
-        // Load PDF async
-        Task {
-            if let document = PDFDocument(url: url) {
-                await MainActor.run {
-                    pdfView.document = document
-                }
-            }
-        }
-
         return pdfView
     }
 
@@ -182,12 +314,10 @@ struct PDFViewerView: UIViewRepresentable {
 
 // MARK: - Share Sheet
 
-private struct NotesShareSheet: UIViewControllerRepresentable {
+private struct NotesShareView: UIViewControllerRepresentable {
     let items: [Any]
-
     func makeUIViewController(context: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
-
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
