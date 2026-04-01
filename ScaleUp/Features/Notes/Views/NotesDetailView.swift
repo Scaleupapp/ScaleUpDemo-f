@@ -15,6 +15,7 @@ struct NotesDetailView: View {
     @State private var isLoadingPDF = false
     @State private var flashcardSetId: String?
     @State private var isGeneratingFlashcards = false
+    @State private var isGeneratingQuiz = false
     @State private var showShareSheet = false
     @State private var readStartTime = Date()
     @Environment(AppState.self) private var appState
@@ -258,15 +259,19 @@ struct NotesDetailView: View {
                 .padding(Spacing.md).background(ColorTokens.surface).clipShape(RoundedRectangle(cornerRadius: 14))
             }
 
-            Button { } label: {
+            Button { Task { await generateQuiz() } } label: {
                 HStack(spacing: Spacing.md) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 10).fill(ColorTokens.gold.opacity(0.15)).frame(width: 44, height: 44)
-                        Image(systemName: "brain.head.profile").font(.system(size: 18)).foregroundStyle(ColorTokens.gold)
+                        if isGeneratingQuiz {
+                            ProgressView().tint(ColorTokens.gold)
+                        } else {
+                            Image(systemName: "brain.head.profile").font(.system(size: 18)).foregroundStyle(ColorTokens.gold)
+                        }
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Generate Quiz").font(Typography.bodyBold).foregroundStyle(.white)
-                        Text("Test your understanding of these notes").font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
+                        Text(isGeneratingQuiz ? "Generating Quiz..." : "Generate Quiz").font(Typography.bodyBold).foregroundStyle(.white)
+                        Text(isGeneratingQuiz ? "This may take a minute" : "Test your understanding of these notes").font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
                     }
                     Spacer()
                     Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
@@ -383,6 +388,22 @@ struct NotesDetailView: View {
         isGeneratingFlashcards = false
     }
 
+    private func generateQuiz() async {
+        guard !isGeneratingQuiz else { return }
+        isGeneratingQuiz = true; Haptics.light()
+        do {
+            let body = NotesQuizRequestBody(topic: content?.domain ?? "general", contentIds: [contentId], questionCount: 10)
+            _ = try await APIClient.shared.requestRaw(NotesQuizRequestEndpoint(), body: body)
+            // Show success — quiz will appear in quiz list when ready
+            Haptics.success()
+            // Brief delay then stop spinner
+            try? await Task.sleep(for: .seconds(2))
+        } catch {
+            Haptics.error()
+        }
+        isGeneratingQuiz = false
+    }
+
     private func trackReadingProgress() {
         let t = Int(Date().timeIntervalSince(readStartTime))
         guard t > 5 else { return }
@@ -423,6 +444,17 @@ private struct PDFKitView: UIViewRepresentable {
         v.backgroundColor = .systemBackground; return v
     }
     func updateUIView(_ uiView: PDFView, context: Context) {}
+}
+
+private struct NotesQuizRequestBody: Encodable, Sendable {
+    let topic: String
+    let contentIds: [String]
+    let questionCount: Int
+}
+
+private struct NotesQuizRequestEndpoint: Endpoint {
+    var path: String { "/quizzes/request" }
+    var method: HTTPMethod { .post }
 }
 
 private struct NotesDetailShareSheet: UIViewControllerRepresentable {
