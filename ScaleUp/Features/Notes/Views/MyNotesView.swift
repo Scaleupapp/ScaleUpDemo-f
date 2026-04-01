@@ -129,50 +129,75 @@ struct MyNotesView: View {
     // MARK: - Note Row
 
     private func noteRow(_ note: Content) -> some View {
-        HStack(spacing: Spacing.md) {
-            // Thumbnail or icon
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(ColorTokens.surfaceElevated)
-                    .frame(width: 50, height: 50)
-                Image(systemName: "doc.text.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.orange)
-            }
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: Spacing.md) {
+                // Icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(LinearGradient(colors: [Color(hex: 0x1A2A3A), Color(hex: 0x0F1923)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 50, height: 50)
+                    Image(systemName: "doc.text.image")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.orange.opacity(0.8))
+                }
 
-            VStack(alignment: .leading, spacing: 3) {
-                Text(note.title)
-                    .font(Typography.bodySmall)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(note.title)
+                        .font(Typography.bodySmall)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
 
-                HStack(spacing: Spacing.sm) {
-                    statusBadge(note)
+                    HStack(spacing: Spacing.sm) {
+                        statusBadge(note)
 
-                    if let views = note.viewCount, views > 0 {
-                        Label("\(views)", systemImage: "eye")
-                            .font(.system(size: 10))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                    if let likes = note.likeCount, likes > 0 {
-                        Label("\(likes)", systemImage: "heart")
-                            .font(.system(size: 10))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                    if let saves = note.saveCount, saves > 0 {
-                        Label("\(saves)", systemImage: "bookmark")
-                            .font(.system(size: 10))
-                            .foregroundStyle(ColorTokens.textTertiary)
+                        if let domain = note.domain {
+                            Text(domain.capitalized)
+                                .font(.system(size: 10))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+
+                        if let pages = note.pageCount, pages > 0 {
+                            Text("\(pages) pg")
+                                .font(.system(size: 10))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
                     }
                 }
             }
 
-            Spacer()
+            // Preview snippet
+            if let ocrText = note.ocrText, !ocrText.isEmpty {
+                Text(ocrText.prefix(120).replacingOccurrences(of: "\n", with: " "))
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .lineLimit(2)
+            }
 
-            Image(systemName: "chevron.right")
-                .font(.system(size: 11))
-                .foregroundStyle(ColorTokens.textTertiary)
+            // Stats row
+            HStack(spacing: Spacing.md) {
+                if let views = note.viewCount, views > 0 {
+                    Label("\(views)", systemImage: "eye")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                if let likes = note.likeCount, likes > 0 {
+                    Label("\(likes)", systemImage: "heart")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                if let saves = note.saveCount, saves > 0 {
+                    Label("\(saves)", systemImage: "bookmark")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                if let date = note.createdAt {
+                    Spacer()
+                    Text(date, style: .date)
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
         }
         .padding(Spacing.md)
         .background(ColorTokens.surface)

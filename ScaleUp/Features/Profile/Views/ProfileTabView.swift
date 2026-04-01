@@ -122,22 +122,27 @@ struct ProfileTabView: View {
                 // Role-specific sections
                 roleSpecificSection(user: user)
 
-                // AI Tutor History
-                aiTutorHistoryLink
-
-                // My Notes
-                myNotesLink
-
-                // My Flashcards
-                myFlashcardsLink
-
-                // Pending Notes (admin only)
-                if viewModel.user?.role == .admin {
-                    pendingNotesLink
+                // Learning Tools group
+                VStack(spacing: Spacing.sm) {
+                    sectionLabel("Learning Tools")
+                    myNotesLink
+                    myFlashcardsLink
+                    aiTutorHistoryLink
                 }
 
-                // Competition
-                competitionLink
+                // Competition group
+                VStack(spacing: Spacing.sm) {
+                    sectionLabel("Competition")
+                    competitionLink
+                }
+
+                // Admin group
+                if viewModel.user?.role == .admin {
+                    VStack(spacing: Spacing.sm) {
+                        sectionLabel("Admin")
+                        pendingNotesLink
+                    }
+                }
 
                 // Objectives section (all users)
                 objectivesSection
@@ -508,6 +513,18 @@ struct ProfileTabView: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, Spacing.md)
+    }
+
+    // MARK: - Section Label
+
+    private func sectionLabel(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.system(size: 11, weight: .bold, design: .rounded))
+            .tracking(1)
+            .foregroundStyle(ColorTokens.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.sm)
     }
 
     // MARK: - My Notes Link

@@ -48,6 +48,11 @@ struct NotesDetailView: View {
                             aiSummarySection(aiData)
                         }
 
+                        // Notes content (OCR text)
+                        if let ocrText = content.ocrText, !ocrText.isEmpty {
+                            notesContentSection(ocrText)
+                        }
+
                         studySection
                         aboutSection(content)
                         Spacer().frame(height: Spacing.xxxl)
@@ -236,6 +241,45 @@ struct NotesDetailView: View {
                         }
                     }
                 }
+            }
+        }
+        .padding(Spacing.lg)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - Notes Content
+
+    @State private var isContentExpanded = false
+
+    private func notesContentSection(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack(spacing: 6) {
+                Image(systemName: "doc.plaintext")
+                    .foregroundStyle(.orange)
+                Text("Notes Content")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(.white)
+                Spacer()
+                Button {
+                    withAnimation { isContentExpanded.toggle() }
+                } label: {
+                    Text(isContentExpanded ? "Show Less" : "Show More")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+
+            Text(isContentExpanded ? text : String(text.prefix(500)))
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .lineSpacing(5)
+
+            if !isContentExpanded && text.count > 500 {
+                Text("... tap Show More to read full content")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .italic()
             }
         }
         .padding(Spacing.lg)

@@ -49,6 +49,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
     let pageCount: Int?
     let fileFormat: String?
     let collegeName: String?
+    let ocrText: String?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
@@ -57,7 +58,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         case difficulty, aiData, status, viewCount, likeCount, commentCount
         case saveCount, averageRating, ratingCount, publishedAt, createdAt
         case reportCount, removalReason, _progress, moderationStatus
-        case pageCount, fileFormat, collegeName
+        case pageCount, fileFormat, collegeName, ocrText
     }
 
     init(from decoder: Decoder) throws {
@@ -92,6 +93,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         pageCount = try container.decodeIfPresent(Int.self, forKey: .pageCount)
         fileFormat = try container.decodeIfPresent(String.self, forKey: .fileFormat)
         collegeName = try container.decodeIfPresent(String.self, forKey: .collegeName)
+        ocrText = try container.decodeIfPresent(String.self, forKey: .ocrText)
 
         // creatorId can be either a string (ObjectId) or a populated Creator object
         if let creator = try? container.decodeIfPresent(Creator.self, forKey: .creatorId) {
@@ -104,7 +106,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
     }
 
     // Memberwise init for mock data
-    init(id: String, creatorId: Creator?, title: String, description: String?, contentType: ContentType, contentURL: String?, thumbnailURL: String?, duration: Int?, sourceType: ContentSource?, sourceAttribution: SourceAttribution?, domain: String?, topics: [String]?, tags: [String]?, difficulty: Difficulty?, aiData: AIData?, status: ContentStatus?, viewCount: Int?, likeCount: Int?, commentCount: Int?, saveCount: Int?, averageRating: Double?, ratingCount: Int?, publishedAt: Date?, createdAt: Date?, reportCount: Int? = nil, removalReason: String? = nil, _progress: ContentProgressInfo? = nil, moderationStatus: String? = nil, pageCount: Int? = nil, fileFormat: String? = nil, collegeName: String? = nil) {
+    init(id: String, creatorId: Creator?, title: String, description: String?, contentType: ContentType, contentURL: String?, thumbnailURL: String?, duration: Int?, sourceType: ContentSource?, sourceAttribution: SourceAttribution?, domain: String?, topics: [String]?, tags: [String]?, difficulty: Difficulty?, aiData: AIData?, status: ContentStatus?, viewCount: Int?, likeCount: Int?, commentCount: Int?, saveCount: Int?, averageRating: Double?, ratingCount: Int?, publishedAt: Date?, createdAt: Date?, reportCount: Int? = nil, removalReason: String? = nil, _progress: ContentProgressInfo? = nil, moderationStatus: String? = nil, pageCount: Int? = nil, fileFormat: String? = nil, collegeName: String? = nil, ocrText: String? = nil) {
         self.id = id
         self.creatorId = creatorId
         self.title = title
@@ -136,6 +138,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         self.pageCount = pageCount
         self.fileFormat = fileFormat
         self.collegeName = collegeName
+        self.ocrText = ocrText
     }
 
     var formattedDuration: String {
