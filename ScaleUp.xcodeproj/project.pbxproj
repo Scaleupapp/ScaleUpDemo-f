@@ -123,6 +123,7 @@
 		9A4C3237DF8F63AF0A6E3B40 /* MyContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D05DAB1044B3215C83D630B /* MyContentViewModel.swift */; };
 		9A86C9D975069E65B4B0B097 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12E645CC5045EF597C4A5EF /* Onboarding.swift */; };
 		9BD1DA01BE1F40DE6BD79E0F /* Flashcard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7D3CB8E38FE4F5104F4D0B5 /* Flashcard.swift */; };
+		9C62778C3161EC60082AA220 /* MyNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E1D9E0603FB3F7682280FCD /* MyNotesView.swift */; };
 		9C8133F4C56F1AB1EDEBEF12 /* AITutorSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4360C561A62E9E17EAF559 /* AITutorSheetView.swift */; };
 		9CC8953E37027F722C400A94 /* MilestoneCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74080EDBB82330F54039BA22 /* MilestoneCard.swift */; };
 		9D2B0D1F9AB4B93A8C8536BF /* AdminDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D989D59400C3C9E8233B8BD /* AdminDashboardView.swift */; };
@@ -132,6 +133,7 @@
 		A3FFC38CBFF9891564E7436C /* ChallengeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E362E314447D6CCCDE1023A /* ChallengeReviewView.swift */; };
 		A4E1D6F6E88B0AA7180CA8B7 /* AITutorTypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A9DD6FC8946940AE8F458D /* AITutorTypingIndicator.swift */; };
 		A9895314335F03C298A82A95 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6345CA87F28CAB287DBE9463 /* Assets.xcassets */; };
+		A9EB91634FCC0CC79DA07790 /* PendingNotesReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD473A7954F474BBA6809EE /* PendingNotesReviewView.swift */; };
 		ABD51A9D77C9927139CD9784 /* ConsumptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BA0A748861879E69F594E8 /* ConsumptionHistoryView.swift */; };
 		ACC27673D4EBD98E8C05EC82 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBDA1EA66E812B6D410C89F6 /* RegisterView.swift */; };
 		ADFD3022E2A3098E45830223 /* ActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C545DA6F0DCF8B099E7AFDE3 /* ActionBar.swift */; };
@@ -258,6 +260,7 @@
 		4B6D97EDB884C2FD59E3A9A5 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		4BB707A3DC976EB2862BD5DA /* DailyChallengeCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyChallengeCarousel.swift; sourceTree = "<group>"; };
 		4CBC8C20C3650FE146221E73 /* PendingApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingApplicationsView.swift; sourceTree = "<group>"; };
+		4CD473A7954F474BBA6809EE /* PendingNotesReviewView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = PendingNotesReviewView.swift; path = ScaleUp/Features/Notes/Views/PendingNotesReviewView.swift; sourceTree = SOURCE_ROOT; };
 		511D86511F9230F82D5C71AA /* PhoneAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneAuthView.swift; sourceTree = "<group>"; };
 		518A75D7CDAD16E4055CF774 /* SkeletonLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonLoader.swift; sourceTree = "<group>"; };
 		525ED418E82CE9629856551D /* BackgroundStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundStepView.swift; sourceTree = "<group>"; };
@@ -321,6 +324,7 @@
 		984467574B3CEEA59B68E9E6 /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
 		98C0952DA371E65B5BAEF48E /* OnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingService.swift; sourceTree = "<group>"; };
 		991A5A25BEE91B4E514EEB74 /* NotesDetailView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NotesDetailView.swift; path = ScaleUp/Features/Notes/Views/NotesDetailView.swift; sourceTree = SOURCE_ROOT; };
+		9E1D9E0603FB3F7682280FCD /* MyNotesView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MyNotesView.swift; path = ScaleUp/Features/Notes/Views/MyNotesView.swift; sourceTree = SOURCE_ROOT; };
 		9FEB8741140EABB6AED1369B /* CreatorPromotionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorPromotionView.swift; sourceTree = "<group>"; };
 		A03E34B6A50E38145ACED09D /* CreatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorService.swift; sourceTree = "<group>"; };
 		A06055AB1A5ADA4C00B203B2 /* MyPlanViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlanViewModel.swift; sourceTree = "<group>"; };
@@ -883,6 +887,8 @@
 				991A5A25BEE91B4E514EEB74 /* NotesDetailView.swift */,
 				ABD5AD5C3903E596F04D7462 /* FlashcardStudyView.swift */,
 				92F7B1A898FF138A2F26F3CE /* ContentDestinationView.swift */,
+				9E1D9E0603FB3F7682280FCD /* MyNotesView.swift */,
+				4CD473A7954F474BBA6809EE /* PendingNotesReviewView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1556,6 +1562,8 @@
 				088C27B42647DE3EDECF5F14 /* FlashcardStudyView.swift in Sources */,
 				57102995F73C887EDA0F32C2 /* ContentDestinationView.swift in Sources */,
 				C9A5272EECAE6268AD4733EF /* CreateNotesViewModel.swift in Sources */,
+				9C62778C3161EC60082AA220 /* MyNotesView.swift in Sources */,
+				A9EB91634FCC0CC79DA07790 /* PendingNotesReviewView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

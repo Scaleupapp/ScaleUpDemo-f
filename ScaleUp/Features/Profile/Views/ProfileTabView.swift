@@ -125,6 +125,14 @@ struct ProfileTabView: View {
                 // AI Tutor History
                 aiTutorHistoryLink
 
+                // My Notes
+                myNotesLink
+
+                // Pending Notes (admin only)
+                if viewModel.user?.role == .admin {
+                    pendingNotesLink
+                }
+
                 // Competition
                 competitionLink
 
@@ -497,6 +505,74 @@ struct ProfileTabView: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, Spacing.md)
+    }
+
+    // MARK: - My Notes Link
+
+    private var myNotesLink: some View {
+        NavigationLink {
+            MyNotesView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "doc.text.image.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("My Notes")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Upload and manage your notes")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.lg)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    // MARK: - Pending Notes Link (Admin)
+
+    private var pendingNotesLink: some View {
+        NavigationLink {
+            PendingNotesReviewView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "doc.badge.clock.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Review Notes")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Approve or reject pending submissions")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.lg)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.lg)
     }
 
     // MARK: - Competition Link
