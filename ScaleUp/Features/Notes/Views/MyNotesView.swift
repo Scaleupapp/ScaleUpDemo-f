@@ -4,6 +4,7 @@ struct MyNotesView: View {
     @State private var notes: [Content] = []
     @State private var isLoading = true
     @State private var showCreateNotes = false
+    @State private var autoRefreshTask: Task<Void, Never>?
 
     private let notesService = NotesService()
 
@@ -32,12 +33,18 @@ struct MyNotesView: View {
             }
         }
         .sheet(isPresented: $showCreateNotes) {
-            CreateNotesView()
+            CreateNotesView(onComplete: {
+                Task {
+                    try? await Task.sleep(for: .seconds(1))
+                    await loadNotes()
+                }
+            })
         }
         .onChange(of: showCreateNotes) { _, showing in
             if !showing { Task { await loadNotes() } }
         }
         .task { await loadNotes() }
+        .onDisappear { autoRefreshTask?.cancel() }
     }
 
     // MARK: - Empty
@@ -191,8 +198,29 @@ struct MyNotesView: View {
     // MARK: - Load
 
     private func loadNotes() async {
-        isLoading = true
+        isLoading = notes.isEmpty
         notes = (try? await notesService.fetchMyNotes()) ?? []
         isLoading = false
+
+        // Auto-refresh if any notes are still processing
+        let hasProcessing = notes.contains { $0.status == .processing }
+        if hasProcessing {
+            startAutoRefresh()
+        } else {
+            autoRefreshTask?.cancel()
+        }
+    }
+
+    private func startAutoRefresh() {
+        autoRefreshTask?.cancel()
+        autoRefreshTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(10))
+                guard !Task.isCancelled else { return }
+                notes = (try? await notesService.fetchMyNotes()) ?? notes
+                let stillProcessing = notes.contains { $0.status == .processing }
+                if !stillProcessing { return }
+            }
+        }
     }
 }

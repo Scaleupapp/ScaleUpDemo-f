@@ -4,6 +4,7 @@ import PDFKit
 import UniformTypeIdentifiers
 
 struct CreateNotesView: View {
+    var onComplete: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
     @State private var vm = CreateNotesViewModel()
 
@@ -39,7 +40,10 @@ struct CreateNotesView: View {
                 Text(vm.errorMessage ?? "Something went wrong")
             }
             .onChange(of: vm.uploadComplete) { _, done in
-                if done { dismiss() }
+                if done {
+                    dismiss()
+                    onComplete?()
+                }
             }
         }
     }
@@ -62,14 +66,14 @@ struct CreateNotesView: View {
                 .font(Typography.titleLarge)
                 .foregroundStyle(.white)
 
-            Text("Share your handwritten or typed notes with others")
+            Text("Share your notes — PDF, Word, Excel, or images")
                 .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, Spacing.xl)
 
             VStack(spacing: Spacing.md) {
-                PrimaryButton(title: "Pick PDF File", icon: "doc.fill") {
+                PrimaryButton(title: "Pick File", icon: "doc.fill") {
                     vm.showDocumentPicker = true
                 }
 
