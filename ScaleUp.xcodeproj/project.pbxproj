@@ -11,6 +11,7 @@
 		019975614B85ECD9668E4AEC /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = F35C0859D0728200E1BB4898 /* Nuke */; };
 		0224DC891BE11CEB9E2CAEE3 /* ProgressTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E3DF77CC36E2D69C9EFF0 /* ProgressTabView.swift */; };
 		04E4F1F5445C1F1CED42595E /* Creator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B39675BE768F19F3B1D4832 /* Creator.swift */; };
+		083B2EB68985B279B08C2758 /* MyFlashcardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F9C9E862992043EF1B60032 /* MyFlashcardsView.swift */; };
 		086C014105400FD29D3F6A91 /* MyPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDF23307E37EFE298593AA0 /* MyPlanView.swift */; };
 		088C27B42647DE3EDECF5F14 /* FlashcardStudyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABD5AD5C3903E596F04D7462 /* FlashcardStudyView.swift */; };
 		0A930E61B0982A739E2E5229 /* ObjectiveService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B35FDBAC311EF8BD16012817 /* ObjectiveService.swift */; };
@@ -308,6 +309,7 @@
 		7DC257BE3138B8CC144A06A8 /* ChallengeResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeResultsView.swift; sourceTree = "<group>"; };
 		7F1D89751B6F59A00541B652 /* LiveEventSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventSessionView.swift; sourceTree = "<group>"; };
 		7F45BD0E40088B0F3BBE3301 /* Knowledge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Knowledge.swift; sourceTree = "<group>"; };
+		7F9C9E862992043EF1B60032 /* MyFlashcardsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = MyFlashcardsView.swift; path = ScaleUp/Features/Notes/Views/MyFlashcardsView.swift; sourceTree = SOURCE_ROOT; };
 		812A064F60A4DAA3376584E2 /* LiveEventLobbyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventLobbyView.swift; sourceTree = "<group>"; };
 		8835651517EDAE41559FDD7F /* VideoCompressor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCompressor.swift; sourceTree = "<group>"; };
 		899E47FA8A0AAAE132F896E1 /* ScaleUpUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpUITests.swift; sourceTree = "<group>"; };
@@ -892,6 +894,7 @@
 				9E1D9E0603FB3F7682280FCD /* MyNotesView.swift */,
 				4CD473A7954F474BBA6809EE /* PendingNotesReviewView.swift */,
 				0BF8FAEE8406AEA4C2D97D2C /* NoteManageView.swift */,
+				7F9C9E862992043EF1B60032 /* MyFlashcardsView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1568,6 +1571,7 @@
 				9C62778C3161EC60082AA220 /* MyNotesView.swift in Sources */,
 				A9EB91634FCC0CC79DA07790 /* PendingNotesReviewView.swift in Sources */,
 				1E438FADB832CF9E50BFC099 /* NoteManageView.swift in Sources */,
+				083B2EB68985B279B08C2758 /* MyFlashcardsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

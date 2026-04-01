@@ -128,6 +128,9 @@ struct ProfileTabView: View {
                 // My Notes
                 myNotesLink
 
+                // My Flashcards
+                myFlashcardsLink
+
                 // Pending Notes (admin only)
                 if viewModel.user?.role == .admin {
                     pendingNotesLink
@@ -523,6 +526,40 @@ struct ProfileTabView: View {
                         .font(Typography.bodyBold)
                         .foregroundStyle(ColorTokens.textPrimary)
                     Text("Upload and manage your notes")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.lg)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    // MARK: - My Flashcards Link
+
+    private var myFlashcardsLink: some View {
+        NavigationLink {
+            MyFlashcardsView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "rectangle.on.rectangle.angled")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.purple)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("My Flashcards")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Study your generated flashcard sets")
                         .font(Typography.caption)
                         .foregroundStyle(ColorTokens.textSecondary)
                 }
