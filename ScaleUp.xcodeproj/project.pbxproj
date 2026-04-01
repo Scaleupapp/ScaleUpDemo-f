@@ -28,6 +28,7 @@
 		17015978096ADD92B7031650 /* RecommendationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E80E349B32BEBC48AFE29340 /* RecommendationService.swift */; };
 		189E1A3D3B085323EAB12E02 /* CreateNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06DEC8126ED597D2A5F6D585 /* CreateNotesView.swift */; };
 		1CB52CAC919A1D8AEAB9EE4E /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9FCFF31644E1447D8156FBE /* UploadManager.swift */; };
+		1E438FADB832CF9E50BFC099 /* NoteManageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BF8FAEE8406AEA4C2D97D2C /* NoteManageView.swift */; };
 		1ED705F8CA8D7869C6416104 /* ObjectiveContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7877AE2E0E0CE7D591F4B182 /* ObjectiveContext.swift */; };
 		1F44282E00A8C93F9DC1642C /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AE1A3DCF810F3DA604C4DE2 /* AppState.swift */; };
 		1F800912454BC2E926A6F2B7 /* LiveEventResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D17141FD37287891A9725EA6 /* LiveEventResultsView.swift */; };
@@ -219,6 +220,7 @@
 		0A17585F67A229CBF496D2D2 /* ScaleUpUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ScaleUpUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B321EABA6BE1BD2A99354C6 /* SeeAllContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeeAllContentView.swift; sourceTree = "<group>"; };
 		0B50058EB5E3042E510A9AFC /* CreateContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateContentViewModel.swift; sourceTree = "<group>"; };
+		0BF8FAEE8406AEA4C2D97D2C /* NoteManageView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = NoteManageView.swift; path = ScaleUp/Features/Notes/Views/NoteManageView.swift; sourceTree = SOURCE_ROOT; };
 		0D05DAB1044B3215C83D630B /* MyContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentViewModel.swift; sourceTree = "<group>"; };
 		0E6049CF02B3DFDDFBEBBF50 /* TierBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierBadge.swift; sourceTree = "<group>"; };
 		11B2C0E7F9144D8A75BD8783 /* VideoPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerView.swift; sourceTree = "<group>"; };
@@ -889,6 +891,7 @@
 				92F7B1A898FF138A2F26F3CE /* ContentDestinationView.swift */,
 				9E1D9E0603FB3F7682280FCD /* MyNotesView.swift */,
 				4CD473A7954F474BBA6809EE /* PendingNotesReviewView.swift */,
+				0BF8FAEE8406AEA4C2D97D2C /* NoteManageView.swift */,
 			);
 			name = Views;
 			sourceTree = "<group>";
@@ -1564,6 +1567,7 @@
 				C9A5272EECAE6268AD4733EF /* CreateNotesViewModel.swift in Sources */,
 				9C62778C3161EC60082AA220 /* MyNotesView.swift in Sources */,
 				A9EB91634FCC0CC79DA07790 /* PendingNotesReviewView.swift in Sources */,
+				1E438FADB832CF9E50BFC099 /* NoteManageView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

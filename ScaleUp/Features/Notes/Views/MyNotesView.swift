@@ -79,7 +79,12 @@ struct MyNotesView: View {
 
             LazyVStack(spacing: Spacing.sm) {
                 ForEach(notes) { note in
-                    noteRow(note)
+                    NavigationLink {
+                        NoteManageView(note: note, onUpdate: { Task { await loadNotes() } })
+                    } label: {
+                        noteRow(note)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, Spacing.lg)
