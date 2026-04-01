@@ -30,12 +30,12 @@ struct HomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Content.self) { content in
-                PlayerView(contentId: content.id)
+                ContentDestinationView(content: content)
             }
             .navigationDestination(for: SeeAllDestination.self) { destination in
                 SeeAllContentView(title: destination.title, items: destination.items)
                     .navigationDestination(for: Content.self) { content in
-                        PlayerView(contentId: content.id)
+                        ContentDestinationView(content: content)
                     }
             }
             .navigationDestination(for: QuizListDestination.self) { _ in
@@ -667,8 +667,8 @@ struct HomeView: View {
                         .padding(4)
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    if !content.formattedDuration.isEmpty {
-                        Text(content.formattedDuration)
+                    if !content.overlayBadge.isEmpty {
+                        Text(content.overlayBadge)
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
@@ -817,8 +817,8 @@ struct HomeView: View {
                     .padding(6)
             }
             .overlay(alignment: .bottomTrailing) {
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)

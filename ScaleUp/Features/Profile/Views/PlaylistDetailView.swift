@@ -179,8 +179,8 @@ struct PlaylistDetailView: View {
                         .frame(width: 80, height: 50)
                         .clipShape(RoundedRectangle(cornerRadius: 6))
 
-                    if !content.formattedDuration.isEmpty {
-                        Text(content.formattedDuration)
+                    if !content.overlayBadge.isEmpty {
+                        Text(content.overlayBadge)
                             .font(.system(size: 8, weight: .medium))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 3)

@@ -30,8 +30,8 @@ struct ContentCard: View {
                     .padding(6)
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    if !content.formattedDuration.isEmpty {
-                        Text(content.formattedDuration)
+                    if !content.overlayBadge.isEmpty {
+                        Text(content.overlayBadge)
                             .font(Typography.micro)
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)

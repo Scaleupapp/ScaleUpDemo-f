@@ -38,8 +38,8 @@ struct ContentCardWide: View {
                 }
 
                 HStack(spacing: Spacing.md) {
-                    if !content.formattedDuration.isEmpty {
-                        Label(content.formattedDuration, systemImage: "clock")
+                    if !content.overlayBadge.isEmpty {
+                        Label(content.overlayBadge, systemImage: "clock")
                             .font(Typography.caption)
                             .foregroundStyle(.white.opacity(0.7))
                     }

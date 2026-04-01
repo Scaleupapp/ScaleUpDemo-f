@@ -75,7 +75,7 @@ struct ProfileTabView: View {
                 CreateContentView()
             }
             .navigationDestination(for: Content.self) { content in
-                PlayerView(contentId: content.id)
+                ContentDestinationView(content: content)
             }
             .navigationDestination(for: DailyChallenge.self) { challenge in
                 ChallengeSessionView(challengeId: challenge.id, topic: challenge.topic)
@@ -855,8 +855,8 @@ struct ProfileTabView: View {
                         .frame(height: 100)
                 }
 
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)

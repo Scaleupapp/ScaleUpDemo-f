@@ -337,6 +337,7 @@ struct UserManagementView: View {
         let (color, icon): (Color, String) = switch role {
         case .admin: (ColorTokens.info, "shield.fill")
         case .creator: (ColorTokens.gold, "star.fill")
+        case .contributor: (Color.orange, "doc.text.fill")
         case .consumer: (ColorTokens.textTertiary, "person.fill")
         }
         return HStack(spacing: 3) {

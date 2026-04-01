@@ -51,7 +51,7 @@ struct ConsumptionHistoryView: View {
         .navigationTitle("Learning History")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: Content.self) { content in
-            PlayerView(contentId: content.id)
+            ContentDestinationView(content: content)
         }
         .task {
             await loadHistory()

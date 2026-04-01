@@ -34,7 +34,7 @@ struct GapsView: View {
         .navigationTitle("Knowledge Gaps")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: Content.self) { content in
-            PlayerView(contentId: content.id)
+            ContentDestinationView(content: content)
         }
         .navigationDestination(for: QuizListDestination.self) { _ in
             QuizListView()

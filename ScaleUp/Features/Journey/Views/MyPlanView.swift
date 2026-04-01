@@ -40,7 +40,7 @@ struct MyPlanView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Content.self) { content in
-                PlayerView(contentId: content.id)
+                ContentDestinationView(content: content)
             }
             .navigationDestination(for: TopicDetailDestination.self) { dest in
                 TopicDetailView(topic: dest.topic)

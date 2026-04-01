@@ -48,7 +48,7 @@ struct TopicDetailView: View {
         .navigationTitle(topic.capitalized)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: Content.self) { content in
-            PlayerView(contentId: content.id)
+            ContentDestinationView(content: content)
         }
         .navigationDestination(for: Quiz.self) { quiz in
             QuizDetailView(quiz: quiz)

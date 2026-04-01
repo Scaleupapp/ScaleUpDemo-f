@@ -30,7 +30,7 @@ struct DiscoverView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Content.self) { content in
-                PlayerView(contentId: content.id)
+                ContentDestinationView(content: content)
             }
             .navigationDestination(for: Creator.self) { creator in
                 CreatorProfileView(creatorId: creator.id)
@@ -295,8 +295,8 @@ struct DiscoverView: View {
                                 .foregroundStyle(.white.opacity(0.8))
                         }
                     }
-                    if !content.formattedDuration.isEmpty {
-                        Label(content.formattedDuration, systemImage: "clock")
+                    if !content.overlayBadge.isEmpty {
+                        Label(content.overlayBadge, systemImage: "clock")
                             .font(.system(size: 11))
                             .foregroundStyle(.white.opacity(0.6))
                     }
@@ -457,8 +457,8 @@ struct DiscoverView: View {
                     .padding(6)
             }
             .overlay(alignment: .bottomTrailing) {
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)
@@ -694,8 +694,8 @@ struct DiscoverView: View {
                     .padding(4)
             }
             .overlay(alignment: .bottomTrailing) {
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 4)
@@ -886,8 +886,8 @@ struct DiscoverView: View {
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 4)

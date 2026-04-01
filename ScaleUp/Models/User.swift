@@ -62,7 +62,7 @@ struct User: Codable, Sendable, Identifiable {
 // MARK: - Enums
 
 enum UserRole: String, Codable, Sendable {
-    case consumer, creator, admin
+    case consumer, contributor, creator, admin
 }
 
 enum AuthProvider: String, Codable, Sendable {

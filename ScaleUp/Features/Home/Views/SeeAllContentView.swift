@@ -53,8 +53,8 @@ struct SeeAllContentView: View {
                 .clipped()
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                if !content.formattedDuration.isEmpty {
-                    Text(content.formattedDuration)
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 5)

@@ -42,6 +42,11 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
     let removalReason: String?
     let _progress: ContentProgressInfo?
 
+    // Notes-specific
+    let pageCount: Int?
+    let fileFormat: String?
+    let collegeName: String?
+
     enum CodingKeys: String, CodingKey {
         case id = "_id"
         case creatorId, title, description, contentType, contentURL, thumbnailURL
@@ -49,6 +54,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         case difficulty, aiData, status, viewCount, likeCount, commentCount
         case saveCount, averageRating, ratingCount, publishedAt, createdAt
         case reportCount, removalReason, _progress
+        case pageCount, fileFormat, collegeName
     }
 
     init(from decoder: Decoder) throws {
@@ -79,6 +85,9 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         reportCount = try container.decodeIfPresent(Int.self, forKey: .reportCount)
         removalReason = try container.decodeIfPresent(String.self, forKey: .removalReason)
         _progress = try container.decodeIfPresent(ContentProgressInfo.self, forKey: ._progress)
+        pageCount = try container.decodeIfPresent(Int.self, forKey: .pageCount)
+        fileFormat = try container.decodeIfPresent(String.self, forKey: .fileFormat)
+        collegeName = try container.decodeIfPresent(String.self, forKey: .collegeName)
 
         // creatorId can be either a string (ObjectId) or a populated Creator object
         if let creator = try? container.decodeIfPresent(Creator.self, forKey: .creatorId) {
@@ -91,7 +100,7 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
     }
 
     // Memberwise init for mock data
-    init(id: String, creatorId: Creator?, title: String, description: String?, contentType: ContentType, contentURL: String?, thumbnailURL: String?, duration: Int?, sourceType: ContentSource?, sourceAttribution: SourceAttribution?, domain: String?, topics: [String]?, tags: [String]?, difficulty: Difficulty?, aiData: AIData?, status: ContentStatus?, viewCount: Int?, likeCount: Int?, commentCount: Int?, saveCount: Int?, averageRating: Double?, ratingCount: Int?, publishedAt: Date?, createdAt: Date?, reportCount: Int? = nil, removalReason: String? = nil, _progress: ContentProgressInfo? = nil) {
+    init(id: String, creatorId: Creator?, title: String, description: String?, contentType: ContentType, contentURL: String?, thumbnailURL: String?, duration: Int?, sourceType: ContentSource?, sourceAttribution: SourceAttribution?, domain: String?, topics: [String]?, tags: [String]?, difficulty: Difficulty?, aiData: AIData?, status: ContentStatus?, viewCount: Int?, likeCount: Int?, commentCount: Int?, saveCount: Int?, averageRating: Double?, ratingCount: Int?, publishedAt: Date?, createdAt: Date?, reportCount: Int? = nil, removalReason: String? = nil, _progress: ContentProgressInfo? = nil, pageCount: Int? = nil, fileFormat: String? = nil, collegeName: String? = nil) {
         self.id = id
         self.creatorId = creatorId
         self.title = title
@@ -119,6 +128,9 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         self.reportCount = reportCount
         self.removalReason = removalReason
         self._progress = _progress
+        self.pageCount = pageCount
+        self.fileFormat = fileFormat
+        self.collegeName = collegeName
     }
 
     var formattedDuration: String {
@@ -127,6 +139,19 @@ struct Content: Codable, Sendable, Identifiable, Hashable {
         let seconds = d % 60
         return String(format: "%d:%02d", minutes, seconds)
     }
+
+    var formattedPageCount: String {
+        guard let p = pageCount, p > 0 else { return "" }
+        return "\(p) pg"
+    }
+
+    /// Display string for the content card overlay (duration for videos, pages for notes)
+    var overlayBadge: String {
+        if contentType == .notes { return formattedPageCount }
+        return formattedDuration
+    }
+
+    var isNotes: Bool { contentType == .notes }
 
     var isNew: Bool {
         guard let published = publishedAt else { return false }
@@ -172,13 +197,14 @@ struct SourceAttribution: Codable, Sendable {
 // MARK: - Enums
 
 enum ContentType: String, Codable, Sendable {
-    case video, article, infographic
+    case video, article, infographic, notes
 
     var badgeIcon: String {
         switch self {
         case .video: return "play.fill"
         case .article: return "doc.text.fill"
         case .infographic: return "chart.bar.doc.horizontal.fill"
+        case .notes: return "doc.text.image.fill"
         }
     }
 
@@ -187,6 +213,7 @@ enum ContentType: String, Codable, Sendable {
         case .video: return "VIDEO"
         case .article: return "ARTICLE"
         case .infographic: return "INFOGRAPHIC"
+        case .notes: return "NOTES"
         }
     }
 
@@ -195,6 +222,7 @@ enum ContentType: String, Codable, Sendable {
         case .video: return ColorTokens.info
         case .article: return ColorTokens.success
         case .infographic: return Color.purple
+        case .notes: return .orange
         }
     }
 }

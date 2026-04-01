@@ -134,6 +134,7 @@ struct ProfileHeaderView: View {
         case .admin: return "Admin"
         case .creator:
             return (creatorProfile?.tier?.displayName ?? "Creator") + " Creator"
+        case .contributor: return "Contributor"
         case .consumer: return "Learner"
         }
     }
@@ -142,6 +143,7 @@ struct ProfileHeaderView: View {
         switch user.role {
         case .admin: return "shield.fill"
         case .creator: return creatorProfile?.tier?.icon ?? "star.fill"
+        case .contributor: return "doc.text.fill"
         case .consumer: return "graduationcap.fill"
         }
     }
@@ -150,6 +152,7 @@ struct ProfileHeaderView: View {
         switch user.role {
         case .admin: return ColorTokens.info
         case .creator: return creatorProfile?.tier?.color ?? ColorTokens.gold
+        case .contributor: return .orange
         case .consumer: return ColorTokens.gold
         }
     }

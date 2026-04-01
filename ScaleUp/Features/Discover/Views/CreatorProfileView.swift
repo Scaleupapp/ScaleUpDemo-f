@@ -80,7 +80,7 @@ struct CreatorProfileView: View {
         .navigationTitle("Creator")
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: Content.self) { content in
-            PlayerView(contentId: content.id)
+            ContentDestinationView(content: content)
         }
         .task {
             await viewModel.loadCreator(id: creatorId)
