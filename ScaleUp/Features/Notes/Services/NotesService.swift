@@ -7,8 +7,8 @@ actor NotesService {
 
     // MARK: - Upload
 
-    func requestUpload(fileName: String, contentType: String, fileSize: Int) async throws -> NotesUploadURLResponse {
-        let body = NotesUploadRequest(fileName: fileName, contentType: contentType, fileSize: fileSize)
+    func requestUpload(fileName: String, fileType: String, fileSize: Int) async throws -> NotesUploadURLResponse {
+        let body = NotesUploadRequest(fileName: fileName, fileType: fileType, fileSize: fileSize)
         return try await api.request(NotesEndpoints.requestUpload, body: body)
     }
 
@@ -84,7 +84,7 @@ struct NotesUploadURLResponse: Codable, Sendable {
 
 private struct NotesUploadRequest: Encodable, Sendable {
     let fileName: String
-    let contentType: String
+    let fileType: String
     let fileSize: Int
 }
 

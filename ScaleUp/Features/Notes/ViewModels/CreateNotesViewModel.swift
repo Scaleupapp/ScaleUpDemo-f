@@ -138,7 +138,7 @@ final class CreateNotesViewModel {
             // 2. Request presigned URL
             let uploadInfo = try await notesService.requestUpload(
                 fileName: selectedFileName ?? "notes.pdf",
-                contentType: mimeType,
+                fileType: mimeType,
                 fileSize: fileData.count
             )
 
