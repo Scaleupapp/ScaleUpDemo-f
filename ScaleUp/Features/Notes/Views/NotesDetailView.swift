@@ -13,7 +13,8 @@ struct NotesDetailView: View {
     @State private var showPDFViewer = false
     @State private var pdfDocument: PDFDocument?
     @State private var isLoadingPDF = false
-    @State private var flashcardSetId: String?
+    @State private var existingFlashcardSetId: String?  // tracks if flashcards exist
+    @State private var navigateToFlashcardId: String?  // triggers navigation only on tap
     @State private var isGeneratingFlashcards = false
     @State private var isGeneratingQuiz = false
     @State private var showShareSheet = false
@@ -79,7 +80,7 @@ struct NotesDetailView: View {
                     .presentationDetents([.medium, .large])
             }
         }
-        .navigationDestination(item: $flashcardSetId) { id in
+        .navigationDestination(item: $navigateToFlashcardId) { id in
             FlashcardStudyView(flashcardSetId: id)
         }
         .task { await loadContent() }
@@ -257,9 +258,9 @@ struct NotesDetailView: View {
                         }
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(isGeneratingFlashcards ? "Generating..." : flashcardSetId != nil ? "Study Flashcards" : "Create Flashcards")
+                        Text(isGeneratingFlashcards ? "Generating..." : existingFlashcardSetId != nil ? "Study Flashcards" : "Create Flashcards")
                             .font(Typography.bodyBold).foregroundStyle(.white)
-                        Text(flashcardSetId != nil ? "Tap to start studying" : "AI generates cards from this content")
+                        Text(existingFlashcardSetId != nil ? "Tap to start studying" : "AI generates cards from this content")
                             .font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
                     }
                     Spacer()
@@ -332,7 +333,7 @@ struct NotesDetailView: View {
                     case .id(let id): matchId = id
                     }
                     if matchId == contentId && set.isReady {
-                        flashcardSetId = set.id
+                        existingFlashcardSetId = set.id
                         break
                     }
                 }
@@ -364,17 +365,16 @@ struct NotesDetailView: View {
     }
 
     private func handleFlashcards() async {
-        if let id = flashcardSetId {
-            flashcardSetId = nil
-            try? await Task.sleep(for: .milliseconds(100))
-            flashcardSetId = id
+        if let id = existingFlashcardSetId {
+            // Navigate to existing set
+            navigateToFlashcardId = id
             return
         }
         isGeneratingFlashcards = true; Haptics.light()
         do {
-            // Synchronous — returns full FlashcardSet when ready
             let set = try await notesService.generateFlashcards(contentId: contentId)
-            flashcardSetId = set.id
+            existingFlashcardSetId = set.id
+            navigateToFlashcardId = set.id
             Haptics.success()
         } catch {
             Haptics.error()

@@ -34,7 +34,8 @@ actor NotesService {
     // MARK: - CRUD
 
     func fetchMyNotes(page: Int = 1) async throws -> [Content] {
-        try await api.request(NotesEndpoints.myNotes(page: page))
+        let response: MyNotesResponse = try await api.request(NotesEndpoints.myNotes(page: page))
+        return response.items
     }
 
     func publishNote(id: String) async throws {
@@ -75,6 +76,10 @@ actor NotesService {
 }
 
 // MARK: - Request Bodies
+
+private struct MyNotesResponse: Codable, Sendable {
+    let items: [Content]
+}
 
 struct NotesUploadURLResponse: Codable, Sendable {
     let uploadURL: String
