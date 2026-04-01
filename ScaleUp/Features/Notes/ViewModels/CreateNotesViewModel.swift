@@ -1,5 +1,6 @@
 import SwiftUI
 import PDFKit
+import UniformTypeIdentifiers
 
 @Observable
 @MainActor
@@ -13,6 +14,7 @@ final class CreateNotesViewModel {
     var selectedFileData: Data?
     var selectedFileName: String?
     var fileFormat: String = "pdf"
+    var fileMIMEType: String = "application/pdf"
 
     // Details
     var title = ""
@@ -58,11 +60,38 @@ final class CreateNotesViewModel {
         do {
             selectedFileData = try Data(contentsOf: url)
             selectedFileName = url.lastPathComponent
-            fileFormat = "pdf"
+
+            let ext = url.pathExtension.lowercased()
+            let (format, mime) = Self.formatAndMIME(for: ext)
+            fileFormat = format
+            fileMIMEType = mime
             step = 1
         } catch {
             errorMessage = "Could not read file"
             showError = true
+        }
+    }
+
+    static func formatAndMIME(for ext: String) -> (String, String) {
+        switch ext {
+        case "pdf":
+            return ("pdf", "application/pdf")
+        case "jpg", "jpeg":
+            return ("image", "image/jpeg")
+        case "png":
+            return ("image", "image/png")
+        case "heic":
+            return ("image", "image/heic")
+        case "doc":
+            return ("doc", "application/msword")
+        case "docx":
+            return ("doc", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        case "xls":
+            return ("excel", "application/vnd.ms-excel")
+        case "xlsx":
+            return ("excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        default:
+            return ("pdf", "application/pdf")
         }
     }
 
@@ -119,7 +148,7 @@ final class CreateNotesViewModel {
             // 1. Request presigned URL
             let uploadInfo = try await notesService.requestUpload(
                 fileName: selectedFileName ?? "notes.pdf",
-                contentType: "application/pdf",
+                contentType: fileMIMEType,
                 fileSize: fileData.count
             )
 
@@ -130,7 +159,7 @@ final class CreateNotesViewModel {
 
             var request = URLRequest(url: uploadURL)
             request.httpMethod = "PUT"
-            request.setValue("application/pdf", forHTTPHeaderField: "Content-Type")
+            request.setValue(fileMIMEType, forHTTPHeaderField: "Content-Type")
             request.httpBody = fileData
 
             let (_, response) = try await URLSession.shared.data(for: request)

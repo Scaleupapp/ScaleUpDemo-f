@@ -69,12 +69,17 @@ struct CreateNotesView: View {
                 .padding(.horizontal, Spacing.xl)
 
             VStack(spacing: Spacing.md) {
-                PrimaryButton(title: "Pick PDF File", icon: "doc.fill") {
+                PrimaryButton(title: "Choose File", icon: "doc.fill") {
                     vm.showDocumentPicker = true
                 }
 
                 Button {
-                    vm.showScanner = true
+                    if VNDocumentCameraViewController.isSupported {
+                        vm.showScanner = true
+                    } else {
+                        vm.errorMessage = "Document scanning is not available on this device."
+                        vm.showError = true
+                    }
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "camera.fill")
@@ -108,7 +113,7 @@ struct CreateNotesView: View {
                 // File preview
                 if let fileName = vm.selectedFileName {
                     HStack(spacing: Spacing.sm) {
-                        Image(systemName: "doc.fill")
+                        Image(systemName: vm.fileFormat == "image" ? "photo.fill" : vm.fileFormat == "excel" ? "tablecells.fill" : "doc.fill")
                             .foregroundStyle(ColorTokens.gold)
                         Text(fileName)
                             .font(Typography.bodySmall)
@@ -289,7 +294,18 @@ struct DocumentPickerView: UIViewControllerRepresentable {
     let onPick: (URL) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf])
+        let supportedTypes: [UTType] = [
+            .pdf,
+            .jpeg,
+            .png,
+            .heic,
+            .image,
+            UTType("com.microsoft.word.doc") ?? .data,
+            UTType("org.openxmlformats.wordprocessingml.document") ?? .data,
+            UTType("com.microsoft.excel.xls") ?? .data,
+            UTType("org.openxmlformats.spreadsheetml.sheet") ?? .data
+        ]
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: supportedTypes)
         picker.delegate = context.coordinator
         return picker
     }

@@ -46,6 +46,8 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "ScaleUp"
         INFOPLIST_KEY_CFBundleIconName: "AppIcon"
         SWIFT_STRICT_CONCURRENCY: complete
+        INFOPLIST_FILE: ScaleUp/Info.plist
+        INFOPLIST_KEY_NSCameraUsageDescription: "ScaleUp needs camera access to scan your handwritten or printed notes."
     entitlements:
       path: ScaleUp/ScaleUp.entitlements
       properties:
