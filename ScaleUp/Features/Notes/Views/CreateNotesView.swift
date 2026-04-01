@@ -73,6 +73,7 @@ struct CreateNotesView: View {
                     vm.showDocumentPicker = true
                 }
 
+                #if !targetEnvironment(macCatalyst)
                 Button {
                     vm.showScanner = true
                 } label: {
@@ -92,6 +93,7 @@ struct CreateNotesView: View {
                             .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
                     )
                 }
+                #endif
             }
             .padding(.horizontal, Spacing.lg)
 
@@ -289,7 +291,17 @@ struct DocumentPickerView: UIViewControllerRepresentable {
     let onPick: (URL) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf])
+        let types: [UTType] = [
+            .pdf,
+            .image,
+            .jpeg,
+            .png,
+            UTType("org.openxmlformats.wordprocessingml.document") ?? .data, // .docx
+            UTType("com.microsoft.word.doc") ?? .data, // .doc
+            UTType("org.openxmlformats.spreadsheetml.sheet") ?? .data, // .xlsx
+            UTType("com.microsoft.excel.xls") ?? .data, // .xls
+        ]
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
         picker.delegate = context.coordinator
         return picker
     }

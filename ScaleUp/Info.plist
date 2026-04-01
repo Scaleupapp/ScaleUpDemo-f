@@ -2,5 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>ScaleUp uses the camera to scan your handwritten notes for uploading.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ScaleUp needs access to your photos to select images for notes upload.</string>
 </dict>
 </plist>

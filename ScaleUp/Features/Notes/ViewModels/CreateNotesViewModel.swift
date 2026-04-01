@@ -58,7 +58,12 @@ final class CreateNotesViewModel {
         do {
             selectedFileData = try Data(contentsOf: url)
             selectedFileName = url.lastPathComponent
-            fileFormat = "pdf"
+            let ext = url.pathExtension.lowercased()
+            if ["jpg", "jpeg", "png", "heic"].contains(ext) {
+                fileFormat = "image"
+            } else {
+                fileFormat = "pdf" // pdf, docx, xlsx all uploaded as-is
+            }
             step = 1
         } catch {
             errorMessage = "Could not read file"
@@ -116,21 +121,35 @@ final class CreateNotesViewModel {
         isUploading = true
 
         do {
-            // 1. Request presigned URL
+            // 1. Determine MIME type
+            let ext = (selectedFileName ?? "").split(separator: ".").last?.lowercased() ?? "pdf"
+            let mimeType: String
+            switch ext {
+            case "pdf": mimeType = "application/pdf"
+            case "doc": mimeType = "application/msword"
+            case "docx": mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            case "xls": mimeType = "application/vnd.ms-excel"
+            case "xlsx": mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            case "jpg", "jpeg": mimeType = "image/jpeg"
+            case "png": mimeType = "image/png"
+            default: mimeType = "application/octet-stream"
+            }
+
+            // 2. Request presigned URL
             let uploadInfo = try await notesService.requestUpload(
                 fileName: selectedFileName ?? "notes.pdf",
-                contentType: "application/pdf",
+                contentType: mimeType,
                 fileSize: fileData.count
             )
 
-            // 2. Upload to S3
+            // 3. Upload to S3
             guard let uploadURL = URL(string: uploadInfo.uploadURL) else {
                 throw URLError(.badURL)
             }
 
             var request = URLRequest(url: uploadURL)
             request.httpMethod = "PUT"
-            request.setValue("application/pdf", forHTTPHeaderField: "Content-Type")
+            request.setValue(mimeType, forHTTPHeaderField: "Content-Type")
             request.httpBody = fileData
 
             let (_, response) = try await URLSession.shared.data(for: request)
