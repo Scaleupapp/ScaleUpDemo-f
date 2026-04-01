@@ -93,10 +93,28 @@ struct ContentCardWide: View {
 
     private var placeholder: some View {
         ZStack {
-            ColorTokens.surfaceElevated
-            Image(systemName: "play.rectangle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(ColorTokens.textTertiary)
+            if content.contentType == .notes {
+                LinearGradient(
+                    colors: [Color(hex: 0x1A2A3A), Color(hex: 0x0F1923)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                VStack(spacing: 4) {
+                    Image(systemName: "doc.text.image")
+                        .font(.system(size: 30))
+                        .foregroundStyle(.orange.opacity(0.8))
+                    if let domain = content.domain {
+                        Text(domain.capitalized)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.5))
+                    }
+                }
+            } else {
+                ColorTokens.surfaceElevated
+                Image(systemName: "play.rectangle.fill")
+                    .font(.system(size: 40))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
         }
     }
 
