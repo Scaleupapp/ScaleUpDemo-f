@@ -365,7 +365,6 @@ struct NotesDetailView: View {
 
     private func handleFlashcards() async {
         if let id = flashcardSetId {
-            // Navigate to existing flashcard set
             flashcardSetId = nil
             try? await Task.sleep(for: .milliseconds(100))
             flashcardSetId = id
@@ -373,27 +372,13 @@ struct NotesDetailView: View {
         }
         isGeneratingFlashcards = true; Haptics.light()
         do {
-            _ = try await notesService.generateFlashcards(contentId: contentId)
-            for _ in 0..<12 {
-                try? await Task.sleep(for: .seconds(5))
-                if let sets = try? await notesService.fetchMyFlashcards() {
-                    for set in sets.items {
-                        if let ref = set.contentId {
-                            let matchId: String
-                            switch ref {
-                            case .content(let info): matchId = info.id
-                            case .id(let id): matchId = id
-                            }
-                            if matchId == contentId && set.isReady {
-                                flashcardSetId = set.id; Haptics.success()
-                                isGeneratingFlashcards = false
-                                return
-                            }
-                        }
-                    }
-                }
-            }
-        } catch { Haptics.error() }
+            // Synchronous — returns full FlashcardSet when ready
+            let set = try await notesService.generateFlashcards(contentId: contentId)
+            flashcardSetId = set.id
+            Haptics.success()
+        } catch {
+            Haptics.error()
+        }
         isGeneratingFlashcards = false
     }
 

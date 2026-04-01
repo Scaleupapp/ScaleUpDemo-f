@@ -51,7 +51,7 @@ actor NotesService {
 
     // MARK: - Flashcards
 
-    func generateFlashcards(contentId: String) async throws -> FlashcardGenerateResponse {
+    func generateFlashcards(contentId: String) async throws -> FlashcardSet {
         let body = FlashcardGenerateRequest(contentId: contentId)
         return try await api.request(FlashcardEndpoints.generate, body: body)
     }
