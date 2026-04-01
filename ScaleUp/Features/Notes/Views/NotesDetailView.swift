@@ -9,6 +9,7 @@ struct NotesDetailView: View {
     @State private var pdfURL: URL?
     @State private var flashcardStatus: String?
     @State private var showShareSheet = false
+    @State private var readStartTime = Date()
     @Environment(AppState.self) private var appState
 
     private let contentService = ContentService()
@@ -52,6 +53,8 @@ struct NotesDetailView: View {
             }
         }
         .task { await loadContent() }
+        .onAppear { readStartTime = Date() }
+        .onDisappear { trackReadingProgress() }
     }
 
     // MARK: - Action Bar
@@ -118,6 +121,23 @@ struct NotesDetailView: View {
         }
 
         isLoading = false
+    }
+
+    private func trackReadingProgress() {
+        let timeSpent = Int(Date().timeIntervalSince(readStartTime))
+        guard timeSpent > 5 else { return } // Only track if spent > 5 seconds
+        Task {
+            // Mark progress — treat any reading > 30s as complete
+            let _ = try? await playerService.updateProgress(
+                contentId: contentId,
+                currentPosition: timeSpent,
+                totalDuration: max(timeSpent, 60),
+                timeSpent: timeSpent
+            )
+            if timeSpent > 30 {
+                try? await playerService.markComplete(contentId: contentId)
+            }
+        }
     }
 
     private func generateFlashcards() async {
