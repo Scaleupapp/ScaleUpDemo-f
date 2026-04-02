@@ -13,13 +13,11 @@ actor NoteRequestService {
             URLQueryItem(name: "limit", value: "20"),
         ]
         if let domain { items.append(URLQueryItem(name: "domain", value: domain)) }
-        let resp: PaginatedNoteRequestResponse = try await APIClient.shared.request(NoteRequestEndpoints.list(queryItems: items))
-        return resp.items
+        return try await APIClient.shared.request(NoteRequestEndpoints.list(queryItems: items))
     }
 
     func fetchMyRequests() async throws -> [NoteRequest] {
-        let resp: PaginatedNoteRequestResponse = try await APIClient.shared.request(NoteRequestEndpoints.mine)
-        return resp.items
+        return try await APIClient.shared.request(NoteRequestEndpoints.mine)
     }
 
     func fetchDetail(id: String) async throws -> NoteRequest {
@@ -55,11 +53,6 @@ actor NoteRequestService {
     }
 }
 
-// MARK: - Response
-
-private struct PaginatedNoteRequestResponse: Decodable, Sendable {
-    let items: [NoteRequest]
-}
 
 // MARK: - Endpoints
 

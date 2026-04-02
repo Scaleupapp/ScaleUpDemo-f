@@ -54,14 +54,20 @@ struct NoteRequestsListView: View {
             }
         }
         .sheet(isPresented: $showCreateSheet) {
-            CreateNoteRequestSheet { newRequest in
-                requests.insert(newRequest, at: 0)
+            CreateNoteRequestSheet { _ in
+                Task { await loadRequests() }
             }
+        }
+        .onChange(of: showCreateSheet) { _, showing in
+            if !showing { Task { await loadRequests() } }
         }
         .navigationDestination(item: $selectedRequest) { request in
             NoteRequestDetailView(request: request)
         }
         .task { await loadRequests() }
+        .onAppear {
+            if !requests.isEmpty { Task { await loadRequests() } }
+        }
         .refreshable { await loadRequests() }
     }
 
@@ -144,7 +150,7 @@ struct NoteRequestsListView: View {
                         .foregroundStyle(request.isUpvotedByMe == true ? ColorTokens.gold : ColorTokens.textTertiary)
                 }
 
-                if let user = request.requestedBy {
+                if let user = request.requestedBy?.user {
                     Text(user.displayName)
                         .font(.system(size: 11))
                         .foregroundStyle(ColorTokens.textTertiary)

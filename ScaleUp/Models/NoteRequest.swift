@@ -2,7 +2,7 @@ import Foundation
 
 struct NoteRequest: Codable, Sendable, Identifiable {
     let id: String
-    let requestedBy: NoteRequestUser?
+    let requestedBy: NoteRequestUserRef?
     let title: String
     let description: String?
     let domain: String
@@ -10,8 +10,8 @@ struct NoteRequest: Codable, Sendable, Identifiable {
     let difficulty: String?
     let collegeName: String?
     let status: String // open, in_progress, fulfilled, closed
-    let fulfilledBy: NoteRequestUser?
-    let fulfilledContentId: NoteRequestContent?
+    let fulfilledBy: NoteRequestUserRef?
+    let fulfilledContentId: NoteRequestContentRef?
     let fulfilledAt: Date?
     let upvoteCount: Int
     let responseCount: Int?
@@ -36,6 +36,32 @@ struct NoteRequest: Codable, Sendable, Identifiable {
     }
 }
 
+// Handles both raw ObjectId string and populated user object from backend
+enum NoteRequestUserRef: Codable, Sendable {
+    case id(String)
+    case populated(NoteRequestUser)
+
+    var user: NoteRequestUser? {
+        if case .populated(let u) = self { return u }
+        return nil
+    }
+
+    init(from decoder: Decoder) throws {
+        if let str = try? decoder.singleValueContainer().decode(String.self) {
+            self = .id(str)
+        } else {
+            self = .populated(try NoteRequestUser(from: decoder))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .id(let str): var c = encoder.singleValueContainer(); try c.encode(str)
+        case .populated(let u): try u.encode(to: encoder)
+        }
+    }
+}
+
 struct NoteRequestUser: Codable, Sendable {
     let _id: String
     let firstName: String
@@ -43,6 +69,32 @@ struct NoteRequestUser: Codable, Sendable {
     let username: String?
     let profilePicture: String?
     var displayName: String { "\(firstName) \(lastName ?? "")".trimmingCharacters(in: .whitespaces) }
+}
+
+// Handles both raw ObjectId string and populated content object
+enum NoteRequestContentRef: Codable, Sendable {
+    case id(String)
+    case populated(NoteRequestContent)
+
+    var content: NoteRequestContent? {
+        if case .populated(let c) = self { return c }
+        return nil
+    }
+
+    init(from decoder: Decoder) throws {
+        if let str = try? decoder.singleValueContainer().decode(String.self) {
+            self = .id(str)
+        } else {
+            self = .populated(try NoteRequestContent(from: decoder))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .id(let str): var c = encoder.singleValueContainer(); try c.encode(str)
+        case .populated(let c): try c.encode(to: encoder)
+        }
+    }
 }
 
 struct NoteRequestContent: Codable, Sendable {

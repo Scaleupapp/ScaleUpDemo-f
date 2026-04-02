@@ -92,7 +92,7 @@ struct NoteRequestDetailView: View {
     private var detailsCard: some View {
         VStack(spacing: Spacing.md) {
             // Requester
-            if let user = request.requestedBy {
+            if let user = request.requestedBy?.user {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "person.circle.fill")
                         .font(.system(size: 16))
@@ -219,7 +219,7 @@ struct NoteRequestDetailView: View {
 
     @ViewBuilder
     private var fulfilledSection: some View {
-        if request.status == "fulfilled", let content = request.fulfilledContentId {
+        if request.status == "fulfilled", let content = request.fulfilledContentId?.content {
             VStack(alignment: .leading, spacing: Spacing.sm) {
                 Text("Fulfilled Notes")
                     .font(.system(size: 13, weight: .bold))
@@ -257,7 +257,7 @@ struct NoteRequestDetailView: View {
                 }
                 .buttonStyle(.plain)
 
-                if let user = request.fulfilledBy {
+                if let user = request.fulfilledBy?.user {
                     Text("Fulfilled by \(user.displayName)")
                         .font(.system(size: 11))
                         .foregroundStyle(ColorTokens.textTertiary)
