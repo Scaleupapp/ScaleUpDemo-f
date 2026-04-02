@@ -92,28 +92,32 @@ struct ContentCardWide: View {
     }
 
     private var placeholder: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             if content.contentType == .notes {
                 LinearGradient(
-                    colors: [Color(hex: 0x1A2A3A), Color(hex: 0x0F1923)],
+                    colors: [Color(hex: 0x1C2D3D), Color(hex: 0x111D27)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                VStack(spacing: 4) {
+                if let ocrText = content.ocrText, !ocrText.isEmpty {
+                    Text(ocrText.replacingOccurrences(of: "**", with: "").prefix(200))
+                        .font(.system(size: 7))
+                        .foregroundStyle(.white.opacity(0.2))
+                        .lineSpacing(2)
+                        .lineLimit(10)
+                        .padding(8)
+                } else {
                     Image(systemName: "doc.text.image")
                         .font(.system(size: 30))
-                        .foregroundStyle(.orange.opacity(0.8))
-                    if let domain = content.domain {
-                        Text(domain.capitalized)
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.5))
-                    }
+                        .foregroundStyle(.orange.opacity(0.4))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             } else {
                 ColorTokens.surfaceElevated
                 Image(systemName: "play.rectangle.fill")
                     .font(.system(size: 40))
                     .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }

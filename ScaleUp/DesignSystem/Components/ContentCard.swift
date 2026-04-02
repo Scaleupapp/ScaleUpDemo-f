@@ -112,29 +112,49 @@ struct ContentCard: View {
     }
 
     private var thumbnailPlaceholder: some View {
-        ZStack {
+        ZStack(alignment: .topLeading) {
             if content.contentType == .notes {
-                // Styled notes thumbnail
+                // Content-preview thumbnail — shows actual text from notes
                 LinearGradient(
-                    colors: [Color(hex: 0x1A2A3A), Color(hex: 0x0F1923)],
+                    colors: [Color(hex: 0x1C2D3D), Color(hex: 0x111D27)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
-                VStack(spacing: 6) {
-                    Image(systemName: "doc.text.image")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.orange.opacity(0.8))
-                    if let domain = content.domain {
-                        Text(domain.capitalized)
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.5))
+
+                // Faint lined paper effect
+                VStack(spacing: 12) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        Rectangle().fill(.white.opacity(0.03)).frame(height: 0.5)
                     }
                 }
+                .padding(.top, 10)
+
+                // Content preview text
+                VStack(alignment: .leading, spacing: 0) {
+                    if let ocrText = content.ocrText, !ocrText.isEmpty {
+                        let preview = ocrText
+                            .replacingOccurrences(of: "**", with: "")
+                            .replacingOccurrences(of: "```", with: "")
+                            .prefix(150)
+                        Text(preview)
+                            .font(.system(size: 7, weight: .regular))
+                            .foregroundStyle(.white.opacity(0.25))
+                            .lineSpacing(2)
+                            .lineLimit(8)
+                    } else {
+                        Image(systemName: "doc.text.image")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.orange.opacity(0.4))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .padding(8)
             } else {
                 ColorTokens.surfaceElevated
                 Image(systemName: content.contentType == .video ? "play.rectangle.fill" : "doc.text.fill")
                     .font(.system(size: 28))
                     .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }

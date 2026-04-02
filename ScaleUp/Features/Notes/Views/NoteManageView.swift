@@ -1,4 +1,5 @@
 import SwiftUI
+import PDFKit
 
 struct NoteManageView: View {
     let note: Content
@@ -11,6 +12,9 @@ struct NoteManageView: View {
     @State private var editDifficulty: String
     @State private var showDeleteConfirm = false
     @State private var isSaving = false
+    @State private var showPDFViewer = false
+    @State private var pdfDocument: PDFDocument?
+    @State private var isLoadingPDF = false
     @Environment(\.dismiss) private var dismiss
 
     private let notesService = NotesService()
@@ -56,6 +60,13 @@ struct NoteManageView: View {
         .background(ColorTokens.background)
         .navigationTitle(isEditing ? "Edit Note" : "Note Details")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showPDFViewer) {
+            if let pdfDocument {
+                FullScreenPDFView(document: pdfDocument, title: note.title) {
+                    showPDFViewer = false
+                }
+            }
+        }
         .alert("Delete Note?", isPresented: $showDeleteConfirm) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) { Task { await deleteNote() } }
@@ -296,6 +307,26 @@ struct NoteManageView: View {
 
     private var actionsSection: some View {
         VStack(spacing: Spacing.sm) {
+            // View Document
+            Button {
+                Task { await openPDF() }
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    if isLoadingPDF {
+                        ProgressView().tint(.orange)
+                    } else {
+                        Image(systemName: "doc.text.fill")
+                    }
+                    Text("View Document")
+                }
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(.orange)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(.orange.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
             // Edit
             Button {
                 isEditing.toggle()
@@ -349,6 +380,20 @@ struct NoteManageView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
+    }
+
+    private let playerService = PlayerService()
+
+    private func openPDF() async {
+        if pdfDocument != nil { showPDFViewer = true; return }
+        isLoadingPDF = true
+        if let stream: StreamResponse = try? await playerService.fetchStreamURL(contentId: note.id),
+           let urlStr = stream.resolvedURL, let url = URL(string: urlStr),
+           let data = try? await URLSession.shared.data(from: url).0 {
+            pdfDocument = PDFDocument(data: data)
+            showPDFViewer = true
+        }
+        isLoadingPDF = false
     }
 
     // MARK: - API Actions
