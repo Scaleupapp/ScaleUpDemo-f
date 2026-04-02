@@ -6,8 +6,6 @@ struct SettingsView: View {
     @State private var showLogoutAlert = false
     @State private var showDeactivateAlert = false
     @State private var isDeactivating = false
-    @State private var showClearCacheAlert = false
-    @State private var cacheCleared = false
     @State private var isExportingData = false
     @State private var showExportSuccess = false
 
@@ -23,7 +21,6 @@ struct SettingsView: View {
                 preferencesSection
                 privacySection
                 appSection
-                aboutSection
                 dangerSection
             }
             .scrollContentBackground(.hidden)
@@ -46,14 +43,6 @@ struct SettingsView: View {
             }
         } message: {
             Text("Your profile, progress, and content will be hidden. You have 30 days to log back in and reactivate before permanent deletion.")
-        }
-        .alert("Clear Cache", isPresented: $showClearCacheAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Clear", role: .destructive) {
-                clearCache()
-            }
-        } message: {
-            Text("This will clear cached images and data. The app may load slower temporarily.")
         }
     }
 
@@ -97,29 +86,6 @@ struct SettingsView: View {
 
             settingsNavigableRow(icon: "bell.fill", title: "Notifications", value: "Enabled") {
                 NotificationSettingsView()
-            }
-
-            Button {
-                showClearCacheAlert = true
-            } label: {
-                HStack {
-                    Image(systemName: "externaldrive.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(ColorTokens.gold)
-                        .frame(width: 24)
-
-                    Text("Clear Cache")
-                        .font(Typography.body)
-                        .foregroundStyle(ColorTokens.textPrimary)
-
-                    Spacer()
-
-                    if cacheCleared {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(ColorTokens.success)
-                            .font(.system(size: 14))
-                    }
-                }
             }
         } header: {
             sectionHeader("App")
@@ -185,17 +151,6 @@ struct SettingsView: View {
             .disabled(isExportingData)
         } header: {
             sectionHeader("Privacy & Data")
-        }
-        .listRowBackground(ColorTokens.surface)
-    }
-
-    // MARK: - About
-
-    private var aboutSection: some View {
-        Section {
-            settingsInfoRow(icon: "info.circle.fill", title: "Version", value: "1.0.0")
-        } header: {
-            sectionHeader("About")
         }
         .listRowBackground(ColorTokens.surface)
     }
@@ -326,15 +281,6 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
-
-    private func clearCache() {
-        URLCache.shared.removeAllCachedResponses()
-        cacheCleared = true
-        Haptics.success()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            cacheCleared = false
-        }
-    }
 
     private func exportData() async {
         isExportingData = true
