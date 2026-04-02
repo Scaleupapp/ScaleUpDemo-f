@@ -89,7 +89,7 @@ struct NotesDetailView: View {
         .navigationDestination(item: $navigateToFlashcardId) { id in
             FlashcardStudyView(flashcardSetId: id)
         }
-        .navigationDestination(item: $generatedQuiz) { quiz in
+        .fullScreenCover(item: $generatedQuiz) { quiz in
             QuizSessionView(quiz: quiz)
         }
         .task { await loadContent() }
