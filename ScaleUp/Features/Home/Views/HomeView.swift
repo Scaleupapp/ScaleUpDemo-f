@@ -646,7 +646,9 @@ struct HomeView: View {
         NavigationLink(value: content) {
             HStack(spacing: Spacing.sm) {
                 Group {
-                    if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                    if content.contentType == .notes {
+                        NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+                    } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
                         AsyncImage(url: imageURL) { phase in
                             switch phase {
                             case .success(let image):
@@ -796,7 +798,9 @@ struct HomeView: View {
     private func contentCard(_ content: Content, width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Group {
-                if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                if content.contentType == .notes {
+                    NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+                } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
                     AsyncImage(url: imageURL) { phase in
                         switch phase {
                         case .success(let image):

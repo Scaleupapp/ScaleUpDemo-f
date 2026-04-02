@@ -246,7 +246,9 @@ struct DiscoverView: View {
         ZStack(alignment: .bottomLeading) {
             // Full-width thumbnail
             Group {
-                if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                if content.contentType == .notes {
+                    NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+                } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
                     AsyncImage(url: imageURL) { phase in
                         if case .success(let image) = phase {
                             image.resizable().aspectRatio(contentMode: .fill)
@@ -438,7 +440,9 @@ struct DiscoverView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Thumbnail
             Group {
-                if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                if content.contentType == .notes {
+                    NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+                } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
                     AsyncImage(url: imageURL) { phase in
                         if case .success(let image) = phase {
                             image.resizable().aspectRatio(contentMode: .fill)
@@ -674,7 +678,9 @@ struct DiscoverView: View {
     private func gridCard(_ content: Content) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Group {
-                if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                if content.contentType == .notes {
+                    NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+                } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
                     AsyncImage(url: imageURL) { phase in
                         if case .success(let image) = phase {
                             image.resizable().aspectRatio(contentMode: .fill)
@@ -871,7 +877,9 @@ struct DiscoverView: View {
             // Thumbnail
             ZStack(alignment: .bottomTrailing) {
                 Group {
-                    if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+                    if content.contentType == .notes {
+                        NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+                    } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
                         AsyncImage(url: imageURL) { phase in
                             if case .success(let image) = phase {
                                 image.resizable().aspectRatio(contentMode: .fill)

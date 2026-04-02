@@ -98,108 +98,94 @@ struct MyNotesView: View {
         let totalViews = notes.compactMap { $0.viewCount }.reduce(0, +)
         let totalLikes = notes.compactMap { $0.likeCount }.reduce(0, +)
 
-        return HStack(spacing: Spacing.md) {
-            statPill(value: "\(notes.count)", label: "Total", color: ColorTokens.textSecondary)
-            statPill(value: "\(published)", label: "Live", color: ColorTokens.success)
+        return HStack(spacing: 8) {
+            statPill(value: "\(notes.count)", label: "Total", icon: "doc.text", color: ColorTokens.textSecondary)
+            statPill(value: "\(published)", label: "Live", icon: "checkmark.circle", color: ColorTokens.success)
             if pending > 0 {
-                statPill(value: "\(pending)", label: "Review", color: .orange)
+                statPill(value: "\(pending)", label: "Review", icon: "clock", color: .orange)
             }
-            statPill(value: "\(totalViews)", label: "Views", color: ColorTokens.gold)
-            statPill(value: "\(totalLikes)", label: "Likes", color: .red)
+            statPill(value: "\(totalViews)", label: "Views", icon: "eye", color: ColorTokens.gold)
+            statPill(value: "\(totalLikes)", label: "Likes", icon: "heart", color: .red)
         }
         .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.md)
+        .padding(.vertical, Spacing.sm)
     }
 
-    private func statPill(value: String, label: String, color: Color) -> some View {
-        VStack(spacing: 2) {
+    private func statPill(value: String, label: String, icon: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(color.opacity(0.7))
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
             Text(label)
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 8, weight: .medium))
                 .foregroundStyle(ColorTokens.textTertiary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(ColorTokens.surface)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Note Row
 
     private func noteRow(_ note: Content) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: Spacing.md) {
-                // Icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(LinearGradient(colors: [Color(hex: 0x1A2A3A), Color(hex: 0x0F1923)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        .frame(width: 50, height: 50)
-                    Image(systemName: "doc.text.image")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.orange.opacity(0.8))
-                }
+        HStack(spacing: 14) {
+            // Status indicator strip
+            let (_, statusColor) = noteStatusInfo(note)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(statusColor)
+                .frame(width: 3, height: 48)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(note.title)
-                        .font(Typography.bodySmall)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+            // Main info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(note.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
 
-                    HStack(spacing: Spacing.sm) {
-                        statusBadge(note)
+                HStack(spacing: 8) {
+                    statusBadge(note)
 
-                        if let domain = note.domain {
-                            Text(domain.capitalized)
-                                .font(.system(size: 10))
-                                .foregroundStyle(ColorTokens.textTertiary)
-                        }
-
-                        if let pages = note.pageCount, pages > 0 {
-                            Text("\(pages) pg")
-                                .font(.system(size: 10))
-                                .foregroundStyle(ColorTokens.textTertiary)
-                        }
+                    if let date = note.createdAt {
+                        Text(date, style: .date)
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
                     }
                 }
             }
 
-            // Preview snippet
-            if let ocrText = note.ocrText, !ocrText.isEmpty {
-                Text(ocrText.prefix(120).replacingOccurrences(of: "\n", with: " "))
-                    .font(.system(size: 11))
-                    .foregroundStyle(ColorTokens.textTertiary)
-                    .lineLimit(2)
+            Spacer()
+
+            // Performance numbers
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 3) {
+                    Text("\(note.viewCount ?? 0)")
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                    Image(systemName: "eye")
+                        .font(.system(size: 9))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+
+                HStack(spacing: 3) {
+                    Text("\(note.likeCount ?? 0)")
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Image(systemName: "heart")
+                        .font(.system(size: 8))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
             }
 
-            // Stats row
-            HStack(spacing: Spacing.md) {
-                if let views = note.viewCount, views > 0 {
-                    Label("\(views)", systemImage: "eye")
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
-                if let likes = note.likeCount, likes > 0 {
-                    Label("\(likes)", systemImage: "heart")
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
-                if let saves = note.saveCount, saves > 0 {
-                    Label("\(saves)", systemImage: "bookmark")
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
-                if let date = note.createdAt {
-                    Spacer()
-                    Text(date, style: .date)
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
-            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(ColorTokens.textTertiary.opacity(0.5))
         }
-        .padding(Spacing.md)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(ColorTokens.surface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }

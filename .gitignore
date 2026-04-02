@@ -52,3 +52,4 @@ Pods/
 *.log
 *.tmp
 Thumbs.db
+build_sim/

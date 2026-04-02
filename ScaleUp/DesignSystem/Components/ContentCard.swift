@@ -80,7 +80,9 @@ struct ContentCard: View {
 
     @ViewBuilder
     private var thumbnailImage: some View {
-        if let url = content.thumbnailURL, let imageURL = URL(string: url) {
+        if content.contentType == .notes {
+            NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+        } else if let url = content.thumbnailURL, let imageURL = URL(string: url) {
             AsyncImage(url: imageURL) { phase in
                 switch phase {
                 case .success(let image):
@@ -112,43 +114,9 @@ struct ContentCard: View {
     }
 
     private var thumbnailPlaceholder: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack {
             if content.contentType == .notes {
-                // Content-preview thumbnail — shows actual text from notes
-                LinearGradient(
-                    colors: [Color(hex: 0x1C2D3D), Color(hex: 0x111D27)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                // Faint lined paper effect
-                VStack(spacing: 12) {
-                    ForEach(0..<6, id: \.self) { _ in
-                        Rectangle().fill(.white.opacity(0.03)).frame(height: 0.5)
-                    }
-                }
-                .padding(.top, 10)
-
-                // Content preview text
-                VStack(alignment: .leading, spacing: 0) {
-                    if let ocrText = content.ocrText, !ocrText.isEmpty {
-                        let preview = ocrText
-                            .replacingOccurrences(of: "**", with: "")
-                            .replacingOccurrences(of: "```", with: "")
-                            .prefix(150)
-                        Text(preview)
-                            .font(.system(size: 7, weight: .regular))
-                            .foregroundStyle(.white.opacity(0.25))
-                            .lineSpacing(2)
-                            .lineLimit(8)
-                    } else {
-                        Image(systemName: "doc.text.image")
-                            .font(.system(size: 24))
-                            .foregroundStyle(.orange.opacity(0.4))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
-                }
-                .padding(8)
+                notesPlaceholder
             } else {
                 ColorTokens.surfaceElevated
                 Image(systemName: content.contentType == .video ? "play.rectangle.fill" : "doc.text.fill")
@@ -158,4 +126,9 @@ struct ContentCard: View {
             }
         }
     }
+
+    private var notesPlaceholder: some View {
+        NotesThumbnail(title: content.title, domain: content.domain, pageCount: content.pageCount)
+    }
 }
+
