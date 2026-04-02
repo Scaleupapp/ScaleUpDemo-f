@@ -17,6 +17,7 @@ struct NotesDetailView: View {
     @State private var navigateToFlashcardId: String?  // triggers navigation only on tap
     @State private var isGeneratingFlashcards = false
     @State private var isGeneratingQuiz = false
+    @State private var generatedQuiz: Quiz?
     @State private var showShareSheet = false
     @State private var showContributorCard = false
     @State private var readStartTime = Date()
@@ -87,6 +88,9 @@ struct NotesDetailView: View {
         }
         .navigationDestination(item: $navigateToFlashcardId) { id in
             FlashcardStudyView(flashcardSetId: id)
+        }
+        .navigationDestination(item: $generatedQuiz) { quiz in
+            QuizSessionView(quiz: quiz)
         }
         .task { await loadContent() }
         .onAppear { readStartTime = Date() }
@@ -344,13 +348,16 @@ struct NotesDetailView: View {
                     }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(isGeneratingQuiz ? "Generating Quiz..." : "Generate Quiz").font(Typography.bodyBold).foregroundStyle(.white)
-                        Text(isGeneratingQuiz ? "This may take a minute" : "Test your understanding of these notes").font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
+                        Text(isGeneratingQuiz ? "AI is crafting questions — you'll be taken to the quiz automatically" : "Test your understanding of these notes").font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+                    if !isGeneratingQuiz {
+                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+                    }
                 }
                 .padding(Spacing.md).background(ColorTokens.surface).clipShape(RoundedRectangle(cornerRadius: 14))
             }
+            .disabled(isGeneratingQuiz)
         }
     }
 
@@ -450,15 +457,36 @@ struct NotesDetailView: View {
         isGeneratingQuiz = true; Haptics.light()
         do {
             let body = NotesQuizRequestBody(topic: content?.domain ?? "general", contentIds: [contentId], questionCount: 10)
-            _ = try await APIClient.shared.requestRaw(NotesQuizRequestEndpoint(), body: body)
-            // Show success — quiz will appear in quiz list when ready
-            Haptics.success()
-            // Brief delay then stop spinner
-            try? await Task.sleep(for: .seconds(2))
+            // Request returns a trigger with quizId
+            let trigger: QuizTriggerResponse = try await APIClient.shared.request(NotesQuizRequestEndpoint(), body: body)
+            if let quizId = trigger.quizId {
+                let quiz = try await QuizService().fetchQuiz(id: quizId)
+                Haptics.success()
+                generatedQuiz = quiz
+            } else if let triggerId = trigger.triggerId {
+                // Poll for completion
+                let quiz = try await pollForQuiz(triggerId: triggerId)
+                Haptics.success()
+                generatedQuiz = quiz
+            } else {
+                Haptics.error()
+            }
         } catch {
             Haptics.error()
         }
         isGeneratingQuiz = false
+    }
+
+    private func pollForQuiz(triggerId: String) async throws -> Quiz {
+        let quizService = QuizService()
+        for _ in 0..<30 { // poll up to ~60 seconds
+            try await Task.sleep(for: .seconds(2))
+            let status: QuizTriggerResponse = try await APIClient.shared.request(QuizTriggerStatusEndpoint(triggerId: triggerId))
+            if let quizId = status.quizId {
+                return try await quizService.fetchQuiz(id: quizId)
+            }
+        }
+        throw URLError(.timedOut)
     }
 
     private func trackReadingProgress() {
@@ -512,6 +540,12 @@ private struct NotesQuizRequestBody: Encodable, Sendable {
 private struct NotesQuizRequestEndpoint: Endpoint {
     var path: String { "/quizzes/request" }
     var method: HTTPMethod { .post }
+}
+
+private struct QuizTriggerStatusEndpoint: Endpoint {
+    let triggerId: String
+    var path: String { "/quizzes/trigger/\(triggerId)" }
+    var method: HTTPMethod { .get }
 }
 
 private struct NotesDetailShareSheet: UIViewControllerRepresentable {

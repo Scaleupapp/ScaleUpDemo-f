@@ -42,7 +42,9 @@ struct NoteManageView: View {
                 }
 
                 // AI Analysis
-                if note.aiData != nil {
+                if note.status == .processing {
+                    aiProcessingSection
+                } else if note.aiData != nil {
                     aiSection
                 }
 
@@ -216,6 +218,46 @@ struct NoteManageView: View {
         .padding(Spacing.lg)
         .background(ColorTokens.surface)
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    // MARK: - AI Processing
+
+    private var aiProcessingSection: some View {
+        VStack(spacing: Spacing.md) {
+            HStack(spacing: 8) {
+                Image(systemName: "brain.head.profile")
+                    .foregroundStyle(ColorTokens.gold)
+                Text("AI Analysis")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(.white)
+                Spacer()
+                ProgressView()
+                    .tint(ColorTokens.gold)
+                    .scaleEffect(0.8)
+            }
+
+            VStack(spacing: Spacing.sm) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.gold.opacity(0.7))
+                    Text("Your notes are being analyzed by AI. This may take a minute or two.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Text("We're extracting key concepts, generating a summary, and assessing content quality. This page will update automatically once complete.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .padding(Spacing.lg)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+        )
     }
 
     // MARK: - AI Analysis

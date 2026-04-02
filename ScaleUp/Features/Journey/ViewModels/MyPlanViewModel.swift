@@ -15,6 +15,9 @@ final class MyPlanViewModel {
     var errorMessage: String?
     var hasActiveJourney = false
     var isGenerating = false
+    var generationProgress: Double = 0
+    var generationStatusText: String = ""
+    private var progressTask: Task<Void, Never>?
     var showAddMilestone = false
     var activeObjectiveId: String?
 
@@ -349,9 +352,42 @@ final class MyPlanViewModel {
 
     func generateJourney(objectiveId: String) async {
         isGenerating = true
+        generationProgress = 0
+        generationStatusText = "Analyzing your objectives..."
+        startProgressSimulation()
         _ = try? await journeyService.generate(objectiveId: objectiveId)
+        progressTask?.cancel()
+        generationProgress = 1.0
+        generationStatusText = "Finalizing your plan..."
         await loadDashboard()
         isGenerating = false
+        generationProgress = 0
+    }
+
+    private func startProgressSimulation() {
+        let steps: [(Double, String, Double)] = [
+            (0.10, "Analyzing your objectives...", 3),
+            (0.20, "Mapping skill requirements...", 5),
+            (0.35, "Structuring weekly modules...", 8),
+            (0.50, "Selecting content for each week...", 12),
+            (0.65, "Building knowledge assessments...", 10),
+            (0.78, "Calibrating difficulty curve...", 8),
+            (0.88, "Setting milestones...", 6),
+            (0.93, "Almost there...", 10),
+        ]
+        progressTask = Task { @MainActor [weak self] in
+            for (target, status, duration) in steps {
+                guard !Task.isCancelled else { return }
+                self?.generationStatusText = status
+                let ticks = Int(duration * 10)
+                let increment = (target - (self?.generationProgress ?? 0)) / Double(ticks)
+                for _ in 0..<ticks {
+                    guard !Task.isCancelled else { return }
+                    try? await Task.sleep(for: .milliseconds(100))
+                    self?.generationProgress = min(target, (self?.generationProgress ?? 0) + increment)
+                }
+            }
+        }
     }
 
     func addMilestone(title: String, type: String, targetScore: Int?, targetTopic: String?) async {

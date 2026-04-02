@@ -1,9 +1,15 @@
 import SwiftUI
 import PhotosUI
 
+private struct IdentifiableImage: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
 struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel = EditProfileViewModel()
+    @State private var cropImage: IdentifiableImage?
     let user: User
     var onSave: (User) -> Void
 
@@ -57,6 +63,14 @@ struct EditProfileSheet: View {
                         .scaleEffect(1.2)
                 }
             }
+            .fullScreenCover(item: $cropImage) { item in
+                ImageCropView(image: item.image) { cropped in
+                    viewModel.avatarImage = cropped
+                    cropImage = nil
+                } onCancel: {
+                    cropImage = nil
+                }
+            }
         }
     }
 
@@ -99,7 +113,12 @@ struct EditProfileSheet: View {
                 }
             }
             .onChange(of: viewModel.selectedPhotoItem) {
-                Task { await viewModel.handlePhotoSelection() }
+                Task {
+                    guard let item = viewModel.selectedPhotoItem,
+                          let data = try? await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else { return }
+                    cropImage = IdentifiableImage(image: image)
+                }
             }
 
             Text("Tap to change photo")

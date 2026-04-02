@@ -52,6 +52,45 @@ struct GenerateJourneyView: View {
 
             Spacer()
 
+            // Progress section (visible during generation)
+            if viewModel.isGenerating {
+                VStack(spacing: Spacing.sm) {
+                    // Status text
+                    Text(viewModel.generationStatusText)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .animation(.easeInOut(duration: 0.3), value: viewModel.generationStatusText)
+
+                    // Progress bar
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(ColorTokens.surface)
+                                .frame(height: 10)
+
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(ColorTokens.gold)
+                                .frame(width: geo.size.width * viewModel.generationProgress, height: 10)
+                                .animation(.easeInOut(duration: 0.4), value: viewModel.generationProgress)
+                        }
+                    }
+                    .frame(height: 10)
+
+                    // Percentage + time estimate
+                    HStack {
+                        Text("\(Int(viewModel.generationProgress * 100))%")
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(ColorTokens.gold)
+                        Spacer()
+                        Text("This usually takes 60–90 seconds")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.bottom, Spacing.sm)
+            }
+
             // CTA
             Button {
                 Task {
