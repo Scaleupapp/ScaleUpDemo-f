@@ -253,33 +253,52 @@ struct NotesDetailView: View {
     @State private var isContentExpanded = false
 
     private func notesContentSection(_ text: String) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            HStack(spacing: 6) {
-                Image(systemName: "doc.plaintext")
-                    .foregroundStyle(.orange)
-                Text("Notes Content")
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(.white)
+        let cleanText = text
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "text.book.closed.fill")
+                        .foregroundStyle(.orange)
+                    Text("Read Notes")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(.white)
+                }
                 Spacer()
                 Button {
-                    withAnimation { isContentExpanded.toggle() }
+                    withAnimation(.easeOut(duration: 0.2)) { isContentExpanded.toggle() }
                 } label: {
-                    Text(isContentExpanded ? "Show Less" : "Show More")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.gold)
+                    HStack(spacing: 3) {
+                        Text(isContentExpanded ? "Collapse" : "Expand")
+                            .font(.system(size: 11, weight: .semibold))
+                        Image(systemName: isContentExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .foregroundStyle(ColorTokens.gold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(ColorTokens.gold.opacity(0.1))
+                    .clipShape(Capsule())
                 }
             }
 
-            Text(isContentExpanded ? text : String(text.prefix(500)))
-                .font(.system(size: 13, design: .monospaced))
+            Text(isContentExpanded ? cleanText : String(cleanText.prefix(400)))
+                .font(.system(size: 14))
                 .foregroundStyle(ColorTokens.textSecondary)
-                .lineSpacing(5)
+                .lineSpacing(6)
+                .textSelection(.enabled)
 
-            if !isContentExpanded && text.count > 500 {
-                Text("... tap Show More to read full content")
-                    .font(Typography.caption)
-                    .foregroundStyle(ColorTokens.textTertiary)
-                    .italic()
+            if !isContentExpanded && cleanText.count > 400 {
+                HStack {
+                    Spacer()
+                    Text("Tap Expand to read full notes")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Spacer()
+                }
             }
         }
         .padding(Spacing.lg)
