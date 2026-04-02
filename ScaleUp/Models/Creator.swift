@@ -23,6 +23,7 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
     let domain: String?
     let specializations: [String]?
     let isVerified: Bool?
+    let isVerifiedContributor: Bool?
     let createdAt: Date?
     let isFollowing: Bool?
     let totalViews: Int?
@@ -35,7 +36,7 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         case id = "_id"
         case firstName, lastName, username, profilePicture, bio
         case tier, followersCount, contentCount, averageRating
-        case domain, specializations, isVerified, createdAt
+        case domain, specializations, isVerified, isVerifiedContributor, createdAt
         case isFollowing, totalViews, mutualFollowers
         case education, workExperience, skills
         case creatorProfile
@@ -78,6 +79,7 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         domain = try container.decodeIfPresent(String.self, forKey: .domain) ?? nested?.domain
         specializations = try container.decodeIfPresent([String].self, forKey: .specializations) ?? nested?.specializations
         isVerified = try container.decodeIfPresent(Bool.self, forKey: .isVerified) ?? nested?.isVerified
+        isVerifiedContributor = try container.decodeIfPresent(Bool.self, forKey: .isVerifiedContributor)
         totalViews = try container.decodeIfPresent(Int.self, forKey: .totalViews) ?? nested?.stats?.totalViews
         contentCount = try container.decodeIfPresent(Int.self, forKey: .contentCount) ?? nested?.stats?.totalContent
         averageRating = try container.decodeIfPresent(Double.self, forKey: .averageRating) ?? nested?.stats?.averageRating
@@ -102,6 +104,7 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         try container.encodeIfPresent(domain, forKey: .domain)
         try container.encodeIfPresent(specializations, forKey: .specializations)
         try container.encodeIfPresent(isVerified, forKey: .isVerified)
+        try container.encodeIfPresent(isVerifiedContributor, forKey: .isVerifiedContributor)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
         try container.encodeIfPresent(isFollowing, forKey: .isFollowing)
         try container.encodeIfPresent(totalViews, forKey: .totalViews)
@@ -117,7 +120,8 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         profilePicture: String?, bio: String?, tier: CreatorTier?,
         followersCount: Int?, contentCount: Int?, averageRating: Double?,
         domain: String? = nil, specializations: [String]? = nil,
-        isVerified: Bool? = nil, createdAt: Date? = nil,
+        isVerified: Bool? = nil, isVerifiedContributor: Bool? = nil,
+        createdAt: Date? = nil,
         isFollowing: Bool? = nil, totalViews: Int? = nil,
         mutualFollowers: MutualFollowersInfo? = nil,
         education: [Education]? = nil, workExperience: [WorkExperience]? = nil,
@@ -136,6 +140,7 @@ struct Creator: Codable, Sendable, Identifiable, Hashable {
         self.domain = domain
         self.specializations = specializations
         self.isVerified = isVerified
+        self.isVerifiedContributor = isVerifiedContributor
         self.createdAt = createdAt
         self.isFollowing = isFollowing
         self.totalViews = totalViews

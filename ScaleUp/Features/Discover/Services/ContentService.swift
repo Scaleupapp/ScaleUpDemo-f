@@ -50,6 +50,11 @@ actor ContentService {
         return wrapper.items
     }
 
+    func fetchTrendingNotes(limit: Int = 10) async throws -> [Content] {
+        let wrapper: ItemsWrapper<Content> = try await api.request(ContentEndpoints.trendingNotes(limit: limit))
+        return wrapper.items
+    }
+
     // MARK: - Interactions
 
     func toggleLike(contentId: String) async throws -> LikeResponse {
@@ -152,6 +157,7 @@ private enum ContentEndpoints: Endpoint {
     case gaps(limit: Int)
     case forObjective(id: String, limit: Int)
     case similar(id: String, limit: Int)
+    case trendingNotes(limit: Int)
     case interactionStatus(id: String)
     case like(id: String)
     case save(id: String)
@@ -172,6 +178,7 @@ private enum ContentEndpoints: Endpoint {
         case .gaps: return "/recommendations/gaps"
         case .forObjective(let id, _): return "/recommendations/objective/\(id)"
         case .similar(let id, _): return "/recommendations/similar/\(id)"
+        case .trendingNotes: return "/recommendations/trending/notes"
         case .like(let id): return "/content/\(id)/like"
         case .save(let id): return "/content/\(id)/save"
         case .rate(let id): return "/content/\(id)/rate"
@@ -201,7 +208,7 @@ private enum ContentEndpoints: Endpoint {
             if let d = domain, !d.isEmpty { items.append(URLQueryItem(name: "domain", value: d)) }
             if let df = difficulty, !df.isEmpty { items.append(URLQueryItem(name: "difficulty", value: df)) }
             return items
-        case .recommendations(let limit), .trending(let limit), .gaps(let limit):
+        case .recommendations(let limit), .trending(let limit), .gaps(let limit), .trendingNotes(let limit):
             return [URLQueryItem(name: "limit", value: "\(limit)")]
         case .forObjective(_, let limit), .similar(_, let limit):
             return [URLQueryItem(name: "limit", value: "\(limit)")]

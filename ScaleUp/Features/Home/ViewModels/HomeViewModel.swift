@@ -8,6 +8,7 @@ final class HomeViewModel {
     var continueWatching: [ContentProgress] = []
     var recommendations: [Content] = []
     var trending: [Content] = []
+    var trendingNotes: [Content] = []
     var allContent: [Content] = []
     var isLoading = false
     var errorMessage: String?
@@ -186,6 +187,10 @@ final class HomeViewModel {
             (try? await self.contentService.fetchTrending(limit: 10)) ?? []
         }()
 
+        async let trendingNotesTask: [Content] = {
+            (try? await self.contentService.fetchTrendingNotes(limit: 10)) ?? []
+        }()
+
         async let exploreTask: [Content] = {
             (try? await self.contentService.explore(page: 1, limit: 20)) ?? []
         }()
@@ -202,12 +207,13 @@ final class HomeViewModel {
             try? await self.competitionService.fetchCompetitionStats()
         }()
 
-        let (dash, watching, recs, trend, explore, challenges, events, compStats) = await (dashboardTask, watchingTask, recsTask, trendingTask, exploreTask, challengesTask, eventsTask, statsTask)
+        let (dash, watching, recs, trend, trendNotes, explore, challenges, events, compStats) = await (dashboardTask, watchingTask, recsTask, trendingTask, trendingNotesTask, exploreTask, challengesTask, eventsTask, statsTask)
 
         dashboard = dash
         continueWatching = watching.filter { $0.isCompleted != true && ($0.percentageCompleted ?? 0) > 0 }
         recommendations = recs
         trending = trend
+        trendingNotes = trendNotes
         allContent = explore
         todayChallenges = challenges
         upcomingEvents = events

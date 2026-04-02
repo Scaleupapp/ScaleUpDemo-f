@@ -59,9 +59,14 @@ struct ContributorCardView: View {
 
             // Name + role
             VStack(spacing: 2) {
-                Text(user.displayName)
-                    .font(Typography.titleMedium)
-                    .foregroundStyle(.white)
+                HStack(spacing: 4) {
+                    Text(user.displayName)
+                        .font(Typography.titleMedium)
+                        .foregroundStyle(.white)
+                    if user.isVerifiedContributor == true {
+                        VerifiedBadge(compact: true)
+                    }
+                }
 
                 Text(user.role == "creator" ? "Creator" : user.role == "contributor" ? "Contributor" : "Learner")
                     .font(Typography.caption)
@@ -205,12 +210,13 @@ struct ContributorUser: Codable, Sendable {
     let profilePicture: String?
     let bio: String?
     let role: String?
+    let isVerifiedContributor: Bool?
     let education: [ContributorEducation]?
     let workExperience: [ContributorWork]?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case firstName, lastName, username, profilePicture, bio, role, education, workExperience
+        case firstName, lastName, username, profilePicture, bio, role, isVerifiedContributor, education, workExperience
     }
 
     var displayName: String {

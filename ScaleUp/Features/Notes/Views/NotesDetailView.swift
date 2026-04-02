@@ -18,6 +18,9 @@ struct NotesDetailView: View {
     @State private var isGeneratingFlashcards = false
     @State private var isGeneratingQuiz = false
     @State private var generatedQuiz: Quiz?
+    @State private var existingMindMapId: String?
+    @State private var isGeneratingMindMap = false
+    @State private var showMindMap: MindMap?
     @State private var showShareSheet = false
     @State private var showContributorCard = false
     @State private var readStartTime = Date()
@@ -92,6 +95,9 @@ struct NotesDetailView: View {
         .fullScreenCover(item: $generatedQuiz) { quiz in
             QuizSessionView(quiz: quiz)
         }
+        .sheet(item: $showMindMap) { map in
+            MindMapView(mindMap: map)
+        }
         .task { await loadContent() }
         .onAppear { readStartTime = Date() }
         .onDisappear { trackReadingProgress() }
@@ -137,7 +143,12 @@ struct NotesDetailView: View {
             HStack(spacing: Spacing.sm) {
                 if let creator = content.creatorId {
                     Button { showContributorCard = true } label: {
-                        Text(creator.displayName).font(Typography.caption).foregroundStyle(ColorTokens.gold).underline()
+                        HStack(spacing: 4) {
+                            Text(creator.displayName).font(Typography.caption).foregroundStyle(ColorTokens.gold).underline()
+                            if creator.isVerifiedContributor == true {
+                                VerifiedBadge(compact: true)
+                            }
+                        }
                     }
                 }
                 if let domain = content.domain {
@@ -246,6 +257,9 @@ struct NotesDetailView: View {
                     }
                 }
             }
+
+            Divider().background(ColorTokens.border)
+            AudioSummaryPlayerView(contentId: contentId)
         }
         .padding(Spacing.lg)
         .background(ColorTokens.surface)
@@ -358,6 +372,29 @@ struct NotesDetailView: View {
                 .padding(Spacing.md).background(ColorTokens.surface).clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .disabled(isGeneratingQuiz)
+
+            Button { Task { await handleMindMap() } } label: {
+                HStack(spacing: Spacing.md) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10).fill(Color.cyan.opacity(0.15)).frame(width: 44, height: 44)
+                        if isGeneratingMindMap {
+                            ProgressView().tint(.cyan)
+                        } else {
+                            Image(systemName: "point.3.connected.trianglepath.dotted").font(.system(size: 18)).foregroundStyle(.cyan)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(isGeneratingMindMap ? "Generating..." : existingMindMapId != nil ? "View Mind Map" : "Generate Mind Map")
+                            .font(Typography.bodyBold).foregroundStyle(.white)
+                        Text(existingMindMapId != nil ? "Visualize key concepts and connections" : "AI creates a visual mind map from this content")
+                            .font(Typography.caption).foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(Spacing.md).background(ColorTokens.surface).clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .disabled(isGeneratingMindMap)
         }
     }
 
@@ -450,6 +487,31 @@ struct NotesDetailView: View {
             Haptics.error()
         }
         isGeneratingFlashcards = false
+    }
+
+    private func handleMindMap() async {
+        if let id = existingMindMapId {
+            isGeneratingMindMap = true
+            do {
+                let map = try await notesService.fetchMindMap(id: id)
+                Haptics.success()
+                showMindMap = map
+            } catch {
+                Haptics.error()
+            }
+            isGeneratingMindMap = false
+            return
+        }
+        isGeneratingMindMap = true; Haptics.light()
+        do {
+            let map = try await notesService.generateMindMap(contentId: contentId)
+            existingMindMapId = map.id
+            Haptics.success()
+            showMindMap = map
+        } catch {
+            Haptics.error()
+        }
+        isGeneratingMindMap = false
     }
 
     private func generateQuiz() async {

@@ -127,6 +127,8 @@ struct ProfileTabView: View {
                     sectionLabel("Learning Tools")
                     myNotesLink
                     myFlashcardsLink
+                    noteRequestsLink
+                    notesAnalyticsLink
                     aiTutorHistoryLink
                 }
 
@@ -577,6 +579,74 @@ struct ProfileTabView: View {
                         .font(Typography.bodyBold)
                         .foregroundStyle(ColorTokens.textPrimary)
                     Text("Study your generated flashcard sets")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.lg)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    // MARK: - Note Requests Link
+
+    private var noteRequestsLink: some View {
+        NavigationLink {
+            NoteRequestsListView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "text.bubble.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.teal)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Note Requests")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Request or fulfill community notes")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.lg)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    // MARK: - Notes Analytics Link
+
+    private var notesAnalyticsLink: some View {
+        NavigationLink {
+            NotesAnalyticsView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "chart.bar.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.mint)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Notes Analytics")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Views, saves, and performance insights")
                         .font(Typography.caption)
                         .foregroundStyle(ColorTokens.textSecondary)
                 }

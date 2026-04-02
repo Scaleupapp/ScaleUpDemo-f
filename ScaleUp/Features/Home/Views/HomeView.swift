@@ -631,6 +631,13 @@ struct HomeView: View {
                 }
             }
 
+            // Trending Notes
+            if !viewModel.trendingNotes.isEmpty {
+                sectionRow(title: "Trending Notes", icon: "doc.text.fill", items: viewModel.trendingNotes) {
+                    horizontalContentScroll(items: viewModel.trendingNotes, width: 180)
+                }
+            }
+
             // All Content
             if !viewModel.allContent.isEmpty {
                 sectionRow(title: "Explore", icon: "safari.fill", items: viewModel.allContent) {
@@ -974,6 +981,7 @@ struct HomeView: View {
         !viewModel.continueWatching.isEmpty ||
         !viewModel.recommendations.isEmpty ||
         !viewModel.trending.isEmpty ||
+        !viewModel.trendingNotes.isEmpty ||
         !viewModel.allContent.isEmpty ||
         !quizViewModel.availableQuizzes.isEmpty
     }

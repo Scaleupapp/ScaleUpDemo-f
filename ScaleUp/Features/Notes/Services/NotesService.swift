@@ -73,6 +73,44 @@ actor NotesService {
     func deleteFlashcardSet(id: String) async throws {
         _ = try await api.requestRaw(FlashcardEndpoints.delete(id: id))
     }
+
+    // MARK: - Mind Maps
+
+    func generateMindMap(contentId: String) async throws -> MindMap {
+        struct Body: Encodable { let contentId: String }
+        return try await api.request(MindMapEndpoints.generate, body: Body(contentId: contentId))
+    }
+
+    func fetchMyMindMaps() async throws -> [MindMap] {
+        struct Resp: Decodable, Sendable { let items: [MindMap] }
+        let resp: Resp = try await api.request(MindMapEndpoints.list)
+        return resp.items
+    }
+
+    func fetchMindMap(id: String) async throws -> MindMap {
+        return try await api.request(MindMapEndpoints.get(id: id))
+    }
+
+    // MARK: - Analytics
+
+    func fetchAnalytics() async throws -> NotesAnalytics {
+        return try await api.request(NotesAnalyticsEndpoint())
+    }
+
+    // MARK: - Audio Summaries
+
+    func generateAudioSummary(contentId: String) async throws {
+        struct Body: Encodable { let contentId: String }
+        _ = try await api.requestRaw(AudioSummaryEndpoints.generate, body: Body(contentId: contentId))
+    }
+
+    func getAudioSummary(contentId: String) async throws -> AudioSummaryResponse {
+        return try await api.request(AudioSummaryEndpoints.get(contentId: contentId))
+    }
+
+    func getAudioStatus(contentId: String) async throws -> AudioStatusResponse {
+        return try await api.request(AudioSummaryEndpoints.status(contentId: contentId))
+    }
 }
 
 // MARK: - Request Bodies
@@ -187,4 +225,73 @@ private enum FlashcardEndpoints: Endpoint {
         default: return nil
         }
     }
+}
+
+// MARK: - Mind Map Endpoints
+
+private enum MindMapEndpoints: Endpoint {
+    case generate
+    case list
+    case get(id: String)
+    case delete(id: String)
+
+    var path: String {
+        switch self {
+        case .generate: return "/mindmaps/generate"
+        case .list: return "/mindmaps"
+        case .get(let id): return "/mindmaps/\(id)"
+        case .delete(let id): return "/mindmaps/\(id)"
+        }
+    }
+
+    var method: HTTPMethod {
+        switch self {
+        case .generate: return .post
+        case .list, .get: return .get
+        case .delete: return .delete
+        }
+    }
+}
+
+// MARK: - Audio Summary Endpoints
+
+private enum AudioSummaryEndpoints: Endpoint {
+    case generate
+    case get(contentId: String)
+    case status(contentId: String)
+
+    var path: String {
+        switch self {
+        case .generate: return "/audio-summaries/generate"
+        case .get(let contentId): return "/audio-summaries/\(contentId)"
+        case .status(let contentId): return "/audio-summaries/\(contentId)/status"
+        }
+    }
+
+    var method: HTTPMethod {
+        switch self {
+        case .generate: return .post
+        case .get, .status: return .get
+        }
+    }
+}
+
+// MARK: - Audio Summary Response Models
+
+struct AudioSummaryResponse: Codable, Sendable {
+    let url: String
+    let duration: Int?
+    let voice: String?
+    let fileSize: Int?
+}
+
+struct AudioStatusResponse: Codable, Sendable {
+    let status: String
+}
+
+// MARK: - Notes Analytics Endpoint
+
+private struct NotesAnalyticsEndpoint: Endpoint {
+    var path: String { "/notes/analytics" }
+    var method: HTTPMethod { .get }
 }
