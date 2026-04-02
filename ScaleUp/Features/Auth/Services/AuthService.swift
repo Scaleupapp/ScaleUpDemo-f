@@ -86,7 +86,22 @@ actor AuthService {
             phone: phone, otp: otp,
             firstName: firstName, lastName: lastName
         )
-        return try await api.request(AuthEndpoints.verifyOTP, body: body)
+        let data = try await api.requestRawData(AuthEndpoints.verifyOTP, body: body)
+
+        // Check if backend says this phone number is not registered
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let innerData = json["data"] as? [String: Any],
+           innerData["needsRegistration"] as? Bool == true {
+            throw PhoneNotRegisteredError()
+        }
+
+        return try parseAuthResponse(data)
+    }
+
+    /// Link & verify phone for an already-authenticated user (post-registration).
+    func verifyPhoneForUser(phone: String, otp: String) async throws {
+        let body = VerifyPhoneForUserRequest(phone: phone, otp: otp)
+        _ = try await api.requestRaw(AuthEndpoints.verifyPhoneForUser, body: body)
     }
 
     // MARK: - Password Reset
@@ -117,9 +132,11 @@ struct ReactivationRequiredError: Error, Sendable {
     let info: ReactivationNeeded
 }
 
+struct PhoneNotRegisteredError: Error, Sendable {}
+
 private enum AuthEndpoints: Endpoint {
     case register, login, google
-    case sendOTP, verifyOTP
+    case sendOTP, verifyOTP, verifyPhoneForUser
     case forgotPassword, resetPassword
     case reactivate
     case logout
@@ -131,6 +148,7 @@ private enum AuthEndpoints: Endpoint {
         case .google: return "/auth/google"
         case .sendOTP: return "/auth/phone/send-otp"
         case .verifyOTP: return "/auth/phone/verify-otp"
+        case .verifyPhoneForUser: return "/auth/phone/verify"
         case .forgotPassword: return "/auth/forgot-password"
         case .resetPassword: return "/auth/reset-password"
         case .reactivate: return "/auth/reactivate"
@@ -143,7 +161,7 @@ private enum AuthEndpoints: Endpoint {
     }
 
     var requiresAuth: Bool {
-        self == .logout
+        self == .logout || self == .verifyPhoneForUser
     }
 }
 
@@ -174,6 +192,11 @@ private struct VerifyOTPRequest: Encodable, Sendable {
     let otp: String
     let firstName: String?
     let lastName: String?
+}
+
+private struct VerifyPhoneForUserRequest: Encodable, Sendable {
+    let phone: String
+    let otp: String
 }
 
 private struct ForgotPasswordRequest: Encodable, Sendable {

@@ -136,17 +136,11 @@ struct PhoneVerificationView: View {
                 isLoading: viewModel.isLoading,
                 isDisabled: !viewModel.isOTPValid
             ) {
-                // Pass firstName so backend doesn't reject "new user" phone verification
-                viewModel.firstName = userName
                 Task {
-                    if let authData = await viewModel.verifyOTP() {
-                        // Phone verified — save new tokens and go to onboarding step 1
-                        await KeychainManager.shared.saveTokens(
-                            access: authData.accessToken,
-                            refresh: authData.refreshToken
-                        )
-                        appState.currentUser = authData.user
-                        // Always start from step 1 — this is a fresh registration
+                    // Use authenticated endpoint to link phone to the existing account
+                    // (user is already logged in from email registration)
+                    let success = await viewModel.verifyPhoneForUser()
+                    if success {
                         appState.launchState = .onboarding(step: 1)
                     }
                 }

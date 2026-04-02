@@ -49,6 +49,7 @@ struct LoginView: View {
                     HStack {
                         Spacer()
                         Button("Forgot password?") {
+                            Haptics.selection()
                             showForgotPassword = true
                         }
                         .font(Typography.caption)
@@ -83,6 +84,9 @@ struct LoginView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 backButton
             }
+        }
+        .navigationDestination(isPresented: $showForgotPassword) {
+            ForgotPasswordView()
         }
         .sheet(isPresented: $viewModel.needsReactivation) {
             reactivationSheet

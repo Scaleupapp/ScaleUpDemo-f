@@ -24,6 +24,9 @@ final class AuthViewModel {
     var needsReactivation = false
     var reactivationInfo: ReactivationNeeded?
 
+    // Phone not registered (standalone phone login for unregistered user)
+    var phoneNeedsRegistration = false
+
     // MARK: - Dependencies
 
     private let authService = AuthService()
@@ -172,6 +175,7 @@ final class AuthViewModel {
         guard isOTPValid else { return nil }
         isLoading = true
         errorMessage = nil
+        phoneNeedsRegistration = false
 
         let formattedPhone = phone.hasPrefix("+") ? phone : "+91\(phone)"
 
@@ -185,6 +189,12 @@ final class AuthViewModel {
             isLoading = false
             Haptics.success()
             return result
+        } catch is PhoneNotRegisteredError {
+            phoneNeedsRegistration = true
+            errorMessage = "No account found with this phone number. Please sign up first."
+            isLoading = false
+            Haptics.error()
+            return nil
         } catch let error as APIError {
             errorMessage = error.errorDescription
             isLoading = false
@@ -198,7 +208,37 @@ final class AuthViewModel {
         }
     }
 
+    /// Link phone to the already-authenticated user (used after email registration).
+    func verifyPhoneForUser() async -> Bool {
+        guard isOTPValid else { return false }
+        isLoading = true
+        errorMessage = nil
+
+        let formattedPhone = phone.hasPrefix("+") ? phone : "+91\(phone)"
+
+        do {
+            try await authService.verifyPhoneForUser(phone: formattedPhone, otp: otp)
+            isLoading = false
+            Haptics.success()
+            return true
+        } catch let error as APIError {
+            errorMessage = error.errorDescription
+            isLoading = false
+            Haptics.error()
+            return false
+        } catch {
+            errorMessage = "Verification failed. Try again."
+            isLoading = false
+            Haptics.error()
+            return false
+        }
+    }
+
     // MARK: - Cooldown
+
+    func startResendCooldown() {
+        startCooldown()
+    }
 
     private func startCooldown() {
         otpCooldown = 60

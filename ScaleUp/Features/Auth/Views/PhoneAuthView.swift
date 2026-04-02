@@ -136,6 +136,18 @@ struct PhoneAuthView: View {
                 errorBanner(error)
             }
 
+            if viewModel.phoneNeedsRegistration {
+                // Phone not registered — offer to sign up
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Go to Sign Up")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .padding(.top, Spacing.xs)
+            }
+
             PrimaryButton(
                 title: "Verify",
                 isLoading: viewModel.isLoading,
