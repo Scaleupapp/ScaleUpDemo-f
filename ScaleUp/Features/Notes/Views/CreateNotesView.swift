@@ -66,7 +66,7 @@ struct CreateNotesView: View {
                 .font(Typography.titleLarge)
                 .foregroundStyle(.white)
 
-            Text("Share your notes — PDF, Word, Excel, or images")
+            Text("Share your notes — PDF, Word, Excel, PowerPoint, or images")
                 .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -304,6 +304,8 @@ struct DocumentPickerView: UIViewControllerRepresentable {
             UTType("com.microsoft.word.doc") ?? .data, // .doc
             UTType("org.openxmlformats.spreadsheetml.sheet") ?? .data, // .xlsx
             UTType("com.microsoft.excel.xls") ?? .data, // .xls
+            UTType("org.openxmlformats.presentationml.presentation") ?? .data, // .pptx
+            UTType("com.microsoft.powerpoint.ppt") ?? .data, // .ppt
         ]
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
         picker.delegate = context.coordinator

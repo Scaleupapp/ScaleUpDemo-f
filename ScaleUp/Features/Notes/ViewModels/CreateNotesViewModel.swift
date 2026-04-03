@@ -61,6 +61,8 @@ final class CreateNotesViewModel {
             let ext = url.pathExtension.lowercased()
             if ["jpg", "jpeg", "png", "heic"].contains(ext) {
                 fileFormat = "image"
+            } else if ["ppt", "pptx"].contains(ext) {
+                fileFormat = "presentation"
             } else {
                 fileFormat = "pdf" // pdf, docx, xlsx all uploaded as-is
             }
@@ -130,6 +132,8 @@ final class CreateNotesViewModel {
             case "docx": mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             case "xls": mimeType = "application/vnd.ms-excel"
             case "xlsx": mimeType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            case "ppt": mimeType = "application/vnd.ms-powerpoint"
+            case "pptx": mimeType = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             case "jpg", "jpeg": mimeType = "image/jpeg"
             case "png": mimeType = "image/png"
             default: mimeType = "application/octet-stream"
