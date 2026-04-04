@@ -26,9 +26,18 @@ final class GeminiLiveManager {
     // MARK: - Start Session
 
     func startSession(systemInstruction: String) async throws {
-        // Configure Firebase lazily (only when interview starts)
+        // Configure Firebase lazily — only when interview starts
         if FirebaseApp.app() == nil {
+            // Verify GoogleService-Info.plist exists in bundle
+            guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
+                throw GeminiError.firebaseConfigFailed("GoogleService-Info.plist not found in app bundle.")
+            }
             FirebaseApp.configure()
+        }
+
+        // Double-check Firebase is ready
+        guard FirebaseApp.app() != nil else {
+            throw GeminiError.firebaseConfigFailed("Firebase failed to initialize.")
         }
 
         // Configure audio session
@@ -46,8 +55,14 @@ final class GeminiLiveManager {
             systemInstruction: ModelContent(role: "system", parts: systemInstruction)
         )
 
-        // Connect
-        let session = try await model.connect()
+        // Connect to Gemini Live
+        let session: LiveSession
+        do {
+            session = try await model.connect()
+        } catch {
+            throw GeminiError.connectionFailed(error.localizedDescription)
+        }
+
         liveSession = session
         isConnected = true
         interviewStartTime = Date()
@@ -225,3 +240,18 @@ final class GeminiLiveManager {
             (last.content.contains("concludes our interview") || last.content.contains("end of our interview"))
     }
 }
+
+// MARK: - Error Types
+
+enum GeminiError: LocalizedError {
+    case firebaseConfigFailed(String)
+    case connectionFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .firebaseConfigFailed(let msg): return "Firebase setup failed: \(msg)"
+        case .connectionFailed(let msg): return "Could not connect to AI interviewer: \(msg)"
+        }
+    }
+}
+

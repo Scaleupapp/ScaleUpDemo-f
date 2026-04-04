@@ -32,11 +32,52 @@ struct InterviewSessionView: View {
             case .results:
                 InterviewResultsView(viewModel: viewModel)
 
-            case .error:
-                InterviewResultsView(viewModel: viewModel)
+            case .error(let message):
+                errorView(message)
             }
         }
         .animation(Motion.easeOut, value: viewModel.state)
+    }
+
+    // MARK: - Error State
+
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer()
+
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.orange)
+
+            Text("Something went wrong")
+                .font(Typography.titleMedium)
+                .foregroundStyle(.white)
+
+            Text(message)
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.xl)
+
+            Button {
+                viewModel.state = .setup
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.counterclockwise")
+                    Text("Try Again")
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(ColorTokens.gold)
+                .clipShape(Capsule())
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ColorTokens.background)
     }
 
     // MARK: - Connecting State
