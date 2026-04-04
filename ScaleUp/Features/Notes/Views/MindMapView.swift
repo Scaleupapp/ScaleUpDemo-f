@@ -12,47 +12,60 @@ struct MindMapView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView([.horizontal, .vertical], showsIndicators: false) {
-                ZStack {
-                    // Draw edges first (behind nodes)
-                    ForEach(Array(mindMap.edges.enumerated()), id: \.offset) { _, edge in
-                        if let fromPos = nodePosition(edge.from),
-                           let toPos = nodePosition(edge.to) {
-                            Path { path in
-                                path.move(to: fromPos)
-                                path.addQuadCurve(to: toPos, control: CGPoint(
-                                    x: (fromPos.x + toPos.x) / 2,
-                                    y: fromPos.y + (toPos.y - fromPos.y) * 0.3
-                                ))
-                            }
-                            .stroke(
-                                edge.type == "related" ? Color.orange.opacity(0.3) : Color.white.opacity(0.15),
-                                style: StrokeStyle(lineWidth: edge.type == "related" ? 1 : 1.5, dash: edge.type == "related" ? [4, 4] : [])
-                            )
-                        }
+            mapContent
+                .background(ColorTokens.background)
+                .navigationTitle(mindMap.title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Done") { dismiss() }
+                            .foregroundStyle(ColorTokens.gold)
                     }
+                }
+        }
+    }
 
-                    // Draw nodes
-                    ForEach(mindMap.nodes) { node in
-                        if let pos = nodePosition(node.id) {
-                            nodeView(node)
-                                .position(pos)
-                        }
-                    }
-                }
-                .frame(width: canvasSize.width, height: canvasSize.height)
-                .padding(40)
+    private var mapContent: some View {
+        ScrollView([.horizontal, .vertical], showsIndicators: false) {
+            ZStack {
+                edgesLayer
+                nodesLayer
             }
-            .scaleEffect(scale)
-            .gesture(MagnificationGesture().onChanged { scale = $0 }.onEnded { scale = max(0.5, min(2.0, $0)) })
-            .background(ColorTokens.background)
-            .navigationTitle(mindMap.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(ColorTokens.gold)
-                }
+            .frame(width: canvasSize.width, height: canvasSize.height)
+            .padding(40)
+        }
+        .scaleEffect(scale)
+        .gesture(MagnificationGesture().onChanged { scale = $0 }.onEnded { scale = max(0.5, min(2.0, $0)) })
+    }
+
+    private var edgesLayer: some View {
+        ForEach(Array(mindMap.edges.enumerated()), id: \.offset) { _, edge in
+            edgePath(edge)
+        }
+    }
+
+    @ViewBuilder
+    private func edgePath(_ edge: MindMapEdge) -> some View {
+        if let fromPos = nodePosition(edge.from),
+           let toPos = nodePosition(edge.to) {
+            let isRelated = edge.type == "related"
+            Path { path in
+                path.move(to: fromPos)
+                let controlPt = CGPoint(x: (fromPos.x + toPos.x) / 2, y: fromPos.y + (toPos.y - fromPos.y) * 0.3)
+                path.addQuadCurve(to: toPos, control: controlPt)
+            }
+            .stroke(
+                isRelated ? Color.orange.opacity(0.3) : Color.white.opacity(0.15),
+                style: StrokeStyle(lineWidth: isRelated ? 1 : 1.5, dash: isRelated ? [4, 4] : [])
+            )
+        }
+    }
+
+    private var nodesLayer: some View {
+        ForEach(mindMap.nodes) { node in
+            if let pos = nodePosition(node.id) {
+                nodeView(node)
+                    .position(pos)
             }
         }
     }
