@@ -174,6 +174,7 @@
 		C4C55B5BEE386EB0AEECA13B /* CreatorProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5F5A722554BB4925C1BBDE /* CreatorProfileView.swift */; };
 		C6B4BEF19E688756C8C16819 /* CompetitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 414EC651815D642AC6374BE1 /* CompetitionService.swift */; };
 		C77106ADFC5A4F8C5CB29257 /* splash_animation.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 239F99F9145930B812FFE55C /* splash_animation.mp4 */; };
+		GOOG1234567890ABCDEF02 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = GOOG1234567890ABCDEF01 /* GoogleService-Info.plist */; };
 		C888688805F1CC061ABFA63D /* AddMilestoneSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4CE3EA22A9EAC01A653DCC8 /* AddMilestoneSheet.swift */; };
 		C88D097168D48DA93014E28D /* EditContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00C8E5C8D26D15DE67BA0760 /* EditContentView.swift */; };
 		CA54324E92E46019276544D7 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6C9EA77B531964E5E49362 /* Typography.swift */; };
@@ -268,6 +269,7 @@
 		213B2C3CB92A4EE770323F7C /* InterestsStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestsStepView.swift; sourceTree = "<group>"; };
 		2354CCCC2CACBFFFB12EC92C /* CreatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorViewModel.swift; sourceTree = "<group>"; };
 		239F99F9145930B812FFE55C /* splash_animation.mp4 */ = {isa = PBXFileReference; path = splash_animation.mp4; sourceTree = "<group>"; };
+		GOOG1234567890ABCDEF01 /* GoogleService-Info.plist */ = {isa = PBXFileReference; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		25A10244004AFF5CCBED32EC /* PreferencesStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStepView.swift; sourceTree = "<group>"; };
 		25FC9CCAE67C8A65F89EE0B3 /* CompetitionHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetitionHubView.swift; sourceTree = "<group>"; };
 		2698A80E59B34CA4A6DE1C11 /* PendingNotesReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingNotesReviewView.swift; sourceTree = "<group>"; };
@@ -893,6 +895,7 @@
 			children = (
 				6345CA87F28CAB287DBE9463 /* Assets.xcassets */,
 				239F99F9145930B812FFE55C /* splash_animation.mp4 */,
+				GOOG1234567890ABCDEF01 /* GoogleService-Info.plist */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -1488,6 +1491,7 @@
 			files = (
 				A9895314335F03C298A82A95 /* Assets.xcassets in Resources */,
 				C77106ADFC5A4F8C5CB29257 /* splash_animation.mp4 in Resources */,
+				GOOG1234567890ABCDEF02 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1816,7 +1820,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1892,7 +1896,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
