@@ -47,7 +47,7 @@ final class GeminiLiveManager {
 
         // Create Gemini Live model
         let model = FirebaseAI.firebaseAI(backend: .googleAI()).liveModel(
-            modelName: "gemini-live-2.5-flash-preview",
+            modelName: "gemini-2.5-flash-native-audio-preview-12-2025",
             generationConfig: LiveGenerationConfig(
                 responseModalities: [.audio],
                 speech: SpeechConfig(voiceName: "Puck")
