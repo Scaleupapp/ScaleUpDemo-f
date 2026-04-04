@@ -131,6 +131,7 @@ struct ProfileTabView: View {
                     notesAnalyticsLink
                     aiTutorHistoryLink
                     mockInterviewsLink
+                    interviewAnalyticsLink
                 }
 
                 // Competition group
@@ -550,6 +551,44 @@ struct ProfileTabView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.medium)
                     .stroke(Color.cyan.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.md)
+    }
+
+    // MARK: - Interview Analytics Link
+
+    private var interviewAnalyticsLink: some View {
+        NavigationLink {
+            InterviewAnalyticsView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "chart.xyaxis.line")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.indigo)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Interview Analytics")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Score trends, strengths & weaknesses")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.md)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(Color.indigo.opacity(0.15), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

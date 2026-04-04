@@ -10,6 +10,7 @@ final class InterviewViewModel {
     var targetRole = ""
     var targetCompany = ""
     var selectedDifficulty: InterviewDifficulty = .moderate
+    var selectedObjectiveId: String?
 
     // MARK: - Session
 
@@ -88,7 +89,8 @@ final class InterviewViewModel {
                 type: selectedType,
                 targetRole: targetRole.trimmingCharacters(in: .whitespaces),
                 targetCompany: targetCompany.isEmpty ? nil : targetCompany,
-                difficulty: selectedDifficulty
+                difficulty: selectedDifficulty,
+                objectiveId: selectedObjectiveId
             )
 
             sessionId = response._id

@@ -4,16 +4,17 @@ actor InterviewService {
 
     // MARK: - Start Interview
 
-    func startInterview(type: InterviewType, targetRole: String, targetCompany: String?, difficulty: InterviewDifficulty) async throws -> StartInterviewResponse {
+    func startInterview(type: InterviewType, targetRole: String, targetCompany: String?, difficulty: InterviewDifficulty, objectiveId: String? = nil) async throws -> StartInterviewResponse {
         struct Body: Encodable {
             let interviewType: String
             let targetRole: String
             let targetCompany: String?
             let difficulty: String
+            let objectiveId: String?
         }
         return try await APIClient.shared.request(
             InterviewEndpoints.start,
-            body: Body(interviewType: type.rawValue, targetRole: targetRole, targetCompany: targetCompany, difficulty: difficulty.rawValue)
+            body: Body(interviewType: type.rawValue, targetRole: targetRole, targetCompany: targetCompany, difficulty: difficulty.rawValue, objectiveId: objectiveId)
         )
     }
 
@@ -52,6 +53,12 @@ actor InterviewService {
     func deleteSession(sessionId: String) async throws {
         _ = try await APIClient.shared.requestRaw(InterviewEndpoints.delete(sessionId: sessionId))
     }
+
+    // MARK: - Analytics
+
+    func fetchAnalytics() async throws -> InterviewAnalytics {
+        return try await APIClient.shared.request(InterviewEndpoints.analytics)
+    }
 }
 
 // MARK: - Endpoints
@@ -63,6 +70,7 @@ private enum InterviewEndpoints: Endpoint {
     case status(sessionId: String)
     case list(page: Int, limit: Int)
     case delete(sessionId: String)
+    case analytics
 
     var path: String {
         switch self {
@@ -72,13 +80,14 @@ private enum InterviewEndpoints: Endpoint {
         case .status(let id): return "/interviews/\(id)/status"
         case .list: return "/interviews"
         case .delete(let id): return "/interviews/\(id)"
+        case .analytics: return "/interviews/analytics"
         }
     }
 
     var method: HTTPMethod {
         switch self {
         case .start, .complete: return .post
-        case .session, .status, .list: return .get
+        case .session, .status, .list, .analytics: return .get
         case .delete: return .delete
         }
     }

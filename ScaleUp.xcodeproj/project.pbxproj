@@ -217,6 +217,7 @@
 		6C2B3A3F07F84D4597BE2DA0 /* InterviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7E27E7F6934B6D8EF63E85 /* InterviewViewModel.swift */; };
 		0889B9AE6A4E46B9A16AFE8F /* InterviewSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D172AE50784F497DB6166E03 /* InterviewSetupView.swift */; };
 		A9C6BD8B8E3643B49649337C /* InterviewCameraCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F965843D9204DC0A278E651 /* InterviewCameraCheckView.swift */; };
+		F4A2C71D9E3B4A27B8D1E5C3 /* InterviewAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7B3D84A2F6C4D18A9C0F7E2 /* InterviewAnalyticsView.swift */; };
 		164E0B35B09C4855BAC16F23 /* InterviewLiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC6ACF90B4B4298B356927A /* InterviewLiveView.swift */; };
 		98389274986A462A8C680F8E /* InterviewResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BA0C42836F482CB9D5B3AF /* InterviewResultsView.swift */; };
 		C637C934EF7C410BB20E92DD /* InterviewHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E73FF9284E54BB7BB0A0F3F /* InterviewHistoryView.swift */; };
@@ -452,6 +453,7 @@
 		8E7E27E7F6934B6D8EF63E85 /* InterviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewViewModel.swift; sourceTree = "<group>"; };
 		D172AE50784F497DB6166E03 /* InterviewSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewSetupView.swift; sourceTree = "<group>"; };
 		2F965843D9204DC0A278E651 /* InterviewCameraCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewCameraCheckView.swift; sourceTree = "<group>"; };
+		E7B3D84A2F6C4D18A9C0F7E2 /* InterviewAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewAnalyticsView.swift; sourceTree = "<group>"; };
 		FAC6ACF90B4B4298B356927A /* InterviewLiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewLiveView.swift; sourceTree = "<group>"; };
 		D6BA0C42836F482CB9D5B3AF /* InterviewResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewResultsView.swift; sourceTree = "<group>"; };
 		7E73FF9284E54BB7BB0A0F3F /* InterviewHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewHistoryView.swift; sourceTree = "<group>"; };
@@ -1347,6 +1349,7 @@
 				D6BA0C42836F482CB9D5B3AF /* */,
 				7E73FF9284E54BB7BB0A0F3F /* */,
 				B8754935B0FC4099ABEE8716 /* */,
+				E7B3D84A2F6C4D18A9C0F7E2 /* */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -1521,6 +1524,7 @@
 				98389274986A462A8C680F8E /* InterviewResultsView.swift in Sources */,
 				C637C934EF7C410BB20E92DD /* InterviewHistoryView.swift in Sources */,
 				2C1E2E8D7D144FDD8D889CBF /* InterviewSessionView.swift in Sources */,
+				F4A2C71D9E3B4A27B8D1E5C3 /* InterviewAnalyticsView.swift in Sources */,
 				65153FCC81549E7869B3C3C7 /* AITutor.swift in Sources */,
 				4E79AF74D5991A280BABDF8D /* AITutorHistoryView.swift in Sources */,
 				2E87737BDDEF62DEE513C54F /* AITutorMessageBubble.swift in Sources */,

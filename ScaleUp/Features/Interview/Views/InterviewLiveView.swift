@@ -7,6 +7,11 @@ struct InterviewLiveView: View {
     @State private var showTranscript = false
     @State private var pulseScale: CGFloat = 1.0
     @State private var wavePhase: CGFloat = 0
+    @State private var showingStarter = true
+    @State private var countdownValue = 3
+    @State private var countdownScale: CGFloat = 0.5
+    @State private var countdownOpacity: Double = 0
+    @State private var showCountdown = false
 
     var body: some View {
         ZStack {
@@ -18,6 +23,10 @@ struct InterviewLiveView: View {
                 conversationStatus
                 Spacer()
                 bottomSection
+            }
+
+            if showingStarter {
+                starterOverlay
             }
         }
         .alert("End Interview?", isPresented: $showEndConfirm) {
@@ -383,5 +392,171 @@ struct InterviewLiveView: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+
+    // MARK: - Starter Overlay
+
+    private var starterOverlay: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.black.opacity(0.95), Color(hex: 0x0A0A0F)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: Spacing.xl) {
+                Spacer()
+
+                if showCountdown {
+                    countdownDisplay
+                } else {
+                    starterContent
+                }
+
+                Spacer()
+            }
+        }
+        .transition(.opacity)
+        .onAppear {
+            startStarterSequence()
+        }
+    }
+
+    private var starterContent: some View {
+        VStack(spacing: Spacing.xl) {
+            // Interview type icon
+            ZStack {
+                Circle()
+                    .fill(viewModel.selectedType.color.opacity(0.12))
+                    .frame(width: 120, height: 120)
+                Circle()
+                    .fill(viewModel.selectedType.color.opacity(0.06))
+                    .frame(width: 160, height: 160)
+                Image(systemName: viewModel.selectedType.icon)
+                    .font(.system(size: 48, weight: .semibold))
+                    .foregroundStyle(viewModel.selectedType.color)
+            }
+
+            // Title
+            VStack(spacing: Spacing.sm) {
+                Text("Your Interview is About to Begin")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+
+                Text("\(viewModel.selectedType.displayName) \u{2022} \(viewModel.selectedDifficulty.displayName)")
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(viewModel.selectedType.color)
+            }
+
+            // Role + company
+            if !viewModel.targetRole.isEmpty {
+                VStack(spacing: 4) {
+                    Text(viewModel.targetRole)
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    if !viewModel.targetCompany.isEmpty {
+                        Text("at \(viewModel.targetCompany)")
+                            .font(Typography.bodySmall)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.vertical, Spacing.md)
+                .background(ColorTokens.surfaceElevated.opacity(0.6))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            }
+
+            // Quick Tips
+            VStack(alignment: .leading, spacing: Spacing.md) {
+                Text("Quick Tips")
+                    .font(Typography.captionBold)
+                    .foregroundStyle(ColorTokens.gold)
+                    .tracking(1)
+
+                ForEach(Array(tipsForType(viewModel.selectedType).enumerated()), id: \.offset) { index, tip in
+                    HStack(alignment: .top, spacing: Spacing.sm) {
+                        Text("\(index + 1).")
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundStyle(ColorTokens.gold)
+                            .frame(width: 18, alignment: .trailing)
+                        Text(tip)
+                            .font(Typography.bodySmall)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+            }
+            .padding(Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(ColorTokens.surface.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+            .padding(.horizontal, Spacing.xl)
+        }
+    }
+
+    private var countdownDisplay: some View {
+        Text("\(countdownValue)")
+            .font(.system(size: 96, weight: .heavy, design: .rounded))
+            .foregroundStyle(viewModel.selectedType.color)
+            .scaleEffect(countdownScale)
+            .opacity(countdownOpacity)
+    }
+
+    private func startStarterSequence() {
+        // Show content for 3 seconds, then begin countdown
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(Motion.easeOut) {
+                showCountdown = true
+            }
+            animateCountdownDigit()
+        }
+    }
+
+    private func animateCountdownDigit() {
+        guard countdownValue > 0 else {
+            // Countdown finished — dismiss starter
+            withAnimation(.easeInOut(duration: 0.3)) {
+                showingStarter = false
+            }
+            return
+        }
+
+        // Reset for new digit
+        countdownScale = 0.5
+        countdownOpacity = 0
+
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+            countdownScale = 1.0
+            countdownOpacity = 1.0
+        }
+
+        // Fade out before next digit
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            withAnimation(.easeOut(duration: 0.25)) {
+                countdownOpacity = 0
+                countdownScale = 1.3
+            }
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            countdownValue -= 1
+            animateCountdownDigit()
+        }
+    }
+
+    private func tipsForType(_ type: InterviewType) -> [String] {
+        switch type {
+        case .mba_admissions:
+            return ["Be specific with examples", "Show self-awareness", "Know your career goals clearly"]
+        case .placement_hr:
+            return ["Use the STAR method", "Be authentic about strengths/weaknesses", "Research the company"]
+        case .placement_technical:
+            return ["Think aloud while solving", "Ask clarifying questions", "Structure before coding"]
+        case .case_study:
+            return ["Structure your approach first", "Use frameworks (4Ps, SWOT)", "Quantify when possible"]
+        case .behavioral:
+            return ["Use specific examples, not hypotheticals", "Focus on YOUR contribution", "Reflect on learnings"]
+        }
     }
 }

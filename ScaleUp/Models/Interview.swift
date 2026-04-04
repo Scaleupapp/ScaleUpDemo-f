@@ -227,3 +227,36 @@ struct StartInterviewResponse: Codable, Sendable {
 struct InterviewStatusResponse: Codable, Sendable {
     let status: InterviewStatus
 }
+
+// MARK: - Analytics
+
+struct InterviewAnalytics: Codable, Sendable {
+    let totalInterviews: Int
+    let averageScore: Int
+    let scoreTrend: [InterviewScorePoint]
+    let dimensionAverages: DimensionAverages
+    let weakestDimension: String?
+    let interviewsThisWeek: Int
+    let interviewsThisMonth: Int
+    let typeBreakdown: [TypeCount]
+}
+
+struct InterviewScorePoint: Codable, Sendable, Identifiable {
+    let date: Date?
+    let score: Int
+    let type: InterviewType?
+    var id: String { "\(date?.timeIntervalSince1970 ?? 0)_\(score)" }
+}
+
+struct DimensionAverages: Codable, Sendable {
+    let communication: Double
+    let content: Double
+    let structure: Double
+    let confidence: Double
+}
+
+struct TypeCount: Codable, Sendable, Identifiable {
+    let type: InterviewType
+    let count: Int
+    var id: String { type.rawValue }
+}

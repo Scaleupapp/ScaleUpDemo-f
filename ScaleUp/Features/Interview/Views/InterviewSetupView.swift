@@ -3,6 +3,10 @@ import SwiftUI
 struct InterviewSetupView: View {
     @Bindable var viewModel: InterviewViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var objectives: [UserObjective] = []
+    @State private var isLoadingObjectives = false
+
+    private let objectiveService = ObjectiveService()
 
     var body: some View {
         ZStack {
@@ -14,6 +18,7 @@ struct InterviewSetupView: View {
                     typeSelector
                     roleSection
                     difficultySection
+                    objectiveSection
                     estimateText
                     startButton
                     Spacer().frame(height: Spacing.xxl)
@@ -26,6 +31,9 @@ struct InterviewSetupView: View {
         .toolbar(.hidden, for: .navigationBar)
         .overlay(alignment: .topLeading) {
             closeButton
+        }
+        .task {
+            await loadObjectives()
         }
     }
 
@@ -240,6 +248,83 @@ struct InterviewSetupView: View {
                 .font(Typography.caption)
                 .foregroundStyle(ColorTokens.textTertiary)
         }
+    }
+
+    // MARK: - Objective Section
+
+    private var objectiveSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("LINK TO OBJECTIVE")
+                .font(Typography.captionBold)
+                .foregroundStyle(ColorTokens.textTertiary)
+                .tracking(1)
+
+            if isLoadingObjectives {
+                HStack {
+                    Spacer()
+                    ProgressView().tint(ColorTokens.gold)
+                    Spacer()
+                }
+                .padding(.vertical, Spacing.md)
+            } else {
+                let columns = [GridItem(.adaptive(minimum: 140), spacing: Spacing.sm)]
+
+                LazyVGrid(columns: columns, spacing: Spacing.sm) {
+                    // None option
+                    objectiveChip(title: "None", icon: "xmark.circle", color: ColorTokens.textTertiary, isSelected: viewModel.selectedObjectiveId == nil) {
+                        Haptics.selection()
+                        withAnimation(Motion.springSnappy) {
+                            viewModel.selectedObjectiveId = nil
+                        }
+                    }
+
+                    // Active objectives
+                    ForEach(objectives.filter { $0.status == .active }) { obj in
+                        objectiveChip(title: obj.specificTitle, icon: obj.typeIcon, color: ColorTokens.gold, isSelected: viewModel.selectedObjectiveId == obj.id) {
+                            Haptics.selection()
+                            withAnimation(Motion.springSnappy) {
+                                viewModel.selectedObjectiveId = obj.id
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func objectiveChip(title: String, icon: String, color: Color, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(isSelected ? ColorTokens.buttonPrimaryText : color)
+
+                Text(title)
+                    .font(isSelected ? Typography.captionBold : Typography.caption)
+                    .foregroundStyle(isSelected ? ColorTokens.buttonPrimaryText : ColorTokens.textSecondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? ColorTokens.gold : ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(isSelected ? ColorTokens.gold : ColorTokens.border, lineWidth: isSelected ? 2 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func loadObjectives() async {
+        isLoadingObjectives = true
+        do {
+            objectives = try await objectiveService.list()
+        } catch {
+            objectives = []
+        }
+        isLoadingObjectives = false
     }
 
     // MARK: - Start Button
