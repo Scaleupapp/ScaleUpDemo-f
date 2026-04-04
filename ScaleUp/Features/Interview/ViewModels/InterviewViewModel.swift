@@ -93,13 +93,13 @@ final class InterviewViewModel {
                 objectiveId: selectedObjectiveId
             )
 
-            sessionId = response._id
+            sessionId = response.session._id
             systemInstruction = response.systemInstruction
             interviewStartTime = Date()
 
             try await geminiManager.startSession(systemInstruction: response.systemInstruction)
 
-            proctor.startMonitoring(sessionId: response._id, startTime: interviewStartTime!)
+            proctor.startMonitoring(sessionId: response.session._id, startTime: interviewStartTime!)
 
             timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
                 Task { @MainActor in

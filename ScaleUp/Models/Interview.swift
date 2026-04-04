@@ -215,13 +215,18 @@ struct InterviewSessionSummary: Codable, Sendable, Identifiable, Hashable {
 // MARK: - API Response Types
 
 struct StartInterviewResponse: Codable, Sendable {
+    let session: StartInterviewSession
+    let systemInstruction: String
+}
+
+struct StartInterviewSession: Codable, Sendable {
     let _id: String
     let interviewType: InterviewType
     let targetRole: String?
     let targetCompany: String?
     let difficulty: InterviewDifficulty
     let status: InterviewStatus
-    let systemInstruction: String
+    let startedAt: Date?
 }
 
 struct InterviewStatusResponse: Codable, Sendable {
