@@ -14,38 +14,36 @@ final class GeminiLiveManager {
     var error: String?
 
     private var liveSession: LiveSession?
-    private var audioEngine = AVAudioEngine()
+    private var audioEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
     private var questionCount = 0
     private var interviewStartTime = Date()
     private var lastAIFinishTime = Date()
 
-    // Audio format for Gemini output: 16-bit PCM at 24kHz mono
-    private let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
-
     // MARK: - Start Session
 
     func startSession(systemInstruction: String) async throws {
-        // Configure Firebase lazily — only when interview starts
+        // Step 1: Firebase
         if FirebaseApp.app() == nil {
-            // Verify GoogleService-Info.plist exists in bundle
             guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
                 throw GeminiError.firebaseConfigFailed("GoogleService-Info.plist not found in app bundle.")
             }
             FirebaseApp.configure()
         }
-
-        // Double-check Firebase is ready
         guard FirebaseApp.app() != nil else {
             throw GeminiError.firebaseConfigFailed("Firebase failed to initialize.")
         }
 
-        // Configure audio session
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-        try audioSession.setActive(true)
+        // Step 2: Audio session
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+            try audioSession.setActive(true)
+        } catch {
+            throw GeminiError.audioSetupFailed("Audio session setup failed: \(error.localizedDescription)")
+        }
 
-        // Create Gemini Live model
+        // Step 3: Gemini Live model
         let model = FirebaseAI.firebaseAI(backend: .googleAI()).liveModel(
             modelName: "gemini-2.5-flash-native-audio-preview-12-2025",
             generationConfig: LiveGenerationConfig(
@@ -55,7 +53,7 @@ final class GeminiLiveManager {
             systemInstruction: ModelContent(role: "system", parts: systemInstruction)
         )
 
-        // Connect to Gemini Live
+        // Step 4: Connect
         let session: LiveSession
         do {
             session = try await model.connect()
@@ -67,25 +65,36 @@ final class GeminiLiveManager {
         isConnected = true
         interviewStartTime = Date()
 
-        // Setup audio playback
-        setupAudioPlayer()
+        // Step 5: Receive AI responses (background task)
+        Task { [weak self] in
+            await self?.receiveResponses()
+        }
 
-        // Start receiving AI responses
-        Task { await receiveResponses() }
-
-        // Start streaming mic audio
-        startMicCapture()
+        // Step 6: Start mic capture (can fail gracefully)
+        do {
+            try startMicCapture()
+        } catch {
+            // Mic failed but we can still receive AI audio — don't crash
+            self.error = "Microphone unavailable: \(error.localizedDescription)"
+        }
     }
 
     // MARK: - End Session
 
     func endSession() {
-        audioEngine.stop()
-        if audioEngine.inputNode.numberOfInputs > 0 {
-            audioEngine.inputNode.removeTap(onBus: 0)
+        // Stop audio engine safely
+        if let engine = audioEngine {
+            engine.inputNode.removeTap(onBus: 0)
+            engine.stop()
+            if let player = playerNode {
+                player.stop()
+                engine.detach(player)
+            }
         }
-        playerNode?.stop()
+        audioEngine = nil
+        playerNode = nil
 
+        // Close Gemini session
         Task {
             await liveSession?.close()
         }
@@ -93,45 +102,55 @@ final class GeminiLiveManager {
         isConnected = false
     }
 
-    // MARK: - Audio Player Setup
-
-    private func setupAudioPlayer() {
-        let player = AVAudioPlayerNode()
-        audioEngine.attach(player)
-        audioEngine.connect(player, to: audioEngine.mainMixerNode, format: outputFormat)
-        playerNode = player
-    }
-
     // MARK: - Mic Capture → Gemini
 
-    private func startMicCapture() {
-        let inputNode = audioEngine.inputNode
+    private func startMicCapture() throws {
+        let engine = AVAudioEngine()
+        self.audioEngine = engine
+
+        // Setup player node for AI audio output
+        let player = AVAudioPlayerNode()
+        let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
+        engine.attach(player)
+        engine.connect(player, to: engine.mainMixerNode, format: outputFormat)
+        self.playerNode = player
+
+        // Get mic input format
+        let inputNode = engine.inputNode
         let hwFormat = inputNode.outputFormat(forBus: 0)
 
+        guard hwFormat.sampleRate > 0, hwFormat.channelCount > 0 else {
+            throw GeminiError.audioSetupFailed("No audio input available.")
+        }
+
+        // Install mic tap
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
             guard let self else { return }
-            // Convert to 16-bit PCM data and send to Gemini
             guard let channelData = buffer.floatChannelData else { return }
             let frameCount = Int(buffer.frameLength)
-            var pcmData = Data(count: frameCount * 2) // 16-bit = 2 bytes per sample
+            guard frameCount > 0 else { return }
+
+            // Convert float samples to 16-bit PCM
+            var pcmData = Data(count: frameCount * 2)
             pcmData.withUnsafeMutableBytes { rawBuffer in
-                let int16Buffer = rawBuffer.bindMemory(to: Int16.self)
+                let int16Ptr = rawBuffer.bindMemory(to: Int16.self)
                 for i in 0..<frameCount {
                     let sample = max(-1.0, min(1.0, channelData[0][i]))
-                    int16Buffer[i] = Int16(sample * Float(Int16.max))
+                    int16Ptr[i] = Int16(sample * Float(Int16.max))
                 }
             }
 
             Task { @MainActor [weak self] in
                 guard let self, self.isConnected else { return }
                 self.isUserSpeaking = true
-                await self.liveSession?.sendAudioRealtime(pcmData)
+                try? await self.liveSession?.sendAudioRealtime(pcmData)
             }
         }
 
-        audioEngine.prepare()
-        try? audioEngine.start()
-        playerNode?.play()
+        // Start engine
+        engine.prepare()
+        try engine.start()
+        player.play()
     }
 
     // MARK: - Receive Responses
@@ -141,44 +160,54 @@ final class GeminiLiveManager {
 
         do {
             for try await message in session.responses {
-                if case let .content(content) = message.payload {
-                    isAISpeaking = true
-                    isUserSpeaking = false
+                await MainActor.run { [weak self] in
+                    guard let self else { return }
 
-                    // Handle audio output
-                    content.modelTurn?.parts.forEach { part in
-                        if let inlinePart = part as? InlineDataPart,
-                           inlinePart.mimeType.starts(with: "audio/pcm") {
-                            playAudioData(inlinePart.data)
-                        }
-                        if let textPart = part as? TextPart {
-                            handleAIText(textPart.text)
-                        }
-                    }
+                    if case let .content(content) = message.payload {
+                        self.isAISpeaking = true
+                        self.isUserSpeaking = false
 
-                    // Check for turn complete
-                    if content.isTurnComplete {
-                        isAISpeaking = false
-                        lastAIFinishTime = Date()
+                        // Handle audio + text from model turn
+                        if let parts = content.modelTurn?.parts {
+                            for part in parts {
+                                if let inlinePart = part as? InlineDataPart,
+                                   inlinePart.mimeType.starts(with: "audio/pcm") {
+                                    self.playAudioData(inlinePart.data)
+                                }
+                                if let textPart = part as? TextPart, !textPart.text.isEmpty {
+                                    self.handleAIText(textPart.text)
+                                }
+                            }
+                        }
+
+                        if content.isTurnComplete {
+                            self.isAISpeaking = false
+                            self.lastAIFinishTime = Date()
+                        }
                     }
                 }
             }
         } catch {
-            self.error = error.localizedDescription
-            isConnected = false
+            await MainActor.run { [weak self] in
+                self?.error = "Interview connection lost: \(error.localizedDescription)"
+                self?.isConnected = false
+            }
         }
     }
 
     // MARK: - Audio Playback
 
     private func playAudioData(_ data: Data) {
+        guard data.count > 1 else { return }
+        let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
         let frameCount = UInt32(data.count / 2)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: frameCount) else { return }
         buffer.frameLength = frameCount
 
         data.withUnsafeBytes { rawBuffer in
-            if let baseAddress = rawBuffer.baseAddress {
-                memcpy(buffer.int16ChannelData?[0], baseAddress, data.count)
+            guard let baseAddress = rawBuffer.baseAddress else { return }
+            if let channelData = buffer.int16ChannelData {
+                memcpy(channelData[0], baseAddress, data.count)
             }
         }
 
@@ -246,12 +275,13 @@ final class GeminiLiveManager {
 enum GeminiError: LocalizedError {
     case firebaseConfigFailed(String)
     case connectionFailed(String)
+    case audioSetupFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .firebaseConfigFailed(let msg): return "Firebase setup failed: \(msg)"
         case .connectionFailed(let msg): return "Could not connect to AI interviewer: \(msg)"
+        case .audioSetupFailed(let msg): return "Audio setup failed: \(msg)"
         }
     }
 }
-
