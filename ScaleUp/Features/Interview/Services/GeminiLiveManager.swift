@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import FirebaseCore
 import FirebaseAI
 
 // MARK: - Gemini Live Manager
@@ -25,6 +26,11 @@ final class GeminiLiveManager {
     // MARK: - Start Session
 
     func startSession(systemInstruction: String) async throws {
+        // Configure Firebase lazily (only when interview starts)
+        if FirebaseApp.app() == nil {
+            FirebaseApp.configure()
+        }
+
         // Configure audio session
         let audioSession = AVAudioSession.sharedInstance()
         try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
