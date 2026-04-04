@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		01349BDA8CFEB9AAC64F9C59 /* CreatorApplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = D22F18DCCE58CE3B311003EF /* CreatorApplication.swift */; };
 		019975614B85ECD9668E4AEC /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = F35C0859D0728200E1BB4898 /* Nuke */; };
+		FBAE1234567890ABCDEF0003 /* FirebaseAI in Frameworks */ = {isa = PBXBuildFile; productRef = FBAE1234567890ABCDEF0002 /* FirebaseAI */; };
 		0224DC891BE11CEB9E2CAEE3 /* ProgressTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E3DF77CC36E2D69C9EFF0 /* ProgressTabView.swift */; };
 		04E4F1F5445C1F1CED42595E /* Creator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B39675BE768F19F3B1D4832 /* Creator.swift */; };
 		086C014105400FD29D3F6A91 /* MyPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BDF23307E37EFE298593AA0 /* MyPlanView.swift */; };
@@ -209,6 +210,17 @@
 		FB2704BAAD5D188AA37C05B9 /* CoachMarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EF6014B27E8F8895DC2EE6 /* CoachMarkManager.swift */; };
 		FB4AAE51920E679B1000A485 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B118C6CD5D863DFFB46615 /* AppDelegate.swift */; };
 		FDB4021A57B5BBDB9D62869B /* ScaleUpApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD392FC876C99D8FDF703375 /* ScaleUpApp.swift */; };
+		23CBB49D255E47C5AF395206 /* Interview.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5619083CA534319B1D35512 /* Interview.swift */; };
+		AF6917A112C3434D9349BA76 /* InterviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5634C2B0754492B8E2A2AE0 /* InterviewService.swift */; };
+		54B0C8D8F7A94A44BB4CC1C0 /* GeminiLiveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB818EECB7C43A2B9B115F9 /* GeminiLiveManager.swift */; };
+		FCFD6F6618494C92B9C76A2D /* InterviewProctor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508F5302D3824F2BA0E69207 /* InterviewProctor.swift */; };
+		6C2B3A3F07F84D4597BE2DA0 /* InterviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7E27E7F6934B6D8EF63E85 /* InterviewViewModel.swift */; };
+		0889B9AE6A4E46B9A16AFE8F /* InterviewSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D172AE50784F497DB6166E03 /* InterviewSetupView.swift */; };
+		A9C6BD8B8E3643B49649337C /* InterviewCameraCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F965843D9204DC0A278E651 /* InterviewCameraCheckView.swift */; };
+		164E0B35B09C4855BAC16F23 /* InterviewLiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAC6ACF90B4B4298B356927A /* InterviewLiveView.swift */; };
+		98389274986A462A8C680F8E /* InterviewResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BA0C42836F482CB9D5B3AF /* InterviewResultsView.swift */; };
+		C637C934EF7C410BB20E92DD /* InterviewHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E73FF9284E54BB7BB0A0F3F /* InterviewHistoryView.swift */; };
+		2C1E2E8D7D144FDD8D889CBF /* InterviewSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8754935B0FC4099ABEE8716 /* InterviewSessionView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -433,6 +445,17 @@
 		FA912AB3AB92C41AE4D4260E /* NotesThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesThumbnail.swift; sourceTree = "<group>"; };
 		FAD65A3BDC6810EEEA013026 /* ContentRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentRow.swift; sourceTree = "<group>"; };
 		FD784009FBD8BB16DC62FE7B /* ObjectiveSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveSwitcherView.swift; sourceTree = "<group>"; };
+		E5619083CA534319B1D35512 /* Interview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interview.swift; sourceTree = "<group>"; };
+		C5634C2B0754492B8E2A2AE0 /* InterviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewService.swift; sourceTree = "<group>"; };
+		9CB818EECB7C43A2B9B115F9 /* GeminiLiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiLiveManager.swift; sourceTree = "<group>"; };
+		508F5302D3824F2BA0E69207 /* InterviewProctor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewProctor.swift; sourceTree = "<group>"; };
+		8E7E27E7F6934B6D8EF63E85 /* InterviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewViewModel.swift; sourceTree = "<group>"; };
+		D172AE50784F497DB6166E03 /* InterviewSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewSetupView.swift; sourceTree = "<group>"; };
+		2F965843D9204DC0A278E651 /* InterviewCameraCheckView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewCameraCheckView.swift; sourceTree = "<group>"; };
+		FAC6ACF90B4B4298B356927A /* InterviewLiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewLiveView.swift; sourceTree = "<group>"; };
+		D6BA0C42836F482CB9D5B3AF /* InterviewResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewResultsView.swift; sourceTree = "<group>"; };
+		7E73FF9284E54BB7BB0A0F3F /* InterviewHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewHistoryView.swift; sourceTree = "<group>"; };
+		B8754935B0FC4099ABEE8716 /* InterviewSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewSessionView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -443,6 +466,7 @@
 				019975614B85ECD9668E4AEC /* Nuke in Frameworks */,
 				13F7ED3FE9DC9DEF4682D176 /* NukeUI in Frameworks */,
 				4B1D87910EB1315C4FE995DB /* GoogleSignIn in Frameworks */,
+				FBAE1234567890ABCDEF0003 /* FirebaseAI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -849,6 +873,7 @@
 				94A728C8DD6FCEB5326E0891 /* Progress */,
 				472852C3D94FF7A9E015CA73 /* Quiz */,
 				D5B1BEFAF15746B480E22BE5 /* Splash */,
+				3B5AB1038EC6434FAB4107A7 /* Interview */,
 			);
 			path = Features;
 			sourceTree = "<group>";
@@ -1149,6 +1174,7 @@
 		DFFA63ADE7496F70C249BDA7 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				E5619083CA534319B1D35512 /* Interview.swift */,
 				745763EE8FF0F674F82AFFD7 /* AdminStats.swift */,
 				BC70377CFA5F997485094F1B /* AITutor.swift */,
 				F58CFB298CB55E9D16FA6DAA /* AppNotification.swift */,
@@ -1301,6 +1327,48 @@
 			path = Steps;
 			sourceTree = "<group>";
 		};
+
+		49C29639C20C43AE8B22AB6C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				C5634C2B0754492B8E2A2AE0 /* */,
+				9CB818EECB7C43A2B9B115F9 /* */,
+				508F5302D3824F2BA0E69207 /* */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		C6939BF5128D44E4B55BE56D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D172AE50784F497DB6166E03 /* */,
+				2F965843D9204DC0A278E651 /* */,
+				FAC6ACF90B4B4298B356927A /* */,
+				D6BA0C42836F482CB9D5B3AF /* */,
+				7E73FF9284E54BB7BB0A0F3F /* */,
+				B8754935B0FC4099ABEE8716 /* */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		3520E6835E9B450192CBA3F4 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				8E7E27E7F6934B6D8EF63E85 /* */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		3B5AB1038EC6434FAB4107A7 /* Interview */ = {
+			isa = PBXGroup;
+			children = (
+				49C29639C20C43AE8B22AB6C /* Services */,
+				3520E6835E9B450192CBA3F4 /* ViewModels */,
+				C6939BF5128D44E4B55BE56D /* Views */,
+			);
+			path = Interview;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -1321,6 +1389,7 @@
 				F35C0859D0728200E1BB4898 /* Nuke */,
 				EAC6EC44E6DBA21CC815D90B /* NukeUI */,
 				3F6A5A1E69F51B5356AA87A7 /* GoogleSignIn */,
+				FBAE1234567890ABCDEF0002 /* FirebaseAI */,
 			);
 			productName = ScaleUp;
 			productReference = 1340E05FF259F05B83633CED /* ScaleUp.app */;
@@ -1395,6 +1464,7 @@
 			packageReferences = (
 				16079D51E6615ED0C95FA73A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				419C74B615DE54C17FFF9A6A /* XCRemoteSwiftPackageReference "Nuke" */,
+				FBAE1234567890ABCDEF0001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 32E5C4DA8A3699E3D0C0336B /* Products */;
@@ -1425,8 +1495,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				85DF87E8E396DE1C956D46D4 /* ScaleUpUITests.swift in Sources */,
-			);
+				85DF87E8E396DE1C956D46D4 /* ScaleUpUITests.swift in Sources */,);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		D9F9FD5BF2786139E009BF2E /* Sources */ = {
@@ -1441,6 +1510,17 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23CBB49D255E47C5AF395206 /* Interview.swift in Sources */,
+				AF6917A112C3434D9349BA76 /* InterviewService.swift in Sources */,
+				54B0C8D8F7A94A44BB4CC1C0 /* GeminiLiveManager.swift in Sources */,
+				FCFD6F6618494C92B9C76A2D /* InterviewProctor.swift in Sources */,
+				6C2B3A3F07F84D4597BE2DA0 /* InterviewViewModel.swift in Sources */,
+				0889B9AE6A4E46B9A16AFE8F /* InterviewSetupView.swift in Sources */,
+				A9C6BD8B8E3643B49649337C /* InterviewCameraCheckView.swift in Sources */,
+				164E0B35B09C4855BAC16F23 /* InterviewLiveView.swift in Sources */,
+				98389274986A462A8C680F8E /* InterviewResultsView.swift in Sources */,
+				C637C934EF7C410BB20E92DD /* InterviewHistoryView.swift in Sources */,
+				2C1E2E8D7D144FDD8D889CBF /* InterviewSessionView.swift in Sources */,
 				65153FCC81549E7869B3C3C7 /* AITutor.swift in Sources */,
 				4E79AF74D5991A280BABDF8D /* AITutorHistoryView.swift in Sources */,
 				2E87737BDDEF62DEE513C54F /* AITutorMessageBubble.swift in Sources */,
@@ -1956,6 +2036,14 @@
 				minimumVersion = 12.0.0;
 			};
 		};
+		FBAE1234567890ABCDEF0001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1973,6 +2061,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 419C74B615DE54C17FFF9A6A /* XCRemoteSwiftPackageReference "Nuke" */;
 			productName = Nuke;
+		};
+		FBAE1234567890ABCDEF0002 /* FirebaseAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FBAE1234567890ABCDEF0001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

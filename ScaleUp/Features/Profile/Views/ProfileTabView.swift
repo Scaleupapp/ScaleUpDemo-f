@@ -130,6 +130,7 @@ struct ProfileTabView: View {
                     noteRequestsLink
                     notesAnalyticsLink
                     aiTutorHistoryLink
+                    mockInterviewsLink
                 }
 
                 // Competition group
@@ -511,6 +512,44 @@ struct ProfileTabView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: CornerRadius.medium)
                     .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Spacing.md)
+    }
+
+    // MARK: - Mock Interviews Link
+
+    private var mockInterviewsLink: some View {
+        NavigationLink {
+            InterviewHistoryView()
+        } label: {
+            HStack(spacing: Spacing.md) {
+                Image(systemName: "mic.badge.plus")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.cyan)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Mock Interviews")
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Practice with AI interviewer")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(Spacing.md)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+            .overlay(
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .stroke(Color.cyan.opacity(0.15), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
