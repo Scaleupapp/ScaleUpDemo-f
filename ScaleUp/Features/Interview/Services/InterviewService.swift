@@ -44,8 +44,13 @@ actor InterviewService {
 
     // MARK: - List Sessions
 
+    private struct SessionListResponse: Decodable, Sendable {
+        let items: [InterviewSessionSummary]
+    }
+
     func listSessions(page: Int = 1, limit: Int = 20) async throws -> [InterviewSessionSummary] {
-        return try await APIClient.shared.request(InterviewEndpoints.list(page: page, limit: limit))
+        let resp: SessionListResponse = try await APIClient.shared.request(InterviewEndpoints.list(page: page, limit: limit))
+        return resp.items
     }
 
     // MARK: - Delete Session
