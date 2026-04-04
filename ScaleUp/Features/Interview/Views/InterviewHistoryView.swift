@@ -24,20 +24,28 @@ struct InterviewHistoryView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showNewInterview = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(ColorTokens.gold)
+                if inProgressSession == nil {
+                    Button {
+                        showNewInterview = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(ColorTokens.gold)
+                    }
                 }
             }
         }
         .fullScreenCover(isPresented: $showNewInterview) {
             InterviewSessionView(viewModel: InterviewViewModel())
         }
+        .onChange(of: showNewInterview) { _, showing in
+            if !showing { Task { await loadSessions() } }
+        }
         .task {
             await loadSessions()
+        }
+        .onAppear {
+            if !sessions.isEmpty { Task { await loadSessions() } }
         }
         .refreshable {
             await loadSessions()
@@ -46,9 +54,23 @@ struct InterviewHistoryView: View {
 
     // MARK: - Sessions List
 
+    private var inProgressSession: InterviewSessionSummary? {
+        sessions.first { $0.status == .in_progress || $0.status == .setup }
+    }
+
     private var sessionsList: some View {
         List {
-            ForEach(sessions) { session in
+            // Active interview banner
+            if let active = inProgressSession {
+                Section {
+                    activeInterviewBanner(active)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                }
+            }
+
+            // Past sessions
+            ForEach(sessions.filter { $0.status != .in_progress && $0.status != .setup }) { session in
                 NavigationLink {
                     InterviewResultsDetailView(sessionId: session.id)
                 } label: {
@@ -61,6 +83,72 @@ struct InterviewHistoryView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+    }
+
+    // MARK: - Active Interview Banner
+
+    private func activeInterviewBanner(_ session: InterviewSessionSummary) -> some View {
+        VStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill(ColorTokens.gold.opacity(0.2))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: session.interviewType.icon)
+                        .font(.system(size: 18))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Interview In Progress")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("\(session.interviewType.displayName) • \(session.targetRole ?? "")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+            }
+
+            HStack(spacing: Spacing.md) {
+                Button {
+                    abandonSession(session)
+                } label: {
+                    Text("Abandon")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(.red.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+
+                Button {
+                    showNewInterview = true
+                } label: {
+                    Text("Resume")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(ColorTokens.gold)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+        }
+        .padding(Spacing.lg)
+        .background(ColorTokens.gold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+    }
+
+    private func abandonSession(_ session: InterviewSessionSummary) {
+        Task {
+            try? await service.deleteSession(sessionId: session.id)
+            await loadSessions()
+        }
     }
 
     // MARK: - Session Row
