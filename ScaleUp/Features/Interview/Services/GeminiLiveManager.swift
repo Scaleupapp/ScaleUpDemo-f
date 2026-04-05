@@ -232,7 +232,7 @@ final class GeminiLiveManager {
         Task.detached { [weak self] in
             guard let session = await self?.liveSession else { return }
             await session.sendTextRealtime(
-                "The candidate is ready. Ask the first interview question now. Keep it concise and direct."
+                "The candidate is ready. Ask exactly ONE interview question, then STOP completely. Do not say anything else after asking the question. Wait silently for the candidate to answer."
             )
         }
     }
@@ -278,7 +278,7 @@ final class GeminiLiveManager {
         Task.detached { [weak self] in
             guard let session = await self?.liveSession else { return }
             await session.sendTextRealtime(
-                "The candidate has finished answering. Based on their response, decide: either ask a follow-up question to probe deeper, or move to the next topic. Do not repeat what they said. Be concise."
+                "The candidate has finished answering. Based on their response, ask exactly ONE follow-up or next question, then STOP completely. Do not say anything else after asking. Wait silently for the candidate's response."
             )
         }
     }
@@ -301,6 +301,12 @@ final class GeminiLiveManager {
         do {
             for try await message in session.responses {
                 if case let .content(content) = message.payload {
+                    // GUARD: Ignore unsolicited AI content when waiting for user action.
+                    // Without this, Gemini Live auto-generates Q2, Q3, etc. without user answering.
+                    if turn == .waitingToAnswer || turn == .readyCheck || turn == .userRecording {
+                        continue
+                    }
+
                     if turn != .aiSpeaking {
                         turn = .aiSpeaking
                     }
@@ -322,14 +328,18 @@ final class GeminiLiveManager {
                         pendingAIText = ""
 
                         if !greetingDone {
-                            // Greeting just finished — show ready check
                             turn = .readyCheck
                         } else {
-                            // Process as a question turn
                             if !text.isEmpty {
                                 processCompletedAITurn(text)
                             }
                             turn = .waitingToAnswer
+
+                            // Send explicit STOP signal so model doesn't auto-continue
+                            Task.detached { [weak self] in
+                                guard let s = await self?.liveSession else { return }
+                                await s.sendTextRealtime("[STOP] Wait silently. Do not speak or ask another question until I tell you the candidate has finished answering.")
+                            }
                         }
                     }
                 }
