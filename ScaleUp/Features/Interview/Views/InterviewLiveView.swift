@@ -282,8 +282,8 @@ struct InterviewLiveView: View {
 
     private var cameraPill: some View {
         ZStack {
-            if let session = viewModel.proctor.activeCaptureSession {
-                CameraPreviewView(session: session)
+            if viewModel.proctor.cameraEnabled {
+                CameraStatusView(authorized: true)
                     .frame(width: 60, height: 80)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {

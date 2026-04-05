@@ -3,42 +3,25 @@ import AVFoundation
 
 // MARK: - Camera Preview UIViewRepresentable
 
-struct CameraPreviewView: UIViewRepresentable {
-    let session: AVCaptureSession
+// Simple camera status indicator (no live preview to avoid AVCaptureSession crashes)
+struct CameraStatusView: View {
+    let authorized: Bool
 
-    func makeUIView(context: Context) -> CameraPreviewUIView {
-        let view = CameraPreviewUIView()
-        view.backgroundColor = .black
-        // Defer session attachment to avoid crash during SwiftUI layout
-        DispatchQueue.main.async {
-            view.attachSession(session)
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black)
+
+            VStack(spacing: 8) {
+                Image(systemName: authorized ? "checkmark.circle.fill" : "camera.fill")
+                    .font(.system(size: 32))
+                    .foregroundStyle(authorized ? .green : ColorTokens.gold)
+
+                Text(authorized ? "Camera Ready" : "Camera Access Needed")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
         }
-        return view
-    }
-
-    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
-        uiView.updateFrame()
-    }
-}
-
-class CameraPreviewUIView: UIView {
-    private var previewLayer: AVCaptureVideoPreviewLayer?
-
-    func attachSession(_ session: AVCaptureSession) {
-        let layer = AVCaptureVideoPreviewLayer(session: session)
-        layer.videoGravity = .resizeAspectFill
-        layer.frame = bounds
-        self.layer.addSublayer(layer)
-        previewLayer = layer
-    }
-
-    func updateFrame() {
-        previewLayer?.frame = bounds
-    }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        previewLayer?.frame = bounds
     }
 }
 
@@ -98,8 +81,8 @@ struct InterviewCameraCheckView: View {
                     .fill(ColorTokens.surface)
                     .frame(height: 260)
 
-                if let session = cameraSession, cameraAuthorized {
-                    CameraPreviewView(session: session)
+                if cameraAuthorized {
+                    CameraStatusView(authorized: true)
                         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
                         .frame(height: 260)
                 } else {
