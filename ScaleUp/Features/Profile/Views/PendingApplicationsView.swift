@@ -7,14 +7,24 @@ final class PendingApplicationsViewModel {
     var isLoading = false
     var errorMessage: String?
     var isActioning = false
+    let isAdmin: Bool
 
     private let adminService = AdminService()
+    private let creatorService = CreatorService()
+
+    init(isAdmin: Bool) {
+        self.isAdmin = isAdmin
+    }
 
     func loadApplications() async {
         isLoading = true
         errorMessage = nil
         do {
-            applications = try await adminService.fetchApplications()
+            if isAdmin {
+                applications = try await adminService.fetchApplications()
+            } else {
+                applications = try await creatorService.fetchPendingApplications()
+            }
         } catch {
             errorMessage = "\(error)"
             applications = []
@@ -22,17 +32,22 @@ final class PendingApplicationsViewModel {
         isLoading = false
     }
 
-    func approve(applicationId: String, note: String?) async {
+    /// Admin: direct approve. Creator: endorse (peer endorsement).
+    func approveOrEndorse(applicationId: String, note: String?) async {
         isActioning = true
         do {
-            try await adminService.approveApplication(id: applicationId, note: note)
+            if isAdmin {
+                try await adminService.approveApplication(id: applicationId, note: note)
+            } else {
+                try await creatorService.endorseApplication(id: applicationId, note: note)
+            }
             Haptics.success()
             await loadApplications()
         } catch let error as APIError {
             errorMessage = error.errorDescription
             Haptics.error()
         } catch {
-            errorMessage = "Failed to approve"
+            errorMessage = isAdmin ? "Failed to approve" : "Failed to endorse"
             Haptics.error()
         }
         isActioning = false
@@ -41,7 +56,11 @@ final class PendingApplicationsViewModel {
     func reject(applicationId: String, note: String) async {
         isActioning = true
         do {
-            try await adminService.rejectApplication(id: applicationId, note: note)
+            if isAdmin {
+                try await adminService.rejectApplication(id: applicationId, note: note)
+            } else {
+                try await creatorService.rejectApplication(id: applicationId, note: note)
+            }
             Haptics.success()
             await loadApplications()
         } catch let error as APIError {
@@ -58,8 +77,12 @@ final class PendingApplicationsViewModel {
 // MARK: - View
 
 struct PendingApplicationsView: View {
-    @State private var viewModel = PendingApplicationsViewModel()
+    @State private var viewModel: PendingApplicationsViewModel
     @State private var selectedApp: CreatorApplication?
+
+    init(isAdmin: Bool = false) {
+        _viewModel = State(initialValue: PendingApplicationsViewModel(isAdmin: isAdmin))
+    }
 
     var body: some View {
         ZStack {
@@ -106,10 +129,11 @@ struct PendingApplicationsView: View {
         .sheet(item: $selectedApp) { app in
             ApplicationReviewSheet(
                 application: app,
+                isAdmin: viewModel.isAdmin,
                 isActioning: viewModel.isActioning,
-                onApprove: { note in
+                onApproveOrEndorse: { note in
                     Task {
-                        await viewModel.approve(applicationId: app.id, note: note)
+                        await viewModel.approveOrEndorse(applicationId: app.id, note: note)
                         if viewModel.errorMessage == nil { selectedApp = nil }
                     }
                 },
@@ -223,13 +247,17 @@ struct PendingApplicationsView: View {
 struct ApplicationReviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     let application: CreatorApplication
+    var isAdmin: Bool
     var isActioning: Bool
-    var onApprove: (String?) -> Void
+    var onApproveOrEndorse: (String?) -> Void
     var onReject: (String) -> Void
 
     @State private var approveNote = ""
     @State private var rejectNote = ""
     @State private var showRejectConfirm = false
+
+    private var actionTitle: String { isAdmin ? "Approve" : "Endorse" }
+    private var actionButtonTitle: String { isAdmin ? "Approve Application" : "Endorse Application" }
 
     var body: some View {
         NavigationStack {
@@ -430,9 +458,9 @@ struct ApplicationReviewSheet: View {
 
                         Divider().overlay(ColorTokens.divider)
 
-                        // Approve section
+                        // Approve / Endorse section
                         VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("Approve")
+                            Text(actionTitle)
                                 .font(Typography.bodyBold)
                                 .foregroundStyle(ColorTokens.textPrimary)
                             TextField("Add a note (optional)", text: $approveNote)
@@ -446,8 +474,8 @@ struct ApplicationReviewSheet: View {
                                         .stroke(ColorTokens.border, lineWidth: 1)
                                 )
 
-                            PrimaryButton(title: "Approve Application", icon: "checkmark.seal") {
-                                onApprove(approveNote.isEmpty ? nil : approveNote)
+                            PrimaryButton(title: actionButtonTitle, icon: "checkmark.seal") {
+                                onApproveOrEndorse(approveNote.isEmpty ? nil : approveNote)
                             }
                             .disabled(isActioning)
                         }

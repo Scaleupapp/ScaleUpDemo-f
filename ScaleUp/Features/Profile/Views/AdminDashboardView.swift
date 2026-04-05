@@ -126,7 +126,7 @@ struct AdminDashboardView: View {
             .buttonStyle(.plain)
 
             NavigationLink {
-                PendingApplicationsView()
+                PendingApplicationsView(isAdmin: true)
             } label: {
                 adminNavRow(
                     icon: "doc.text.magnifyingglass", title: "Creator Applications",
