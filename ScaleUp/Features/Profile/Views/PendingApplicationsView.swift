@@ -6,9 +6,9 @@ final class PendingApplicationsViewModel {
     var applications: [CreatorApplication] = []
     var isLoading = false
     var errorMessage: String?
+    var isActioning = false
 
     private let adminService = AdminService()
-    private let creatorService = CreatorService()
 
     func loadApplications() async {
         isLoading = true
@@ -22,23 +22,26 @@ final class PendingApplicationsViewModel {
         isLoading = false
     }
 
-    func endorse(applicationId: String, note: String?) async {
+    func approve(applicationId: String, note: String?) async {
+        isActioning = true
         do {
-            try await creatorService.endorseApplication(id: applicationId, note: note)
+            try await adminService.approveApplication(id: applicationId, note: note)
             Haptics.success()
             await loadApplications()
         } catch let error as APIError {
             errorMessage = error.errorDescription
             Haptics.error()
         } catch {
-            errorMessage = "Failed to endorse"
+            errorMessage = "Failed to approve"
             Haptics.error()
         }
+        isActioning = false
     }
 
     func reject(applicationId: String, note: String) async {
+        isActioning = true
         do {
-            try await creatorService.rejectApplication(id: applicationId, note: note)
+            try await adminService.rejectApplication(id: applicationId, note: note)
             Haptics.success()
             await loadApplications()
         } catch let error as APIError {
@@ -48,6 +51,7 @@ final class PendingApplicationsViewModel {
             errorMessage = "Failed to reject"
             Haptics.error()
         }
+        isActioning = false
     }
 }
 
@@ -61,12 +65,34 @@ struct PendingApplicationsView: View {
         ZStack {
             ColorTokens.background.ignoresSafeArea()
 
-            if viewModel.isLoading && viewModel.applications.isEmpty {
-                ProgressView().tint(ColorTokens.gold)
-            } else if viewModel.applications.isEmpty {
-                emptyState
-            } else {
-                applicationList
+            VStack(spacing: 0) {
+                if let error = viewModel.errorMessage {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(ColorTokens.error)
+                        Text(error)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.error)
+                        Spacer()
+                        Button { viewModel.errorMessage = nil } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(ColorTokens.error)
+                        }
+                    }
+                    .padding(Spacing.sm)
+                    .background(ColorTokens.error.opacity(0.1))
+                }
+
+                if viewModel.isLoading && viewModel.applications.isEmpty {
+                    Spacer()
+                    ProgressView().tint(ColorTokens.gold)
+                    Spacer()
+                } else if viewModel.applications.isEmpty {
+                    emptyState
+                } else {
+                    applicationList
+                }
             }
         }
         .navigationTitle("Review Applications")
@@ -80,13 +106,18 @@ struct PendingApplicationsView: View {
         .sheet(item: $selectedApp) { app in
             ApplicationReviewSheet(
                 application: app,
-                onEndorse: { note in
-                    Task { await viewModel.endorse(applicationId: app.id, note: note) }
-                    selectedApp = nil
+                isActioning: viewModel.isActioning,
+                onApprove: { note in
+                    Task {
+                        await viewModel.approve(applicationId: app.id, note: note)
+                        if viewModel.errorMessage == nil { selectedApp = nil }
+                    }
                 },
                 onReject: { note in
-                    Task { await viewModel.reject(applicationId: app.id, note: note) }
-                    selectedApp = nil
+                    Task {
+                        await viewModel.reject(applicationId: app.id, note: note)
+                        if viewModel.errorMessage == nil { selectedApp = nil }
+                    }
                 }
             )
         }
@@ -94,23 +125,18 @@ struct PendingApplicationsView: View {
 
     private var emptyState: some View {
         VStack(spacing: Spacing.md) {
+            Spacer()
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 40))
                 .foregroundStyle(ColorTokens.textTertiary)
             Text("No pending applications")
                 .font(Typography.bodyBold)
                 .foregroundStyle(ColorTokens.textPrimary)
-            if let error = viewModel.errorMessage {
-                Text(error)
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.error)
-                    .multilineTextAlignment(.center)
-            } else {
-                Text("Check back later for new applications in your domain")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
+            Text("Check back later for new applications in your domain")
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textTertiary)
+                .multilineTextAlignment(.center)
+            Spacer()
         }
         .padding(Spacing.xl)
     }
@@ -155,6 +181,13 @@ struct PendingApplicationsView: View {
                             .foregroundStyle(ColorTokens.textTertiary)
                     }
                 }
+
+                if let detail = app.statusDetail, !detail.isEmpty {
+                    Text(detail)
+                        .font(Typography.micro)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .lineLimit(2)
+                }
             }
 
             Spacer()
@@ -190,10 +223,11 @@ struct PendingApplicationsView: View {
 struct ApplicationReviewSheet: View {
     @Environment(\.dismiss) private var dismiss
     let application: CreatorApplication
-    var onEndorse: (String?) -> Void
+    var isActioning: Bool
+    var onApprove: (String?) -> Void
     var onReject: (String) -> Void
 
-    @State private var endorseNote = ""
+    @State private var approveNote = ""
     @State private var rejectNote = ""
     @State private var showRejectConfirm = false
 
@@ -396,12 +430,12 @@ struct ApplicationReviewSheet: View {
 
                         Divider().overlay(ColorTokens.divider)
 
-                        // Endorse section
+                        // Approve section
                         VStack(alignment: .leading, spacing: Spacing.sm) {
-                            Text("Endorse")
+                            Text("Approve")
                                 .font(Typography.bodyBold)
                                 .foregroundStyle(ColorTokens.textPrimary)
-                            TextField("Add a note (optional)", text: $endorseNote)
+                            TextField("Add a note (optional)", text: $approveNote)
                                 .font(Typography.body)
                                 .foregroundStyle(ColorTokens.textPrimary)
                                 .padding(Spacing.sm)
@@ -412,9 +446,10 @@ struct ApplicationReviewSheet: View {
                                         .stroke(ColorTokens.border, lineWidth: 1)
                                 )
 
-                            PrimaryButton(title: "Endorse Application", icon: "checkmark.seal") {
-                                onEndorse(endorseNote.isEmpty ? nil : endorseNote)
+                            PrimaryButton(title: "Approve Application", icon: "checkmark.seal") {
+                                onApprove(approveNote.isEmpty ? nil : approveNote)
                             }
+                            .disabled(isActioning)
                         }
 
                         // Reject section
@@ -447,7 +482,7 @@ struct ApplicationReviewSheet: View {
                                 .background(rejectNote.isEmpty ? ColorTokens.buttonDisabledBg : ColorTokens.error)
                                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
                             }
-                            .disabled(rejectNote.isEmpty)
+                            .disabled(rejectNote.isEmpty || isActioning)
                             .buttonStyle(.plain)
                         }
                     }

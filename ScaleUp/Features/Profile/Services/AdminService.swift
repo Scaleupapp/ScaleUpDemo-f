@@ -48,6 +48,11 @@ actor AdminService {
         try await api.request(AdminEndpoints.applications(page: page))
     }
 
+    func approveApplication(id: String, note: String?) async throws {
+        let body = AdminApproveRequest(note: note)
+        _ = try await api.requestRaw(AdminEndpoints.approveApplication(id: id), body: body)
+    }
+
     func rejectApplication(id: String, note: String) async throws {
         let body = AdminRejectRequest(reviewNote: note)
         _ = try await api.requestRaw(AdminEndpoints.rejectApplication(id: id), body: body)
@@ -159,6 +164,10 @@ private struct SimplePagination: Decodable {
 
 // MARK: - Request Bodies
 
+private struct AdminApproveRequest: Encodable, Sendable {
+    let note: String?
+}
+
 private struct AdminRejectRequest: Encodable, Sendable {
     let reviewNote: String
 }
@@ -185,6 +194,7 @@ private enum AdminEndpoints: Endpoint {
     case ban(userId: String)
     case unban(userId: String)
     case applications(page: Int)
+    case approveApplication(id: String)
     case rejectApplication(id: String)
     case moderateContent(id: String)
     case promoteCreator(userId: String)
@@ -201,6 +211,7 @@ private enum AdminEndpoints: Endpoint {
         case .ban(let id): return "/admin/users/\(id)/ban"
         case .unban(let id): return "/admin/users/\(id)/unban"
         case .applications: return "/admin/applications"
+        case .approveApplication(let id): return "/admin/applications/\(id)/approve"
         case .rejectApplication(let id): return "/admin/applications/\(id)/reject"
         case .moderateContent(let id): return "/admin/content/\(id)/moderate"
         case .promoteCreator(let id): return "/admin/creators/\(id)/promote"
@@ -216,7 +227,7 @@ private enum AdminEndpoints: Endpoint {
         switch self {
         case .stats, .users, .applications, .content, .contentReports, .creators: return .get
         case .ban, .unban, .moderateContent, .promoteCreator, .removeContent, .dismissReports: return .put
-        case .rejectApplication: return .post
+        case .approveApplication, .rejectApplication: return .post
         }
     }
 

@@ -47,6 +47,9 @@ struct ApplicationStatusView: View {
     }
 
     private var statusMessage: String {
+        if let detail = application.statusDetail, !detail.isEmpty {
+            return detail
+        }
         switch application.status {
         case .pending:
             return "Your application is being reviewed by creators in your domain."

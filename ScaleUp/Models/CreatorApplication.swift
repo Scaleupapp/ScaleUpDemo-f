@@ -14,6 +14,7 @@ struct CreatorApplication: Codable, Sendable, Identifiable {
     let portfolioUrl: String?
     let socialLinks: SocialLinks?
     let status: ApplicationStatus
+    let statusDetail: String?
     let endorsements: [Endorsement]?
     let rejectionNote: String?
     let reapplyAfter: Date?
@@ -24,7 +25,7 @@ struct CreatorApplication: Codable, Sendable, Identifiable {
         case id = "_id"
         case userId, applicant, domain, specializations
         case experience, motivation, sampleContentLinks
-        case portfolioUrl, socialLinks, status
+        case portfolioUrl, socialLinks, status, statusDetail
         case endorsements, rejectionNote, reapplyAfter
         case createdAt, updatedAt
     }
@@ -34,6 +35,7 @@ struct CreatorApplication: Codable, Sendable, Identifiable {
         id = try container.decode(String.self, forKey: .id)
         domain = try container.decode(String.self, forKey: .domain)
         status = try container.decode(ApplicationStatus.self, forKey: .status)
+        statusDetail = try container.decodeIfPresent(String.self, forKey: .statusDetail)
         specializations = try container.decodeIfPresent([String].self, forKey: .specializations)
         experience = try container.decodeIfPresent(String.self, forKey: .experience)
         motivation = try container.decodeIfPresent(String.self, forKey: .motivation)
