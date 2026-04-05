@@ -12,6 +12,9 @@ final class AudioSender: @unchecked Sendable {
     private var playerNode: AVAudioPlayerNode?
     private weak var session: LiveSession?
     private let queue = DispatchQueue(label: "com.scaleup.audiosender")
+
+    /// When false, mic is captured for level detection but NOT sent to Gemini.
+    var isSendingAudio = false
     var onAudioLevel: ((Float) -> Void)?
     private var lastLevelTime = Date.distantPast
 
@@ -37,33 +40,34 @@ final class AudioSender: @unchecked Sendable {
         let dstRate: Double = 16000
 
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
+            guard let self else { return }
             guard let channelData = buffer.floatChannelData else { return }
             let frameCount = Int(buffer.frameLength)
             guard frameCount > 0 else { return }
+
+            // Audio level (throttled ~10 fps) — always active for visual feedback
+            let now = Date()
+            if now.timeIntervalSince(self.lastLevelTime) > 0.1 {
+                self.lastLevelTime = now
+                var sum: Float = 0
+                let step = max(1, frameCount / 256)
+                var count = 0
+                for i in Swift.stride(from: 0, to: frameCount, by: step) {
+                    let s = channelData[0][i]
+                    sum += s * s
+                    count += 1
+                }
+                let rms = sqrt(sum / Float(max(1, count)))
+                self.onAudioLevel?(rms)
+            }
+
+            // Only send audio to Gemini when explicitly enabled (push-to-talk)
+            guard self.isSendingAudio else { return }
 
             // Resample from hardware rate to 16 kHz via linear interpolation
             let outputCount = Int(Double(frameCount) * dstRate / srcRate)
             guard outputCount > 0 else { return }
 
-            // Audio level (throttled ~10 fps)
-            if let self {
-                let now = Date()
-                if now.timeIntervalSince(self.lastLevelTime) > 0.1 {
-                    self.lastLevelTime = now
-                    var sum: Float = 0
-                    let step = max(1, frameCount / 256)
-                    var count = 0
-                    for i in Swift.stride(from: 0, to: frameCount, by: step) {
-                        let s = channelData[0][i]
-                        sum += s * s
-                        count += 1
-                    }
-                    let rms = sqrt(sum / Float(max(1, count)))
-                    self.onAudioLevel?(rms)
-                }
-            }
-
-            // Convert to 16 kHz PCM Int16
             var pcmData = Data(count: outputCount * 2)
             pcmData.withUnsafeMutableBytes { rawBuffer in
                 let ptr = rawBuffer.bindMemory(to: Int16.self)
@@ -106,6 +110,7 @@ final class AudioSender: @unchecked Sendable {
     }
 
     func stop() {
+        isSendingAudio = false
         if let engine = audioEngine {
             engine.inputNode.removeTap(onBus: 0)
             engine.stop()
@@ -122,23 +127,31 @@ final class AudioSender: @unchecked Sendable {
 
 // MARK: - Gemini Live Manager
 
+/// Interview turn state — drives the entire UI.
+enum InterviewTurn: Equatable {
+    case aiSpeaking         // AI is delivering a question
+    case waitingToAnswer    // AI finished, user hasn't tapped yet
+    case userRecording      // User tapped mic, audio flowing to Gemini
+    case processing         // User tapped done, waiting for AI to respond
+}
+
 @Observable @MainActor
 final class GeminiLiveManager {
     var isConnected = false
-    var isAISpeaking = false
-    var isUserSpeaking = false
+    var turn: InterviewTurn = .aiSpeaking
     var transcript: [TranscriptEntry] = []
     var error: String?
     var currentQuestion: String = ""
     var audioLevel: Float = 0
     var questionCount = 0
+    var answerDuration: TimeInterval = 0
 
     private var liveSession: LiveSession?
     private let audioSender = AudioSender()
     private var interviewStartTime = Date()
-    private var lastAIFinishTime = Date()
-    private var lastUserSpeechTime = Date.distantPast
+    private var answerStartTime = Date()
     private var pendingAIText = ""
+    private var answerTimer: Timer?
 
     // MARK: - Start Session
 
@@ -183,33 +196,26 @@ final class GeminiLiveManager {
         liveSession = session
         isConnected = true
         interviewStartTime = Date()
+        turn = .aiSpeaking
 
         // Start receiving AI responses
         Task { [weak self] in
             await self?.receiveResponses()
         }
 
-        // Send initial text prompt to trigger the AI to start speaking
+        // Send initial text prompt — AI introduces itself
         Task.detached {
             await session.sendTextRealtime("Please begin the interview. Introduce yourself and ask the first question.")
         }
 
-        // Audio level callback — detect user speaking
+        // Audio level callback for visual feedback
         audioSender.onAudioLevel = { [weak self] level in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.audioLevel = level
-                if level > 0.01 && !self.isAISpeaking {
-                    self.isUserSpeaking = true
-                    self.lastUserSpeechTime = Date()
-                } else if self.isUserSpeaking,
-                          Date().timeIntervalSince(self.lastUserSpeechTime) > 1.5 {
-                    self.isUserSpeaking = false
-                }
+                self?.audioLevel = level
             }
         }
 
-        // Start mic on background — completely isolated from MainActor
+        // Start audio engine (mic NOT sending yet — push-to-talk)
         do {
             try audioSender.start(session: session)
         } catch {
@@ -217,10 +223,56 @@ final class GeminiLiveManager {
         }
     }
 
+    // MARK: - Push-to-Talk Controls
+
+    /// User tapped "Start Answering" — begin sending mic audio to Gemini.
+    func startAnswering() {
+        guard turn == .waitingToAnswer else { return }
+        turn = .userRecording
+        answerStartTime = Date()
+        answerDuration = 0
+        audioSender.isSendingAudio = true
+
+        // Timer to show recording duration
+        answerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.answerDuration = Date().timeIntervalSince(self.answerStartTime)
+            }
+        }
+    }
+
+    /// User tapped "Done" — stop sending audio and tell Gemini to move on.
+    func finishAnswering() {
+        guard turn == .userRecording else { return }
+        audioSender.isSendingAudio = false
+        answerTimer?.invalidate()
+        answerTimer = nil
+        turn = .processing
+
+        // Record a placeholder for the user's answer in transcript
+        let elapsed = Date().timeIntervalSince(interviewStartTime)
+        let duration = Date().timeIntervalSince(answerStartTime)
+        transcript.append(TranscriptEntry(
+            role: "candidate", content: "(answered via voice — \(Int(duration))s)",
+            questionNumber: questionCount, isFollowUp: false,
+            timestamp: elapsed, responseDuration: duration,
+            createdAt: Date()
+        ))
+
+        // Signal Gemini to proceed
+        Task.detached { [weak self] in
+            guard let session = await self?.liveSession else { return }
+            await session.sendTextRealtime("The candidate has finished answering. Please provide brief acknowledgment and ask the next question.")
+        }
+    }
+
     // MARK: - End Session
 
     func endSession() {
         audioSender.stop()
+        answerTimer?.invalidate()
+        answerTimer = nil
         Task { await liveSession?.close() }
         liveSession = nil
         isConnected = false
@@ -233,8 +285,10 @@ final class GeminiLiveManager {
         do {
             for try await message in session.responses {
                 if case let .content(content) = message.payload {
-                    isAISpeaking = true
-                    isUserSpeaking = false
+                    // AI is speaking — update turn
+                    if turn != .aiSpeaking {
+                        turn = .aiSpeaking
+                    }
 
                     if let parts = content.modelTurn?.parts {
                         for part in parts {
@@ -249,14 +303,14 @@ final class GeminiLiveManager {
                     }
 
                     if content.isTurnComplete {
-                        isAISpeaking = false
-                        lastAIFinishTime = Date()
                         // Process accumulated text as one complete turn
                         let text = pendingAIText.trimmingCharacters(in: .whitespacesAndNewlines)
                         if !text.isEmpty {
                             processCompletedAITurn(text)
                         }
                         pendingAIText = ""
+                        // AI finished — now user can answer
+                        turn = .waitingToAnswer
                     }
                 }
             }
@@ -295,7 +349,6 @@ final class GeminiLiveManager {
 
     private func cleanAIText(_ text: String) -> String {
         var result = text
-        // Strip markdown bold markers
         result = result.replacingOccurrences(of: "**", with: "")
 
         let lines = result.components(separatedBy: .newlines)
@@ -303,7 +356,6 @@ final class GeminiLiveManager {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty { return nil }
 
-            // Skip reasoning-style headers (short gerund lines without punctuation)
             let reasoningPrefixes = [
                 "Refining", "Formulating", "Crafting", "Rephrasing", "Preparing",
                 "Analyzing", "Considering", "Evaluating", "Structuring", "Planning",
@@ -320,21 +372,6 @@ final class GeminiLiveManager {
 
         result = filtered.joined(separator: " ")
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    // MARK: - Record User Response
-
-    func recordUserResponse(_ text: String) {
-        guard !text.isEmpty else { return }
-        let elapsed = Date().timeIntervalSince(interviewStartTime)
-        let responseTime = Date().timeIntervalSince(lastAIFinishTime)
-
-        transcript.append(TranscriptEntry(
-            role: "candidate", content: text,
-            questionNumber: questionCount, isFollowUp: false,
-            timestamp: elapsed, responseDuration: responseTime,
-            createdAt: Date()
-        ))
     }
 
     var isInterviewComplete: Bool {

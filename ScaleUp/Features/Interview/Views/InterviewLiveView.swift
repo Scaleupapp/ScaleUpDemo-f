@@ -12,16 +12,34 @@ struct InterviewLiveView: View {
     @State private var countdownOpacity: Double = 0
     @State private var showCountdown = false
 
+    private var turn: InterviewTurn { viewModel.geminiManager.turn }
+
     var body: some View {
         ZStack {
             ColorTokens.background.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 topBar
+                    .padding(.bottom, Spacing.sm)
+
+                // Current question card
+                if !viewModel.geminiManager.currentQuestion.isEmpty {
+                    currentQuestionCard
+                        .padding(.bottom, Spacing.md)
+                }
+
                 Spacer()
-                conversationStatus
+
+                // Center state indicator
+                centerIndicator
+
                 Spacer()
-                bottomSection
+
+                // Main action button
+                actionButton
+                    .padding(.bottom, Spacing.md)
+
+                bottomControls
             }
 
             if showingStarter {
@@ -45,7 +63,6 @@ struct InterviewLiveView: View {
 
     private var topBar: some View {
         HStack(spacing: Spacing.md) {
-            // Interview type badge
             HStack(spacing: 6) {
                 Image(systemName: viewModel.selectedType.icon)
                     .font(.system(size: 11))
@@ -60,7 +77,6 @@ struct InterviewLiveView: View {
 
             Spacer()
 
-            // Timer
             HStack(spacing: 4) {
                 Circle()
                     .fill(Color.red)
@@ -76,7 +92,6 @@ struct InterviewLiveView: View {
 
             Spacer()
 
-            // Question counter
             Text("Q\(viewModel.questionCount)/~10")
                 .font(Typography.captionBold)
                 .foregroundStyle(ColorTokens.gold)
@@ -87,24 +102,6 @@ struct InterviewLiveView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
-    }
-
-    // MARK: - Conversation Status
-
-    private var conversationStatus: some View {
-        VStack(spacing: Spacing.lg) {
-            // Current question card (visible after first question)
-            if !viewModel.geminiManager.currentQuestion.isEmpty {
-                currentQuestionCard
-            }
-
-            // State indicator
-            if viewModel.geminiManager.isAISpeaking {
-                aiSpeakingIndicator
-            } else {
-                userTurnIndicator
-            }
-        }
     }
 
     // MARK: - Current Question Card
@@ -122,7 +119,6 @@ struct InterviewLiveView: View {
             Text(viewModel.geminiManager.currentQuestion)
                 .font(Typography.body)
                 .foregroundStyle(ColorTokens.textPrimary)
-                .lineLimit(6)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(Spacing.md)
@@ -136,7 +132,21 @@ struct InterviewLiveView: View {
         .padding(.horizontal, Spacing.lg)
     }
 
-    // MARK: - AI Speaking Indicator
+    // MARK: - Center Indicator
+
+    @ViewBuilder
+    private var centerIndicator: some View {
+        switch turn {
+        case .aiSpeaking:
+            aiSpeakingIndicator
+        case .waitingToAnswer:
+            waitingToAnswerIndicator
+        case .userRecording:
+            recordingIndicator
+        case .processing:
+            processingIndicator
+        }
+    }
 
     private var aiSpeakingIndicator: some View {
         VStack(spacing: Spacing.lg) {
@@ -172,40 +182,76 @@ struct InterviewLiveView: View {
         }
     }
 
-    // MARK: - User Turn Indicator
-
-    private var userTurnIndicator: some View {
-        VStack(spacing: Spacing.md) {
+    private var waitingToAnswerIndicator: some View {
+        VStack(spacing: Spacing.lg) {
             ZStack {
-                // Audio level reactive ring
-                if viewModel.geminiManager.isUserSpeaking {
-                    Circle()
-                        .fill(ColorTokens.success.opacity(0.06))
-                        .frame(
-                            width: 110 + normalizedAudioLevel * 80,
-                            height: 110 + normalizedAudioLevel * 80
-                        )
-                        .animation(.easeOut(duration: 0.1), value: normalizedAudioLevel)
-                }
+                Circle()
+                    .fill(ColorTokens.success.opacity(0.06))
+                    .frame(width: 130, height: 130)
 
                 Circle()
-                    .fill(viewModel.geminiManager.isUserSpeaking
-                          ? ColorTokens.success.opacity(0.12)
-                          : ColorTokens.surfaceElevated)
+                    .fill(ColorTokens.success.opacity(0.12))
                     .frame(width: 100, height: 100)
 
-                Image(systemName: viewModel.geminiManager.isUserSpeaking ? "waveform" : "mic.fill")
-                    .font(.system(size: 32, weight: viewModel.geminiManager.isUserSpeaking ? .semibold : .regular))
-                    .foregroundStyle(viewModel.geminiManager.isUserSpeaking
-                                     ? ColorTokens.success
-                                     : ColorTokens.textTertiary)
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 36, weight: .semibold))
+                    .foregroundStyle(ColorTokens.success)
             }
 
-            Text(viewModel.geminiManager.isUserSpeaking ? "Listening to you..." : "Your turn — speak now")
+            Text("Ready when you are")
                 .font(Typography.bodyBold)
-                .foregroundStyle(viewModel.geminiManager.isUserSpeaking
-                                 ? ColorTokens.success
-                                 : ColorTokens.textSecondary)
+                .foregroundStyle(ColorTokens.success)
+        }
+    }
+
+    private var recordingIndicator: some View {
+        VStack(spacing: Spacing.lg) {
+            ZStack {
+                // Audio level reactive ring
+                Circle()
+                    .fill(ColorTokens.success.opacity(0.06))
+                    .frame(
+                        width: 110 + normalizedAudioLevel * 80,
+                        height: 110 + normalizedAudioLevel * 80
+                    )
+                    .animation(.easeOut(duration: 0.1), value: normalizedAudioLevel)
+
+                Circle()
+                    .fill(ColorTokens.success.opacity(0.12))
+                    .frame(width: 100, height: 100)
+
+                Image(systemName: "waveform")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(ColorTokens.success)
+            }
+
+            VStack(spacing: 4) {
+                Text("Recording your answer...")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.success)
+
+                Text(formatDuration(viewModel.geminiManager.answerDuration))
+                    .font(.system(size: 24, weight: .bold, design: .monospaced))
+                    .foregroundStyle(ColorTokens.success)
+            }
+        }
+    }
+
+    private var processingIndicator: some View {
+        VStack(spacing: Spacing.lg) {
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.surfaceElevated)
+                    .frame(width: 100, height: 100)
+
+                ProgressView()
+                    .tint(ColorTokens.gold)
+                    .scaleEffect(1.5)
+            }
+
+            Text("Preparing next question...")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.textSecondary)
         }
     }
 
@@ -213,11 +259,66 @@ struct InterviewLiveView: View {
         CGFloat(min(viewModel.geminiManager.audioLevel / 0.08, 1.0))
     }
 
-    // MARK: - Bottom Section
+    private func formatDuration(_ t: TimeInterval) -> String {
+        let m = Int(t) / 60
+        let s = Int(t) % 60
+        return String(format: "%d:%02d", m, s)
+    }
 
-    private var bottomSection: some View {
+    // MARK: - Action Button
+
+    @ViewBuilder
+    private var actionButton: some View {
+        switch turn {
+        case .waitingToAnswer:
+            Button {
+                Haptics.medium()
+                viewModel.geminiManager.startAnswering()
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Tap to Start Answering")
+                        .font(Typography.bodyBold)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(ColorTokens.success)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, Spacing.lg)
+
+        case .userRecording:
+            Button {
+                Haptics.medium()
+                viewModel.geminiManager.finishAnswering()
+            } label: {
+                HStack(spacing: Spacing.sm) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Done — Send Answer")
+                        .font(Typography.bodyBold)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 18)
+                .background(ColorTokens.info)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, Spacing.lg)
+
+        default:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Bottom Controls
+
+    private var bottomControls: some View {
         VStack(spacing: Spacing.md) {
-            // Camera preview pill + transcript button
             HStack(spacing: Spacing.md) {
                 if viewModel.proctor.cameraEnabled {
                     cameraPill
@@ -243,7 +344,6 @@ struct InterviewLiveView: View {
                 .buttonStyle(.plain)
             }
 
-            // End Interview button
             Button {
                 Haptics.warning()
                 showEndConfirm = true
@@ -289,7 +389,6 @@ struct InterviewLiveView: View {
                     }
             }
 
-            // Proctoring status indicator
             if case .alert(let msg) = viewModel.proctor.currentStatus {
                 VStack {
                     Spacer()
@@ -417,7 +516,6 @@ struct InterviewLiveView: View {
 
     private var starterContent: some View {
         VStack(spacing: Spacing.xl) {
-            // Interview type icon
             ZStack {
                 Circle()
                     .fill(viewModel.selectedType.color.opacity(0.12))
@@ -430,7 +528,6 @@ struct InterviewLiveView: View {
                     .foregroundStyle(viewModel.selectedType.color)
             }
 
-            // Title
             VStack(spacing: Spacing.sm) {
                 Text("Your Interview is About to Begin")
                     .font(.system(size: 22, weight: .bold))
@@ -442,7 +539,6 @@ struct InterviewLiveView: View {
                     .foregroundStyle(viewModel.selectedType.color)
             }
 
-            // Role + company
             if !viewModel.targetRole.isEmpty {
                 VStack(spacing: 4) {
                     Text(viewModel.targetRole)
@@ -460,7 +556,6 @@ struct InterviewLiveView: View {
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
             }
 
-            // Quick Tips
             VStack(alignment: .leading, spacing: Spacing.md) {
                 Text("Quick Tips")
                     .font(Typography.captionBold)
@@ -496,7 +591,6 @@ struct InterviewLiveView: View {
     }
 
     private func startStarterSequence() {
-        // Show content for 3 seconds, then begin countdown
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             withAnimation(Motion.easeOut) {
                 showCountdown = true
@@ -507,14 +601,12 @@ struct InterviewLiveView: View {
 
     private func animateCountdownDigit() {
         guard countdownValue > 0 else {
-            // Countdown finished — dismiss starter
             withAnimation(.easeInOut(duration: 0.3)) {
                 showingStarter = false
             }
             return
         }
 
-        // Reset for new digit
         countdownScale = 0.5
         countdownOpacity = 0
 
@@ -523,7 +615,6 @@ struct InterviewLiveView: View {
             countdownOpacity = 1.0
         }
 
-        // Fade out before next digit
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             withAnimation(.easeOut(duration: 0.25)) {
                 countdownOpacity = 0
