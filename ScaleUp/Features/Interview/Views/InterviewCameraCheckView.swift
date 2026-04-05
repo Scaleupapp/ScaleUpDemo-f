@@ -6,25 +6,39 @@ import AVFoundation
 struct CameraPreviewView: UIViewRepresentable {
     let session: AVCaptureSession
 
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        let previewLayer = AVCaptureVideoPreviewLayer(session: session)
-        previewLayer.videoGravity = .resizeAspectFill
-        view.layer.addSublayer(previewLayer)
-        context.coordinator.previewLayer = previewLayer
+    func makeUIView(context: Context) -> CameraPreviewUIView {
+        let view = CameraPreviewUIView()
+        view.backgroundColor = .black
+        // Defer session attachment to avoid crash during SwiftUI layout
+        DispatchQueue.main.async {
+            view.attachSession(session)
+        }
         return view
     }
 
-    func updateUIView(_ uiView: UIView, context: Context) {
-        DispatchQueue.main.async {
-            context.coordinator.previewLayer?.frame = uiView.bounds
-        }
+    func updateUIView(_ uiView: CameraPreviewUIView, context: Context) {
+        uiView.updateFrame()
+    }
+}
+
+class CameraPreviewUIView: UIView {
+    private var previewLayer: AVCaptureVideoPreviewLayer?
+
+    func attachSession(_ session: AVCaptureSession) {
+        let layer = AVCaptureVideoPreviewLayer(session: session)
+        layer.videoGravity = .resizeAspectFill
+        layer.frame = bounds
+        self.layer.addSublayer(layer)
+        previewLayer = layer
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator() }
+    func updateFrame() {
+        previewLayer?.frame = bounds
+    }
 
-    class Coordinator {
-        var previewLayer: AVCaptureVideoPreviewLayer?
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        previewLayer?.frame = bounds
     }
 }
 

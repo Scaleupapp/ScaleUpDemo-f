@@ -123,9 +123,12 @@ final class GeminiLiveManager {
             throw GeminiError.audioSetupFailed("No audio input available.")
         }
 
-        // Install mic tap
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
-            guard let self else { return }
+        // Capture a reference to the live session outside the closure
+        // to avoid accessing @MainActor-isolated self from the audio thread
+        let session = self.liveSession
+
+        // Install mic tap — this closure runs on an audio thread, NOT main actor
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { buffer, _ in
             guard let channelData = buffer.floatChannelData else { return }
             let frameCount = Int(buffer.frameLength)
             guard frameCount > 0 else { return }
@@ -140,10 +143,9 @@ final class GeminiLiveManager {
                 }
             }
 
-            Task { @MainActor [weak self] in
-                guard let self, self.isConnected else { return }
-                self.isUserSpeaking = true
-                try? await self.liveSession?.sendAudioRealtime(pcmData)
+            // Send on a detached task to avoid MainActor isolation issues
+            Task.detached {
+                try? await session?.sendAudioRealtime(pcmData)
             }
         }
 
