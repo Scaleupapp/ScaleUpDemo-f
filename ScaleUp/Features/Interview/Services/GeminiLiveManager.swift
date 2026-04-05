@@ -148,9 +148,14 @@ final class GeminiLiveManager {
         isConnected = true
         interviewStartTime = Date()
 
-        // Start receiving
+        // Start receiving AI responses
         Task { [weak self] in
             await self?.receiveResponses()
+        }
+
+        // Send initial text prompt to trigger the AI to start speaking
+        Task.detached {
+            await session.sendTextRealtime("Please begin the interview. Introduce yourself and ask the first question.")
         }
 
         // Start mic on background — completely isolated from MainActor

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct InterviewResultsView: View {
     @Bindable var viewModel: InterviewViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var scoreAnimated = false
     @State private var showNewInterview = false
 
@@ -14,12 +15,43 @@ struct InterviewResultsView: View {
             } else if let evaluation = viewModel.evaluation {
                 ScrollView {
                     VStack(spacing: Spacing.xl) {
+                        // Close button
+                        HStack {
+                            Spacer()
+                            Button {
+                                dismiss()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                            }
+                        }
+
                         scoreCircle(evaluation)
                         subScores(evaluation)
                         summarySection(evaluation)
                         strengthsAndImprovements(evaluation)
                         integrityBadge(evaluation)
                         perQuestionSection(evaluation)
+
+                        // Back to profile button
+                        Button {
+                            dismiss()
+                        } label: {
+                            HStack(spacing: Spacing.sm) {
+                                Image(systemName: "arrow.left")
+                                    .font(.system(size: 14, weight: .semibold))
+                                Text("Back to Profile")
+                                    .font(Typography.bodyBold)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(ColorTokens.surface)
+                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+                        }
+                        .buttonStyle(.plain)
+
                         newInterviewButton
                         Spacer().frame(height: Spacing.xxl)
                     }
