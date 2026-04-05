@@ -22,22 +22,25 @@ struct InterviewLiveView: View {
                 topBar
                     .padding(.bottom, Spacing.sm)
 
-                // Current question card
-                if !viewModel.geminiManager.currentQuestion.isEmpty {
-                    currentQuestionCard
-                        .padding(.bottom, Spacing.md)
+                // Scrollable middle section
+                ScrollView {
+                    VStack(spacing: Spacing.lg) {
+                        // Current question card (only during Q&A)
+                        if viewModel.geminiManager.greetingDone,
+                           !viewModel.geminiManager.currentQuestion.isEmpty {
+                            currentQuestionCard
+                        }
+
+                        // Center state indicator
+                        centerIndicator
+                            .frame(minHeight: 180)
+                    }
+                    .padding(.top, Spacing.md)
                 }
 
-                Spacer()
-
-                // Center state indicator
-                centerIndicator
-
-                Spacer()
-
-                // Main action button
-                actionButton
-                    .padding(.bottom, Spacing.md)
+                // Action buttons — always at bottom, never blocked
+                actionSection
+                    .padding(.top, Spacing.sm)
 
                 bottomControls
             }
@@ -92,13 +95,15 @@ struct InterviewLiveView: View {
 
             Spacer()
 
-            Text("Q\(viewModel.questionCount)/~10")
-                .font(Typography.captionBold)
-                .foregroundStyle(ColorTokens.gold)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(ColorTokens.gold.opacity(0.15))
-                .clipShape(Capsule())
+            if viewModel.geminiManager.greetingDone {
+                Text("Q\(viewModel.questionCount)/~10")
+                    .font(Typography.captionBold)
+                    .foregroundStyle(ColorTokens.gold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(ColorTokens.gold.opacity(0.15))
+                    .clipShape(Capsule())
+            }
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -139,6 +144,8 @@ struct InterviewLiveView: View {
         switch turn {
         case .aiSpeaking:
             aiSpeakingIndicator
+        case .readyCheck:
+            readyCheckIndicator
         case .waitingToAnswer:
             waitingToAnswerIndicator
         case .userRecording:
@@ -153,20 +160,20 @@ struct InterviewLiveView: View {
             ZStack {
                 Circle()
                     .fill(ColorTokens.gold.opacity(0.08))
-                    .frame(width: 140, height: 140)
+                    .frame(width: 130, height: 130)
                     .scaleEffect(pulseScale)
 
                 Circle()
                     .fill(ColorTokens.gold.opacity(0.15))
-                    .frame(width: 96, height: 96)
+                    .frame(width: 88, height: 88)
                     .scaleEffect(pulseScale * 0.9)
 
                 Circle()
                     .fill(ColorTokens.gold.opacity(0.25))
-                    .frame(width: 64, height: 64)
+                    .frame(width: 60, height: 60)
 
                 Image(systemName: "waveform")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 22, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
             }
             .onAppear {
@@ -176,8 +183,34 @@ struct InterviewLiveView: View {
             }
             .onDisappear { pulseScale = 1.0 }
 
-            Text("Interviewer is speaking...")
+            Text(viewModel.geminiManager.greetingDone ? "Interviewer is speaking..." : "The interviewer is greeting you...")
                 .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+    }
+
+    private var readyCheckIndicator: some View {
+        VStack(spacing: Spacing.lg) {
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.success.opacity(0.08))
+                    .frame(width: 120, height: 120)
+
+                Circle()
+                    .fill(ColorTokens.success.opacity(0.15))
+                    .frame(width: 80, height: 80)
+
+                Image(systemName: "hand.wave.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(ColorTokens.success)
+            }
+
+            Text("The interviewer is ready for you")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.textPrimary)
+
+            Text("Tap below when you're ready to start")
+                .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textSecondary)
         }
     }
@@ -187,14 +220,14 @@ struct InterviewLiveView: View {
             ZStack {
                 Circle()
                     .fill(ColorTokens.success.opacity(0.06))
-                    .frame(width: 130, height: 130)
+                    .frame(width: 120, height: 120)
 
                 Circle()
                     .fill(ColorTokens.success.opacity(0.12))
-                    .frame(width: 100, height: 100)
+                    .frame(width: 88, height: 88)
 
                 Image(systemName: "mic.fill")
-                    .font(.system(size: 36, weight: .semibold))
+                    .font(.system(size: 32, weight: .semibold))
                     .foregroundStyle(ColorTokens.success)
             }
 
@@ -207,21 +240,20 @@ struct InterviewLiveView: View {
     private var recordingIndicator: some View {
         VStack(spacing: Spacing.lg) {
             ZStack {
-                // Audio level reactive ring
                 Circle()
                     .fill(ColorTokens.success.opacity(0.06))
                     .frame(
-                        width: 110 + normalizedAudioLevel * 80,
-                        height: 110 + normalizedAudioLevel * 80
+                        width: 100 + normalizedAudioLevel * 60,
+                        height: 100 + normalizedAudioLevel * 60
                     )
                     .animation(.easeOut(duration: 0.1), value: normalizedAudioLevel)
 
                 Circle()
                     .fill(ColorTokens.success.opacity(0.12))
-                    .frame(width: 100, height: 100)
+                    .frame(width: 88, height: 88)
 
                 Image(systemName: "waveform")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(ColorTokens.success)
             }
 
@@ -231,7 +263,7 @@ struct InterviewLiveView: View {
                     .foregroundStyle(ColorTokens.success)
 
                 Text(formatDuration(viewModel.geminiManager.answerDuration))
-                    .font(.system(size: 24, weight: .bold, design: .monospaced))
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(ColorTokens.success)
             }
         }
@@ -242,7 +274,7 @@ struct InterviewLiveView: View {
             ZStack {
                 Circle()
                     .fill(ColorTokens.surfaceElevated)
-                    .frame(width: 100, height: 100)
+                    .frame(width: 88, height: 88)
 
                 ProgressView()
                     .tint(ColorTokens.gold)
@@ -265,11 +297,43 @@ struct InterviewLiveView: View {
         return String(format: "%d:%02d", m, s)
     }
 
-    // MARK: - Action Button
+    // MARK: - Action Section
 
     @ViewBuilder
-    private var actionButton: some View {
+    private var actionSection: some View {
         switch turn {
+        case .readyCheck:
+            VStack(spacing: Spacing.sm) {
+                Button {
+                    Haptics.medium()
+                    viewModel.geminiManager.confirmReady()
+                } label: {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                        Text("I'm Ready — Let's Begin")
+                            .font(Typography.bodyBold)
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 18)
+                    .background(ColorTokens.success)
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    viewModel.geminiManager.declineAndExit()
+                    // ViewModel will handle navigation back
+                } label: {
+                    Text("Not Now — Come Back Later")
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, Spacing.lg)
+
         case .waitingToAnswer:
             Button {
                 Haptics.medium()
@@ -326,22 +390,24 @@ struct InterviewLiveView: View {
 
                 Spacer()
 
-                Button {
-                    showTranscript = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "text.bubble")
-                            .font(.system(size: 12))
-                        Text("Transcript")
-                            .font(Typography.caption)
+                if viewModel.geminiManager.greetingDone {
+                    Button {
+                        showTranscript = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "text.bubble")
+                                .font(.system(size: 12))
+                            Text("Transcript")
+                                .font(Typography.caption)
+                        }
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(Capsule())
                     }
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(ColorTokens.surfaceElevated)
-                    .clipShape(Capsule())
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
 
             Button {
@@ -498,20 +564,16 @@ struct InterviewLiveView: View {
 
             VStack(spacing: Spacing.xl) {
                 Spacer()
-
                 if showCountdown {
                     countdownDisplay
                 } else {
                     starterContent
                 }
-
                 Spacer()
             }
         }
         .transition(.opacity)
-        .onAppear {
-            startStarterSequence()
-        }
+        .onAppear { startStarterSequence() }
     }
 
     private var starterContent: some View {
@@ -592,36 +654,28 @@ struct InterviewLiveView: View {
 
     private func startStarterSequence() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            withAnimation(Motion.easeOut) {
-                showCountdown = true
-            }
+            withAnimation(Motion.easeOut) { showCountdown = true }
             animateCountdownDigit()
         }
     }
 
     private func animateCountdownDigit() {
         guard countdownValue > 0 else {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showingStarter = false
-            }
+            withAnimation(.easeInOut(duration: 0.3)) { showingStarter = false }
             return
         }
-
         countdownScale = 0.5
         countdownOpacity = 0
-
         withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
             countdownScale = 1.0
             countdownOpacity = 1.0
         }
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             withAnimation(.easeOut(duration: 0.25)) {
                 countdownOpacity = 0
                 countdownScale = 1.3
             }
         }
-
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             countdownValue -= 1
             animateCountdownDigit()

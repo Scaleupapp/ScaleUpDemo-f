@@ -45,7 +45,7 @@ final class AudioSender: @unchecked Sendable {
             let frameCount = Int(buffer.frameLength)
             guard frameCount > 0 else { return }
 
-            // Audio level (throttled ~10 fps) — always active for visual feedback
+            // Audio level (throttled ~10 fps)
             let now = Date()
             if now.timeIntervalSince(self.lastLevelTime) > 0.1 {
                 self.lastLevelTime = now
@@ -61,10 +61,9 @@ final class AudioSender: @unchecked Sendable {
                 self.onAudioLevel?(rms)
             }
 
-            // Only send audio to Gemini when explicitly enabled (push-to-talk)
+            // Only send audio to Gemini when explicitly enabled
             guard self.isSendingAudio else { return }
 
-            // Resample from hardware rate to 16 kHz via linear interpolation
             let outputCount = Int(Double(frameCount) * dstRate / srcRate)
             guard outputCount > 0 else { return }
 
@@ -129,8 +128,9 @@ final class AudioSender: @unchecked Sendable {
 
 /// Interview turn state — drives the entire UI.
 enum InterviewTurn: Equatable {
-    case aiSpeaking         // AI is delivering a question
-    case waitingToAnswer    // AI finished, user hasn't tapped yet
+    case aiSpeaking         // AI is speaking (greeting or question)
+    case readyCheck         // After greeting — "Are you ready?"
+    case waitingToAnswer    // After a question — user hasn't tapped yet
     case userRecording      // User tapped mic, audio flowing to Gemini
     case processing         // User tapped done, waiting for AI to respond
 }
@@ -146,6 +146,9 @@ final class GeminiLiveManager {
     var questionCount = 0
     var answerDuration: TimeInterval = 0
 
+    /// Has the AI finished its greeting and user confirmed ready?
+    private(set) var greetingDone = false
+
     private var liveSession: LiveSession?
     private let audioSender = AudioSender()
     private var interviewStartTime = Date()
@@ -156,7 +159,6 @@ final class GeminiLiveManager {
     // MARK: - Start Session
 
     func startSession(systemInstruction: String) async throws {
-        // Firebase
         if FirebaseApp.app() == nil {
             guard Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist") != nil else {
                 throw GeminiError.firebaseConfigFailed("GoogleService-Info.plist not found in app bundle.")
@@ -167,7 +169,6 @@ final class GeminiLiveManager {
             throw GeminiError.firebaseConfigFailed("Firebase failed to initialize.")
         }
 
-        // Audio session
         do {
             let audioSession = AVAudioSession.sharedInstance()
             try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
@@ -176,7 +177,6 @@ final class GeminiLiveManager {
             throw GeminiError.audioSetupFailed("Audio session: \(error.localizedDescription)")
         }
 
-        // Gemini
         let model = FirebaseAI.firebaseAI(backend: .googleAI()).liveModel(
             modelName: "gemini-2.5-flash-native-audio-preview-12-2025",
             generationConfig: LiveGenerationConfig(
@@ -198,24 +198,23 @@ final class GeminiLiveManager {
         interviewStartTime = Date()
         turn = .aiSpeaking
 
-        // Start receiving AI responses
         Task { [weak self] in
             await self?.receiveResponses()
         }
 
-        // Send initial text prompt — AI introduces itself
+        // Brief greeting only — no questions yet
         Task.detached {
-            await session.sendTextRealtime("Please begin the interview. Introduce yourself and ask the first question.")
+            await session.sendTextRealtime(
+                "Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: 'Are you ready to begin?' Do NOT ask any interview questions yet. Keep it brief and warm."
+            )
         }
 
-        // Audio level callback for visual feedback
         audioSender.onAudioLevel = { [weak self] level in
             Task { @MainActor [weak self] in
                 self?.audioLevel = level
             }
         }
 
-        // Start audio engine (mic NOT sending yet — push-to-talk)
         do {
             try audioSender.start(session: session)
         } catch {
@@ -223,9 +222,28 @@ final class GeminiLiveManager {
         }
     }
 
+    // MARK: - Ready Check
+
+    /// User confirmed they're ready — tell AI to start questioning.
+    func confirmReady() {
+        greetingDone = true
+        turn = .processing
+
+        Task.detached { [weak self] in
+            guard let session = await self?.liveSession else { return }
+            await session.sendTextRealtime(
+                "The candidate is ready. Ask the first interview question now. Keep it concise and direct."
+            )
+        }
+    }
+
+    /// User is not ready — end session for now.
+    func declineAndExit() {
+        endSession()
+    }
+
     // MARK: - Push-to-Talk Controls
 
-    /// User tapped "Start Answering" — begin sending mic audio to Gemini.
     func startAnswering() {
         guard turn == .waitingToAnswer else { return }
         turn = .userRecording
@@ -233,7 +251,6 @@ final class GeminiLiveManager {
         answerDuration = 0
         audioSender.isSendingAudio = true
 
-        // Timer to show recording duration
         answerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
@@ -242,7 +259,6 @@ final class GeminiLiveManager {
         }
     }
 
-    /// User tapped "Done" — stop sending audio and tell Gemini to move on.
     func finishAnswering() {
         guard turn == .userRecording else { return }
         audioSender.isSendingAudio = false
@@ -250,7 +266,6 @@ final class GeminiLiveManager {
         answerTimer = nil
         turn = .processing
 
-        // Record a placeholder for the user's answer in transcript
         let elapsed = Date().timeIntervalSince(interviewStartTime)
         let duration = Date().timeIntervalSince(answerStartTime)
         transcript.append(TranscriptEntry(
@@ -260,10 +275,11 @@ final class GeminiLiveManager {
             createdAt: Date()
         ))
 
-        // Signal Gemini to proceed
         Task.detached { [weak self] in
             guard let session = await self?.liveSession else { return }
-            await session.sendTextRealtime("The candidate has finished answering. Based on their response, decide: either ask a follow-up question to probe deeper, or move to the next topic. Do not repeat what they said.")
+            await session.sendTextRealtime(
+                "The candidate has finished answering. Based on their response, decide: either ask a follow-up question to probe deeper, or move to the next topic. Do not repeat what they said. Be concise."
+            )
         }
     }
 
@@ -285,7 +301,6 @@ final class GeminiLiveManager {
         do {
             for try await message in session.responses {
                 if case let .content(content) = message.payload {
-                    // AI is speaking — update turn
                     if turn != .aiSpeaking {
                         turn = .aiSpeaking
                     }
@@ -303,14 +318,19 @@ final class GeminiLiveManager {
                     }
 
                     if content.isTurnComplete {
-                        // Process accumulated text as one complete turn
                         let text = pendingAIText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !text.isEmpty {
-                            processCompletedAITurn(text)
-                        }
                         pendingAIText = ""
-                        // AI finished — now user can answer
-                        turn = .waitingToAnswer
+
+                        if !greetingDone {
+                            // Greeting just finished — show ready check
+                            turn = .readyCheck
+                        } else {
+                            // Process as a question turn
+                            if !text.isEmpty {
+                                processCompletedAITurn(text)
+                            }
+                            turn = .waitingToAnswer
+                        }
                     }
                 }
             }
@@ -323,55 +343,89 @@ final class GeminiLiveManager {
     // MARK: - Process Completed AI Turn
 
     private func processCompletedAITurn(_ rawText: String) {
-        let cleaned = cleanAIText(rawText)
-        guard !cleaned.isEmpty else { return }
+        // The text from Gemini native audio is internal "thinking" — NOT what was spoken.
+        // Extract only candidate-facing sentences (questions, direct address).
+        let cleaned = extractSpokenContent(rawText)
+        let elapsed = Date().timeIntervalSince(interviewStartTime)
 
         let lower = cleaned.lowercased()
         let isClosing = lower.contains("concludes our interview") || lower.contains("end of our interview")
-        let isFollowUp = lower.contains("elaborate") || lower.contains("tell me more") || lower.contains("can you give")
-        let elapsed = Date().timeIntervalSince(interviewStartTime)
+        let isFollowUp = lower.contains("elaborate") || lower.contains("tell me more") || lower.contains("can you give") || lower.contains("follow up") || lower.contains("follow-up") || lower.contains("could you expand")
 
         if !isFollowUp && !isClosing { questionCount += 1 }
 
+        // Store the cleaned version (may be empty if all text was reasoning)
+        let displayText = cleaned.isEmpty ? "Question \(questionCount)" : cleaned
+
         transcript.append(TranscriptEntry(
-            role: "interviewer", content: cleaned,
+            role: "interviewer", content: displayText,
             questionNumber: isClosing ? nil : questionCount,
             isFollowUp: isFollowUp, timestamp: elapsed,
             responseDuration: nil, createdAt: Date()
         ))
 
         if !isClosing {
-            currentQuestion = cleaned
+            currentQuestion = displayText
         }
     }
 
-    // MARK: - Clean AI Text
+    // MARK: - Extract Spoken Content
 
-    private func cleanAIText(_ text: String) -> String {
-        var result = text
-        result = result.replacingOccurrences(of: "**", with: "")
+    /// Gemini native audio model sends "thinking" text, not spoken text.
+    /// This extracts only sentences likely directed at the candidate.
+    private func extractSpokenContent(_ text: String) -> String {
+        var cleaned = text
+        // Strip markdown
+        cleaned = cleaned.replacingOccurrences(of: "**", with: "")
+        cleaned = cleaned.replacingOccurrences(of: "\\n\\n", with: "\n")
+        cleaned = cleaned.replacingOccurrences(of: "\\n", with: "\n")
 
-        let lines = result.components(separatedBy: .newlines)
-        let filtered = lines.compactMap { line -> String? in
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty { return nil }
+        // Split into rough sentences
+        cleaned = cleaned.replacingOccurrences(of: "\n", with: ". ")
+        // Normalize sentence boundaries
+        var normalized = cleaned
+            .replacingOccurrences(of: "? ", with: "?\n")
+            .replacingOccurrences(of: ". ", with: ".\n")
+            .replacingOccurrences(of: "! ", with: "!\n")
+        let sentences = normalized.components(separatedBy: "\n")
 
-            let reasoningPrefixes = [
-                "Refining", "Formulating", "Crafting", "Rephrasing", "Preparing",
-                "Analyzing", "Considering", "Evaluating", "Structuring", "Planning",
-                "Drafting", "Composing", "Developing", "Designing", "Outlining",
-                "Integrating", "Assessing", "Reviewing", "Determining", "Generating"
+        let kept = sentences.compactMap { raw -> String? in
+            let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard s.count > 3 else { return nil }
+            let lower = s.lowercased()
+
+            // KEEP: questions (contain ?)
+            if s.contains("?") { return s }
+
+            // KEEP: sentences addressing the candidate
+            let addressPatterns = [" you ", "your ", "you're", "you've", "yourself"]
+            if addressPatterns.contains(where: { lower.contains($0) }) { return s }
+
+            // KEEP: greetings
+            let greetings = ["hello", "hi ", "welcome", "good morning", "good afternoon", "good evening", "nice to meet"]
+            if greetings.contains(where: { lower.hasPrefix($0) || lower.contains($0) }) { return s }
+
+            // DROP: first-person reasoning / planning
+            let dropPatterns = [
+                "i've ", "i'm ", "i am ", "i'll ", "i will ", "i have ",
+                "my goal", "my approach", "my prompt", "my chosen", "my plan",
+                "it's designed", "the goal is", "the case involves",
+                "focusing on", "structured it", "to avoid repeating",
+                "launching the", "defining the", "refining the", "formulating the",
+                "crafting the", "preparing the", "designing the",
+                "carefully avoiding", "previously used",
+                "explores strategic", "incorporating",
             ]
-            for prefix in reasoningPrefixes {
-                if trimmed.hasPrefix(prefix) && trimmed.count < 60 && !trimmed.contains("?") {
-                    return nil
-                }
-            }
-            return trimmed
+            if dropPatterns.contains(where: { lower.contains($0) }) { return nil }
+
+            // DROP: short header-like text without punctuation
+            if s.count < 50 && !s.contains("?") && !s.contains(",") { return nil }
+
+            // Default: keep if it seems conversational (has common words)
+            return nil
         }
 
-        result = filtered.joined(separator: " ")
-        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+        return kept.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     var isInterviewComplete: Bool {
