@@ -6,7 +6,6 @@ struct InterviewLiveView: View {
     @State private var showEndConfirm = false
     @State private var showTranscript = false
     @State private var pulseScale: CGFloat = 1.0
-    @State private var wavePhase: CGFloat = 0
     @State private var showingStarter = true
     @State private var countdownValue = 3
     @State private var countdownScale: CGFloat = 0.5
@@ -93,33 +92,48 @@ struct InterviewLiveView: View {
     // MARK: - Conversation Status
 
     private var conversationStatus: some View {
-        VStack(spacing: Spacing.xl) {
+        VStack(spacing: Spacing.lg) {
+            // Current question card (visible after first question)
+            if !viewModel.geminiManager.currentQuestion.isEmpty {
+                currentQuestionCard
+            }
+
+            // State indicator
             if viewModel.geminiManager.isAISpeaking {
                 aiSpeakingIndicator
-            } else if viewModel.geminiManager.isUserSpeaking {
-                userSpeakingIndicator
             } else {
-                waitingIndicator
-            }
-
-            // Latest transcript
-            if let lastEntry = viewModel.transcript.last {
-                VStack(spacing: Spacing.sm) {
-                    Text(lastEntry.isInterviewer ? "Interviewer" : "You")
-                        .font(Typography.captionBold)
-                        .foregroundStyle(lastEntry.isInterviewer ? ColorTokens.gold : ColorTokens.success)
-
-                    Text(lastEntry.content)
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(4)
-                        .padding(.horizontal, Spacing.xl)
-                }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-                .animation(Motion.easeOut, value: viewModel.transcript.count)
+                userTurnIndicator
             }
         }
+    }
+
+    // MARK: - Current Question Card
+
+    private var currentQuestionCard: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: "quote.bubble.fill")
+                    .font(.system(size: 12))
+                Text("Question \(viewModel.questionCount)")
+                    .font(Typography.captionBold)
+            }
+            .foregroundStyle(ColorTokens.gold)
+
+            Text(viewModel.geminiManager.currentQuestion)
+                .font(Typography.body)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .lineLimit(6)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.large)
+                .stroke(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+        )
+        .padding(.horizontal, Spacing.lg)
     }
 
     // MARK: - AI Speaking Indicator
@@ -127,25 +141,22 @@ struct InterviewLiveView: View {
     private var aiSpeakingIndicator: some View {
         VStack(spacing: Spacing.lg) {
             ZStack {
-                // Outer pulsing circle
                 Circle()
                     .fill(ColorTokens.gold.opacity(0.08))
-                    .frame(width: 160, height: 160)
+                    .frame(width: 140, height: 140)
                     .scaleEffect(pulseScale)
 
-                // Middle circle
                 Circle()
                     .fill(ColorTokens.gold.opacity(0.15))
-                    .frame(width: 110, height: 110)
+                    .frame(width: 96, height: 96)
                     .scaleEffect(pulseScale * 0.9)
 
-                // Inner circle with icon
                 Circle()
                     .fill(ColorTokens.gold.opacity(0.25))
-                    .frame(width: 72, height: 72)
+                    .frame(width: 64, height: 64)
 
                 Image(systemName: "waveform")
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
             }
             .onAppear {
@@ -161,64 +172,45 @@ struct InterviewLiveView: View {
         }
     }
 
-    // MARK: - User Speaking Indicator
+    // MARK: - User Turn Indicator
 
-    private var userSpeakingIndicator: some View {
-        VStack(spacing: Spacing.lg) {
+    private var userTurnIndicator: some View {
+        VStack(spacing: Spacing.md) {
             ZStack {
-                Circle()
-                    .fill(ColorTokens.success.opacity(0.1))
-                    .frame(width: 120, height: 120)
-
-                // Waveform bars
-                HStack(spacing: 4) {
-                    ForEach(0..<5, id: \.self) { i in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(ColorTokens.success)
-                            .frame(width: 4, height: waveHeight(for: i))
-                            .animation(
-                                .easeInOut(duration: 0.4)
-                                    .repeatForever(autoreverses: true)
-                                    .delay(Double(i) * 0.1),
-                                value: wavePhase
-                            )
-                    }
+                // Audio level reactive ring
+                if viewModel.geminiManager.isUserSpeaking {
+                    Circle()
+                        .fill(ColorTokens.success.opacity(0.06))
+                        .frame(
+                            width: 110 + normalizedAudioLevel * 80,
+                            height: 110 + normalizedAudioLevel * 80
+                        )
+                        .animation(.easeOut(duration: 0.1), value: normalizedAudioLevel)
                 }
-            }
-            .onAppear {
-                wavePhase = 1
-            }
-            .onDisappear { wavePhase = 0 }
 
-            Text("You're speaking...")
-                .font(Typography.bodyBold)
-                .foregroundStyle(ColorTokens.success)
-        }
-    }
-
-    private func waveHeight(for index: Int) -> CGFloat {
-        let heights: [CGFloat] = [20, 32, 44, 28, 36]
-        return wavePhase == 0 ? 12 : heights[index]
-    }
-
-    // MARK: - Waiting Indicator
-
-    private var waitingIndicator: some View {
-        VStack(spacing: Spacing.lg) {
-            ZStack {
                 Circle()
-                    .fill(ColorTokens.surfaceElevated)
+                    .fill(viewModel.geminiManager.isUserSpeaking
+                          ? ColorTokens.success.opacity(0.12)
+                          : ColorTokens.surfaceElevated)
                     .frame(width: 100, height: 100)
 
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 32))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                Image(systemName: viewModel.geminiManager.isUserSpeaking ? "waveform" : "mic.fill")
+                    .font(.system(size: 32, weight: viewModel.geminiManager.isUserSpeaking ? .semibold : .regular))
+                    .foregroundStyle(viewModel.geminiManager.isUserSpeaking
+                                     ? ColorTokens.success
+                                     : ColorTokens.textTertiary)
             }
 
-            Text("Listening...")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textTertiary)
+            Text(viewModel.geminiManager.isUserSpeaking ? "Listening to you..." : "Your turn — speak now")
+                .font(Typography.bodyBold)
+                .foregroundStyle(viewModel.geminiManager.isUserSpeaking
+                                 ? ColorTokens.success
+                                 : ColorTokens.textSecondary)
         }
+    }
+
+    private var normalizedAudioLevel: CGFloat {
+        CGFloat(min(viewModel.geminiManager.audioLevel / 0.08, 1.0))
     }
 
     // MARK: - Bottom Section

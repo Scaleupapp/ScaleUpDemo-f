@@ -50,11 +50,7 @@ final class InterviewViewModel {
 
     var transcript: [TranscriptEntry] { geminiManager.transcript }
 
-    var questionCount: Int {
-        geminiManager.transcript
-            .filter { $0.isInterviewer && $0.questionNumber != nil && $0.isFollowUp != true }
-            .count
-    }
+    var questionCount: Int { geminiManager.questionCount }
 
     var evaluation: InterviewEvaluation?
     var fullSession: InterviewSession?

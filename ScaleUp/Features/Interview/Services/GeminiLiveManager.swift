@@ -12,7 +12,8 @@ final class AudioSender: @unchecked Sendable {
     private var playerNode: AVAudioPlayerNode?
     private weak var session: LiveSession?
     private let queue = DispatchQueue(label: "com.scaleup.audiosender")
-    var onAudioData: ((Data) -> Void)?
+    var onAudioLevel: ((Float) -> Void)?
+    private var lastLevelTime = Date.distantPast
 
     func start(session: LiveSession) throws {
         self.session = session
@@ -31,18 +32,49 @@ final class AudioSender: @unchecked Sendable {
             throw GeminiError.audioSetupFailed("No audio input available.")
         }
 
-        // Capture session ref — closure is NOT @MainActor
         let capturedSession = session
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { buffer, _ in
+        let srcRate = hwFormat.sampleRate
+        let dstRate: Double = 16000
+
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
             guard let channelData = buffer.floatChannelData else { return }
             let frameCount = Int(buffer.frameLength)
             guard frameCount > 0 else { return }
 
-            var pcmData = Data(count: frameCount * 2)
+            // Resample from hardware rate to 16 kHz via linear interpolation
+            let outputCount = Int(Double(frameCount) * dstRate / srcRate)
+            guard outputCount > 0 else { return }
+
+            // Audio level (throttled ~10 fps)
+            if let self {
+                let now = Date()
+                if now.timeIntervalSince(self.lastLevelTime) > 0.1 {
+                    self.lastLevelTime = now
+                    var sum: Float = 0
+                    let step = max(1, frameCount / 256)
+                    var count = 0
+                    for i in Swift.stride(from: 0, to: frameCount, by: step) {
+                        let s = channelData[0][i]
+                        sum += s * s
+                        count += 1
+                    }
+                    let rms = sqrt(sum / Float(max(1, count)))
+                    self.onAudioLevel?(rms)
+                }
+            }
+
+            // Convert to 16 kHz PCM Int16
+            var pcmData = Data(count: outputCount * 2)
             pcmData.withUnsafeMutableBytes { rawBuffer in
                 let ptr = rawBuffer.bindMemory(to: Int16.self)
-                for i in 0..<frameCount {
-                    let sample = max(-1.0, min(1.0, channelData[0][i]))
+                for i in 0..<outputCount {
+                    let srcPos = Double(i) * srcRate / dstRate
+                    let srcIdx = Int(srcPos)
+                    let frac = Float(srcPos - Double(srcIdx))
+
+                    let s0 = channelData[0][min(srcIdx, frameCount - 1)]
+                    let s1 = channelData[0][min(srcIdx + 1, frameCount - 1)]
+                    let sample = max(-1.0, min(1.0, s0 + (s1 - s0) * frac))
                     ptr[i] = Int16(sample * Float(Int16.max))
                 }
             }
@@ -97,12 +129,16 @@ final class GeminiLiveManager {
     var isUserSpeaking = false
     var transcript: [TranscriptEntry] = []
     var error: String?
+    var currentQuestion: String = ""
+    var audioLevel: Float = 0
+    var questionCount = 0
 
     private var liveSession: LiveSession?
     private let audioSender = AudioSender()
-    private var questionCount = 0
     private var interviewStartTime = Date()
     private var lastAIFinishTime = Date()
+    private var lastUserSpeechTime = Date.distantPast
+    private var pendingAIText = ""
 
     // MARK: - Start Session
 
@@ -158,6 +194,21 @@ final class GeminiLiveManager {
             await session.sendTextRealtime("Please begin the interview. Introduce yourself and ask the first question.")
         }
 
+        // Audio level callback — detect user speaking
+        audioSender.onAudioLevel = { [weak self] level in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.audioLevel = level
+                if level > 0.01 && !self.isAISpeaking {
+                    self.isUserSpeaking = true
+                    self.lastUserSpeechTime = Date()
+                } else if self.isUserSpeaking,
+                          Date().timeIntervalSince(self.lastUserSpeechTime) > 1.5 {
+                    self.isUserSpeaking = false
+                }
+            }
+        }
+
         // Start mic on background — completely isolated from MainActor
         do {
             try audioSender.start(session: session)
@@ -192,7 +243,7 @@ final class GeminiLiveManager {
                                 audioSender.playAudio(inlinePart.data)
                             }
                             if let textPart = part as? TextPart, !textPart.text.isEmpty {
-                                handleAIText(textPart.text)
+                                pendingAIText += textPart.text + "\n"
                             }
                         }
                     }
@@ -200,6 +251,12 @@ final class GeminiLiveManager {
                     if content.isTurnComplete {
                         isAISpeaking = false
                         lastAIFinishTime = Date()
+                        // Process accumulated text as one complete turn
+                        let text = pendingAIText.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !text.isEmpty {
+                            processCompletedAITurn(text)
+                        }
+                        pendingAIText = ""
                     }
                 }
             }
@@ -209,24 +266,63 @@ final class GeminiLiveManager {
         }
     }
 
-    // MARK: - Transcript
+    // MARK: - Process Completed AI Turn
 
-    func handleAIText(_ text: String) {
-        guard !text.isEmpty else { return }
-        let isClosing = text.contains("concludes our interview") || text.contains("end of our interview")
-        let elapsed = Date().timeIntervalSince(interviewStartTime)
-        let lower = text.lowercased()
+    private func processCompletedAITurn(_ rawText: String) {
+        let cleaned = cleanAIText(rawText)
+        guard !cleaned.isEmpty else { return }
+
+        let lower = cleaned.lowercased()
+        let isClosing = lower.contains("concludes our interview") || lower.contains("end of our interview")
         let isFollowUp = lower.contains("elaborate") || lower.contains("tell me more") || lower.contains("can you give")
+        let elapsed = Date().timeIntervalSince(interviewStartTime)
 
         if !isFollowUp && !isClosing { questionCount += 1 }
 
         transcript.append(TranscriptEntry(
-            role: "interviewer", content: text,
+            role: "interviewer", content: cleaned,
             questionNumber: isClosing ? nil : questionCount,
             isFollowUp: isFollowUp, timestamp: elapsed,
             responseDuration: nil, createdAt: Date()
         ))
+
+        if !isClosing {
+            currentQuestion = cleaned
+        }
     }
+
+    // MARK: - Clean AI Text
+
+    private func cleanAIText(_ text: String) -> String {
+        var result = text
+        // Strip markdown bold markers
+        result = result.replacingOccurrences(of: "**", with: "")
+
+        let lines = result.components(separatedBy: .newlines)
+        let filtered = lines.compactMap { line -> String? in
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty { return nil }
+
+            // Skip reasoning-style headers (short gerund lines without punctuation)
+            let reasoningPrefixes = [
+                "Refining", "Formulating", "Crafting", "Rephrasing", "Preparing",
+                "Analyzing", "Considering", "Evaluating", "Structuring", "Planning",
+                "Drafting", "Composing", "Developing", "Designing", "Outlining",
+                "Integrating", "Assessing", "Reviewing", "Determining", "Generating"
+            ]
+            for prefix in reasoningPrefixes {
+                if trimmed.hasPrefix(prefix) && trimmed.count < 60 && !trimmed.contains("?") {
+                    return nil
+                }
+            }
+            return trimmed
+        }
+
+        result = filtered.joined(separator: " ")
+        return result.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Record User Response
 
     func recordUserResponse(_ text: String) {
         guard !text.isEmpty else { return }
