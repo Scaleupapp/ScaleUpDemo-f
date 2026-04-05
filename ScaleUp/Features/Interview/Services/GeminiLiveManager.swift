@@ -1,21 +1,20 @@
 import Foundation
 import AVFoundation
+import Speech
 import FirebaseCore
 import FirebaseAI
 
 // MARK: - Audio Sender (NOT MainActor — runs on audio thread)
 
-/// Handles mic capture and audio sending on a background queue.
-/// Completely decoupled from MainActor to avoid dispatch_assert_queue crashes.
 final class AudioSender: @unchecked Sendable {
     private var audioEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
     private weak var session: LiveSession?
-    private let queue = DispatchQueue(label: "com.scaleup.audiosender")
 
-    /// When false, mic is captured for level detection but NOT sent to Gemini.
     var isSendingAudio = false
     var onAudioLevel: ((Float) -> Void)?
+    /// Callback for raw audio buffers — used for speech recognition
+    var onAudioBuffer: ((AVAudioPCMBuffer) -> Void)?
     private var lastLevelTime = Date.distantPast
 
     func start(session: LiveSession) throws {
@@ -61,6 +60,11 @@ final class AudioSender: @unchecked Sendable {
                 self.onAudioLevel?(rms)
             }
 
+            // Forward buffer for speech recognition when recording
+            if self.isSendingAudio {
+                self.onAudioBuffer?(buffer)
+            }
+
             // Only send audio to Gemini when explicitly enabled
             guard self.isSendingAudio else { return }
 
@@ -95,6 +99,10 @@ final class AudioSender: @unchecked Sendable {
         self.playerNode = player
     }
 
+    var inputFormat: AVAudioFormat? {
+        audioEngine?.inputNode.outputFormat(forBus: 0)
+    }
+
     func playAudio(_ data: Data) {
         guard data.count > 1 else { return }
         let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
@@ -126,13 +134,12 @@ final class AudioSender: @unchecked Sendable {
 
 // MARK: - Gemini Live Manager
 
-/// Interview turn state — drives the entire UI.
 enum InterviewTurn: Equatable {
-    case aiSpeaking         // AI is speaking (greeting or question)
-    case readyCheck         // After greeting — "Are you ready?"
-    case waitingToAnswer    // After a question — user hasn't tapped yet
-    case userRecording      // User tapped mic, audio flowing to Gemini
-    case processing         // User tapped done, waiting for AI to respond
+    case aiSpeaking
+    case readyCheck
+    case waitingToAnswer
+    case userRecording
+    case processing
 }
 
 @Observable @MainActor
@@ -145,8 +152,8 @@ final class GeminiLiveManager {
     var audioLevel: Float = 0
     var questionCount = 0
     var answerDuration: TimeInterval = 0
+    var liveTranscription: String = ""
 
-    /// Has the AI finished its greeting and user confirmed ready?
     private(set) var greetingDone = false
 
     private var liveSession: LiveSession?
@@ -155,6 +162,11 @@ final class GeminiLiveManager {
     private var answerStartTime = Date()
     private var pendingAIText = ""
     private var answerTimer: Timer?
+
+    // Speech recognition
+    private var speechRecognizer: SFSpeechRecognizer?
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var recognitionTask: SFSpeechRecognitionTask?
 
     // MARK: - Start Session
 
@@ -176,6 +188,10 @@ final class GeminiLiveManager {
         } catch {
             throw GeminiError.audioSetupFailed("Audio session: \(error.localizedDescription)")
         }
+
+        // Request speech recognition permission
+        SFSpeechRecognizer.requestAuthorization { _ in }
+        speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
 
         let model = FirebaseAI.firebaseAI(backend: .googleAI()).liveModel(
             modelName: "gemini-2.5-flash-native-audio-preview-12-2025",
@@ -202,7 +218,6 @@ final class GeminiLiveManager {
             await self?.receiveResponses()
         }
 
-        // Brief greeting only — no questions yet
         Task.detached {
             await session.sendTextRealtime(
                 "Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: 'Are you ready to begin?' Do NOT ask any interview questions yet. Keep it brief and warm."
@@ -215,6 +230,11 @@ final class GeminiLiveManager {
             }
         }
 
+        // Forward mic buffers to speech recognizer
+        audioSender.onAudioBuffer = { [weak self] buffer in
+            self?.recognitionRequest?.append(buffer)
+        }
+
         do {
             try audioSender.start(session: session)
         } catch {
@@ -224,7 +244,6 @@ final class GeminiLiveManager {
 
     // MARK: - Ready Check
 
-    /// User confirmed they're ready — tell AI to start questioning.
     func confirmReady() {
         greetingDone = true
         turn = .processing
@@ -232,12 +251,11 @@ final class GeminiLiveManager {
         Task.detached { [weak self] in
             guard let session = await self?.liveSession else { return }
             await session.sendTextRealtime(
-                "The candidate is ready. Ask exactly ONE interview question, then STOP completely. Do not say anything else after asking the question. Wait silently for the candidate to answer."
+                "The candidate is ready. Ask the first interview question now. Keep it to 2-3 sentences maximum."
             )
         }
     }
 
-    /// User is not ready — end session for now.
     func declineAndExit() {
         endSession()
     }
@@ -249,7 +267,11 @@ final class GeminiLiveManager {
         turn = .userRecording
         answerStartTime = Date()
         answerDuration = 0
+        liveTranscription = ""
         audioSender.isSendingAudio = true
+
+        // Start speech recognition
+        startSpeechRecognition()
 
         answerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -264,12 +286,19 @@ final class GeminiLiveManager {
         audioSender.isSendingAudio = false
         answerTimer?.invalidate()
         answerTimer = nil
+
+        // Stop speech recognition and get final text
+        stopSpeechRecognition()
+        let spokenText = liveTranscription.trimmingCharacters(in: .whitespacesAndNewlines)
+
         turn = .processing
 
         let elapsed = Date().timeIntervalSince(interviewStartTime)
         let duration = Date().timeIntervalSince(answerStartTime)
+
         transcript.append(TranscriptEntry(
-            role: "candidate", content: "(answered via voice — \(Int(duration))s)",
+            role: "candidate",
+            content: spokenText.isEmpty ? "(voice response — \(Int(duration))s)" : spokenText,
             questionNumber: questionCount, isFollowUp: false,
             timestamp: elapsed, responseDuration: duration,
             createdAt: Date()
@@ -278,9 +307,34 @@ final class GeminiLiveManager {
         Task.detached { [weak self] in
             guard let session = await self?.liveSession else { return }
             await session.sendTextRealtime(
-                "The candidate has finished answering. Based on their response, ask exactly ONE follow-up or next question, then STOP completely. Do not say anything else after asking. Wait silently for the candidate's response."
+                "The candidate has finished answering. Ask the next question or a follow-up. Keep it to 2-3 sentences."
             )
         }
+    }
+
+    // MARK: - Speech Recognition
+
+    private func startSpeechRecognition() {
+        guard let speechRecognizer, speechRecognizer.isAvailable else { return }
+
+        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+        recognitionRequest?.shouldReportPartialResults = true
+
+        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest!) { [weak self] result, error in
+            guard let self else { return }
+            if let result {
+                Task { @MainActor in
+                    self.liveTranscription = result.bestTranscription.formattedString
+                }
+            }
+        }
+    }
+
+    private func stopSpeechRecognition() {
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionRequest = nil
+        recognitionTask = nil
     }
 
     // MARK: - End Session
@@ -289,6 +343,7 @@ final class GeminiLiveManager {
         audioSender.stop()
         answerTimer?.invalidate()
         answerTimer = nil
+        stopSpeechRecognition()
         Task { await liveSession?.close() }
         liveSession = nil
         isConnected = false
@@ -301,8 +356,7 @@ final class GeminiLiveManager {
         do {
             for try await message in session.responses {
                 if case let .content(content) = message.payload {
-                    // GUARD: Ignore unsolicited AI content when waiting for user action.
-                    // Without this, Gemini Live auto-generates Q2, Q3, etc. without user answering.
+                    // Ignore unsolicited AI content when waiting for user action.
                     if turn == .waitingToAnswer || turn == .readyCheck || turn == .userRecording {
                         continue
                     }
@@ -334,12 +388,6 @@ final class GeminiLiveManager {
                                 processCompletedAITurn(text)
                             }
                             turn = .waitingToAnswer
-
-                            // Send explicit STOP signal so model doesn't auto-continue
-                            Task.detached { [weak self] in
-                                guard let s = await self?.liveSession else { return }
-                                await s.sendTextRealtime("[STOP] Wait silently. Do not speak or ask another question until I tell you the candidate has finished answering.")
-                            }
                         }
                     }
                 }
@@ -353,8 +401,6 @@ final class GeminiLiveManager {
     // MARK: - Process Completed AI Turn
 
     private func processCompletedAITurn(_ rawText: String) {
-        // The text from Gemini native audio is internal "thinking" — NOT what was spoken.
-        // Extract only candidate-facing sentences (questions, direct address).
         let cleaned = extractSpokenContent(rawText)
         let elapsed = Date().timeIntervalSince(interviewStartTime)
 
@@ -364,7 +410,6 @@ final class GeminiLiveManager {
 
         if !isFollowUp && !isClosing { questionCount += 1 }
 
-        // Store the cleaned version (may be empty if all text was reasoning)
         let displayText = cleaned.isEmpty ? "Question \(questionCount)" : cleaned
 
         transcript.append(TranscriptEntry(
@@ -381,19 +426,14 @@ final class GeminiLiveManager {
 
     // MARK: - Extract Spoken Content
 
-    /// Gemini native audio model sends "thinking" text, not spoken text.
-    /// This extracts only sentences likely directed at the candidate.
     private func extractSpokenContent(_ text: String) -> String {
         var cleaned = text
-        // Strip markdown
         cleaned = cleaned.replacingOccurrences(of: "**", with: "")
         cleaned = cleaned.replacingOccurrences(of: "\\n\\n", with: "\n")
         cleaned = cleaned.replacingOccurrences(of: "\\n", with: "\n")
 
-        // Split into rough sentences
         cleaned = cleaned.replacingOccurrences(of: "\n", with: ". ")
-        // Normalize sentence boundaries
-        var normalized = cleaned
+        let normalized = cleaned
             .replacingOccurrences(of: "? ", with: "?\n")
             .replacingOccurrences(of: ". ", with: ".\n")
             .replacingOccurrences(of: "! ", with: "!\n")
@@ -404,18 +444,14 @@ final class GeminiLiveManager {
             guard s.count > 3 else { return nil }
             let lower = s.lowercased()
 
-            // KEEP: questions (contain ?)
             if s.contains("?") { return s }
 
-            // KEEP: sentences addressing the candidate
             let addressPatterns = [" you ", "your ", "you're", "you've", "yourself"]
             if addressPatterns.contains(where: { lower.contains($0) }) { return s }
 
-            // KEEP: greetings
             let greetings = ["hello", "hi ", "welcome", "good morning", "good afternoon", "good evening", "nice to meet"]
             if greetings.contains(where: { lower.hasPrefix($0) || lower.contains($0) }) { return s }
 
-            // DROP: first-person reasoning / planning
             let dropPatterns = [
                 "i've ", "i'm ", "i am ", "i'll ", "i will ", "i have ",
                 "my goal", "my approach", "my prompt", "my chosen", "my plan",
@@ -428,10 +464,8 @@ final class GeminiLiveManager {
             ]
             if dropPatterns.contains(where: { lower.contains($0) }) { return nil }
 
-            // DROP: short header-like text without punctuation
             if s.count < 50 && !s.contains("?") && !s.contains(",") { return nil }
 
-            // Default: keep if it seems conversational (has common words)
             return nil
         }
 

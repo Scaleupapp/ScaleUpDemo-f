@@ -266,6 +266,16 @@ struct InterviewLiveView: View {
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(ColorTokens.success)
             }
+
+            // Live transcription preview
+            if !viewModel.geminiManager.liveTranscription.isEmpty {
+                Text(viewModel.geminiManager.liveTranscription)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .padding(.horizontal, Spacing.lg)
+            }
         }
     }
 

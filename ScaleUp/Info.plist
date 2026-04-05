@@ -8,5 +8,7 @@
 	<string>ScaleUp needs access to your photos to select images for notes upload.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>ScaleUp uses the microphone for voice-based mock interviews.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>ScaleUp transcribes your spoken answers during mock interviews for evaluation.</string>
 </dict>
 </plist>
