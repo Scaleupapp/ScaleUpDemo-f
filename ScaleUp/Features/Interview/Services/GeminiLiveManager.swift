@@ -263,7 +263,7 @@ final class GeminiLiveManager {
         // Signal Gemini to proceed
         Task.detached { [weak self] in
             guard let session = await self?.liveSession else { return }
-            await session.sendTextRealtime("The candidate has finished answering. Please provide brief acknowledgment and ask the next question.")
+            await session.sendTextRealtime("The candidate has finished answering. Based on their response, decide: either ask a follow-up question to probe deeper, or move to the next topic. Do not repeat what they said.")
         }
     }
 
