@@ -320,15 +320,7 @@ final class OpenAILiveManager {
     // MARK: - Event Handling
 
     private func handleEvent(type: String, json: [String: Any]) async {
-        // Debug: log all event types
-        if type != "response.audio.delta" {
-            print("[OpenAI] Event: \(type)")
-        }
-
         switch type {
-
-        case "response.created":
-            currentResponseHasAudio = false
 
         case "response.audio.delta":
             currentResponseHasAudio = true
@@ -340,21 +332,21 @@ final class OpenAILiveManager {
 
         case "response.audio_transcript.done":
             if let text = json["transcript"] as? String, !text.isEmpty {
+                // Increment question count based on interviewer turns (reliable fallback)
+                let interviewerCount = transcript.filter { $0.role == "interviewer" }.count
+                let nextQ = interviewerCount + 1
+                if nextQ > questionCount && greetingDone {
+                    questionCount = nextQ
+                }
+
                 let elapsed = Date().timeIntervalSince(interviewStartTime)
                 transcript.append(TranscriptEntry(
                     role: "interviewer", content: text,
-                    questionNumber: questionCount > 0 ? questionCount : nil,
+                    questionNumber: greetingDone ? questionCount : nil,
                     isFollowUp: false, timestamp: elapsed,
                     responseDuration: nil, createdAt: Date()
                 ))
                 currentQuestion = text
-
-                // AI finished speaking — transition turn
-                if !greetingDone {
-                    turn = .readyCheck
-                } else {
-                    turn = .waitingToAnswer
-                }
             }
 
         case "conversation.item.input_audio_transcription.completed":
@@ -380,12 +372,12 @@ final class OpenAILiveManager {
 
                 let qNum = args["question_number"] as? Int ?? questionCount
                 let isFollowUp = args["is_follow_up"] as? Bool ?? false
-                let isComplete = args["is_complete"] as? Bool ?? false
                 let qText = args["question_text"] as? String
 
                 if !isFollowUp { questionCount = qNum }
                 if let qText, !qText.isEmpty { currentQuestion = qText }
 
+                // Update last interviewer entry with function call metadata
                 if let lastIdx = transcript.indices.reversed().first(where: { transcript[$0].role == "interviewer" }) {
                     let old = transcript[lastIdx]
                     transcript[lastIdx] = TranscriptEntry(
@@ -406,10 +398,19 @@ final class OpenAILiveManager {
             }
 
         case "response.done":
-            // Turn transitions are handled by response.audio_transcript.done
-            // (when AI finishes speaking). This avoids premature transitions
-            // from function-call-only responses that have no audio.
-            break
+            // Transition turn based on whether this response had audio.
+            // This is the fallback — audio_transcript.done may not always fire.
+            if currentResponseHasAudio {
+                if !greetingDone {
+                    turn = .readyCheck
+                } else {
+                    turn = .waitingToAnswer
+                }
+            }
+            currentResponseHasAudio = false
+
+        case "response.created":
+            currentResponseHasAudio = false
 
         case "input_audio_buffer.committed":
             let elapsed = Date().timeIntervalSince(interviewStartTime)
