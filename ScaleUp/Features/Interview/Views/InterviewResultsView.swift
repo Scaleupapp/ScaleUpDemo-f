@@ -74,24 +74,49 @@ struct InterviewResultsView: View {
             Spacer()
 
             ZStack {
+                // Progress ring
                 Circle()
-                    .fill(ColorTokens.gold.opacity(0.15))
+                    .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 6)
                     .frame(width: 100, height: 100)
-                ProgressView()
-                    .scaleEffect(1.5)
-                    .tint(ColorTokens.gold)
+
+                Circle()
+                    .trim(from: 0, to: viewModel.evaluationProgress)
+                    .stroke(ColorTokens.gold, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .frame(width: 100, height: 100)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeInOut(duration: 0.5), value: viewModel.evaluationProgress)
+
+                Text("\(Int(viewModel.evaluationProgress * 100))%")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(ColorTokens.gold)
             }
 
             Text(viewModel.state == .saving ? "Saving interview..." : "AI is evaluating your performance...")
                 .font(Typography.bodyBold)
                 .foregroundStyle(ColorTokens.textPrimary)
 
-            Text("This may take a minute. We're analyzing communication,\ncontent quality, structure, and confidence.")
-                .font(Typography.caption)
-                .foregroundStyle(ColorTokens.textTertiary)
-                .multilineTextAlignment(.center)
+            // Step indicators
+            VStack(alignment: .leading, spacing: 8) {
+                evaluationStep("Analyzing communication", done: viewModel.evaluationProgress > 0.2)
+                evaluationStep("Reviewing content quality", done: viewModel.evaluationProgress > 0.4)
+                evaluationStep("Evaluating structure", done: viewModel.evaluationProgress > 0.6)
+                evaluationStep("Assessing confidence", done: viewModel.evaluationProgress > 0.75)
+                evaluationStep("Generating feedback", done: viewModel.evaluationProgress > 0.85)
+            }
+            .padding(.horizontal, Spacing.xl)
 
             Spacer()
+        }
+    }
+
+    private func evaluationStep(_ label: String, done: Bool) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: done ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 14))
+                .foregroundStyle(done ? ColorTokens.success : ColorTokens.textTertiary)
+            Text(label)
+                .font(Typography.bodySmall)
+                .foregroundStyle(done ? ColorTokens.textPrimary : ColorTokens.textTertiary)
         }
     }
 

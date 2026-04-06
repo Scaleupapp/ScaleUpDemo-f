@@ -54,6 +54,7 @@ final class InterviewViewModel {
 
     var evaluation: InterviewEvaluation?
     var fullSession: InterviewSession?
+    var evaluationProgress: Double = 0
 
     // MARK: - Managers
 
@@ -148,13 +149,19 @@ final class InterviewViewModel {
 
     private func pollForEvaluation() async {
         guard let sessionId else { return }
+        evaluationProgress = 0.05
 
-        for _ in 0..<40 {
+        for i in 0..<40 {
             try? await Task.sleep(for: .seconds(3))
+
+            // Simulated progress: fast at start, slows down, caps at 0.9
+            let elapsed = Double(i + 1) * 3.0
+            evaluationProgress = min(0.9, 1.0 - exp(-elapsed / 45.0))
 
             do {
                 let status = try await service.getStatus(sessionId: sessionId)
                 if status.status == .evaluated {
+                    evaluationProgress = 1.0
                     let session = try await service.getSession(sessionId: sessionId)
                     fullSession = session
                     evaluation = session.evaluation

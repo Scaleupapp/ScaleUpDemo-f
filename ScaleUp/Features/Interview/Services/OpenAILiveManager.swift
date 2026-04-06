@@ -144,6 +144,7 @@ final class OpenAILiveManager {
     private var answerStartTime = Date()
     private var answerTimer: Timer?
     private var systemInstruction: String = ""
+    private var currentResponseHasAudio = false
 
     // MARK: - Start Session
 
@@ -326,7 +327,11 @@ final class OpenAILiveManager {
 
         switch type {
 
+        case "response.created":
+            currentResponseHasAudio = false
+
         case "response.audio.delta":
+            currentResponseHasAudio = true
             if turn != .aiSpeaking { turn = .aiSpeaking }
             if let audioB64 = json["delta"] as? String,
                let audioData = Data(base64Encoded: audioB64) {
@@ -394,6 +399,11 @@ final class OpenAILiveManager {
             }
 
         case "response.done":
+            // Only transition turn if this response actually contained spoken audio.
+            // Function-call-only responses (no audio) should NOT change the turn —
+            // the AI still needs to speak the next question.
+            guard currentResponseHasAudio else { break }
+
             if !greetingDone {
                 turn = .readyCheck
             } else {
