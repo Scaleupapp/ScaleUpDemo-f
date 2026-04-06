@@ -191,12 +191,20 @@ final class OpenAILiveManager {
             await self?.receiveLoop()
         }
 
-        // Wait for WebSocket handshake
+        // Wait for WebSocket handshake + session.created
         try await Task.sleep(for: .seconds(1))
+
+        // Configure session — ensure English voice and audio output
+        try await webSocket?.send(.string(
+            "{\"type\":\"session.update\",\"session\":{\"voice\":\"alloy\",\"modalities\":[\"audio\",\"text\"],\"input_audio_format\":\"pcm16\",\"output_audio_format\":\"pcm16\",\"input_audio_transcription\":{\"model\":\"whisper-1\"}}}"
+        ))
+
+        // Small delay for session.update to process
+        try await Task.sleep(for: .milliseconds(500))
 
         // Trigger AI greeting
         try await webSocket?.send(.string(
-            "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: Are you ready to begin? Do NOT ask any interview questions yet.\"}}"
+            "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"Speak in English. Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: Are you ready to begin? Do NOT ask any interview questions yet.\"}}"
         ))
     }
 
@@ -293,6 +301,11 @@ final class OpenAILiveManager {
     // MARK: - Event Handling
 
     private func handleEvent(type: String, json: [String: Any]) async {
+        // Debug: log all event types
+        if type != "response.audio.delta" {
+            print("[OpenAI] Event: \(type)")
+        }
+
         switch type {
 
         case "response.audio.delta":
