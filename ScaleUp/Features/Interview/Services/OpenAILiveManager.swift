@@ -348,6 +348,13 @@ final class OpenAILiveManager {
                     responseDuration: nil, createdAt: Date()
                 ))
                 currentQuestion = text
+
+                // AI finished speaking — transition turn
+                if !greetingDone {
+                    turn = .readyCheck
+                } else {
+                    turn = .waitingToAnswer
+                }
             }
 
         case "conversation.item.input_audio_transcription.completed":
@@ -399,16 +406,10 @@ final class OpenAILiveManager {
             }
 
         case "response.done":
-            // Only transition turn if this response actually contained spoken audio.
-            // Function-call-only responses (no audio) should NOT change the turn —
-            // the AI still needs to speak the next question.
-            guard currentResponseHasAudio else { break }
-
-            if !greetingDone {
-                turn = .readyCheck
-            } else {
-                turn = .waitingToAnswer
-            }
+            // Turn transitions are handled by response.audio_transcript.done
+            // (when AI finishes speaking). This avoids premature transitions
+            // from function-call-only responses that have no audio.
+            break
 
         case "input_audio_buffer.committed":
             let elapsed = Date().timeIntervalSince(interviewStartTime)
