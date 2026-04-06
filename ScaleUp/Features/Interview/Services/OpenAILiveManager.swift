@@ -26,14 +26,14 @@ final class OpenAILiveManager {
     var liveTranscription: String = ""
     private(set) var greetingDone = false
 
-    private var webSocket: URLSessionWebSocketTask?
+    nonisolated(unsafe) private var webSocket: URLSessionWebSocketTask?
     private var audioEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
-    private var isSendingAudio = false
+    nonisolated(unsafe) private var isSendingAudio = false
     private var interviewStartTime = Date()
     private var answerStartTime = Date()
     private var answerTimer: Timer?
-    private var lastLevelTime = Date.distantPast
+    nonisolated(unsafe) private var lastLevelTime = Date.distantPast
 
     // MARK: - Start Session
 
@@ -163,16 +163,18 @@ final class OpenAILiveManager {
         let srcRate = hwFormat.sampleRate
         let dstRate: Double = 24000  // OpenAI Realtime expects 24kHz
 
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
-            guard let self else { return }
+        // Capture weak self for nonisolated access only — no MainActor property access in closure
+        weak var weakSelf = self
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { buffer, _ in
+            guard let mgr = weakSelf else { return }
             guard let channelData = buffer.floatChannelData else { return }
             let frameCount = Int(buffer.frameLength)
             guard frameCount > 0 else { return }
 
             // Audio level (throttled ~10 fps)
             let now = Date()
-            if now.timeIntervalSince(self.lastLevelTime) > 0.1 {
-                self.lastLevelTime = now
+            if now.timeIntervalSince(mgr.lastLevelTime) > 0.1 {
+                mgr.lastLevelTime = now
                 var sum: Float = 0
                 let step = max(1, frameCount / 256)
                 var count = 0
@@ -182,10 +184,10 @@ final class OpenAILiveManager {
                     count += 1
                 }
                 let rms = sqrt(sum / Float(max(1, count)))
-                Task { @MainActor [weak self] in self?.audioLevel = rms }
+                Task { @MainActor in mgr.audioLevel = rms }
             }
 
-            guard self.isSendingAudio else { return }
+            guard mgr.isSendingAudio else { return }
 
             // Resample to 24kHz PCM16
             let outputCount = Int(Double(frameCount) * dstRate / srcRate)
@@ -207,11 +209,9 @@ final class OpenAILiveManager {
 
             // Send as base64 input_audio_buffer.append
             let base64 = pcmData.base64EncodedString()
+            let ws = mgr.webSocket
             Task {
-                try? await self.sendEvent([
-                    "type": "input_audio_buffer.append",
-                    "audio": base64
-                ])
+                try? await ws?.send(.string("{\"type\":\"input_audio_buffer.append\",\"audio\":\"\(base64)\"}"))
             }
         }
 
