@@ -11,141 +11,19 @@ enum InterviewTurn: Equatable {
     case processing
 }
 
-// MARK: - OpenAI Realtime Manager
+// MARK: - Audio IO (NOT MainActor — runs on audio thread)
 
-@Observable @MainActor
-final class OpenAILiveManager {
-    var isConnected = false
-    var turn: InterviewTurn = .processing
-    var transcript: [TranscriptEntry] = []
-    var error: String?
-    var currentQuestion: String = ""
-    var audioLevel: Float = 0
-    var questionCount = 0
-    var answerDuration: TimeInterval = 0
-    var liveTranscription: String = ""
-    private(set) var greetingDone = false
-
-    nonisolated(unsafe) private var webSocket: URLSessionWebSocketTask?
+/// Handles mic capture, resampling, and playback on background threads.
+/// Completely decoupled from MainActor to avoid dispatch_assert_queue crashes.
+final class AudioIO: @unchecked Sendable {
     private var audioEngine: AVAudioEngine?
     private var playerNode: AVAudioPlayerNode?
-    nonisolated(unsafe) private var isSendingAudio = false
-    private var interviewStartTime = Date()
-    private var answerStartTime = Date()
-    private var answerTimer: Timer?
-    nonisolated(unsafe) private var lastLevelTime = Date.distantPast
+    var isSending = false
+    var onAudioChunk: ((String) -> Void)?  // base64 PCM16
+    var onAudioLevel: ((Float) -> Void)?
+    private var lastLevelTime = Date.distantPast
 
-    // MARK: - Start Session
-
-    func startSession(systemInstruction: String, token: String) async throws {
-        // Audio session
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
-        try audioSession.setActive(true)
-
-        // WebSocket connection
-        guard let url = URL(string: "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview") else {
-            throw OpenAIError.connectionFailed("Invalid URL")
-        }
-
-        var request = URLRequest(url: url)
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
-
-        let session = URLSession(configuration: .default)
-        let ws = session.webSocketTask(with: request)
-        ws.resume()
-        webSocket = ws
-        isConnected = true
-        interviewStartTime = Date()
-        turn = .aiSpeaking
-
-        // Start audio engine
-        try startAudioEngine()
-
-        // Start receive loop — wait for session.created before sending events
-        Task { [weak self] in
-            await self?.receiveLoop()
-        }
-
-        // Small delay to let WebSocket handshake + session.created arrive
-        try await Task.sleep(for: .seconds(1))
-
-        // Trigger AI greeting
-        let greetingEvent = """
-        {"type":"response.create","response":{"modalities":["audio","text"],"instructions":"Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: Are you ready to begin? Do NOT ask any interview questions yet."}}
-        """
-        try await webSocket?.send(.string(greetingEvent))
-    }
-
-    // MARK: - Ready Check
-
-    func confirmReady() {
-        greetingDone = true
-        turn = .processing
-
-        Task {
-            try? await sendJSON("""
-            {"type":"response.create","response":{"modalities":["audio","text"],"instructions":"The candidate is ready. Ask the first interview question now. Keep it to 2-3 sentences. After asking, call the report_question_meta function."}}
-            """)
-        }
-    }
-
-    func declineAndExit() {
-        endSession()
-    }
-
-    // MARK: - Push-to-Talk
-
-    func startAnswering() {
-        guard turn == .waitingToAnswer else { return }
-        turn = .userRecording
-        answerStartTime = Date()
-        answerDuration = 0
-        liveTranscription = ""
-        isSendingAudio = true
-
-        answerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.answerDuration = Date().timeIntervalSince(self.answerStartTime)
-            }
-        }
-    }
-
-    func finishAnswering() {
-        guard turn == .userRecording else { return }
-        isSendingAudio = false
-        answerTimer?.invalidate()
-        answerTimer = nil
-        turn = .processing
-
-        Task {
-            // Commit the audio buffer and request response
-            try? await sendJSON("""
-            {"type":"input_audio_buffer.commit"}
-            """)
-            try? await sendJSON("""
-            {"type":"response.create","response":{"modalities":["audio","text"],"instructions":"The candidate has finished answering. Based on their response, ask a follow-up or move to the next question. Keep it to 2-3 sentences. Call report_question_meta after asking."}}
-            """)
-        }
-    }
-
-    // MARK: - End Session
-
-    func endSession() {
-        isSendingAudio = false
-        answerTimer?.invalidate()
-        answerTimer = nil
-        stopAudioEngine()
-        webSocket?.cancel(with: .goingAway, reason: nil)
-        webSocket = nil
-        isConnected = false
-    }
-
-    // MARK: - Audio Engine
-
-    private func startAudioEngine() throws {
+    func start() throws {
         let engine = AVAudioEngine()
         let player = AVAudioPlayerNode()
         let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
@@ -161,20 +39,18 @@ final class OpenAILiveManager {
         }
 
         let srcRate = hwFormat.sampleRate
-        let dstRate: Double = 24000  // OpenAI Realtime expects 24kHz
+        let dstRate: Double = 24000
 
-        // Capture weak self for nonisolated access only — no MainActor property access in closure
-        weak var weakSelf = self
-        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { buffer, _ in
-            guard let mgr = weakSelf else { return }
+        inputNode.installTap(onBus: 0, bufferSize: 4096, format: hwFormat) { [weak self] buffer, _ in
+            guard let self else { return }
             guard let channelData = buffer.floatChannelData else { return }
             let frameCount = Int(buffer.frameLength)
             guard frameCount > 0 else { return }
 
             // Audio level (throttled ~10 fps)
             let now = Date()
-            if now.timeIntervalSince(mgr.lastLevelTime) > 0.1 {
-                mgr.lastLevelTime = now
+            if now.timeIntervalSince(self.lastLevelTime) > 0.1 {
+                self.lastLevelTime = now
                 var sum: Float = 0
                 let step = max(1, frameCount / 256)
                 var count = 0
@@ -184,10 +60,10 @@ final class OpenAILiveManager {
                     count += 1
                 }
                 let rms = sqrt(sum / Float(max(1, count)))
-                Task { @MainActor in mgr.audioLevel = rms }
+                self.onAudioLevel?(rms)
             }
 
-            guard mgr.isSendingAudio else { return }
+            guard self.isSending else { return }
 
             // Resample to 24kHz PCM16
             let outputCount = Int(Double(frameCount) * dstRate / srcRate)
@@ -207,12 +83,8 @@ final class OpenAILiveManager {
                 }
             }
 
-            // Send as base64 input_audio_buffer.append
             let base64 = pcmData.base64EncodedString()
-            let ws = mgr.webSocket
-            Task {
-                try? await ws?.send(.string("{\"type\":\"input_audio_buffer.append\",\"audio\":\"\(base64)\"}"))
-            }
+            self.onAudioChunk?(base64)
         }
 
         engine.prepare()
@@ -223,7 +95,7 @@ final class OpenAILiveManager {
         self.playerNode = player
     }
 
-    private func playAudioData(_ data: Data) {
+    func playAudio(_ data: Data) {
         guard data.count > 1, let player = playerNode else { return }
         let outputFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 24000, channels: 1, interleaved: true)!
         let frameCount = UInt32(data.count / 2)
@@ -236,7 +108,8 @@ final class OpenAILiveManager {
         player.scheduleBuffer(buffer)
     }
 
-    private func stopAudioEngine() {
+    func stop() {
+        isSending = false
         if let engine = audioEngine {
             engine.inputNode.removeTap(onBus: 0)
             engine.stop()
@@ -248,19 +121,144 @@ final class OpenAILiveManager {
         audioEngine = nil
         playerNode = nil
     }
+}
 
-    // MARK: - WebSocket Send
+// MARK: - OpenAI Realtime Manager
 
-    private func sendEvent(_ event: [String: Any]) async throws {
-        guard let ws = webSocket else { return }
-        let data = try JSONSerialization.data(withJSONObject: event, options: [.fragmentsAllowed])
-        guard let str = String(data: data, encoding: .utf8) else { return }
-        try await ws.send(.string(str))
+@Observable @MainActor
+final class OpenAILiveManager {
+    var isConnected = false
+    var turn: InterviewTurn = .processing
+    var transcript: [TranscriptEntry] = []
+    var error: String?
+    var currentQuestion: String = ""
+    var audioLevel: Float = 0
+    var questionCount = 0
+    var answerDuration: TimeInterval = 0
+    var liveTranscription: String = ""
+    private(set) var greetingDone = false
+
+    private var webSocket: URLSessionWebSocketTask?
+    private let audioIO = AudioIO()
+    private var interviewStartTime = Date()
+    private var answerStartTime = Date()
+    private var answerTimer: Timer?
+
+    // MARK: - Start Session
+
+    func startSession(systemInstruction: String, token: String) async throws {
+        let audioSession = AVAudioSession.sharedInstance()
+        try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
+        try audioSession.setActive(true)
+
+        guard let url = URL(string: "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview") else {
+            throw OpenAIError.connectionFailed("Invalid URL")
+        }
+
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
+
+        let session = URLSession(configuration: .default)
+        let ws = session.webSocketTask(with: request)
+        ws.resume()
+        webSocket = ws
+        isConnected = true
+        interviewStartTime = Date()
+        turn = .aiSpeaking
+
+        // Audio level callback
+        audioIO.onAudioLevel = { [weak self] level in
+            Task { @MainActor [weak self] in
+                self?.audioLevel = level
+            }
+        }
+
+        // Audio chunk callback — send to WebSocket
+        audioIO.onAudioChunk = { [weak self] base64 in
+            guard let self else { return }
+            let ws = self.webSocket
+            Task.detached {
+                try? await ws?.send(.string("{\"type\":\"input_audio_buffer.append\",\"audio\":\"\(base64)\"}"))
+            }
+        }
+
+        // Start audio engine (runs on its own thread, no MainActor)
+        try audioIO.start()
+
+        // Start receive loop
+        Task { [weak self] in
+            await self?.receiveLoop()
+        }
+
+        // Wait for WebSocket handshake
+        try await Task.sleep(for: .seconds(1))
+
+        // Trigger AI greeting
+        try await webSocket?.send(.string(
+            "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: Are you ready to begin? Do NOT ask any interview questions yet.\"}}"
+        ))
     }
 
-    private func sendJSON(_ json: String) async throws {
-        guard let ws = webSocket else { return }
-        try await ws.send(.string(json))
+    // MARK: - Ready Check
+
+    func confirmReady() {
+        greetingDone = true
+        turn = .processing
+
+        Task {
+            try? await webSocket?.send(.string(
+                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"The candidate is ready. Ask the first interview question now. Keep it to 2-3 sentences. After asking, call the report_question_meta function.\"}}"
+            ))
+        }
+    }
+
+    func declineAndExit() {
+        endSession()
+    }
+
+    // MARK: - Push-to-Talk
+
+    func startAnswering() {
+        guard turn == .waitingToAnswer else { return }
+        turn = .userRecording
+        answerStartTime = Date()
+        answerDuration = 0
+        liveTranscription = ""
+        audioIO.isSending = true
+
+        answerTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.answerDuration = Date().timeIntervalSince(self.answerStartTime)
+            }
+        }
+    }
+
+    func finishAnswering() {
+        guard turn == .userRecording else { return }
+        audioIO.isSending = false
+        answerTimer?.invalidate()
+        answerTimer = nil
+        turn = .processing
+
+        Task {
+            try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
+            try? await webSocket?.send(.string(
+                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"The candidate has finished answering. Based on their response, ask a follow-up or move to the next question. Keep it to 2-3 sentences. Call report_question_meta after asking.\"}}"
+            ))
+        }
+    }
+
+    // MARK: - End Session
+
+    func endSession() {
+        audioIO.stop()
+        answerTimer?.invalidate()
+        answerTimer = nil
+        webSocket?.cancel(with: .goingAway, reason: nil)
+        webSocket = nil
+        isConnected = false
     }
 
     // MARK: - WebSocket Receive
@@ -275,7 +273,6 @@ final class OpenAILiveManager {
                     guard let data = text.data(using: .utf8),
                           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                           let type = json["type"] as? String else { continue }
-
                     await handleEvent(type: type, json: json)
 
                 case .data(let data):
@@ -298,19 +295,15 @@ final class OpenAILiveManager {
     private func handleEvent(type: String, json: [String: Any]) async {
         switch type {
 
-        // AI audio chunk — play it
         case "response.audio.delta":
             if turn != .aiSpeaking { turn = .aiSpeaking }
             if let audioB64 = json["delta"] as? String,
                let audioData = Data(base64Encoded: audioB64) {
-                playAudioData(audioData)
+                audioIO.playAudio(audioData)
             }
 
-        // AI finished speaking its text — this is what the AI actually said
         case "response.audio_transcript.done":
             if let text = json["transcript"] as? String, !text.isEmpty {
-                // Don't set currentQuestion here — wait for function call with metadata
-                // But store it as the latest AI speech for transcript
                 let elapsed = Date().timeIntervalSince(interviewStartTime)
                 transcript.append(TranscriptEntry(
                     role: "interviewer", content: text,
@@ -321,11 +314,9 @@ final class OpenAILiveManager {
                 currentQuestion = text
             }
 
-        // User's speech was transcribed by server
         case "conversation.item.input_audio_transcription.completed":
             if let text = json["transcript"] as? String, !text.isEmpty {
                 liveTranscription = text
-                // Update the last candidate transcript entry with actual text
                 if let lastIdx = transcript.indices.last,
                    transcript[lastIdx].role == "candidate" {
                     let old = transcript[lastIdx]
@@ -338,7 +329,6 @@ final class OpenAILiveManager {
                 }
             }
 
-        // Function call result — question metadata
         case "response.function_call_arguments.done":
             if let name = json["name"] as? String, name == "report_question_meta",
                let argsStr = json["arguments"] as? String,
@@ -353,7 +343,6 @@ final class OpenAILiveManager {
                 if !isFollowUp { questionCount = qNum }
                 if let qText, !qText.isEmpty { currentQuestion = qText }
 
-                // Update the last interviewer transcript entry with correct metadata
                 if let lastIdx = transcript.indices.reversed().first(where: { transcript[$0].role == "interviewer" }) {
                     let old = transcript[lastIdx]
                     transcript[lastIdx] = TranscriptEntry(
@@ -364,25 +353,15 @@ final class OpenAILiveManager {
                     )
                 }
 
-                if isComplete {
-                    // Interview done
-                }
-
-                // Send function call output to acknowledge
+                // Acknowledge function call
                 let callId = json["call_id"] as? String ?? ""
                 Task {
-                    try? await sendEvent([
-                        "type": "conversation.item.create",
-                        "item": [
-                            "type": "function_call_output",
-                            "call_id": callId,
-                            "output": "{\"status\": \"recorded\"}"
-                        ]
-                    ])
+                    try? await webSocket?.send(.string(
+                        "{\"type\":\"conversation.item.create\",\"item\":{\"type\":\"function_call_output\",\"call_id\":\"\(callId)\",\"output\":\"{\\\"status\\\":\\\"recorded\\\"}\"}}"
+                    ))
                 }
             }
 
-        // Full response complete — transition turn state
         case "response.done":
             if !greetingDone {
                 turn = .readyCheck
@@ -390,7 +369,6 @@ final class OpenAILiveManager {
                 turn = .waitingToAnswer
             }
 
-        // Committed audio buffer acknowledged — add placeholder candidate entry
         case "input_audio_buffer.committed":
             let elapsed = Date().timeIntervalSince(interviewStartTime)
             let duration = Date().timeIntervalSince(answerStartTime)
