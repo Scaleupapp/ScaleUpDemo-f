@@ -163,9 +163,9 @@ final class GeminiLiveManager {
     private var pendingAIText = ""
     private var answerTimer: Timer?
 
-    // Speech recognition
+    // Speech recognition — request is nonisolated because audio thread appends buffers
     private var speechRecognizer: SFSpeechRecognizer?
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    nonisolated(unsafe) private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
 
     // MARK: - Start Session
@@ -188,10 +188,6 @@ final class GeminiLiveManager {
         } catch {
             throw GeminiError.audioSetupFailed("Audio session: \(error.localizedDescription)")
         }
-
-        // Request speech recognition permission
-        SFSpeechRecognizer.requestAuthorization { _ in }
-        speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
 
         let model = FirebaseAI.firebaseAI(backend: .googleAI()).liveModel(
             modelName: "gemini-2.5-flash-native-audio-preview-12-2025",
@@ -231,8 +227,11 @@ final class GeminiLiveManager {
         }
 
         // Forward mic buffers to speech recognizer
+        // recognitionRequest.append is thread-safe, so capture it directly
         audioSender.onAudioBuffer = { [weak self] buffer in
-            self?.recognitionRequest?.append(buffer)
+            // Access recognitionRequest via nonisolated unsafe to avoid MainActor hop
+            let req = self?.recognitionRequest
+            req?.append(buffer)
         }
 
         do {
@@ -315,12 +314,31 @@ final class GeminiLiveManager {
     // MARK: - Speech Recognition
 
     private func startSpeechRecognition() {
+        // Lazy init speech recognizer
+        if speechRecognizer == nil {
+            speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+        }
         guard let speechRecognizer, speechRecognizer.isAvailable else { return }
+
+        // Check authorization
+        let authStatus = SFSpeechRecognizer.authorizationStatus()
+        guard authStatus == .authorized else {
+            if authStatus == .notDetermined {
+                SFSpeechRecognizer.requestAuthorization { [weak self] status in
+                    if status == .authorized {
+                        Task { @MainActor [weak self] in
+                            self?.startSpeechRecognition()
+                        }
+                    }
+                }
+            }
+            return
+        }
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         recognitionRequest?.shouldReportPartialResults = true
 
-        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest!) { [weak self] result, error in
+        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest!) { [weak self] result, _ in
             guard let self else { return }
             if let result {
                 Task { @MainActor in
