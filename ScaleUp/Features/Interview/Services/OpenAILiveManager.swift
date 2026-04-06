@@ -143,10 +143,13 @@ final class OpenAILiveManager {
     private var interviewStartTime = Date()
     private var answerStartTime = Date()
     private var answerTimer: Timer?
+    private var systemInstruction: String = ""
 
     // MARK: - Start Session
 
     func startSession(systemInstruction: String, token: String) async throws {
+        self.systemInstruction = systemInstruction
+
         let audioSession = AVAudioSession.sharedInstance()
         try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
         try audioSession.setActive(true)
@@ -194,17 +197,27 @@ final class OpenAILiveManager {
         // Wait for WebSocket handshake + session.created
         try await Task.sleep(for: .seconds(1))
 
-        // Configure session — ensure English voice and audio output
-        try await webSocket?.send(.string(
-            "{\"type\":\"session.update\",\"session\":{\"voice\":\"alloy\",\"modalities\":[\"audio\",\"text\"],\"input_audio_format\":\"pcm16\",\"output_audio_format\":\"pcm16\",\"input_audio_transcription\":{\"model\":\"whisper-1\"}}}"
-        ))
+        // Configure session with full system instruction, voice, and audio format
+        let sessionConfig: [String: Any] = [
+            "type": "session.update",
+            "session": [
+                "instructions": systemInstruction,
+                "voice": "alloy",
+                "modalities": ["audio", "text"],
+                "input_audio_format": "pcm16",
+                "output_audio_format": "pcm16",
+                "input_audio_transcription": ["model": "whisper-1"]
+            ] as [String: Any]
+        ]
+        let configData = try JSONSerialization.data(withJSONObject: sessionConfig)
+        try await webSocket?.send(.string(String(data: configData, encoding: .utf8)!))
 
-        // Small delay for session.update to process
+        // Wait for session.update to be processed
         try await Task.sleep(for: .milliseconds(500))
 
-        // Trigger AI greeting
+        // Trigger AI greeting — no instructions override, use system instruction
         try await webSocket?.send(.string(
-            "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"Speak in English. Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: Are you ready to begin? Do NOT ask any interview questions yet.\"}}"
+            "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
         ))
     }
 
@@ -216,7 +229,10 @@ final class OpenAILiveManager {
 
         Task {
             try? await webSocket?.send(.string(
-                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"The candidate is ready. Ask the first interview question now. Keep it to 2-3 sentences. After asking, call the report_question_meta function.\"}}"
+                "{\"type\":\"conversation.item.create\",\"item\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"I am ready. Please ask the first interview question.\"}]}}"
+            ))
+            try? await webSocket?.send(.string(
+                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
             ))
         }
     }
@@ -253,7 +269,7 @@ final class OpenAILiveManager {
         Task {
             try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
             try? await webSocket?.send(.string(
-                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"],\"instructions\":\"The candidate has finished answering. Based on their response, ask a follow-up or move to the next question. Keep it to 2-3 sentences. Call report_question_meta after asking.\"}}"
+                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
             ))
         }
     }
