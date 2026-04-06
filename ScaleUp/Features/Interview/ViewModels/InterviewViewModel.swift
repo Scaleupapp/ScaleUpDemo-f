@@ -113,6 +113,7 @@ final class InterviewViewModel {
 
             state = .interviewing
         } catch {
+            print("[Interview] startInterview failed: \(error)")
             state = .error(error.localizedDescription)
         }
     }

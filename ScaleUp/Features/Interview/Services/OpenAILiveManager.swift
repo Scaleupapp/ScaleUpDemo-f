@@ -63,20 +63,19 @@ final class OpenAILiveManager {
         // Start audio engine
         try startAudioEngine()
 
-        // Start receive loop
+        // Start receive loop — wait for session.created before sending events
         Task { [weak self] in
             await self?.receiveLoop()
         }
 
-        // Send session.update config (no system instruction — already set server-side via token)
-        // Then trigger greeting
-        try await sendEvent([
-            "type": "response.create",
-            "response": [
-                "modalities": ["audio", "text"],
-                "instructions": "Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: 'Are you ready to begin?' Do NOT ask any interview questions yet."
-            ]
-        ])
+        // Small delay to let WebSocket handshake + session.created arrive
+        try await Task.sleep(for: .seconds(1))
+
+        // Trigger AI greeting
+        let greetingEvent = """
+        {"type":"response.create","response":{"modalities":["audio","text"],"instructions":"Greet the candidate in 2-3 short sentences. Introduce yourself by name, mention the interview type and role. Then ask: Are you ready to begin? Do NOT ask any interview questions yet."}}
+        """
+        try await webSocket?.send(.string(greetingEvent))
     }
 
     // MARK: - Ready Check
@@ -86,13 +85,9 @@ final class OpenAILiveManager {
         turn = .processing
 
         Task {
-            try? await sendEvent([
-                "type": "response.create",
-                "response": [
-                    "modalities": ["audio", "text"],
-                    "instructions": "The candidate is ready. Ask the first interview question now. Keep it to 2-3 sentences. After asking, call the report_question_meta function."
-                ]
-            ])
+            try? await sendJSON("""
+            {"type":"response.create","response":{"modalities":["audio","text"],"instructions":"The candidate is ready. Ask the first interview question now. Keep it to 2-3 sentences. After asking, call the report_question_meta function."}}
+            """)
         }
     }
 
@@ -127,14 +122,12 @@ final class OpenAILiveManager {
 
         Task {
             // Commit the audio buffer and request response
-            try? await sendEvent(["type": "input_audio_buffer.commit"])
-            try? await sendEvent([
-                "type": "response.create",
-                "response": [
-                    "modalities": ["audio", "text"],
-                    "instructions": "The candidate has finished answering. Based on their response, ask a follow-up or move to the next question. Keep it to 2-3 sentences. Call report_question_meta after asking."
-                ]
-            ])
+            try? await sendJSON("""
+            {"type":"input_audio_buffer.commit"}
+            """)
+            try? await sendJSON("""
+            {"type":"response.create","response":{"modalities":["audio","text"],"instructions":"The candidate has finished answering. Based on their response, ask a follow-up or move to the next question. Keep it to 2-3 sentences. Call report_question_meta after asking."}}
+            """)
         }
     }
 
@@ -260,8 +253,14 @@ final class OpenAILiveManager {
 
     private func sendEvent(_ event: [String: Any]) async throws {
         guard let ws = webSocket else { return }
-        let data = try JSONSerialization.data(withJSONObject: event)
-        try await ws.send(.string(String(data: data, encoding: .utf8)!))
+        let data = try JSONSerialization.data(withJSONObject: event, options: [.fragmentsAllowed])
+        guard let str = String(data: data, encoding: .utf8) else { return }
+        try await ws.send(.string(str))
+    }
+
+    private func sendJSON(_ json: String) async throws {
+        guard let ws = webSocket else { return }
+        try await ws.send(.string(json))
     }
 
     // MARK: - WebSocket Receive
