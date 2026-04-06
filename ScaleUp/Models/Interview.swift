@@ -177,10 +177,11 @@ struct InterviewSessionSummary: Codable, Sendable, Identifiable, Hashable {
         case id = "_id"
         case interviewType, targetRole, targetCompany, difficulty
         case status, totalQuestions, duration, startedAt, createdAt
-        case overallScore
+        case evaluation
     }
 
-    // Try to decode overallScore from nested evaluation object
+    private struct EvalSummary: Codable { let overallScore: Int? }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -193,8 +194,23 @@ struct InterviewSessionSummary: Codable, Sendable, Identifiable, Hashable {
         duration = try c.decodeIfPresent(Int.self, forKey: .duration)
         startedAt = try c.decodeIfPresent(Date.self, forKey: .startedAt)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
-        // Backend select includes evaluation.overallScore flattened
-        overallScore = try c.decodeIfPresent(Int.self, forKey: .overallScore)
+        // Backend returns nested: { evaluation: { overallScore: N } }
+        overallScore = try c.decodeIfPresent(EvalSummary.self, forKey: .evaluation)?.overallScore
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(interviewType, forKey: .interviewType)
+        try c.encodeIfPresent(targetRole, forKey: .targetRole)
+        try c.encodeIfPresent(targetCompany, forKey: .targetCompany)
+        try c.encode(difficulty, forKey: .difficulty)
+        try c.encode(status, forKey: .status)
+        try c.encodeIfPresent(totalQuestions, forKey: .totalQuestions)
+        try c.encodeIfPresent(duration, forKey: .duration)
+        try c.encodeIfPresent(startedAt, forKey: .startedAt)
+        try c.encodeIfPresent(createdAt, forKey: .createdAt)
+        try c.encodeIfPresent(overallScore.map { EvalSummary(overallScore: $0) }, forKey: .evaluation)
     }
 
     var timeAgo: String {

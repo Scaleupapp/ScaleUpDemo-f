@@ -268,6 +268,8 @@ final class OpenAILiveManager {
 
         Task {
             try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
+            // Wait for commit to be acknowledged before requesting response
+            try? await Task.sleep(for: .milliseconds(500))
             try? await webSocket?.send(.string(
                 "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
             ))
