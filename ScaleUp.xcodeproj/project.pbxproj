@@ -213,7 +213,7 @@
 		FDB4021A57B5BBDB9D62869B /* ScaleUpApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD392FC876C99D8FDF703375 /* ScaleUpApp.swift */; };
 		23CBB49D255E47C5AF395206 /* Interview.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5619083CA534319B1D35512 /* Interview.swift */; };
 		AF6917A112C3434D9349BA76 /* InterviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5634C2B0754492B8E2A2AE0 /* InterviewService.swift */; };
-		54B0C8D8F7A94A44BB4CC1C0 /* GeminiLiveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB818EECB7C43A2B9B115F9 /* GeminiLiveManager.swift */; };
+		54B0C8D8F7A94A44BB4CC1C0 /* OpenAILiveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB818EECB7C43A2B9B115F9 /* OpenAILiveManager.swift */; };
 		FCFD6F6618494C92B9C76A2D /* InterviewProctor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 508F5302D3824F2BA0E69207 /* InterviewProctor.swift */; };
 		6C2B3A3F07F84D4597BE2DA0 /* InterviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7E27E7F6934B6D8EF63E85 /* InterviewViewModel.swift */; };
 		0889B9AE6A4E46B9A16AFE8F /* InterviewSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D172AE50784F497DB6166E03 /* InterviewSetupView.swift */; };
@@ -450,7 +450,7 @@
 		FD784009FBD8BB16DC62FE7B /* ObjectiveSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveSwitcherView.swift; sourceTree = "<group>"; };
 		E5619083CA534319B1D35512 /* Interview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interview.swift; sourceTree = "<group>"; };
 		C5634C2B0754492B8E2A2AE0 /* InterviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewService.swift; sourceTree = "<group>"; };
-		9CB818EECB7C43A2B9B115F9 /* GeminiLiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeminiLiveManager.swift; sourceTree = "<group>"; };
+		9CB818EECB7C43A2B9B115F9 /* OpenAILiveManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenAILiveManager.swift; sourceTree = "<group>"; };
 		508F5302D3824F2BA0E69207 /* InterviewProctor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewProctor.swift; sourceTree = "<group>"; };
 		8E7E27E7F6934B6D8EF63E85 /* InterviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewViewModel.swift; sourceTree = "<group>"; };
 		D172AE50784F497DB6166E03 /* InterviewSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewSetupView.swift; sourceTree = "<group>"; };
@@ -1519,7 +1519,7 @@
 			files = (
 				23CBB49D255E47C5AF395206 /* Interview.swift in Sources */,
 				AF6917A112C3434D9349BA76 /* InterviewService.swift in Sources */,
-				54B0C8D8F7A94A44BB4CC1C0 /* GeminiLiveManager.swift in Sources */,
+				54B0C8D8F7A94A44BB4CC1C0 /* OpenAILiveManager.swift in Sources */,
 				FCFD6F6618494C92B9C76A2D /* InterviewProctor.swift in Sources */,
 				6C2B3A3F07F84D4597BE2DA0 /* InterviewViewModel.swift in Sources */,
 				0889B9AE6A4E46B9A16AFE8F /* InterviewSetupView.swift in Sources */,
@@ -1820,7 +1820,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 88;
+				CURRENT_PROJECT_VERSION = 89;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1896,7 +1896,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 88;
+				CURRENT_PROJECT_VERSION = 89;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

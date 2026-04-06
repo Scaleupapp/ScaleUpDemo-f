@@ -12,7 +12,7 @@ struct InterviewLiveView: View {
     @State private var countdownOpacity: Double = 0
     @State private var showCountdown = false
 
-    private var turn: InterviewTurn { viewModel.geminiManager.turn }
+    private var turn: InterviewTurn { viewModel.liveManager.turn }
 
     var body: some View {
         ZStack {
@@ -26,8 +26,8 @@ struct InterviewLiveView: View {
                 ScrollView {
                     VStack(spacing: Spacing.lg) {
                         // Current question card (only during Q&A)
-                        if viewModel.geminiManager.greetingDone,
-                           !viewModel.geminiManager.currentQuestion.isEmpty {
+                        if viewModel.liveManager.greetingDone,
+                           !viewModel.liveManager.currentQuestion.isEmpty {
                             currentQuestionCard
                         }
 
@@ -95,7 +95,7 @@ struct InterviewLiveView: View {
 
             Spacer()
 
-            if viewModel.geminiManager.greetingDone {
+            if viewModel.liveManager.greetingDone {
                 Text("Q\(viewModel.questionCount)/~10")
                     .font(Typography.captionBold)
                     .foregroundStyle(ColorTokens.gold)
@@ -121,7 +121,7 @@ struct InterviewLiveView: View {
             }
             .foregroundStyle(ColorTokens.gold)
 
-            Text(viewModel.geminiManager.currentQuestion)
+            Text(viewModel.liveManager.currentQuestion)
                 .font(Typography.body)
                 .foregroundStyle(ColorTokens.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -183,7 +183,7 @@ struct InterviewLiveView: View {
             }
             .onDisappear { pulseScale = 1.0 }
 
-            Text(viewModel.geminiManager.greetingDone ? "Interviewer is speaking..." : "The interviewer is greeting you...")
+            Text(viewModel.liveManager.greetingDone ? "Interviewer is speaking..." : "The interviewer is greeting you...")
                 .font(Typography.bodyBold)
                 .foregroundStyle(ColorTokens.textSecondary)
         }
@@ -262,14 +262,14 @@ struct InterviewLiveView: View {
                     .font(Typography.bodyBold)
                     .foregroundStyle(ColorTokens.success)
 
-                Text(formatDuration(viewModel.geminiManager.answerDuration))
+                Text(formatDuration(viewModel.liveManager.answerDuration))
                     .font(.system(size: 22, weight: .bold, design: .monospaced))
                     .foregroundStyle(ColorTokens.success)
             }
 
             // Live transcription preview
-            if !viewModel.geminiManager.liveTranscription.isEmpty {
-                Text(viewModel.geminiManager.liveTranscription)
+            if !viewModel.liveManager.liveTranscription.isEmpty {
+                Text(viewModel.liveManager.liveTranscription)
                     .font(Typography.bodySmall)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
@@ -298,7 +298,7 @@ struct InterviewLiveView: View {
     }
 
     private var normalizedAudioLevel: CGFloat {
-        CGFloat(min(viewModel.geminiManager.audioLevel / 0.08, 1.0))
+        CGFloat(min(viewModel.liveManager.audioLevel / 0.08, 1.0))
     }
 
     private func formatDuration(_ t: TimeInterval) -> String {
@@ -316,7 +316,7 @@ struct InterviewLiveView: View {
             VStack(spacing: Spacing.sm) {
                 Button {
                     Haptics.medium()
-                    viewModel.geminiManager.confirmReady()
+                    viewModel.liveManager.confirmReady()
                 } label: {
                     HStack(spacing: Spacing.sm) {
                         Image(systemName: "checkmark.circle.fill")
@@ -333,7 +333,7 @@ struct InterviewLiveView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    viewModel.geminiManager.declineAndExit()
+                    viewModel.liveManager.declineAndExit()
                     // ViewModel will handle navigation back
                 } label: {
                     Text("Not Now — Come Back Later")
@@ -347,7 +347,7 @@ struct InterviewLiveView: View {
         case .waitingToAnswer:
             Button {
                 Haptics.medium()
-                viewModel.geminiManager.startAnswering()
+                viewModel.liveManager.startAnswering()
             } label: {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "mic.fill")
@@ -367,7 +367,7 @@ struct InterviewLiveView: View {
         case .userRecording:
             Button {
                 Haptics.medium()
-                viewModel.geminiManager.finishAnswering()
+                viewModel.liveManager.finishAnswering()
             } label: {
                 HStack(spacing: Spacing.sm) {
                     Image(systemName: "checkmark.circle.fill")
@@ -400,7 +400,7 @@ struct InterviewLiveView: View {
 
                 Spacer()
 
-                if viewModel.geminiManager.greetingDone {
+                if viewModel.liveManager.greetingDone {
                     Button {
                         showTranscript = true
                     } label: {

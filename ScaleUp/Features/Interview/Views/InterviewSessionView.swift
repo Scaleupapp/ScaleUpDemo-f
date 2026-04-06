@@ -100,7 +100,7 @@ struct InterviewSessionView: View {
                 .font(Typography.bodyBold)
                 .foregroundStyle(ColorTokens.textPrimary)
 
-            Text("Setting up your voice session with Gemini")
+            Text("Connecting to AI interviewer...")
                 .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textTertiary)
 

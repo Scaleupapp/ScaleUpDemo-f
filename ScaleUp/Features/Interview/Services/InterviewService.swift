@@ -59,6 +59,12 @@ actor InterviewService {
         _ = try await APIClient.shared.requestRaw(InterviewEndpoints.delete(sessionId: sessionId))
     }
 
+    // MARK: - Realtime Token (OpenAI)
+
+    func getRealtimeToken(sessionId: String) async throws -> RealtimeTokenResponse {
+        return try await APIClient.shared.request(InterviewEndpoints.realtimeToken(sessionId: sessionId))
+    }
+
     // MARK: - Analytics
 
     func fetchAnalytics() async throws -> InterviewAnalytics {
@@ -71,6 +77,7 @@ actor InterviewService {
 private enum InterviewEndpoints: Endpoint {
     case start
     case complete(sessionId: String)
+    case realtimeToken(sessionId: String)
     case session(sessionId: String)
     case status(sessionId: String)
     case list(page: Int, limit: Int)
@@ -81,6 +88,7 @@ private enum InterviewEndpoints: Endpoint {
         switch self {
         case .start: return "/interviews/start"
         case .complete(let id): return "/interviews/\(id)/complete"
+        case .realtimeToken(let id): return "/interviews/\(id)/realtime-token"
         case .session(let id): return "/interviews/\(id)"
         case .status(let id): return "/interviews/\(id)/status"
         case .list: return "/interviews"
@@ -91,7 +99,7 @@ private enum InterviewEndpoints: Endpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .start, .complete: return .post
+        case .start, .complete, .realtimeToken: return .post
         case .session, .status, .list, .analytics: return .get
         case .delete: return .delete
         }

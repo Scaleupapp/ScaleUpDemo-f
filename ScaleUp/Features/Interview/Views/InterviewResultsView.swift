@@ -326,36 +326,63 @@ struct InterviewResultsView: View {
                 let integrity = report.overallIntegrity ?? "clean"
                 let isClean = integrity == "clean"
                 let isSuspicious = integrity == "suspicious"
+                let tintColor = isClean ? ColorTokens.success : isSuspicious ? ColorTokens.error : ColorTokens.warning
 
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: isClean ? "shield.checkmark.fill" : isSuspicious ? "exclamationmark.shield.fill" : "shield.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(isClean ? ColorTokens.success : isSuspicious ? ColorTokens.error : ColorTokens.warning)
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    HStack(spacing: Spacing.sm) {
+                        Image(systemName: isClean ? "shield.checkmark.fill" : isSuspicious ? "exclamationmark.shield.fill" : "shield.fill")
+                            .font(.system(size: 18))
+                            .foregroundStyle(tintColor)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Interview Integrity")
-                            .font(Typography.bodySmallBold)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                        Text(isClean ? "Clean" : isSuspicious ? "Suspicious" : "Minor Flags")
-                            .font(Typography.caption)
-                            .foregroundStyle(isClean ? ColorTokens.success : isSuspicious ? ColorTokens.error : ColorTokens.warning)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Interview Integrity")
+                                .font(Typography.bodySmallBold)
+                                .foregroundStyle(ColorTokens.textPrimary)
+                            Text(isClean ? "Clean" : isSuspicious ? "Suspicious" : "Minor Flags")
+                                .font(Typography.caption)
+                                .foregroundStyle(tintColor)
+                        }
+
+                        Spacer()
+
+                        Text(isClean ? "No issues" : "\(report.flags?.count ?? 0) flags")
+                            .font(Typography.captionBold)
+                            .foregroundStyle(ColorTokens.textTertiary)
                     }
 
-                    Spacer()
+                    // Show individual flag descriptions
+                    if let flags = report.flags, !flags.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(flags, id: \.self) { flag in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(tintColor)
+                                        .padding(.top, 2)
+                                    Text(flag)
+                                        .font(Typography.caption)
+                                        .foregroundStyle(ColorTokens.textSecondary)
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
 
-                    Text(isClean ? "No issues" : "\(report.flags?.count ?? 0) flags")
-                        .font(Typography.captionBold)
-                        .foregroundStyle(ColorTokens.textTertiary)
+                    // Show recommendation
+                    if let rec = report.recommendation, !rec.isEmpty {
+                        Text(rec)
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .italic()
+                            .padding(.top, 2)
+                    }
                 }
                 .padding(Spacing.md)
                 .background(ColorTokens.surface)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
                 .overlay(
                     RoundedRectangle(cornerRadius: CornerRadius.medium)
-                        .stroke(
-                            (isClean ? ColorTokens.success : isSuspicious ? ColorTokens.error : ColorTokens.warning).opacity(0.3),
-                            lineWidth: 1
-                        )
+                        .stroke(tintColor.opacity(0.3), lineWidth: 1)
                 )
             }
         }

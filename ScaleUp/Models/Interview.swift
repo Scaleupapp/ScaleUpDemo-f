@@ -66,6 +66,13 @@ enum InterviewStatus: String, Codable, Sendable {
     case setup, in_progress, completed, evaluating, evaluated, abandoned
 }
 
+// MARK: - Realtime Token
+
+struct RealtimeTokenResponse: Codable, Sendable {
+    let token: String
+    let expiresAt: Int
+}
+
 // MARK: - Transcript Entry
 
 struct TranscriptEntry: Codable, Sendable, Identifiable {

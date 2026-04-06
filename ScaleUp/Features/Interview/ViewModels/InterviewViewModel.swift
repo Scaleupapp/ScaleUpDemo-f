@@ -48,16 +48,16 @@ final class InterviewViewModel {
 
     // MARK: - Transcript & Evaluation
 
-    var transcript: [TranscriptEntry] { geminiManager.transcript }
+    var transcript: [TranscriptEntry] { liveManager.transcript }
 
-    var questionCount: Int { geminiManager.questionCount }
+    var questionCount: Int { liveManager.questionCount }
 
     var evaluation: InterviewEvaluation?
     var fullSession: InterviewSession?
 
     // MARK: - Managers
 
-    let geminiManager = GeminiLiveManager()
+    let liveManager = OpenAILiveManager()
     let proctor = InterviewProctor()
 
     // MARK: - Timer
@@ -93,7 +93,8 @@ final class InterviewViewModel {
             systemInstruction = response.systemInstruction
             interviewStartTime = Date()
 
-            try await geminiManager.startSession(systemInstruction: response.systemInstruction)
+            let tokenResponse = try await service.getRealtimeToken(sessionId: response.session._id)
+            try await liveManager.startSession(systemInstruction: response.systemInstruction, token: tokenResponse.token)
 
             proctor.startMonitoring(sessionId: response.session._id, startTime: interviewStartTime!)
 
@@ -102,7 +103,7 @@ final class InterviewViewModel {
                     guard let self else { return }
                     self.elapsedTime = Date().timeIntervalSince(self.interviewStartTime ?? Date())
 
-                    if self.geminiManager.isInterviewComplete && self.state == .interviewing {
+                    if self.liveManager.isInterviewComplete && self.state == .interviewing {
                         self.state = .concluding
                         try? await Task.sleep(for: .seconds(3))
                         await self.saveAndEvaluate()
@@ -119,7 +120,7 @@ final class InterviewViewModel {
     // MARK: - End Interview (manual)
 
     func endInterview() async {
-        geminiManager.endSession()
+        liveManager.endSession()
         await saveAndEvaluate()
     }
 
@@ -129,12 +130,12 @@ final class InterviewViewModel {
         state = .saving
         timer?.invalidate()
         proctor.stopMonitoring()
-        geminiManager.endSession()
+        liveManager.endSession()
 
         guard let sessionId else { return }
 
         do {
-            try await service.completeInterview(sessionId: sessionId, transcript: geminiManager.transcript)
+            try await service.completeInterview(sessionId: sessionId, transcript: liveManager.transcript)
             state = .evaluating
             await pollForEvaluation()
         } catch {
