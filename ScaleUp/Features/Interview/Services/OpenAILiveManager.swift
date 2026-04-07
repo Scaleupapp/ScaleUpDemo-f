@@ -136,6 +136,7 @@ final class OpenAILiveManager {
     var questionCount = 0
     var answerDuration: TimeInterval = 0
     var liveTranscription: String = ""
+    var analyzingResponse: Bool = false  // Shows "Analyzing your response..." UX
     private(set) var greetingDone = false
 
     private var webSocket: URLSessionWebSocketTask?
@@ -145,6 +146,7 @@ final class OpenAILiveManager {
     private var answerTimer: Timer?
     private var systemInstruction: String = ""
     private var currentResponseHasAudio = false
+    private var waitingForNextQuestion = false
 
     // MARK: - Start Session
 
@@ -265,11 +267,13 @@ final class OpenAILiveManager {
         audioIO.isSending = false
         answerTimer?.invalidate()
         answerTimer = nil
+        analyzingResponse = true
+        waitingForNextQuestion = true
         turn = .processing
 
         Task {
+            // Step 1: Commit audio and request first response
             try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
-            // Wait for commit to be acknowledged before requesting response
             try? await Task.sleep(for: .milliseconds(500))
             try? await webSocket?.send(.string(
                 "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
@@ -398,13 +402,31 @@ final class OpenAILiveManager {
             }
 
         case "response.done":
-            // Transition turn based on whether this response had audio.
-            // This is the fallback — audio_transcript.done may not always fire.
             if currentResponseHasAudio {
+                // Response had audio — AI finished speaking
+                analyzingResponse = false
+                waitingForNextQuestion = false
                 if !greetingDone {
                     turn = .readyCheck
                 } else {
+                    // Increment question count
+                    let interviewerCount = transcript.filter { $0.role == "interviewer" }.count
+                    if interviewerCount > questionCount && greetingDone {
+                        questionCount = interviewerCount
+                    }
                     turn = .waitingToAnswer
+                }
+            } else if waitingForNextQuestion {
+                // Response had no audio (function call only) — auto-trigger second round
+                analyzingResponse = false
+                turn = .processing
+                Task {
+                    try? await Task.sleep(for: .milliseconds(300))
+                    try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
+                    try? await Task.sleep(for: .milliseconds(300))
+                    try? await webSocket?.send(.string(
+                        "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
+                    ))
                 }
             }
             currentResponseHasAudio = false

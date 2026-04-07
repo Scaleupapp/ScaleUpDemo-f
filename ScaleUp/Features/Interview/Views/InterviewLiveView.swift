@@ -151,7 +151,11 @@ struct InterviewLiveView: View {
         case .userRecording:
             recordingIndicator
         case .processing:
-            processingIndicator
+            if viewModel.liveManager.analyzingResponse {
+                analyzingIndicator
+            } else {
+                processingIndicator
+            }
         }
     }
 
@@ -276,6 +280,28 @@ struct InterviewLiveView: View {
                     .lineLimit(3)
                     .padding(.horizontal, Spacing.lg)
             }
+        }
+    }
+
+    private var analyzingIndicator: some View {
+        VStack(spacing: Spacing.lg) {
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.info.opacity(0.12))
+                    .frame(width: 88, height: 88)
+
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(ColorTokens.info)
+            }
+
+            Text("Analyzing your response...")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.info)
+
+            Text("Processing what you said")
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textTertiary)
         }
     }
 
