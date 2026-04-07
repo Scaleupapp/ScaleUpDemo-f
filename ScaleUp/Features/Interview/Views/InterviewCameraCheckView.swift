@@ -29,77 +29,50 @@ struct CameraStatusView: View {
 
 struct InterviewCameraCheckView: View {
     @Bindable var viewModel: InterviewViewModel
-    @State private var cameraAuthorized = false
     @State private var micAuthorized = false
-    @State private var cameraSession: AVCaptureSession?
-    @State private var showPermissionDenied = false
 
     var body: some View {
         ZStack {
             ColorTokens.background.ignoresSafeArea()
 
-            VStack(spacing: Spacing.xl) {
-                Spacer()
+            ScrollView {
+                VStack(spacing: Spacing.xl) {
+                    Spacer().frame(height: Spacing.xl)
 
-                // Camera preview area
-                cameraPreviewSection
+                    // Header
+                    VStack(spacing: Spacing.md) {
+                        ZStack {
+                            Circle()
+                                .fill(ColorTokens.gold.opacity(0.12))
+                                .frame(width: 80, height: 80)
+                            Image(systemName: "checklist")
+                                .font(.system(size: 36, weight: .semibold))
+                                .foregroundStyle(ColorTokens.gold)
+                        }
 
-                // Checklist
-                checklistSection
+                        Text("Pre-Interview Check")
+                            .font(Typography.titleLarge)
+                            .foregroundStyle(ColorTokens.textPrimary)
 
-                // Warning if camera denied
-                if showPermissionDenied {
-                    cameraWarning
+                        Text("Make sure everything is set before you begin")
+                            .font(Typography.bodySmall)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+
+                    // Checklist
+                    checklistSection
+
+                    Spacer().frame(height: Spacing.md)
+
+                    // Ready button
+                    readyButton
                 }
-
-                Spacer()
-
-                // Ready button
-                readyButton
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.xl)
         }
         .task {
             await checkPermissions()
-        }
-        .onDisappear {
-            cameraSession?.stopRunning()
-        }
-    }
-
-    // MARK: - Camera Preview
-
-    private var cameraPreviewSection: some View {
-        VStack(spacing: Spacing.md) {
-            Text("Pre-Interview Check")
-                .font(Typography.titleLarge)
-                .foregroundStyle(ColorTokens.textPrimary)
-
-            ZStack {
-                RoundedRectangle(cornerRadius: CornerRadius.large)
-                    .fill(ColorTokens.surface)
-                    .frame(height: 260)
-
-                if cameraAuthorized {
-                    CameraStatusView(authorized: true)
-                        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.large))
-                        .frame(height: 260)
-                } else {
-                    VStack(spacing: Spacing.md) {
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                        Text(showPermissionDenied ? "Camera access denied" : "Setting up camera...")
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                }
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.large)
-                    .stroke(ColorTokens.border, lineWidth: 1)
-            )
         }
     }
 
@@ -108,24 +81,10 @@ struct InterviewCameraCheckView: View {
     private var checklistSection: some View {
         VStack(spacing: Spacing.md) {
             checkItem(
-                icon: "camera.fill",
-                text: "Camera monitors for integrity during the interview",
-                isReady: cameraAuthorized,
-                isOptional: true
-            )
-
-            checkItem(
                 icon: "mic.fill",
                 text: "Microphone will be used for voice conversation",
                 isReady: micAuthorized,
                 isOptional: false
-            )
-
-            checkItem(
-                icon: "headphones",
-                text: "Use headphones for best audio quality",
-                isReady: true,
-                isOptional: true
             )
 
             checkItem(
@@ -143,6 +102,13 @@ struct InterviewCameraCheckView: View {
             )
 
             checkItem(
+                icon: "headphones",
+                text: "Use headphones for best audio quality",
+                isReady: true,
+                isOptional: true
+            )
+
+            checkItem(
                 icon: "battery.75percent",
                 text: "Keep your device charged — interview may last 15-20 minutes",
                 isReady: true,
@@ -155,15 +121,17 @@ struct InterviewCameraCheckView: View {
     }
 
     private func checkItem(icon: String, text: String, isReady: Bool, isOptional: Bool) -> some View {
-        HStack(spacing: Spacing.md) {
+        HStack(alignment: .top, spacing: Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 16))
                 .foregroundStyle(isReady ? ColorTokens.success : ColorTokens.textTertiary)
                 .frame(width: 24)
+                .padding(.top, 2)
 
             Text(text)
                 .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Spacer()
 
@@ -185,21 +153,6 @@ struct InterviewCameraCheckView: View {
                     .foregroundStyle(ColorTokens.error)
             }
         }
-    }
-
-    // MARK: - Camera Warning
-
-    private var cameraWarning: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(ColorTokens.warning)
-            Text("Camera is optional but recommended for integrity monitoring. You can still proceed.")
-                .font(Typography.caption)
-                .foregroundStyle(ColorTokens.warning)
-        }
-        .padding(Spacing.sm)
-        .background(ColorTokens.warning.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
     }
 
     // MARK: - Ready Button
@@ -228,22 +181,6 @@ struct InterviewCameraCheckView: View {
     // MARK: - Permissions
 
     private func checkPermissions() async {
-        // Camera
-        let cameraStatus = AVCaptureDevice.authorizationStatus(for: .video)
-        switch cameraStatus {
-        case .authorized:
-            cameraAuthorized = true
-            setupCameraPreview()
-        case .notDetermined:
-            let granted = await AVCaptureDevice.requestAccess(for: .video)
-            cameraAuthorized = granted
-            if granted { setupCameraPreview() }
-            else { showPermissionDenied = true }
-        default:
-            showPermissionDenied = true
-        }
-
-        // Microphone
         let micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         switch micStatus {
         case .authorized:
@@ -252,22 +189,6 @@ struct InterviewCameraCheckView: View {
             micAuthorized = await AVCaptureDevice.requestAccess(for: .audio)
         default:
             micAuthorized = false
-        }
-    }
-
-    private func setupCameraPreview() {
-        let session = AVCaptureSession()
-        session.sessionPreset = .medium
-
-        guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .front),
-              let input = try? AVCaptureDeviceInput(device: device),
-              session.canAddInput(input) else { return }
-
-        session.addInput(input)
-        cameraSession = session
-
-        DispatchQueue.global(qos: .userInitiated).async {
-            session.startRunning()
         }
     }
 }

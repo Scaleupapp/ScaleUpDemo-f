@@ -420,22 +420,6 @@ struct InterviewLiveView: View {
     private var bottomControls: some View {
         VStack(spacing: Spacing.md) {
             HStack(spacing: Spacing.sm) {
-                // Camera status — compact capsule
-                if viewModel.proctor.cameraEnabled {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(proctorDotColor)
-                            .frame(width: 8, height: 8)
-                        Text(proctorLabel)
-                            .font(Typography.micro)
-                            .foregroundStyle(proctorDotColor)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(proctorDotColor.opacity(0.12))
-                    .clipShape(Capsule())
-                }
-
                 Spacer()
 
                 if viewModel.liveManager.greetingDone {
@@ -482,24 +466,6 @@ struct InterviewLiveView: View {
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.lg)
-    }
-
-    // MARK: - Proctor Status
-
-    private var proctorDotColor: Color {
-        switch viewModel.proctor.currentStatus {
-        case .monitoring: return ColorTokens.success
-        case .alert: return ColorTokens.error
-        default: return ColorTokens.textTertiary
-        }
-    }
-
-    private var proctorLabel: String {
-        switch viewModel.proctor.currentStatus {
-        case .monitoring: return "Proctoring"
-        case .alert(let msg): return msg
-        default: return "Camera"
-        }
     }
 
     // MARK: - Transcript Sheet
