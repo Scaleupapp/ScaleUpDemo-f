@@ -127,6 +127,27 @@ struct InterviewCameraCheckView: View {
                 isReady: true,
                 isOptional: true
             )
+
+            checkItem(
+                icon: "wifi",
+                text: "Ensure stable internet — avoid switching networks during the interview",
+                isReady: true,
+                isOptional: false
+            )
+
+            checkItem(
+                icon: "speaker.slash.fill",
+                text: "Find a quiet environment with minimal background noise",
+                isReady: true,
+                isOptional: false
+            )
+
+            checkItem(
+                icon: "battery.75percent",
+                text: "Keep your device charged — interview may last 15-20 minutes",
+                isReady: true,
+                isOptional: true
+            )
         }
         .padding(Spacing.md)
         .background(ColorTokens.surface)

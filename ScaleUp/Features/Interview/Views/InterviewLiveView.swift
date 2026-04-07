@@ -419,9 +419,21 @@ struct InterviewLiveView: View {
 
     private var bottomControls: some View {
         VStack(spacing: Spacing.md) {
-            HStack(spacing: Spacing.md) {
+            HStack(spacing: Spacing.sm) {
+                // Camera status — compact capsule
                 if viewModel.proctor.cameraEnabled {
-                    cameraPill
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(proctorDotColor)
+                            .frame(width: 8, height: 8)
+                        Text(proctorLabel)
+                            .font(Typography.micro)
+                            .foregroundStyle(proctorDotColor)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(proctorDotColor.opacity(0.12))
+                    .clipShape(Capsule())
                 }
 
                 Spacer()
@@ -472,51 +484,21 @@ struct InterviewLiveView: View {
         .padding(.bottom, Spacing.lg)
     }
 
-    // MARK: - Camera Pill
+    // MARK: - Proctor Status
 
-    private var cameraPill: some View {
-        ZStack {
-            if viewModel.proctor.cameraEnabled {
-                CameraStatusView(authorized: true)
-                    .frame(width: 60, height: 80)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(ColorTokens.surfaceElevated)
-                    .frame(width: 60, height: 80)
-                    .overlay {
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-            }
-
-            if case .alert(let msg) = viewModel.proctor.currentStatus {
-                VStack {
-                    Spacer()
-                    Text(msg)
-                        .font(.system(size: 7, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(ColorTokens.error)
-                        .clipShape(Capsule())
-                }
-                .frame(width: 60, height: 80)
-                .padding(.bottom, 4)
-            }
-        }
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(proctorBorderColor, lineWidth: 2)
-        )
-    }
-
-    private var proctorBorderColor: Color {
+    private var proctorDotColor: Color {
         switch viewModel.proctor.currentStatus {
         case .monitoring: return ColorTokens.success
         case .alert: return ColorTokens.error
-        default: return ColorTokens.border
+        default: return ColorTokens.textTertiary
+        }
+    }
+
+    private var proctorLabel: String {
+        switch viewModel.proctor.currentStatus {
+        case .monitoring: return "Proctoring"
+        case .alert(let msg): return msg
+        default: return "Camera"
         }
     }
 
