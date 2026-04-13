@@ -97,6 +97,14 @@ final class QuizSessionViewModel {
         timeTaken = [:]
         hasCompleted = false
 
+        AnalyticsService.shared.track(.quizStarted(
+            quizId: quiz.id,
+            topic: quiz.topic,
+            source: "quiz_list"
+        ))
+        // Detect content→quiz transition
+        AnalyticsService.shared.checkContentToQuizTransition(quizId: quiz.id)
+
         do {
             let attempt = try await quizService.startQuiz(id: quiz.id)
             attemptId = attempt.id
@@ -137,6 +145,14 @@ final class QuizSessionViewModel {
                 textResponse: text
             )
         }
+
+        // Track answer (correctness unknown client-side — server evaluates)
+        AnalyticsService.shared.track(.quizQuestionAnswered(
+            quizId: quizId,
+            questionIndex: qi,
+            correct: nil,
+            timeToAnswerMs: Int(elapsed * 1000)
+        ))
     }
 
     // MARK: - Navigation
@@ -199,9 +215,26 @@ final class QuizSessionViewModel {
             let result = try await quizService.completeQuiz(id: quiz.id)
             completedAttempt = result
             hasCompleted = true
+            let scorePercent = Int(result.score?.percentage ?? 0)
+            AnalyticsService.shared.track(.quizCompleted(
+                quizId: quiz.id,
+                topic: quiz.topic,
+                score: scorePercent,
+                totalQuestions: quiz.totalQuestions
+            ))
+            // If score is weak (<60%), seed remediation window with this topic
+            if scorePercent < 60 {
+                AnalyticsService.shared.recordQuizCompleted(quizId: quiz.id, weakTopics: [quiz.topic])
+            }
         } catch {
             // Build local result
             hasCompleted = true
+            AnalyticsService.shared.track(.quizCompleted(
+                quizId: quiz.id,
+                topic: quiz.topic,
+                score: 0,
+                totalQuestions: quiz.totalQuestions
+            ))
         }
 
         isCompleting = false

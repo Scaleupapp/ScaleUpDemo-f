@@ -184,6 +184,7 @@ final class OnboardingViewModel {
         isLoading = true
         try? await service.complete()
         isLoading = false
+        AnalyticsService.shared.track(.onboardingCompleted)
         appState?.completeOnboarding()
     }
 
@@ -260,6 +261,15 @@ final class OnboardingViewModel {
                 currentLevel: currentLevel,
                 weeklyCommitHours: Int(weeklyHours)
             )
+            AnalyticsService.shared.track(.onboardingObjectiveSelected(objective: String(describing: objective)))
+            var userProps = AnalyticsUserProperties()
+            userProps.objective = String(describing: objective)
+            userProps.currentLevel = String(describing: currentLevel)
+            userProps.targetExam = objective == .examPreparation ? examName.nilIfEmpty : nil
+            userProps.targetRole = objective == .interviewPreparation ? targetRole.nilIfEmpty : nil
+            userProps.targetCompany = objective == .interviewPreparation ? targetCompany.nilIfEmpty : nil
+            userProps.weeklyCommitHours = Int(weeklyHours)
+            AnalyticsService.shared.setUserProperties(userProps)
         case 4:
             try await service.updatePreferences(
                 style: learningStyle,

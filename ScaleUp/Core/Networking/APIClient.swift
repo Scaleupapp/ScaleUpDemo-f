@@ -169,24 +169,45 @@ actor APIClient {
                 return try await handleUnauthorized(endpoint: endpoint, body: body)
             }
             let msg = parseMessage(from: data)
+            trackError(endpoint: endpoint.path, code: 401, message: msg)
             throw APIError.badRequest(msg)
         case 403:
+            trackError(endpoint: endpoint.path, code: 403, message: "forbidden")
             throw APIError.forbidden
         case 404:
+            trackError(endpoint: endpoint.path, code: 404, message: "not_found")
             throw APIError.notFound
         case 409:
             let msg = parseMessage(from: data)
+            trackError(endpoint: endpoint.path, code: 409, message: msg)
             throw APIError.conflict(msg)
         case 429:
+            trackError(endpoint: endpoint.path, code: 429, message: "rate_limited")
             throw APIError.rateLimited
         case 400:
             let msg = parseMessage(from: data)
+            trackError(endpoint: endpoint.path, code: 400, message: msg)
             throw APIError.badRequest(msg)
         case 500...599:
+            trackError(endpoint: endpoint.path, code: httpResponse.statusCode, message: "server_error")
             throw APIError.serverError
         default:
             let msg = parseMessage(from: data)
+            trackError(endpoint: endpoint.path, code: httpResponse.statusCode, message: msg)
             throw APIError.unknown(httpResponse.statusCode, msg)
+        }
+    }
+
+    // MARK: - Error Tracking
+
+    /// Fire error_encountered from any actor context. Bridges to @MainActor AnalyticsService.
+    private nonisolated func trackError(endpoint: String, code: Int, message: String) {
+        Task { @MainActor in
+            AnalyticsService.shared.track(.errorEncountered(
+                endpoint: endpoint,
+                code: code,
+                message: message
+            ))
         }
     }
 

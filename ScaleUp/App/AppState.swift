@@ -35,6 +35,7 @@ final class AppState {
         do {
             let user: User = try await APIClient.shared.request(MeEndpoint())
             currentUser = user
+            AnalyticsService.shared.identify(userId: user.id)
 
             if user.onboardingComplete == true {
                 launchState = .home
@@ -56,6 +57,7 @@ final class AppState {
             refresh: authData.refreshToken
         )
         currentUser = authData.user
+        AnalyticsService.shared.identify(userId: authData.user.id)
 
         if authData.user.onboardingComplete == true {
             launchState = .home
@@ -81,6 +83,7 @@ final class AppState {
         await KeychainManager.shared.clearTokens()
         URLCache.shared.removeAllCachedResponses()
         currentUser = nil
+        AnalyticsService.shared.reset()
         launchState = .welcome
     }
 }

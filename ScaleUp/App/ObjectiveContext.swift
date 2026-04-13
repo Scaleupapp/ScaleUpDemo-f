@@ -28,6 +28,7 @@ final class ObjectiveContext {
     func switchObjective(to objective: Objective) async {
         guard objective.id != activeObjective?.id else { return }
 
+        let previousObjectiveType = activeObjective?.objectiveType
         isSwitching = true
         switchError = nil
         needsJourneyGeneration = false
@@ -37,6 +38,13 @@ final class ObjectiveContext {
             activeObjective = objective
             needsJourneyGeneration = result.needsGeneration ?? false
             isSwitching = false
+            AnalyticsService.shared.track(.objectiveSwitched(
+                fromObjective: previousObjectiveType,
+                toObjective: objective.objectiveType ?? "unknown"
+            ))
+            if let type = objective.objectiveType {
+                AnalyticsService.shared.setUserProperty("objective", value: type)
+            }
         } catch {
             switchError = error.localizedDescription
             isSwitching = false

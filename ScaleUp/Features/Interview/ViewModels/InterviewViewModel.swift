@@ -94,6 +94,12 @@ final class InterviewViewModel {
             systemInstruction = response.systemInstruction
             interviewStartTime = Date()
 
+            AnalyticsService.shared.track(.interviewStarted(
+                type: selectedType.rawValue,
+                targetRole: targetRole.trimmingCharacters(in: .whitespaces),
+                difficulty: selectedDifficulty.rawValue
+            ))
+
             let tokenResponse = try await service.getRealtimeToken(sessionId: response.session._id)
             try await liveManager.startSession(systemInstruction: response.systemInstruction, token: tokenResponse.token)
 
@@ -138,6 +144,14 @@ final class InterviewViewModel {
 
         do {
             try await service.completeInterview(sessionId: sessionId, transcript: liveManager.transcript)
+            let durationSeconds = Int(elapsedTime)
+            AnalyticsService.shared.track(.interviewCompleted(
+                sessionId: sessionId,
+                type: selectedType.rawValue,
+                durationSeconds: durationSeconds
+            ))
+            // Seed the interview→content transition window
+            AnalyticsService.shared.recordInterviewCompleted(sessionId: sessionId)
             state = .evaluating
             await pollForEvaluation()
         } catch {

@@ -102,6 +102,25 @@ final class PlayerViewModel {
             likeCount = fetchedContent.likeCount ?? 0
             saveCount = fetchedContent.saveCount ?? 0
             commentCount = fetchedContent.commentCount ?? 0
+            hasFiredCompletedEvent = false
+
+            let topic = fetchedContent.topics?.first
+            AnalyticsService.shared.track(.contentStarted(
+                contentId: id,
+                topic: topic,
+                contentType: fetchedContent.contentType.rawValue,
+                source: "player"
+            ))
+            // Detect C2O transitions (quiz weakness → content, interview gap → content)
+            AnalyticsService.shared.checkQuizWeaknessToContent(contentId: id, topic: topic)
+            AnalyticsService.shared.checkInterviewGapToContent(contentId: id)
+
+            // Fire first_content_viewed once per user lifetime (activation event)
+            let defaults = UserDefaults.standard
+            if !defaults.bool(forKey: "analytics.firstContentViewed.fired") {
+                defaults.set(true, forKey: "analytics.firstContentViewed.fired")
+                AnalyticsService.shared.track(.firstContentViewed(contentId: id, topic: topic))
+            }
 
             // Fetch user's interaction status (liked/saved/rated) + follow status
             async let interactionTask: InteractionStatus? = {
@@ -327,15 +346,27 @@ final class PlayerViewModel {
             timeSpent: Int(currentTime)
         )
 
-        if progress >= 0.95 {
+        if progress >= 0.95 && !hasFiredCompletedEvent {
+            hasFiredCompletedEvent = true
             try? await playerService.markComplete(contentId: contentId)
+            AnalyticsService.shared.track(.contentCompleted(
+                contentId: contentId,
+                topic: content?.topics?.first,
+                durationSeconds: Int(duration)
+            ))
+            // Seed the content→quiz transition window
+            AnalyticsService.shared.recordContentCompleted(contentId: contentId)
         }
     }
+
+    // Guard to prevent contentCompleted firing twice for the same content
+    private var hasFiredCompletedEvent = false
 
     // MARK: - Interactions
 
     func toggleLike() async {
         guard let id = content?.id else { return }
+        let willLike = !isLiked
         isLiked.toggle()
         likeCount += isLiked ? 1 : -1
         Haptics.light()
@@ -344,10 +375,14 @@ final class PlayerViewModel {
             isLiked = response.liked
             likeCount = response.likeCount
         }
+        if willLike {
+            AnalyticsService.shared.track(.contentLiked(contentId: id))
+        }
     }
 
     func toggleSave() async {
         guard let id = content?.id else { return }
+        let willSave = !isSaved
         isSaved.toggle()
         saveCount += isSaved ? 1 : -1
         Haptics.light()
@@ -355,6 +390,9 @@ final class PlayerViewModel {
         if let response = try? await contentService.toggleSave(contentId: id) {
             isSaved = response.saved
             saveCount = response.saveCount
+        }
+        if willSave {
+            AnalyticsService.shared.track(.contentSaved(contentId: id))
         }
     }
 
@@ -393,6 +431,16 @@ final class PlayerViewModel {
         userRating = value
         Haptics.success()
         try? await contentService.rate(contentId: id, value: value)
+        AnalyticsService.shared.track(.contentRated(contentId: id, rating: value))
+    }
+
+    func trackCreatorFollowed() {
+        guard let creatorId = content?.creatorId?.id else { return }
+        if isFollowingCreator {
+            AnalyticsService.shared.track(.creatorFollowed(creatorId: creatorId))
+        } else {
+            AnalyticsService.shared.track(.creatorUnfollowed(creatorId: creatorId))
+        }
     }
 
     // MARK: - Comments

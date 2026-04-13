@@ -136,6 +136,7 @@ final class AITutorViewModel {
             contextMeta: nil,
             createdAt: Date()
         )
+        let isFirstMessage = messages.isEmpty
         messages.append(userMessage)
         inputText = ""
         failedMessage = nil
@@ -144,6 +145,14 @@ final class AITutorViewModel {
 
         // Hide quick prompts after first message
         quickPrompts = []
+
+        if isFirstMessage {
+            AnalyticsService.shared.track(.aiTutorConversationStarted(contentId: contentId))
+        }
+        AnalyticsService.shared.track(.aiTutorMessageSent(
+            contentId: contentId,
+            messageLength: messageText.count
+        ))
 
         Haptics.light()
 

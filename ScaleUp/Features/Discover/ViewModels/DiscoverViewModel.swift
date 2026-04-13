@@ -195,6 +195,11 @@ final class DiscoverViewModel {
             }
 
             isSearching = false
+
+            AnalyticsService.shared.track(.searchPerformed(
+                queryLength: query.count,
+                resultsCount: searchResults.count + searchCreatorResults.count
+            ))
         }
     }
 

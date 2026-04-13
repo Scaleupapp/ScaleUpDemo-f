@@ -482,6 +482,7 @@ struct NotesDetailView: View {
             let set = try await notesService.generateFlashcards(contentId: contentId)
             existingFlashcardSetId = set.id
             navigateToFlashcardId = set.id
+            AnalyticsService.shared.track(.flashcardReviewed(deckId: set.id))
             Haptics.success()
         } catch {
             Haptics.error()
@@ -506,6 +507,7 @@ struct NotesDetailView: View {
         do {
             let map = try await notesService.generateMindMap(contentId: contentId)
             existingMindMapId = map.id
+            AnalyticsService.shared.track(.mindmapGenerated(contentId: contentId))
             Haptics.success()
             showMindMap = map
         } catch {

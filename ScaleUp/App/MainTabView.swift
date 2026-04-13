@@ -20,6 +20,12 @@ struct MainTabView: View {
         .onAppear {
             configureTabBarAppearance()
         }
+        .onChange(of: appState.selectedTab) { oldValue, newValue in
+            AnalyticsService.shared.track(.tabSwitched(
+                from: oldValue.rawValue,
+                to: newValue.rawValue
+            ))
+        }
         .overlay {
             if coachMarkManager.showWelcomeCarousel {
                 WelcomeCarouselView {
@@ -94,11 +100,11 @@ enum Tab: String, CaseIterable, Identifiable {
     @MainActor @ViewBuilder
     var view: some View {
         switch self {
-        case .home: HomeView()
-        case .discover: DiscoverView()
-        case .journey: MyPlanView()
-        case .progress: ProgressTabView()
-        case .profile: ProfileTabView()
+        case .home: HomeView().trackScreen("home_tab")
+        case .discover: DiscoverView().trackScreen("discover_tab")
+        case .journey: MyPlanView().trackScreen("myplan_tab")
+        case .progress: ProgressTabView().trackScreen("progress_tab")
+        case .profile: ProfileTabView().trackScreen("profile_tab")
         }
     }
 }

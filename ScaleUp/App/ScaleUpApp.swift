@@ -3,11 +3,18 @@ import SwiftUI
 @main
 struct ScaleUpApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @State private var appState = AppState()
     @State private var coachMarkManager = CoachMarkManager()
     @State private var pushManager = PushNotificationManager()
     @State private var uploadManager = UploadManager()
     @State private var objectiveContext = ObjectiveContext()
+
+    init() {
+        AnalyticsService.shared.configure(mixpanelToken: "e914bd9713918ab6ddc0c574a1d77255")
+        AnalyticsService.shared.track(.appOpened)
+        AnalyticsService.shared.handleAppForeground()
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -44,6 +51,16 @@ struct ScaleUpApp: App {
                         }
                     }
                 }
+                .onChange(of: scenePhase) { _, newPhase in
+                    switch newPhase {
+                    case .active:
+                        AnalyticsService.shared.handleAppForeground()
+                    case .background:
+                        AnalyticsService.shared.handleAppBackground()
+                    default:
+                        break
+                    }
+                }
         }
     }
 
@@ -53,18 +70,22 @@ struct ScaleUpApp: App {
         case .splash:
             SplashView()
                 .transition(.opacity)
+                .trackScreen("splash")
 
         case .welcome:
             WelcomeView()
                 .transition(.opacity)
+                .trackScreen("welcome")
 
         case .phoneVerification:
             PhoneVerificationView()
                 .transition(.opacity)
+                .trackScreen("phone_verification")
 
         case .onboarding(let step):
             OnboardingContainerView(initialStep: step, appState: appState)
                 .transition(.opacity)
+                .trackScreen("onboarding_step_\(step)")
 
         case .home:
             MainTabView()

@@ -178,6 +178,7 @@ final class CreateNotesViewModel {
 
             Haptics.success()
             uploadComplete = true
+            AnalyticsService.shared.track(.noteCreated(fileFormat: fileFormat))
         } catch {
             errorMessage = "Upload failed: \(error.localizedDescription)"
             showError = true

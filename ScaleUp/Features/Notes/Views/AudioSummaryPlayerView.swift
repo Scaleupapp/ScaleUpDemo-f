@@ -126,6 +126,7 @@ struct AudioSummaryPlayerView: View {
         guard let audioURL = URL(string: url) else { status = .error; return }
         let playerItem = AVPlayerItem(url: audioURL)
         player = AVPlayer(playerItem: playerItem)
+        AnalyticsService.shared.track(.audioSummaryPlayed(contentId: contentId))
 
         // Observe duration
         let interval = CMTime(seconds: 0.5, preferredTimescale: 600)

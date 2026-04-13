@@ -26,6 +26,9 @@ packages:
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: "8.0.0"
+  Mixpanel:
+    url: https://github.com/mixpanel/mixpanel-swift
+    from: "6.0.0"
 
 targets:
   ScaleUp:
@@ -57,6 +60,8 @@ targets:
         product: NukeUI
       - package: GoogleSignIn
         product: GoogleSignIn
+      - package: Mixpanel
+        product: Mixpanel
 
   ScaleUpTests:
     type: bundle.unit-test

@@ -133,6 +133,7 @@ final class AuthViewModel {
             )
             isLoading = false
             Haptics.success()
+            AnalyticsService.shared.track(.registrationCompleted(method: .email))
             return result
         } catch let error as APIError {
             errorMessage = error.errorDescription
@@ -153,6 +154,7 @@ final class AuthViewModel {
         errorMessage = nil
 
         let formattedPhone = phone.hasPrefix("+") ? phone : "+91\(phone)"
+        AnalyticsService.shared.track(.phoneEntered)
 
         do {
             try await authService.sendOTP(phone: formattedPhone)
@@ -160,14 +162,17 @@ final class AuthViewModel {
             isLoading = false
             startCooldown()
             Haptics.success()
+            AnalyticsService.shared.track(.otpRequested)
         } catch let error as APIError {
             errorMessage = error.errorDescription
             isLoading = false
             Haptics.error()
+            AnalyticsService.shared.track(.otpFailed(reason: error.errorDescription ?? "api_error"))
         } catch {
             errorMessage = "Failed to send OTP. Try again."
             isLoading = false
             Haptics.error()
+            AnalyticsService.shared.track(.otpFailed(reason: "unknown"))
         }
     }
 
@@ -188,6 +193,11 @@ final class AuthViewModel {
             )
             isLoading = false
             Haptics.success()
+            AnalyticsService.shared.track(.otpVerified)
+            if !firstName.isEmpty {
+                // firstName is only sent on the phone-based registration branch
+                AnalyticsService.shared.track(.registrationCompleted(method: .phone))
+            }
             return result
         } catch is PhoneNotRegisteredError {
             phoneNeedsRegistration = true
