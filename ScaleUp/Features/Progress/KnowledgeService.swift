@@ -34,6 +34,10 @@ actor KnowledgeService {
     func getTimeline(limit: Int = 20, objectiveId: String? = nil) async throws -> [TimelineEvent] {
         try await api.request(ProgressEndpoints.timeline(limit: limit, objectiveId: objectiveId))
     }
+
+    func getInsights(refresh: Bool = false) async throws -> ProgressInsightsResponse {
+        try await api.request(ProgressEndpoints.insights(refresh: refresh))
+    }
 }
 
 // MARK: - Knowledge Endpoints
@@ -73,6 +77,7 @@ private enum ProgressEndpoints: Endpoint {
     case history(page: Int, limit: Int)
     case activityHeatmap(days: Int, objectiveId: String?)
     case timeline(limit: Int, objectiveId: String?)
+    case insights(refresh: Bool)
 
     var path: String {
         switch self {
@@ -80,6 +85,7 @@ private enum ProgressEndpoints: Endpoint {
         case .history: return "/progress/history"
         case .activityHeatmap: return "/progress/activity-heatmap"
         case .timeline: return "/progress/timeline"
+        case .insights: return "/progress/insights"
         }
     }
 
@@ -103,6 +109,8 @@ private enum ProgressEndpoints: Endpoint {
             var items = [URLQueryItem(name: "limit", value: "\(limit)")]
             if let objectiveId { items.append(URLQueryItem(name: "objectiveId", value: objectiveId)) }
             return items
+        case .insights(let refresh):
+            return refresh ? [URLQueryItem(name: "refresh", value: "true")] : nil
         }
     }
 }

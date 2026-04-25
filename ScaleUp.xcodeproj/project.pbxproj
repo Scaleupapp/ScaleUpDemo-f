@@ -40,6 +40,7 @@
 		2013B559561303269E6DBAE3 /* DailyChallengeCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB707A3DC976EB2862BD5DA /* DailyChallengeCarousel.swift */; };
 		206C6B9D2B425F12D8311750 /* AddObjectiveSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF036AE29224BAD23476945 /* AddObjectiveSheet.swift */; };
 		235F53435431AD4A159A5B8C /* NoteRequestDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE16BA2A2251EAA614CAD6F7 /* NoteRequestDetailView.swift */; };
+		24F72891096DD67A8EBAEAFE /* ProgressInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246F59029776866E55CDE9FA /* ProgressInsights.swift */; };
 		26B7CDA6E99F030EE7AE3E7E /* InterviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB84D59D198D460B8B735C /* InterviewViewModel.swift */; };
 		26BDAD61E8DB27421C25DD55 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE09302AF43EC4201680CE4 /* HomeView.swift */; };
 		26FCD69B82179440D0755360 /* AnalyticsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16771E7523419F120DF73DCD /* AnalyticsProvider.swift */; };
@@ -277,6 +278,7 @@
 		2268904DE8A4A97631F6699E /* InterviewHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewHistoryView.swift; sourceTree = "<group>"; };
 		2354CCCC2CACBFFFB12EC92C /* CreatorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorViewModel.swift; sourceTree = "<group>"; };
 		239F99F9145930B812FFE55C /* splash_animation.mp4 */ = {isa = PBXFileReference; path = splash_animation.mp4; sourceTree = "<group>"; };
+		246F59029776866E55CDE9FA /* ProgressInsights.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressInsights.swift; sourceTree = "<group>"; };
 		25A10244004AFF5CCBED32EC /* PreferencesStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesStepView.swift; sourceTree = "<group>"; };
 		25FC9CCAE67C8A65F89EE0B3 /* CompetitionHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetitionHubView.swift; sourceTree = "<group>"; };
 		2698A80E59B34CA4A6DE1C11 /* PendingNotesReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingNotesReviewView.swift; sourceTree = "<group>"; };
@@ -1219,6 +1221,7 @@
 				F181F50AD12704A202AF59C7 /* NotesAnalytics.swift */,
 				E12E645CC5045EF597C4A5EF /* Onboarding.swift */,
 				5570D7781697218AFFDAED04 /* Playlist.swift */,
+				246F59029776866E55CDE9FA /* ProgressInsights.swift */,
 				B283BCCBD8959B333C18CE0E /* Quiz.swift */,
 				729BC5F5424F654CA56FBC4F /* User.swift */,
 				6E9D49F86A25007138C2AA75 /* UserObjective.swift */,
@@ -1655,6 +1658,7 @@
 				D5F8B1BF306718132E5E10CC /* ProfileStepView.swift in Sources */,
 				5C95C525E3D992C58DE284A7 /* ProfileTabView.swift in Sources */,
 				72E4653B4769055F2ABB8C8F /* ProfileViewModel.swift in Sources */,
+				24F72891096DD67A8EBAEAFE /* ProgressInsights.swift in Sources */,
 				8C9F4893A319027236B0832F /* ProgressRing.swift in Sources */,
 				0224DC891BE11CEB9E2CAEE3 /* ProgressTabView.swift in Sources */,
 				72A61B13940988C346C1FAC4 /* ProgressViewModel.swift in Sources */,

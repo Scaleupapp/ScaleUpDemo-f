@@ -10,6 +10,7 @@ struct ProgressTabView: View {
     @State private var viewModel = ProgressViewModel()
     @State private var showDetailedAnalytics = false
     @Environment(ObjectiveContext.self) private var objectiveContext
+    @Environment(AppState.self) private var appState
 
     // Static formatter — renders "3 hours ago" as a fixed string, not a live-ticking counter.
     static let relativeDateFormatter: RelativeDateTimeFormatter = {
@@ -76,6 +77,11 @@ struct ProgressTabView: View {
             VStack(spacing: Spacing.xl) {
                 // 1. Knowledge Score Hero (with explanatory labels)
                 scoreHeroSection
+
+                // 1a. Personalised Insights cards (BUG-8 Phase 1 — signal engine)
+                if let cards = viewModel.insights?.cards, !cards.isEmpty {
+                    insightsSection(cards)
+                }
 
                 // 1b. Competition Performance Stats
                 if viewModel.competitionProfile != nil || viewModel.competitionStats != nil {
@@ -209,6 +215,124 @@ struct ProgressTabView: View {
             Text(value)
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
+        }
+    }
+
+    // MARK: - Personalised Insights (BUG-8 Phase 1)
+
+    @ViewBuilder
+    private func insightsSection(_ cards: [InsightCard]) -> some View {
+        VStack(spacing: Spacing.sm) {
+            HStack(spacing: 6) {
+                Image(systemName: "wand.and.stars")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("For You")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+            VStack(spacing: 10) {
+                ForEach(cards) { card in
+                    insightCardView(card)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func insightCardView(_ card: InsightCard) -> some View {
+        let accent = insightAccentColor(card.tone)
+
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(spacing: 8) {
+                Image(systemName: card.icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 22, height: 22)
+                Text(card.title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .textCase(.uppercase)
+                    .tracking(0.6)
+                Spacer(minLength: 0)
+            }
+
+            Text(card.body)
+                .font(.system(size: 14))
+                .foregroundStyle(.white.opacity(0.92))
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let metric = card.metric {
+                HStack(spacing: 6) {
+                    Text(metric.value)
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(accent)
+                    Text(metric.label.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(0.6)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    if let delta = metric.delta {
+                        Text(delta)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 2)
+            }
+
+            if let cta = card.cta {
+                Button {
+                    handleInsightCTA(cta)
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(cta.label)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.black)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black.opacity(0.6))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(accent)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    private func insightAccentColor(_ tone: InsightCard.InsightTone) -> Color {
+        switch tone {
+        case .positive: return ColorTokens.success
+        case .caution: return Color.orange
+        case .celebration: return ColorTokens.gold
+        case .neutral: return ColorTokens.gold
+        }
+    }
+
+    /// Routes the CTA deeplink to the appropriate tab.
+    /// Phase 1 keeps this simple — every actionable CTA jumps to Journey
+    /// (the planning surface) where the user can pick up the suggested topic.
+    /// Phase 2 will add proper per-topic deeplinking.
+    private func handleInsightCTA(_ cta: InsightCTA) {
+        Haptics.selection()
+        guard let link = cta.deeplink else { return }
+        if link.contains("/topic/") || link.contains("/my-plan") || link.contains("/journey") {
+            appState.selectedTab = .journey
         }
     }
 

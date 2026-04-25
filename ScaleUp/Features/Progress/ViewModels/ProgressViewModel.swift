@@ -17,6 +17,7 @@ final class ProgressViewModel {
     var competitionStats: CompetitionStats? = nil
     var competitionProfile: CompetitionProfile? = nil
     var weeklyBoard: WeeklyLeaderboard? = nil
+    var insights: ProgressInsightsResponse?
     var isLoading = false
     var errorMessage: String?
     var showAllObjectives = false
@@ -116,9 +117,12 @@ final class ProgressViewModel {
         async let compProfileTask: CompetitionProfile? = {
             try? await self.competitionService.fetchCompetitionProfile()
         }()
+        async let insightsTask: ProgressInsightsResponse? = {
+            try? await self.knowledgeService.getInsights()
+        }()
 
-        let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline, compStats, compBoard, compProfile) =
-            await (profileTask, gapsTask, statsTask, dashTask, gapContentTask, quizTask, heatmapTask, timelineTask, compStatsTask, compBoardTask, compProfileTask)
+        let (profile, gapsResult, stats, dash, gapContentResult, quizzes, heatmap, timeline, compStats, compBoard, compProfile, insightsResult) =
+            await (profileTask, gapsTask, statsTask, dashTask, gapContentTask, quizTask, heatmapTask, timelineTask, compStatsTask, compBoardTask, compProfileTask, insightsTask)
 
         knowledgeProfile = profile
         gaps = gapsResult ?? []
@@ -131,8 +135,17 @@ final class ProgressViewModel {
         competitionStats = compStats
         weeklyBoard = compBoard
         competitionProfile = compProfile
+        insights = insightsResult
 
         isLoading = false
+    }
+
+    /// Force-refreshes the insights endpoint (bypasses backend's 15-min cache).
+    /// Called when the user pulls-to-refresh or completes a quiz.
+    func refreshInsights() async {
+        if let fresh = try? await knowledgeService.getInsights(refresh: true) {
+            insights = fresh
+        }
     }
 
     // MARK: - Mock Data
