@@ -46,19 +46,33 @@ final class DiscoverViewModel {
         Array(filteredRecommendations.dropFirst())
     }
 
+    /// Applies both the selected content type AND the selected domain (case-insensitive) to a list.
+    /// If a filter is nil, that dimension isn't applied.
+    private func applyFilters(_ items: [Content]) -> [Content] {
+        let domain = selectedDomain?.lowercased()
+        let type = selectedContentType
+        guard domain != nil || type != nil else { return items }
+        return items.filter { item in
+            let typeOK = type.map { item.contentType == $0 } ?? true
+            let domainOK = domain.map { (item.domain?.lowercased() ?? "") == $0 } ?? true
+            return typeOK && domainOK
+        }
+    }
+
     var filteredRecommendations: [Content] {
-        guard let type = selectedContentType else { return recommendations }
-        return recommendations.filter { $0.contentType == type }
+        applyFilters(recommendations)
     }
 
     var filteredTrending: [Content] {
-        guard let type = selectedContentType else { return trending }
-        return trending.filter { $0.contentType == type }
+        applyFilters(trending)
     }
 
     var filteredExploreResults: [Content] {
-        guard let type = selectedContentType else { return exploreResults }
-        return exploreResults.filter { $0.contentType == type }
+        applyFilters(exploreResults)
+    }
+
+    var filteredGapContent: [Content] {
+        applyFilters(gapContent)
     }
 
     var isShowingSearchResults: Bool {

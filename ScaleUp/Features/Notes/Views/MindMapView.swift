@@ -2,13 +2,22 @@ import SwiftUI
 
 struct MindMapView: View {
     let mindMap: MindMap
-    @State private var scale: CGFloat = 1.0
+    @State private var baseScale: CGFloat = 1.0
+    @GestureState private var pinchScale: CGFloat = 1.0
     @Environment(\.dismiss) private var dismiss
 
     private let nodeWidth: CGFloat = 120
     private let nodeHeight: CGFloat = 50
     private let levelSpacing: CGFloat = 120
     private let siblingSpacing: CGFloat = 20
+
+    // Clamped so text never shrinks below the readability floor.
+    private let minScale: CGFloat = 0.7
+    private let maxScale: CGFloat = 2.0
+
+    private var scale: CGFloat {
+        min(maxScale, max(minScale, baseScale * pinchScale))
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,6 +29,15 @@ struct MindMapView: View {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("Done") { dismiss() }
                             .foregroundStyle(ColorTokens.gold)
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { baseScale = 1.0 }
+                        } label: {
+                            Image(systemName: "arrow.up.left.and.down.right.magnifyingglass")
+                        }
+                        .foregroundStyle(ColorTokens.gold)
+                        .disabled(abs(baseScale - 1.0) < 0.01)
                     }
                 }
         }
@@ -35,7 +53,15 @@ struct MindMapView: View {
             .padding(40)
         }
         .scaleEffect(scale)
-        .gesture(MagnificationGesture().onChanged { scale = $0 }.onEnded { scale = max(0.5, min(2.0, $0)) })
+        .gesture(
+            MagnificationGesture()
+                .updating($pinchScale) { value, state, _ in
+                    state = value
+                }
+                .onEnded { value in
+                    baseScale = min(maxScale, max(minScale, baseScale * value))
+                }
+        )
     }
 
     private var edgesLayer: some View {
@@ -76,14 +102,16 @@ struct MindMapView: View {
     private func nodeView(_ node: MindMapNode) -> some View {
         VStack(spacing: 4) {
             Text(node.label)
-                .font(.system(size: node.level == 0 ? 13 : 11, weight: node.level == 0 ? .bold : .semibold))
+                .font(.system(size: node.level == 0 ? 15 : 13, weight: node.level == 0 ? .bold : .semibold))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(3)
 
-            if let desc = node.description, !desc.isEmpty, node.level < 2 {
+            // Hide the small description when the map is zoomed below 0.85x —
+            // at that point 8pt text is unreadable and just adds clutter.
+            if let desc = node.description, !desc.isEmpty, node.level < 2, scale >= 0.85 {
                 Text(desc)
-                    .font(.system(size: 8))
+                    .font(.system(size: 9))
                     .foregroundStyle(.white.opacity(0.6))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)

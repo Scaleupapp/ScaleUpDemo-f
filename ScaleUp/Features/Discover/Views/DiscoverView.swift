@@ -91,9 +91,10 @@ struct DiscoverView: View {
 
     private var mainFeed: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: 28) {
-                // Unified filter bar
+            LazyVStack(spacing: Spacing.xl) {
+                // Unified filter bar (sticky feel — sits at top)
                 unifiedFilterBar
+                    .padding(.bottom, Spacing.xs)
 
                 // Featured hero (full width)
                 if let featured = viewModel.featuredContent {
@@ -117,8 +118,8 @@ struct DiscoverView: View {
                     )
                 }
 
-                // Knowledge Gaps
-                if !viewModel.gapContent.isEmpty {
+                // Knowledge Gaps — now respects both Type and Topic filters
+                if !viewModel.filteredGapContent.isEmpty {
                     gapSection
                 }
 
@@ -153,7 +154,7 @@ struct DiscoverView: View {
     // MARK: - Filter Section
 
     private var unifiedFilterBar: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 2) {
             // Type filter row
             filterRow(label: "Type") {
                 typeChip(nil, label: "All")
@@ -173,8 +174,14 @@ struct DiscoverView: View {
                 }
             }
         }
-        .padding(.vertical, 4)
-        .background(ColorTokens.background)
+        .padding(.vertical, Spacing.sm)
+        .background(ColorTokens.surface.opacity(0.4))
+        .overlay(
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundStyle(ColorTokens.border.opacity(0.5)),
+            alignment: .bottom
+        )
     }
 
     private func filterRow<Content: View>(label: String, @ViewBuilder chips: () -> Content) -> some View {
@@ -512,7 +519,7 @@ struct DiscoverView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
-                    ForEach(viewModel.gapContent) { content in
+                    ForEach(viewModel.filteredGapContent) { content in
                         NavigationLink(value: content) {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack(spacing: 6) {

@@ -35,8 +35,7 @@ struct ChallengeResultsView: View {
         .navigationBarBackButtonHidden()
         .toolbar(.hidden, for: .navigationBar)
         .navigationDestination(isPresented: $navigateToLeaderboard) {
-            // LeaderboardView will be created separately
-            EmptyView()
+            LeaderboardView()
         }
         .sheet(isPresented: $showShareSheet) {
             ShareScoreCardView(
@@ -279,6 +278,7 @@ struct ChallengeResultsView: View {
             // Done
             Button {
                 NotificationCenter.default.post(name: .dismissChallengeSession, object: nil)
+                dismiss()
             } label: {
                 Text("Done")
                     .font(.system(size: 14, weight: .semibold))

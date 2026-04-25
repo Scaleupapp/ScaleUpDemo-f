@@ -101,11 +101,81 @@ final class CreatorApplicationViewModel {
         sampleContentLinks.remove(at: index)
     }
 
+    // MARK: - URL Validation
+
+    private func isValidURL(_ s: String) -> Bool {
+        let trimmed = s.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty,
+              let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              (scheme == "http" || scheme == "https"),
+              let host = url.host, !host.isEmpty, host.contains(".")
+        else { return false }
+        return true
+    }
+
+    private func hostContains(_ s: String, _ needle: String) -> Bool {
+        URL(string: s.trimmingCharacters(in: .whitespaces))?.host?.lowercased().contains(needle) ?? false
+    }
+
+    /// Validates all link fields. Returns a user-facing error string if anything is wrong, nil if all valid.
+    private func validateLinks() -> String? {
+        // Sample content links — must be valid URLs when non-empty
+        for link in sampleContentLinks where !link.trimmingCharacters(in: .whitespaces).isEmpty {
+            if !isValidURL(link) {
+                return "One of your Sample Content Links isn't a valid URL. Please start with https:// and use a complete web address."
+            }
+        }
+
+        // Portfolio — optional but if present must be valid
+        if !portfolioUrl.isEmpty, !isValidURL(portfolioUrl) {
+            return "Portfolio URL isn't valid. Please start with https:// and use a complete web address."
+        }
+
+        // LinkedIn — must point to linkedin.com
+        if !linkedin.isEmpty {
+            guard isValidURL(linkedin), hostContains(linkedin, "linkedin.com") else {
+                return "LinkedIn URL must be a linkedin.com link (e.g. https://www.linkedin.com/in/yourname)."
+            }
+        }
+
+        // Twitter/X — allow @handle OR a twitter.com / x.com URL
+        if !twitter.isEmpty {
+            let t = twitter.trimmingCharacters(in: .whitespaces)
+            let isHandle = t.hasPrefix("@") && t.count > 1 && !t.contains(" ")
+            let isValidTwitterURL = isValidURL(t) && (hostContains(t, "twitter.com") || hostContains(t, "x.com"))
+            if !isHandle && !isValidTwitterURL {
+                return "Twitter/X must be a handle (e.g. @yourname) or a twitter.com / x.com URL."
+            }
+        }
+
+        // YouTube — must point to youtube.com or youtu.be
+        if !youtube.isEmpty {
+            guard isValidURL(youtube), (hostContains(youtube, "youtube.com") || hostContains(youtube, "youtu.be")) else {
+                return "YouTube URL must be a youtube.com or youtu.be link."
+            }
+        }
+
+        // Website — any valid URL
+        if !website.isEmpty, !isValidURL(website) {
+            return "Website URL isn't valid. Please start with https:// and use a complete web address."
+        }
+
+        return nil
+    }
+
     // MARK: - Submit
 
     func submit() async {
         isSubmitting = true
         errorMessage = nil
+
+        if let validationError = validateLinks() {
+            errorMessage = validationError
+            Haptics.error()
+            isSubmitting = false
+            return
+        }
 
         let socialLinks: SocialLinksInput? = {
             let hasAny = !linkedin.isEmpty || !twitter.isEmpty || !youtube.isEmpty || !website.isEmpty

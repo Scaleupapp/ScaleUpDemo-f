@@ -11,6 +11,13 @@ struct ProgressTabView: View {
     @State private var showDetailedAnalytics = false
     @Environment(ObjectiveContext.self) private var objectiveContext
 
+    // Static formatter — renders "3 hours ago" as a fixed string, not a live-ticking counter.
+    static let relativeDateFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .full
+        return f
+    }()
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -738,7 +745,7 @@ struct ProgressTabView: View {
                         .foregroundStyle(ColorTokens.textTertiary)
 
                     if let date = attempt.completedAt {
-                        Text(date, style: .relative)
+                        Text(Self.relativeDateFormatter.localizedString(for: date, relativeTo: Date()))
                             .font(.system(size: 10))
                             .foregroundStyle(ColorTokens.textTertiary)
                     }
@@ -1015,7 +1022,7 @@ struct ProgressTabView: View {
                             }
 
                             if let date = event.date {
-                                Text(date, style: .relative)
+                                Text(Self.relativeDateFormatter.localizedString(for: date, relativeTo: Date()))
                                     .font(.system(size: 10))
                                     .foregroundStyle(ColorTokens.textTertiary)
                             }

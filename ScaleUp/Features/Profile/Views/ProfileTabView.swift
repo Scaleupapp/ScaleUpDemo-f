@@ -504,19 +504,15 @@ struct ProfileTabView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.textTertiary)
             }
-            .padding(Spacing.md)
+            .padding(Spacing.lg)
             .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
-                    .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 1)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, Spacing.md)
+        .padding(.horizontal, Spacing.lg)
     }
 
     // MARK: - Mock Interviews Link
@@ -542,19 +538,15 @@ struct ProfileTabView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.textTertiary)
             }
-            .padding(Spacing.md)
+            .padding(Spacing.lg)
             .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
-                    .stroke(Color.cyan.opacity(0.15), lineWidth: 1)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, Spacing.md)
+        .padding(.horizontal, Spacing.lg)
     }
 
     // MARK: - Interview Analytics Link
@@ -580,19 +572,15 @@ struct ProfileTabView: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.textTertiary)
             }
-            .padding(Spacing.md)
+            .padding(Spacing.lg)
             .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.medium)
-                    .stroke(Color.indigo.opacity(0.15), lineWidth: 1)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, Spacing.md)
+        .padding(.horizontal, Spacing.lg)
     }
 
     // MARK: - Section Label
