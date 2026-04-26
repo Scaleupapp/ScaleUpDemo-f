@@ -10,6 +10,10 @@ struct ProfileTabView: View {
     @State private var showCreateContent = false
     @State private var followListMode: FollowListMode = .followers
 
+    // BUG-8 Phase 9: transparent inference panel state
+    @State private var inferences: [UserInference] = []
+    private let inferenceService = UserInferenceService()
+
     enum FollowListMode {
         case followers, following
     }
@@ -47,6 +51,7 @@ struct ProfileTabView: View {
                 if viewModel.user == nil {
                     await viewModel.loadProfile()
                 }
+                await loadInferences()
             }
             .sheet(isPresented: $viewModel.showEditSheet) {
                 if let user = viewModel.user {
@@ -132,6 +137,17 @@ struct ProfileTabView: View {
                     aiTutorHistoryLink
                     mockInterviewsLink
                     interviewAnalyticsLink
+                }
+
+                // BUG-8 Phase 9: Transparent inference panel.
+                // Only renders when there are pending inferences to review.
+                if !inferences.isEmpty {
+                    VStack(spacing: Spacing.sm) {
+                        sectionLabel("How we're personalising for you")
+                        ForEach(inferences) { inf in
+                            inferenceRow(inf)
+                        }
+                    }
                 }
 
                 // Competition group
@@ -479,6 +495,75 @@ struct ProfileTabView: View {
         if n >= 10_000 { return String(format: "%.0fK", Double(n) / 1_000) }
         if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1_000) }
         return "\(n)"
+    }
+
+    // MARK: - BUG-8 Phase 9: Transparent inference panel
+
+    private func loadInferences() async {
+        if let list = try? await inferenceService.list() {
+            self.inferences = list
+        }
+    }
+
+    private func resolveInference(_ inference: UserInference, status: UserInference.InferenceStatus) {
+        Haptics.selection()
+        // Optimistic update: drop from local list immediately
+        inferences.removeAll { $0.key == inference.key }
+        Task {
+            _ = try? await inferenceService.resolve(key: inference.key, status: status)
+        }
+    }
+
+    @ViewBuilder
+    private func inferenceRow(_ inference: UserInference) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                Text(inference.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Spacer(minLength: 0)
+            }
+            Text(inference.description)
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button {
+                    resolveInference(inference, status: .confirmed)
+                } label: {
+                    Label("Sounds right", systemImage: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(ColorTokens.success.opacity(0.18))
+                        .foregroundStyle(ColorTokens.success)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                Button {
+                    resolveInference(inference, status: .dismissed)
+                } label: {
+                    Label("Not really", systemImage: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(ColorTokens.surfaceElevated)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: 0)
+            }
+            .padding(.top, 2)
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, Spacing.lg)
     }
 
     // MARK: - AI Tutor History Link
