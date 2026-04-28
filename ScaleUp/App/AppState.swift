@@ -7,6 +7,7 @@ enum AppLaunchState: Equatable {
     case welcome
     case phoneVerification
     case onboarding(step: Int)
+    case diagnostic
     case home
 }
 
@@ -38,7 +39,11 @@ final class AppState {
             AnalyticsService.shared.identify(userId: user.id)
 
             if user.onboardingComplete == true {
-                launchState = .home
+                if user.diagnosticComplete == true {
+                    launchState = .home
+                } else {
+                    launchState = .diagnostic
+                }
             } else {
                 launchState = .onboarding(step: max(1, user.onboardingStep ?? 1))
             }
@@ -60,7 +65,11 @@ final class AppState {
         AnalyticsService.shared.identify(userId: authData.user.id)
 
         if authData.user.onboardingComplete == true {
-            launchState = .home
+            if authData.user.diagnosticComplete == true {
+                launchState = .home
+            } else {
+                launchState = .diagnostic
+            }
         } else {
             launchState = .onboarding(step: max(1, authData.user.onboardingStep ?? 1))
         }
@@ -73,6 +82,20 @@ final class AppState {
     }
 
     func completeOnboarding() {
+        if currentUser?.diagnosticComplete == true {
+            launchState = .home
+        } else {
+            launchState = .diagnostic
+        }
+    }
+
+    // MARK: - Diagnostic
+
+    func completeDiagnostic() {
+        launchState = .home
+    }
+
+    func skipDiagnostic() {
         launchState = .home
     }
 
