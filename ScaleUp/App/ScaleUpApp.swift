@@ -87,6 +87,11 @@ struct ScaleUpApp: App {
                 .transition(.opacity)
                 .trackScreen("onboarding_step_\(step)")
 
+        case .diagnostic:
+            DiagnosticContainerView()
+                .transition(.opacity)
+                .trackScreen("diagnostic")
+
         case .home:
             MainTabView()
                 .transition(.opacity)

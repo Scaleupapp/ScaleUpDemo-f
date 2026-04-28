@@ -71,6 +71,13 @@ enum AnalyticsEvent {
     case streakBroken(previousDays: Int)
     case streakMilestone(days: Int)
 
+    // MARK: Phase 2 — Diagnostic
+
+    case diagnosticStarted(flowType: String)
+    case diagnosticSelfRatingSubmitted(attemptId: String)
+    case diagnosticFinished(attemptId: String, durationSeconds: Int, score: Int)
+    case diagnosticAbandoned(attemptId: String, atStep: String)
+
     // MARK: Phase 3 — Competition & Challenges
 
     case challengeStarted(challengeId: String, topic: String?)
@@ -125,6 +132,11 @@ enum AnalyticsEvent {
         case .quizQuestionAnswered:               return "quiz_question_answered"
         case .quizCompleted:                      return "quiz_completed"
         case .quizAbandoned:                      return "quiz_abandoned"
+
+        case .diagnosticStarted:                  return "diagnostic_started"
+        case .diagnosticSelfRatingSubmitted:      return "diagnostic_self_rating_submitted"
+        case .diagnosticFinished:                 return "diagnostic_finished"
+        case .diagnosticAbandoned:                return "diagnostic_abandoned"
 
         case .interviewStarted:                   return "interview_started"
         case .interviewCompleted:                 return "interview_completed"
@@ -251,6 +263,18 @@ enum AnalyticsEvent {
 
         case .quizAbandoned(let quizId, let atQuestion):
             return ["quiz_id": quizId, "at_question": atQuestion]
+
+        case .diagnosticStarted(let flowType):
+            return ["flow_type": flowType]
+
+        case .diagnosticSelfRatingSubmitted(let attemptId):
+            return ["attempt_id": attemptId]
+
+        case .diagnosticFinished(let attemptId, let durationSeconds, let score):
+            return ["attempt_id": attemptId, "duration_seconds": durationSeconds, "score": score]
+
+        case .diagnosticAbandoned(let attemptId, let atStep):
+            return ["attempt_id": attemptId, "at_step": atStep]
 
         case .interviewStarted(let type, let targetRole, let difficulty):
             return ["interview_type": type, "target_role": targetRole, "difficulty": difficulty]

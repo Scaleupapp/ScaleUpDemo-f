@@ -15,6 +15,7 @@ struct User: Codable, Sendable, Identifiable {
     let authProvider: AuthProvider?
     let onboardingComplete: Bool?
     let onboardingStep: Int?
+    let diagnosticComplete: Bool?
     let followersCount: Int?
     let followingCount: Int?
     let isActive: Bool?
@@ -29,7 +30,7 @@ struct User: Codable, Sendable, Identifiable {
         case id = "_id"
         case email, phone, firstName, lastName, username
         case profilePicture, bio, role, authProvider
-        case onboardingComplete, onboardingStep
+        case onboardingComplete, onboardingStep, diagnosticComplete
         case followersCount, followingCount, isActive
         case skills, education, workExperience
         case location, dateOfBirth, createdAt
@@ -53,7 +54,7 @@ struct User: Codable, Sendable, Identifiable {
         self.skills = partial.skills
         self.role = .consumer
         self.phone = nil; self.username = nil; self.bio = nil
-        self.authProvider = nil; self.onboardingComplete = nil; self.onboardingStep = nil
+        self.authProvider = nil; self.onboardingComplete = nil; self.onboardingStep = nil; self.diagnosticComplete = nil
         self.followersCount = nil; self.followingCount = nil; self.isActive = nil
         self.location = nil; self.dateOfBirth = nil; self.createdAt = nil
     }
