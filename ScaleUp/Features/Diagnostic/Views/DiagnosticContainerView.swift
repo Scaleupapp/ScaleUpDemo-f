@@ -19,6 +19,7 @@ struct DiagnosticContainerView: View {
                 DiagnosticQuestionView(viewModel: viewModel)
             case .results:
                 DiagnosticResultsView(viewModel: viewModel) {
+                    appState.markDiagnosticComplete()
                     appState.completeDiagnostic()
                 }
             case .error:

@@ -15,7 +15,7 @@ struct User: Codable, Sendable, Identifiable {
     let authProvider: AuthProvider?
     let onboardingComplete: Bool?
     let onboardingStep: Int?
-    let diagnosticComplete: Bool?
+    var diagnosticComplete: Bool?
     let followersCount: Int?
     let followingCount: Int?
     let isActive: Bool?

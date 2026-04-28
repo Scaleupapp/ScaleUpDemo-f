@@ -95,6 +95,10 @@ final class AppState {
         launchState = .home
     }
 
+    func markDiagnosticComplete() {
+        currentUser?.diagnosticComplete = true
+    }
+
     func skipDiagnostic() {
         launchState = .home
     }

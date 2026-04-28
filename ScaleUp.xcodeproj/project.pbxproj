@@ -235,6 +235,7 @@
 		F32CA7ECCE32656965CB7920 /* QuizListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10C5C044674AFE1127D85D3 /* QuizListViewModel.swift */; };
 		F53F05F43A6F72A83D88F112 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 32B0ACF12FCE9F6E8D99F97A /* PrivacyInfo.xcprivacy */; };
 		F73E1D1218EC4F38BFEFB014 /* Knowledge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F45BD0E40088B0F3BBE3301 /* Knowledge.swift */; };
+		F90B666700195E78505A9E28 /* DiagnosticTuneUpBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A1FDB5D53217A0221EB81F /* DiagnosticTuneUpBanner.swift */; };
 		F9385E8C738982D0665EC7B0 /* Diagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D6BC22ED78047550814CD4D /* Diagnostic.swift */; };
 		FB2704BAAD5D188AA37C05B9 /* CoachMarkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08EF6014B27E8F8895DC2EE6 /* CoachMarkManager.swift */; };
 		FB4AAE51920E679B1000A485 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47B118C6CD5D863DFFB46615 /* AppDelegate.swift */; };
@@ -362,6 +363,7 @@
 		729BC5F5424F654CA56FBC4F /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		72EF300B6A65B4CAEDA341E5 /* ReadinessScoreCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessScoreCard.swift; sourceTree = "<group>"; };
 		737D8EEF7A57EBB923B9E9AD /* Flashcard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flashcard.swift; sourceTree = "<group>"; };
+		73A1FDB5D53217A0221EB81F /* DiagnosticTuneUpBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticTuneUpBanner.swift; sourceTree = "<group>"; };
 		74080EDBB82330F54039BA22 /* MilestoneCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneCard.swift; sourceTree = "<group>"; };
 		745763EE8FF0F674F82AFFD7 /* AdminStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminStats.swift; sourceTree = "<group>"; };
 		7514BEB988C13693790E69B2 /* QuizSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizSessionViewModel.swift; sourceTree = "<group>"; };
@@ -609,6 +611,7 @@
 				F48DD5F9E8968EFE61B8DC0D /* DiagnosticQuestionView.swift */,
 				B75731680B010FFBFC678E64 /* DiagnosticResultsView.swift */,
 				4C77FAA7729033A931959992 /* DiagnosticSelfRatingView.swift */,
+				73A1FDB5D53217A0221EB81F /* DiagnosticTuneUpBanner.swift */,
 				8061417E7FFCFFB1906188C0 /* DiagnosticWelcomeView.swift */,
 			);
 			path = Views;
@@ -1630,6 +1633,7 @@
 				8E6FD860DD5FD62E512F9F6A /* DiagnosticResultsView.swift in Sources */,
 				38F74919A30F40DEBEA8D91E /* DiagnosticSelfRatingView.swift in Sources */,
 				266DAA2446035E714FDE4534 /* DiagnosticService.swift in Sources */,
+				F90B666700195E78505A9E28 /* DiagnosticTuneUpBanner.swift in Sources */,
 				6D51BFCABD0573CB38F73490 /* DiagnosticViewModel.swift in Sources */,
 				803C4094193FC611345B82FE /* DiagnosticWelcomeView.swift in Sources */,
 				6530CA81A363CDF02631A8E8 /* DiscoverView.swift in Sources */,
@@ -1872,7 +1876,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 104;
+				CURRENT_PROJECT_VERSION = 103;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1948,7 +1952,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 104;
+				CURRENT_PROJECT_VERSION = 103;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

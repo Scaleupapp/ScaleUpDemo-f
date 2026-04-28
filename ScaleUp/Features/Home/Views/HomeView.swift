@@ -15,6 +15,7 @@ struct HomeView: View {
     @State private var viewModel = HomeViewModel()
     @State private var quizViewModel = QuizListViewModel()
     @State private var notificationVM = NotificationViewModel()
+    @State private var presentingDiagnostic = false
 
     var body: some View {
         NavigationStack {
@@ -76,6 +77,10 @@ struct HomeView: View {
             title: "Your Dashboard",
             message: "Your readiness score, recommendations, and next actions update as you learn."
         )
+        .fullScreenCover(isPresented: $presentingDiagnostic) {
+            DiagnosticContainerView()
+                .environment(appState)
+        }
     }
 
     // MARK: - Main Content
@@ -107,6 +112,16 @@ struct HomeView: View {
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.md)
                     .padding(.bottom, Spacing.sm)
+
+                // Diagnostic tune-up banner for existing users who haven't completed diagnostic
+                if appState.currentUser?.diagnosticComplete != true {
+                    DiagnosticTuneUpBanner(
+                        onTap: { presentingDiagnostic = true },
+                        onDismiss: nil
+                    )
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.bottom, Spacing.sm)
+                }
 
                 // Welcome card for new users
                 if viewModel.isNewUser {
