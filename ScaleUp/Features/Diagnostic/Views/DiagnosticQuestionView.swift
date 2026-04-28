@@ -39,19 +39,22 @@ struct DiagnosticQuestionView: View {
 
     private var topBar: some View {
         HStack {
-            // Question counter
+            // Question counter badge
             HStack(spacing: 4) {
-                Text("\(viewModel.questionsAnswered + 1)")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
-                Text("of \(viewModel.totalQuestionsTarget)")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                Text("Question \(viewModel.questionsAnswered + 1) of \(viewModel.totalQuestionsTarget)")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(ColorTokens.surfaceElevated)
+            .padding(.vertical, 7)
+            .background(ColorTokens.gold.opacity(0.12))
             .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(ColorTokens.gold.opacity(0.25), lineWidth: 1)
+            )
 
             Spacer()
 
@@ -59,10 +62,10 @@ struct DiagnosticQuestionView: View {
             if let competency = viewModel.currentQuestion?.competency {
                 Text(competency)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(ColorTokens.gold)
+                    .foregroundStyle(ColorTokens.textSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(ColorTokens.gold.opacity(0.12))
+                    .background(ColorTokens.surfaceElevated)
                     .clipShape(Capsule())
             }
         }
@@ -117,11 +120,20 @@ struct DiagnosticQuestionView: View {
         .background(
             RoundedRectangle(cornerRadius: CornerRadius.medium)
                 .fill(ColorTokens.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.medium)
-                        .stroke(ColorTokens.gold.opacity(0.1), lineWidth: 1)
-                )
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .stroke(ColorTokens.gold.opacity(0.35), lineWidth: 1.5)
+        )
+        // Left accent bar
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(ColorTokens.gold)
+                .frame(width: 3)
+                .padding(.vertical, Spacing.md)
+                .padding(.leading, 0)
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        }
     }
 
     // MARK: - Options
@@ -140,51 +152,53 @@ struct DiagnosticQuestionView: View {
         return Button {
             viewModel.selectOption(option.id)
         } label: {
-            HStack(spacing: 12) {
-                // Label circle
+            HStack(spacing: Spacing.md) {
+                // Leading circle indicator
                 ZStack {
                     Circle()
-                        .stroke(isSelected ? ColorTokens.gold : ColorTokens.border, lineWidth: 2)
-                        .frame(width: 32, height: 32)
+                        .stroke(
+                            isSelected ? ColorTokens.gold : ColorTokens.border,
+                            lineWidth: isSelected ? 2 : 1.5
+                        )
+                        .frame(width: 22, height: 22)
 
                     if isSelected {
                         Circle()
                             .fill(ColorTokens.gold)
-                            .frame(width: 32, height: 32)
-
-                        Text(option.id)
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(.black)
-                    } else {
-                        Text(option.id)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(ColorTokens.textSecondary)
+                            .frame(width: 12, height: 12)
                     }
                 }
 
+                // Option letter label
+                Text(option.id)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(isSelected ? ColorTokens.gold : ColorTokens.textTertiary)
+                    .frame(width: 16)
+
                 Text(option.text)
                     .font(.system(size: 14, weight: isSelected ? .semibold : .regular))
-                    .foregroundStyle(isSelected ? .white : ColorTokens.textSecondary)
+                    .foregroundStyle(isSelected ? ColorTokens.textPrimary : ColorTokens.textSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer()
             }
-            .padding(14)
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 12)
             .background(
-                RoundedRectangle(cornerRadius: CornerRadius.small + 4)
-                    .fill(isSelected ? ColorTokens.gold.opacity(0.1) : ColorTokens.surface)
+                RoundedRectangle(cornerRadius: CornerRadius.small)
+                    .fill(isSelected ? ColorTokens.gold.opacity(0.10) : ColorTokens.surface)
                     .overlay(
-                        RoundedRectangle(cornerRadius: CornerRadius.small + 4)
+                        RoundedRectangle(cornerRadius: CornerRadius.small)
                             .stroke(
                                 isSelected ? ColorTokens.gold : ColorTokens.border,
-                                lineWidth: isSelected ? 2 : 1
+                                lineWidth: isSelected ? 1.5 : 1
                             )
                     )
             )
         }
         .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.2), value: isSelected)
+        .animation(.easeOut(duration: 0.15), value: isSelected)
     }
 
     // MARK: - Bottom Bar

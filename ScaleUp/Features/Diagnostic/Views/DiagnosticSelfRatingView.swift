@@ -1,5 +1,60 @@
 import SwiftUI
 
+// MARK: - Reusable Rating Option Row
+
+struct RatingOptionRow: View {
+    let label: String
+    let isSelected: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: Spacing.md) {
+                // Leading indicator circle
+                ZStack {
+                    Circle()
+                        .stroke(
+                            isSelected ? ColorTokens.gold : ColorTokens.border,
+                            lineWidth: isSelected ? 2 : 1.5
+                        )
+                        .frame(width: 22, height: 22)
+
+                    if isSelected {
+                        Circle()
+                            .fill(ColorTokens.gold)
+                            .frame(width: 12, height: 12)
+                    }
+                }
+
+                Text(label)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(isSelected ? ColorTokens.textPrimary : ColorTokens.textSecondary)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Spacer()
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: CornerRadius.small)
+                    .fill(isSelected ? ColorTokens.gold.opacity(0.10) : ColorTokens.surfaceElevated)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: CornerRadius.small)
+                            .stroke(
+                                isSelected ? ColorTokens.gold : Color.clear,
+                                lineWidth: isSelected ? 1.5 : 0
+                            )
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .animation(.easeOut(duration: 0.15), value: isSelected)
+    }
+}
+
+// MARK: - Diagnostic Self Rating View
+
 struct DiagnosticSelfRatingView: View {
     let viewModel: DiagnosticViewModel
 
@@ -7,13 +62,13 @@ struct DiagnosticSelfRatingView: View {
         VStack(spacing: 0) {
             // Header
             VStack(spacing: Spacing.sm) {
-                Text("How would you rate yourself on each topic?")
+                Text("How would you rate yourself?")
                     .font(Typography.titleLarge)
                     .foregroundStyle(ColorTokens.textPrimary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, Spacing.lg)
 
-                Text("There are no wrong answers. This helps us start at the right level.")
+                Text("Honest answers help us skip what you know and focus on your real gaps.")
                     .font(Typography.bodySmall)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
@@ -53,20 +108,25 @@ struct DiagnosticSelfRatingView: View {
         }
     }
 
+    // MARK: - Competency Card
+
     private func competencyCard(_ competency: DiagnosticCompetency) -> some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
+            // Topic header
             Text(competency.name)
                 .font(Typography.titleMedium)
                 .foregroundStyle(ColorTokens.textPrimary)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.sm) {
-                    ForEach(DiagnosticSelfRating.allCases) { rating in
-                        ratingChip(rating, for: competency.name)
+            // Vertical rating rows
+            VStack(spacing: Spacing.xs) {
+                ForEach(DiagnosticSelfRating.allCases) { rating in
+                    RatingOptionRow(
+                        label: rating.displayLabel,
+                        isSelected: viewModel.selfRatings[competency.name] == rating
+                    ) {
+                        viewModel.setRating(rating, for: competency.name)
                     }
                 }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 2)
             }
         }
         .padding(Spacing.lg)
@@ -75,35 +135,13 @@ struct DiagnosticSelfRatingView: View {
                 .fill(ColorTokens.surface)
                 .overlay(
                     RoundedRectangle(cornerRadius: CornerRadius.medium)
-                        .stroke(ColorTokens.border, lineWidth: 1)
-                )
-        )
-    }
-
-    private func ratingChip(_ rating: DiagnosticSelfRating, for competency: String) -> some View {
-        let isSelected = viewModel.selfRatings[competency] == rating
-
-        return Button {
-            viewModel.setRating(rating, for: competency)
-        } label: {
-            Text(rating.displayLabel)
-                .font(Typography.bodySmallBold)
-                .foregroundStyle(isSelected ? ColorTokens.buttonPrimaryText : ColorTokens.textSecondary)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .background(
-                    RoundedRectangle(cornerRadius: CornerRadius.full)
-                        .fill(isSelected ? ColorTokens.gold : ColorTokens.surfaceElevated)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: CornerRadius.full)
-                                .stroke(
-                                    isSelected ? ColorTokens.gold : ColorTokens.border,
-                                    lineWidth: isSelected ? 2 : 1
-                                )
+                        .stroke(
+                            viewModel.selfRatings[competency.name] != nil
+                                ? ColorTokens.gold.opacity(0.35)
+                                : ColorTokens.border,
+                            lineWidth: 1
                         )
                 )
-        }
-        .buttonStyle(.plain)
-        .animation(.easeOut(duration: 0.15), value: isSelected)
+        )
     }
 }

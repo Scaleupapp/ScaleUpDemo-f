@@ -35,20 +35,53 @@ struct DiagnosticContainerView: View {
 
     @ViewBuilder
     private var errorView: some View {
-        VStack(spacing: Spacing.lg) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 48))
-                .foregroundStyle(ColorTokens.warning)
+        VStack(spacing: 0) {
+            Spacer()
 
-            Text(viewModel.errorMessage ?? "Something went wrong")
-                .font(Typography.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, Spacing.xl)
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.warning.opacity(0.12))
+                    .frame(width: 100, height: 100)
 
-            Button("Skip for now") { appState.skipDiagnostic() }
-                .font(Typography.bodyBold)
-                .foregroundStyle(ColorTokens.gold)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 46))
+                    .foregroundStyle(ColorTokens.warning)
+            }
+            .padding(.bottom, Spacing.xl)
+
+            // Title
+            Text("We hit a snag")
+                .font(Typography.titleLarge)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .padding(.bottom, Spacing.sm)
+
+            // Body
+            Text(
+                (viewModel.errorMessage?.isEmpty == false)
+                    ? viewModel.errorMessage!
+                    : "We couldn't load your questions. This usually clears up in a moment."
+            )
+            .font(Typography.body)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .multilineTextAlignment(.center)
+            .lineSpacing(4)
+            .padding(.horizontal, Spacing.xl)
+
+            Spacer()
+
+            // Buttons
+            VStack(spacing: Spacing.md) {
+                PrimaryButton(title: "Try again") {
+                    Task { await viewModel.retry() }
+                }
+
+                Button("Skip for now") { appState.skipDiagnostic() }
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.bottom, Spacing.xl)
         }
     }
 }

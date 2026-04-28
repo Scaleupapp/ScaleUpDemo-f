@@ -155,6 +155,16 @@ final class DiagnosticViewModel {
         isLoading = false
     }
 
+    // MARK: - Retry
+
+    func retry() async {
+        errorMessage = nil
+        isLoading = true
+        // Reset to welcome so the user can restart the flow cleanly.
+        phase = .welcome
+        isLoading = false
+    }
+
     // MARK: - Abandon
 
     func abandonCurrent(at step: String) async {

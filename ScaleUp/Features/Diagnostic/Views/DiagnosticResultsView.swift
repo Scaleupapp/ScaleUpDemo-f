@@ -6,19 +6,26 @@ struct DiagnosticResultsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            // Celebratory header
             VStack(spacing: Spacing.sm) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 52))
-                    .foregroundStyle(ColorTokens.gold)
-                    .padding(.bottom, Spacing.sm)
+                // Sparkles icon in a gold halo
+                ZStack {
+                    Circle()
+                        .fill(ColorTokens.gold.opacity(0.14))
+                        .frame(width: 100, height: 100)
+
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 46, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .padding(.bottom, Spacing.sm)
 
                 Text("Here's where you stand")
                     .font(Typography.displayMedium)
                     .foregroundStyle(ColorTokens.textPrimary)
                     .multilineTextAlignment(.center)
 
-                Text("We'll use this to personalise your learning plan.")
+                Text("We'll personalise your learning plan around these results.")
                     .font(Typography.bodySmall)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
@@ -31,7 +38,7 @@ struct DiagnosticResultsView: View {
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: Spacing.md) {
                     ForEach(viewModel.results?.perCompetency ?? []) { result in
-                        competencyResultCard(result)
+                        AnimatedCompetencyResultCard(result: result)
                     }
                     Spacer().frame(height: 100)
                 }
@@ -53,10 +60,16 @@ struct DiagnosticResultsView: View {
             .background(ColorTokens.background)
         }
     }
+}
 
-    // MARK: - Competency Result Card
+// MARK: - Animated Competency Result Card
 
-    private func competencyResultCard(_ result: DiagnosticCompetencyResult) -> some View {
+private struct AnimatedCompetencyResultCard: View {
+    let result: DiagnosticCompetencyResult
+
+    @State private var displayedScore: Double = 0
+
+    var body: some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             // Topic + band
             HStack {
@@ -75,8 +88,8 @@ struct DiagnosticResultsView: View {
                     .clipShape(Capsule())
             }
 
-            // Score bar
-            VStack(alignment: .leading, spacing: 4) {
+            // Animated score bar
+            VStack(alignment: .leading, spacing: 6) {
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 4)
@@ -85,8 +98,7 @@ struct DiagnosticResultsView: View {
 
                         RoundedRectangle(cornerRadius: 4)
                             .fill(ColorTokens.goldGradient)
-                            .frame(width: geo.size.width * (Double(result.score) / 100.0), height: 8)
-                            .animation(.easeOut(duration: 0.6), value: result.score)
+                            .frame(width: geo.size.width * (displayedScore / 100.0), height: 8)
                     }
                 }
                 .frame(height: 8)
@@ -96,21 +108,32 @@ struct DiagnosticResultsView: View {
                     .foregroundStyle(ColorTokens.textTertiary)
             }
 
-            // Calibration delta callout
+            // Calibration callout — info card style
             if abs(result.calibrationDelta ?? 0) >= 2 {
-                HStack(spacing: Spacing.sm) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 13))
+                HStack(alignment: .top, spacing: Spacing.sm) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 15))
                         .foregroundStyle(ColorTokens.info)
+                        .padding(.top, 1)
 
-                    Text("We noticed you rated yourself differently than you assessed — we'll fine-tune as you go.")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Calibration note")
+                            .font(Typography.captionBold)
+                            .foregroundStyle(ColorTokens.info)
+
+                        Text("Your self-rating and assessed score differ — we'll fine-tune your plan as you go.")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                .padding(Spacing.sm)
+                .padding(Spacing.md)
                 .background(ColorTokens.info.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+                .overlay(
+                    RoundedRectangle(cornerRadius: CornerRadius.small)
+                        .stroke(ColorTokens.info.opacity(0.20), lineWidth: 1)
+                )
             }
         }
         .padding(Spacing.lg)
@@ -122,6 +145,11 @@ struct DiagnosticResultsView: View {
                         .stroke(ColorTokens.border, lineWidth: 1)
                 )
         )
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.6)) {
+                displayedScore = Double(result.score)
+            }
+        }
     }
 
     // MARK: - Helpers
