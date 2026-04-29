@@ -15,6 +15,8 @@ struct DiagnosticContainerView: View {
                 }
             case .selfRating:
                 DiagnosticSelfRatingView(viewModel: viewModel)
+            case .preparing:
+                DiagnosticPreparingView()
             case .quiz:
                 DiagnosticQuestionView(viewModel: viewModel)
             case .results:
@@ -25,7 +27,7 @@ struct DiagnosticContainerView: View {
             case .error:
                 errorView
             }
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.phase != .preparing {
                 ProgressView()
                     .scaleEffect(1.5)
                     .tint(ColorTokens.gold)

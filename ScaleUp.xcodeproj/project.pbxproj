@@ -65,6 +65,7 @@
 		3544766F4A5F63EDAB6683FF /* Mixpanel in Frameworks */ = {isa = PBXBuildFile; productRef = 76EBFC86E2B344914C6FA0BE /* Mixpanel */; };
 		354BAA8EDECF15FCBED4B040 /* InterviewSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A1F7EDA040293F93CEF677 /* InterviewSessionView.swift */; };
 		35699FC573AA98063A203F0F /* DiagnosticQuestionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F48DD5F9E8968EFE61B8DC0D /* DiagnosticQuestionView.swift */; };
+		AA1234BB5678CC9012DEF345 /* DiagnosticPreparingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB9876AA5432DD1098CDE765 /* DiagnosticPreparingView.swift */; };
 		35D33DD06AFEB0B322BCF98A /* ContentCreationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B40B74C4604610CBD9A5184 /* ContentCreationService.swift */; };
 		3649F301702F8859BF93B448 /* EditContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE8D8226EBF02CC8B025E4DF /* EditContentViewModel.swift */; };
 		375E9CE863E22C6AFB9B3A44 /* FollowUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF0548A68E66F3F98772616E /* FollowUser.swift */; };
@@ -326,6 +327,7 @@
 		4B6D97EDB884C2FD59E3A9A5 /* Haptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Haptics.swift; sourceTree = "<group>"; };
 		4BB707A3DC976EB2862BD5DA /* DailyChallengeCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyChallengeCarousel.swift; sourceTree = "<group>"; };
 		4C77FAA7729033A931959992 /* DiagnosticSelfRatingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticSelfRatingView.swift; sourceTree = "<group>"; };
+		BB9876AA5432DD1098CDE765 /* DiagnosticPreparingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticPreparingView.swift; sourceTree = "<group>"; };
 		4CBC8C20C3650FE146221E73 /* PendingApplicationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PendingApplicationsView.swift; sourceTree = "<group>"; };
 		4D643804E07F1A076796A1DF /* NotesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesDetailView.swift; sourceTree = "<group>"; };
 		511D86511F9230F82D5C71AA /* PhoneAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneAuthView.swift; sourceTree = "<group>"; };
@@ -608,6 +610,7 @@
 			isa = PBXGroup;
 			children = (
 				37078F12CFE28BBE1002E180 /* DiagnosticContainerView.swift */,
+				BB9876AA5432DD1098CDE765 /* DiagnosticPreparingView.swift */,
 				F48DD5F9E8968EFE61B8DC0D /* DiagnosticQuestionView.swift */,
 				B75731680B010FFBFC678E64 /* DiagnosticResultsView.swift */,
 				4C77FAA7729033A931959992 /* DiagnosticSelfRatingView.swift */,
@@ -1629,6 +1632,7 @@
 				0C279AD2C0A9FABF50C6DDC1 /* DashboardService.swift in Sources */,
 				F9385E8C738982D0665EC7B0 /* Diagnostic.swift in Sources */,
 				823FEB71938AC8BA4F7553F0 /* DiagnosticContainerView.swift in Sources */,
+				AA1234BB5678CC9012DEF345 /* DiagnosticPreparingView.swift in Sources */,
 				35699FC573AA98063A203F0F /* DiagnosticQuestionView.swift in Sources */,
 				8E6FD860DD5FD62E512F9F6A /* DiagnosticResultsView.swift in Sources */,
 				38F74919A30F40DEBEA8D91E /* DiagnosticSelfRatingView.swift in Sources */,

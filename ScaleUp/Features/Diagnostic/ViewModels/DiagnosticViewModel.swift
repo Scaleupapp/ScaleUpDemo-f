@@ -9,7 +9,7 @@ final class DiagnosticViewModel {
     // MARK: - Phase
 
     enum Phase: Equatable {
-        case welcome, selfRating, quiz, results, error
+        case welcome, selfRating, preparing, quiz, results, error
     }
 
     // MARK: - State
@@ -71,18 +71,17 @@ final class DiagnosticViewModel {
 
     func submitSelfRatings() async {
         guard let attemptId else { return }
-        isLoading = true
+        phase = .preparing
         do {
             let ratingsPayload = selfRatings.mapValues { $0.rawValue }
             try await service.submitSelfRating(attemptId: attemptId, ratings: ratingsPayload)
             AnalyticsService.shared.track(.diagnosticSelfRatingSubmitted(attemptId: attemptId))
-            phase = .quiz
             await loadNextQuestion()
+            phase = .quiz
         } catch {
             errorMessage = error.localizedDescription
             phase = .error
         }
-        isLoading = false
     }
 
     // MARK: - Quiz
