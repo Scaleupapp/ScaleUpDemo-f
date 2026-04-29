@@ -242,50 +242,202 @@ struct ProgressTabView: View {
 
     @ViewBuilder
     private func insightCardView(_ card: InsightCard) -> some View {
-        let accent = insightAccentColor(card.tone)
+        switch card.kind {
+        case .momentum:
+            momentumCard(card)
+        case .objective:
+            objectiveCard(card)
+        case .attention:
+            attentionCard(card)
+        case .milestone:
+            milestoneCard(card)
+        case .coldStart:
+            coldStartCard(card)
+        }
+    }
 
-        VStack(alignment: .leading, spacing: Spacing.xs) {
+    // MARK: - Momentum Card (Quiet Stretch)
+
+    private func momentumCard(_ card: InsightCard) -> some View {
+        let accent = insightAccentColor(card.tone)
+        let shortBody: String = {
+            let words = card.body.components(separatedBy: " ")
+            var result = ""
+            for word in words {
+                let candidate = result.isEmpty ? word : result + " " + word
+                if candidate.count <= 30 { result = candidate } else { break }
+            }
+            return result.isEmpty ? String(card.body.prefix(30)) : result
+        }()
+
+        return VStack(alignment: .leading, spacing: 8) {
+            // Icon + title
             HStack(spacing: 8) {
                 Image(systemName: card.icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .frame(width: 22, height: 22)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(accent.opacity(0.7))
+                    .frame(width: 20, height: 20)
                 Text(card.title)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
                     .textCase(.uppercase)
-                    .tracking(0.6)
+                    .tracking(0.8)
                 Spacer(minLength: 0)
             }
 
-            Text(card.body)
-                .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.92))
-                .fixedSize(horizontal: false, vertical: true)
+            // 7-day activity bar — flatlined feel
+            HStack(spacing: 4) {
+                ForEach(0..<7, id: \.self) { i in
+                    Capsule()
+                        .fill(ColorTokens.gold.opacity(i == 6 ? 0.25 : 0.12))
+                        .frame(width: 18, height: 4)
+                }
+            }
 
+            // Short body
+            Text(shortBody)
+                .font(.system(size: 13))
+                .foregroundStyle(.white.opacity(0.65))
+
+            // Metric row
             if let metric = card.metric {
                 HStack(spacing: 6) {
                     Text(metric.value)
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                        .foregroundStyle(accent)
+                        .font(.system(size: 22, weight: .black, design: .rounded))
+                        .foregroundStyle(accent.opacity(0.6))
                     Text(metric.label.uppercased())
                         .font(.system(size: 9, weight: .bold))
                         .tracking(0.6)
                         .foregroundStyle(ColorTokens.textTertiary)
-                    if let delta = metric.delta {
-                        Text(delta)
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
                     Spacer(minLength: 0)
                 }
+            }
+
+            // CTA
+            if let cta = card.cta {
+                Button { handleInsightCTA(cta) } label: {
+                    Text(cta.label)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(accent.opacity(0.75))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
                 .padding(.top, 2)
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface.opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(accent.opacity(0.10), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Objective Card (Where You're Heading)
+
+    private func objectiveCard(_ card: InsightCard) -> some View {
+        let accent = insightAccentColor(card.tone)
+        let readinessPct: Double = {
+            if let pct = viewModel.insights?.objective?.readinessPct {
+                return Double(pct) / 100.0
+            }
+            if let val = card.metric?.value, let n = Double(val.replacingOccurrences(of: "%", with: "")) {
+                return n / 100.0
+            }
+            return 0
+        }()
+        let readinessLabel: String = {
+            let pctInt = Int(readinessPct * 100)
+            return "\(pctInt)%"
+        }()
+        let daysLabel: String = {
+            if let d = viewModel.insights?.objective?.daysToTarget {
+                return "\(d) days remaining"
+            }
+            return ""
+        }()
+        let objectiveLabel: String = {
+            if let lbl = viewModel.insights?.objective?.label, !lbl.isEmpty {
+                return lbl
+            }
+            // Try to extract from body: "Senior Product Manager" etc.
+            let body = card.body
+            if let arrowRange = body.range(of: "→ ") {
+                let after = String(body[arrowRange.upperBound...])
+                let parts = after.components(separatedBy: CharacterSet(charactersIn: ".,\n"))
+                if let first = parts.first { return first.trimmingCharacters(in: .whitespaces) }
+            }
+            return ""
+        }()
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 14) {
+                // Progress ring
+                ZStack {
+                    Circle()
+                        .stroke(ColorTokens.surfaceElevated, lineWidth: 6)
+                        .frame(width: 72, height: 72)
+                    Circle()
+                        .trim(from: 0, to: readinessPct)
+                        .stroke(accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .frame(width: 72, height: 72)
+                        .rotationEffect(.degrees(-90))
+                    Text(readinessLabel)
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 80)
+
+                // Right side text
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(card.title)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .textCase(.uppercase)
+                        .tracking(0.7)
+
+                    if !objectiveLabel.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(accent)
+                            Text(objectiveLabel)
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                        }
+                    }
+
+                    if !daysLabel.isEmpty {
+                        Text(daysLabel)
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+
+                    if let delta = card.metric?.delta {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(accent)
+                                .frame(width: 6, height: 6)
+                            Text(delta)
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .foregroundStyle(accent)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 0)
             }
 
             if let cta = card.cta {
-                Button {
-                    handleInsightCTA(cta)
-                } label: {
+                Button { handleInsightCTA(cta) } label: {
                     HStack(spacing: 6) {
                         Text(cta.label)
                             .font(.system(size: 12, weight: .bold))
@@ -294,13 +446,12 @@ struct ProgressTabView: View {
                             .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.black.opacity(0.6))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
                     .background(accent)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
-                .padding(.top, 4)
             }
         }
         .padding(Spacing.md)
@@ -312,6 +463,278 @@ struct ProgressTabView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(accent.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Attention Card (Worth Your Attention)
+
+    @State private var pulseScale: CGFloat = 1.0
+
+    private func attentionCard(_ card: InsightCard) -> some View {
+        let accent = insightAccentColor(card.tone)
+
+        // Extract topic name: everything before " hasn't" or " has been"
+        let topicName: String = {
+            let body = card.body
+            let markers = [" hasn't", " has been", " have been", " is dormant", " hasn't been"]
+            for marker in markers {
+                if let range = body.range(of: marker, options: .caseInsensitive) {
+                    return String(body[body.startIndex..<range.lowerBound]).trimmingCharacters(in: .whitespaces)
+                }
+            }
+            return ""
+        }()
+
+        // Extract dormant duration: "32 days dormant"
+        let dormantLabel: String = {
+            let body = card.body
+            // Look for patterns like "32 days", "2 weeks", "a month"
+            if let match = body.range(of: #"\d+\s+days?"#, options: .regularExpression) {
+                return String(body[match]) + " dormant"
+            }
+            if let match = body.range(of: #"\d+\s+weeks?"#, options: .regularExpression) {
+                return String(body[match]) + " dormant"
+            }
+            return ""
+        }()
+
+        // Short explanation max 80 chars
+        let shortExplanation: String = {
+            let body = card.body
+            // If topic was extracted, skip to after the first sentence / use a short version
+            if !topicName.isEmpty {
+                let withoutTopic = body.replacingOccurrences(of: topicName, with: "It")
+                let sentences = withoutTopic.components(separatedBy: ". ")
+                if let first = sentences.first {
+                    let trimmed = first.trimmingCharacters(in: .whitespaces)
+                    return trimmed.count <= 80 ? trimmed : String(trimmed.prefix(77)) + "..."
+                }
+            }
+            return body.count <= 80 ? body : String(body.prefix(77)) + "..."
+        }()
+
+        return VStack(alignment: .leading, spacing: 10) {
+            // Title row with pulsing icon
+            HStack(spacing: 8) {
+                Image(systemName: card.icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .scaleEffect(pulseScale)
+                    .onAppear {
+                        withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+                            pulseScale = 1.15
+                        }
+                    }
+                Text(card.title)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .textCase(.uppercase)
+                    .tracking(0.7)
+                Spacer(minLength: 0)
+            }
+
+            // Hero topic name
+            if !topicName.isEmpty {
+                Text(topicName)
+                    .font(Typography.titleMedium)
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+            }
+
+            // Dormant pill
+            if !dormantLabel.isEmpty {
+                HStack(spacing: 5) {
+                    Image(systemName: "calendar.badge.clock")
+                        .font(.system(size: 11))
+                        .foregroundStyle(accent)
+                    Text(dormantLabel)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(accent.opacity(0.12))
+                .clipShape(Capsule())
+            }
+
+            // Short explanation
+            if topicName.isEmpty {
+                Text(shortExplanation)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.75))
+                    .lineLimit(3)
+            } else {
+                Text(shortExplanation)
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .lineLimit(2)
+            }
+
+            // CTA
+            if let cta = card.cta {
+                Button { handleInsightCTA(cta) } label: {
+                    HStack(spacing: 6) {
+                        Text(cta.label)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.black)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black.opacity(0.6))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(accent)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(card.tone == .caution ? Color.orange.opacity(0.06) : Color.clear)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(card.tone == .caution ? Color.orange.opacity(0.4) : accent.opacity(0.18), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Milestone / Celebration Card
+
+    private func milestoneCard(_ card: InsightCard) -> some View {
+        let accent = insightAccentColor(card.tone)
+
+        return VStack(spacing: 10) {
+            // Large icon centered
+            Image(systemName: card.icon)
+                .font(.system(size: 36))
+                .foregroundStyle(accent)
+
+            // Title centered
+            Text(card.title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white)
+                .textCase(.uppercase)
+                .tracking(0.7)
+                .multilineTextAlignment(.center)
+
+            // Body — short, one line
+            Text(card.body)
+                .font(.system(size: 13))
+                .foregroundStyle(.white.opacity(0.80))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+
+            // Metric centered
+            if let metric = card.metric {
+                VStack(spacing: 2) {
+                    Text(metric.value)
+                        .font(.system(size: 28, weight: .black, design: .rounded))
+                        .foregroundStyle(accent)
+                    Text(metric.label.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(0.6)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    if let delta = metric.delta {
+                        Text(delta)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundStyle(accent)
+                    }
+                }
+                .padding(.top, 2)
+            }
+
+            // CTA
+            if let cta = card.cta {
+                Button { handleInsightCTA(cta) } label: {
+                    HStack(spacing: 6) {
+                        Text(cta.label)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.black)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black.opacity(0.6))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(accent)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(accent.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Cold Start Card (Gentle Invitation)
+
+    private func coldStartCard(_ card: InsightCard) -> some View {
+        let accent = insightAccentColor(card.tone)
+
+        return VStack(spacing: 12) {
+            Image(systemName: card.icon)
+                .font(.system(size: 40))
+                .foregroundStyle(accent.opacity(0.75))
+
+            VStack(spacing: 6) {
+                Text(card.title)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.white)
+                    .textCase(.uppercase)
+                    .tracking(0.7)
+                    .multilineTextAlignment(.center)
+
+                Text(card.body)
+                    .font(.system(size: 13))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let cta = card.cta {
+                Button { handleInsightCTA(cta) } label: {
+                    HStack(spacing: 6) {
+                        Text(cta.label)
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.black)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.black.opacity(0.6))
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(accent)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(Spacing.md)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTokens.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(accent.opacity(0.15), lineWidth: 1)
         )
     }
 
