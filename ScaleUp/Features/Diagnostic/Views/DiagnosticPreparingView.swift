@@ -46,6 +46,10 @@ struct DiagnosticPreparingView: View {
 
             factCard
                 .padding(.horizontal, Spacing.lg)
+                .fixedSize(horizontal: false, vertical: true)
+
+            factDots
+                .padding(.top, Spacing.md)
 
             Spacer()
         }
@@ -86,37 +90,51 @@ struct DiagnosticPreparingView: View {
     }
 
     private var factCard: some View {
-        HStack(alignment: .top, spacing: Spacing.md) {
-            // Gold accent bar
-            RoundedRectangle(cornerRadius: 2)
-                .fill(ColorTokens.gold)
-                .frame(width: 3)
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: factIcons[factIndex])
-                        .foregroundStyle(ColorTokens.gold)
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Did you know")
-                        .font(Typography.captionBold)
-                        .foregroundStyle(ColorTokens.gold)
-                        .tracking(0.6)
-                }
-                Text(facts[factIndex])
-                    .font(Typography.body)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                    .lineSpacing(3)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: factIcons[factIndex])
+                    .foregroundStyle(ColorTokens.gold)
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Did you know")
+                    .font(Typography.captionBold)
+                    .foregroundStyle(ColorTokens.gold)
+                    .tracking(0.6)
             }
-            .id(factIndex)
-            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            Text(facts[factIndex])
+                .font(Typography.body)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .lineSpacing(3)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .id(factIndex)
+        .transition(.opacity)
         .padding(Spacing.md)
+        .padding(.leading, 4) // room for the accent bar
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: CornerRadius.medium)
                 .fill(ColorTokens.surface)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.medium)
+                .fill(ColorTokens.gold)
+                .frame(width: 3)
+                .frame(maxHeight: .infinity, alignment: .leading),
+            alignment: .leading
+        )
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
         .animation(.easeInOut(duration: 0.5), value: factIndex)
+    }
+
+    private var factDots: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<facts.count, id: \.self) { i in
+                Circle()
+                    .fill(i == factIndex ? ColorTokens.gold : ColorTokens.gold.opacity(0.25))
+                    .frame(width: 6, height: 6)
+                    .animation(.easeInOut(duration: 0.3), value: factIndex)
+            }
+        }
     }
 
     private func startFactRotation() {
