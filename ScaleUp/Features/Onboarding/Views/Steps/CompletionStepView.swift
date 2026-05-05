@@ -63,7 +63,7 @@ struct CompletionStepView: View {
                 VStack(spacing: Spacing.sm) {
                     summaryRow(icon: "target", label: "Goal", value: objective.displayName)
                     summaryRow(icon: "clock.fill", label: "Pace", value: "\(Int(viewModel.weeklyHours)) hrs/week")
-                    summaryRow(icon: "tag.fill", label: "Topics", value: "\(viewModel.selectedTopics.count) selected")
+                    summaryRow(icon: "tag.fill", label: "Topics", value: "\(viewModel.totalSelectedCount) selected")
                 }
                 .padding(Spacing.md)
                 .background(ColorTokens.surfaceElevated)

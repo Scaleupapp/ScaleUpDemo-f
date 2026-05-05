@@ -16,6 +16,8 @@ struct HomeView: View {
     @State private var quizViewModel = QuizListViewModel()
     @State private var notificationVM = NotificationViewModel()
     @State private var presentingDiagnostic = false
+    @State private var calibStore = CalibrationPromptStore()
+    @State private var showCalibration = false
 
     var body: some View {
         NavigationStack {
@@ -121,6 +123,27 @@ struct HomeView: View {
                     )
                     .padding(.horizontal, Spacing.md)
                     .padding(.bottom, Spacing.sm)
+                }
+
+                // Calibration banner for migrated existing users (Plan 2a Task 10) — opt-out with quiet period
+                if let user = appState.currentUser, user.needsCalibration == true, calibStore.shouldShow() {
+                    CalibrationBannerView(
+                        onTap: {
+                            AnalyticsService.shared.track(.existingUserCalibrationBannerTapped)
+                            // TODO: navigate to calibration flow (Plan 4 will define the destination)
+                            showCalibration = true
+                        },
+                        onDismiss: {
+                            AnalyticsService.shared.track(.existingUserCalibrationBannerDismissed)
+                            calibStore.recordDismissed()
+                        }
+                    )
+                    .onAppear {
+                        calibStore.recordShown()
+                        AnalyticsService.shared.track(.existingUserCalibrationBannerShown(
+                            promptCount: calibStore.promptCount
+                        ))
+                    }
                 }
 
                 // Welcome card for new users

@@ -40,25 +40,63 @@ final class OnboardingViewModel {
 
     // MARK: - Step 5: Interests
 
-    var selectedTopics: Set<String> = []
-    var customTopic = ""
+    /// Topics fetched from BE taxonomy. Pre-selected by default.
+    var suggestedTopics: [SuggestedTopic] = []
+    /// Topics the user added manually (capped so total ≤ 8).
+    var customTopics: [SuggestedTopic] = []
+    /// Canonical names of topics currently selected. Mirrors prior `selectedTopics` semantics.
+    var selectedCanonicals: Set<String> = []
+    /// Current draft for "+ Add a topic".
+    var customTopic: String = ""
+    /// Loading state for taxonomy fetch.
+    var isLoadingTopics = false
+    /// Per-topic self-rating; key is canonicalName.
+    var topicSelfRatings: [String: ProficiencyLevel] = [:]
+    /// Within Step 5, are we on the rating sub-step?
+    var isOnRatingSubStep = false
+    /// Optional syllabus ID returned by upload flow.
+    var syllabusId: String?
+    /// Topic descriptions extracted from a syllabus upload (replace taxonomy when present).
+    var syllabusExtractedTopics: [SuggestedTopic] = []
+    /// Whether to gate Step 5 on the syllabus upload card before topic selection.
+    var showSyllabusUpload: Bool = false
+    /// File extension (lowercased) of the uploaded syllabus, captured for analytics.
+    var syllabusFileTypeForAnalytics: String?
 
     // MARK: - Dependencies
 
-    private let service = OnboardingService()
+    private let service: OnboardingService
+    private let topicServiceFactory: (String?) -> OnboardingTopicService
     private weak var appState: AppState?
 
     // MARK: - Init
 
-    init(initialStep: Int, appState: AppState) {
+    init(
+        initialStep: Int,
+        appState: AppState,
+        service: OnboardingService = OnboardingService(),
+        topicServiceFactory: ((String?) -> OnboardingTopicService)? = nil
+    ) {
         self.currentStep = initialStep
         self.appState = appState
+        self.service = service
+        self.topicServiceFactory = topicServiceFactory ?? { token in
+            OnboardingTopicService(authToken: { token })
+        }
 
         // Pre-fill from user data
         if let user = appState.currentUser {
             self.firstName = user.firstName
             self.lastName = user.lastName ?? ""
         }
+    }
+
+    /// Builds an `OnboardingTopicService` with the current keychain access token
+    /// captured in its `authToken` closure. The token is read on the calling actor
+    /// so the service stays MainActor-safe and synchronous.
+    private func makeTopicService() async -> OnboardingTopicService {
+        let token = await KeychainManager.shared.accessToken
+        return topicServiceFactory(token)
     }
 
     // MARK: - Validation
@@ -69,7 +107,8 @@ final class OnboardingViewModel {
         case 2: return true // optional
         case 3: return selectedObjective != nil
         case 4: return true // always has default
-        case 5: return selectedTopics.count >= 3
+        case 5:
+            return isOnRatingSubStep ? canFinishStep5 : canProceedFromTopicSelection
         default: return true
         }
     }
@@ -78,69 +117,105 @@ final class OnboardingViewModel {
         [1, 2, 4].contains(currentStep)
     }
 
-    // MARK: - Topic Suggestions
+    // MARK: - Step 5 helpers
 
-    var suggestedTopics: [String] {
-        guard let objective = selectedObjective else {
-            return Self.generalTopics
-        }
-
-        switch objective {
-        case .examPreparation:
-            return ["Test Strategy", "Time Management", "Practice Tests", "Study Planning",
-                    "Note Taking", "Memory Techniques", "Revision", "Problem Solving",
-                    "Critical Thinking", "Exam Anxiety"]
-        case .upskilling:
-            return topicsForSkill(targetSkill)
-        case .interviewPreparation:
-            return ["System Design", "Behavioral Questions", "Technical Skills",
-                    "Communication", "Problem Solving", "Case Studies",
-                    "Salary Negotiation", "Company Research", "Mock Interviews", "Resume Building"]
-        case .careerSwitch:
-            return ["Industry Overview", "Transferable Skills", "Networking",
-                    "Portfolio Building", "Certifications", "Mentorship",
-                    "Job Market", "Personal Branding", "Skill Gap Analysis", "Bootcamps"]
-        case .academicExcellence:
-            return ["Research Methods", "Academic Writing", "Data Analysis",
-                    "Critical Thinking", "Presentations", "Literature Review",
-                    "Study Techniques", "Time Management", "Collaboration", "Note Taking"]
-        case .casualLearning:
-            return Self.generalTopics
-        case .networking:
-            return ["Personal Branding", "LinkedIn", "Public Speaking", "Community Building",
-                    "Mentorship", "Industry Events", "Content Creation", "Collaboration",
-                    "Relationship Building", "Thought Leadership"]
-        }
+    /// Evaluates whether the syllabus upload card should be shown before topic
+    /// selection. Called by `InterestsStepView.task` on entry to Step 5.
+    func evaluateSyllabusGate() {
+        guard let obj = selectedObjective else { return }
+        showSyllabusUpload = obj.shouldOfferSyllabusUpload(examName: examName.isEmpty ? nil : examName)
     }
 
-    private func topicsForSkill(_ skill: String) -> [String] {
-        let lower = skill.lowercased()
-        if lower.contains("product") {
-            return ["Product Strategy", "User Research", "Metrics & Analytics",
-                    "Roadmapping", "Prioritization", "Agile", "Stakeholder Management",
-                    "A/B Testing", "Go-to-Market", "User Stories"]
-        } else if lower.contains("data") {
-            return ["Python", "SQL", "Machine Learning", "Statistics",
-                    "Data Visualization", "Pandas", "Deep Learning",
-                    "ETL Pipelines", "A/B Testing", "Big Data"]
-        } else if lower.contains("design") {
-            return ["UI Design", "UX Research", "Figma", "Prototyping",
-                    "Design Systems", "Typography", "Color Theory",
-                    "User Testing", "Accessibility", "Interaction Design"]
-        } else if lower.contains("market") {
-            return ["Digital Marketing", "SEO", "Content Strategy", "Social Media",
-                    "Analytics", "Email Marketing", "Branding",
-                    "Growth Hacking", "Copywriting", "Paid Ads"]
-        } else {
-            return Self.generalTopics
+    func loadSuggestedTopics() async {
+        guard let objective = selectedObjective else { return }
+        isLoadingTopics = true
+        errorMessage = nil
+        let specifics = currentSpecificsDictionary()
+        do {
+            let service = await makeTopicService()
+            let response = try await service.fetchSuggestedTopics(
+                objectiveType: objective,
+                specifics: specifics,
+                company: targetCompany.isEmpty ? nil : targetCompany
+            )
+            self.suggestedTopics = response.topics
+            // Pre-select all suggested topics.
+            for t in response.topics { selectedCanonicals.insert(t.canonicalName) }
+            AnalyticsService.shared.track(.onboardingTopicTaxonomyLoaded(
+                cacheHit: response.cacheHit,
+                source: response.source,
+                topicCount: response.topics.count
+            ))
+        } catch {
+            errorMessage = (error as? OnboardingTopicError)?.errorDescription ?? error.localizedDescription
         }
+        isLoadingTopics = false
     }
 
-    private static let generalTopics = [
-        "Technology", "Business", "Design", "Marketing",
-        "Finance", "Data Science", "Leadership", "Communication",
-        "Productivity", "Health & Wellness", "Creative Writing", "Programming"
-    ]
+    func toggleTopic(_ topic: SuggestedTopic) {
+        if selectedCanonicals.contains(topic.canonicalName) {
+            selectedCanonicals.remove(topic.canonicalName)
+            topicSelfRatings.removeValue(forKey: topic.canonicalName)
+            let topicSource = customTopics.contains(where: { $0.canonicalName == topic.canonicalName }) ? "custom" : "taxonomy"
+            AnalyticsService.shared.track(.onboardingTopicRemoved(
+                canonicalName: topic.canonicalName,
+                source: topicSource
+            ))
+        } else if totalSelectedCount < 8 {
+            selectedCanonicals.insert(topic.canonicalName)
+        }
+        Haptics.selection()
+    }
+
+    func addCustomTopic() {
+        let trimmed = customTopic.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, totalSelectedCount < 8 else { return }
+        let canonical = trimmed.lowercased().replacingOccurrences(of: " ", with: "-")
+        let topic = SuggestedTopic(
+            canonicalName: canonical,
+            name: trimmed,
+            description: "Custom topic you added.",
+            isFutureProofing: false,
+            baseDifficulty: "intermediate"
+        )
+        customTopics.append(topic)
+        selectedCanonicals.insert(canonical)
+        customTopic = ""
+        AnalyticsService.shared.track(.onboardingTopicAddedCustom(canonicalName: canonical))
+    }
+
+    func setRating(_ rating: ProficiencyLevel, for topic: SuggestedTopic) {
+        topicSelfRatings[topic.canonicalName] = rating
+    }
+
+    var totalSelectedCount: Int { selectedCanonicals.count }
+
+    var allDisplayableTopics: [SuggestedTopic] {
+        let pool = syllabusExtractedTopics.isEmpty ? suggestedTopics : syllabusExtractedTopics
+        let extras = customTopics
+        var seen = Set<String>()
+        return (pool + extras).filter { seen.insert($0.canonicalName).inserted }
+    }
+
+    var canProceedFromTopicSelection: Bool {
+        totalSelectedCount >= 3 && totalSelectedCount <= 8
+    }
+
+    var canFinishStep5: Bool {
+        canProceedFromTopicSelection &&
+        selectedCanonicals.allSatisfy { topicSelfRatings[$0] != nil }
+    }
+
+    private func currentSpecificsDictionary() -> [String: String] {
+        var dict: [String: String] = [:]
+        if !examName.isEmpty       { dict["examName"]       = examName }
+        if !targetSkill.isEmpty    { dict["targetSkill"]    = targetSkill }
+        if !targetRole.isEmpty     { dict["targetRole"]     = targetRole }
+        if !targetCompany.isEmpty  { dict["targetCompany"]  = targetCompany }
+        if !fromDomain.isEmpty     { dict["fromDomain"]     = fromDomain }
+        if !toDomain.isEmpty       { dict["toDomain"]       = toDomain }
+        return dict
+    }
 
     // MARK: - Navigation Actions
 
@@ -181,29 +256,7 @@ final class OnboardingViewModel {
     }
 
     func completeOnboarding() async {
-        isLoading = true
-        try? await service.complete()
-        isLoading = false
-        AnalyticsService.shared.track(.onboardingCompleted)
-        appState?.completeOnboarding()
-    }
-
-    // MARK: - Add Custom Topic
-
-    func addCustomTopic() {
-        let topic = customTopic.trimmingCharacters(in: .whitespaces)
-        guard !topic.isEmpty else { return }
-        selectedTopics.insert(topic)
-        customTopic = ""
-    }
-
-    func toggleTopic(_ topic: String) {
-        if selectedTopics.contains(topic) {
-            selectedTopics.remove(topic)
-        } else {
-            selectedTopics.insert(topic)
-        }
-        Haptics.selection()
+        await submitOnboarding()
     }
 
     // MARK: - Add/Remove Education & Work
@@ -276,11 +329,75 @@ final class OnboardingViewModel {
                 weeklyCommitHours: Int(weeklyHours)
             )
         case 5:
-            let topics = Array(selectedTopics)
-            try await service.updateInterests(skills: topics, topicsOfInterest: topics)
+            // Step 5 finalization is handled in `submitOnboarding` (called by Completion step)
+            // since the new flow posts a single consolidated payload to /onboarding/complete.
+            break
         default:
             break
         }
+    }
+
+    // MARK: - Submit Onboarding
+
+    func submitOnboarding() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        let topicsPayload: [OnboardingCompletePayload.TopicSelectionPayload] = allDisplayableTopics
+            .filter { selectedCanonicals.contains($0.canonicalName) }
+            .map { topic in
+                let isCustom = customTopics.contains { $0.canonicalName == topic.canonicalName }
+                return .init(
+                    canonicalName: topic.canonicalName,
+                    name: topic.name,
+                    source: isCustom ? TopicSource.custom.rawValue : TopicSource.taxonomy.rawValue,
+                    isFutureProofing: topic.isFutureProofing
+                )
+            }
+
+        let ratings = topicSelfRatings.mapValues { $0.rawValue }
+
+        let educationPayload = educationEntries
+            .filter { !$0.degree.isEmpty && !$0.institution.isEmpty }
+            .map { OnboardingCompletePayload.EducationPayload(degree: $0.degree, institution: $0.institution, yearOfCompletion: $0.yearOfCompletion, currentlyPursuing: $0.currentlyPursuing) }
+        let workPayload = workEntries
+            .filter { !$0.role.isEmpty && !$0.company.isEmpty }
+            .map { OnboardingCompletePayload.WorkPayload(role: $0.role, company: $0.company, years: $0.years, currentlyWorking: $0.currentlyWorking) }
+
+        let payload = OnboardingCompletePayload(
+            firstName: firstName,
+            lastName: lastName,
+            educationEntries: educationPayload,
+            workEntries: workPayload,
+            objectiveType: selectedObjective?.rawValue ?? ObjectiveType.upskilling.rawValue,
+            specifics: currentSpecificsDictionary(),
+            timeline: timeline.rawValue,
+            currentLevel: currentLevel.rawValue,
+            weeklyHours: weeklyHours,
+            learningStyle: learningStyle.rawValue,
+            topicsOfInterest: topicsPayload,
+            topicSelfRatings: ratings,
+            syllabusId: syllabusId
+        )
+
+        do {
+            let service = await makeTopicService()
+            _ = try await service.submitOnboarding(payload)
+            AnalyticsService.shared.track(.onboardingSelfRatingCompleted(
+                topicCount: ratings.count,
+                ratingDistribution: ratingDistribution(from: ratings)
+            ))
+            AnalyticsService.shared.track(.onboardingCompleted)
+            appState?.completeOnboarding()
+        } catch {
+            errorMessage = (error as? OnboardingTopicError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    private func ratingDistribution(from ratings: [String: String]) -> [String: Int] {
+        var counts: [String: Int] = ["novice": 0, "familiar": 0, "proficient": 0, "expert": 0]
+        for value in ratings.values { counts[value, default: 0] += 1 }
+        return counts
     }
 }
 

@@ -17,6 +17,9 @@
 		0B7C8E9FE29ED26029F80DFB /* VerifiedBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD1AB34682085C2E0DF7638 /* VerifiedBadge.swift */; };
 		0C0CAE935FB4E8D101D82193 /* SkeletonLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 518A75D7CDAD16E4055CF774 /* SkeletonLoader.swift */; };
 		0C279AD2C0A9FABF50C6DDC1 /* DashboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021B8CA080F14C064EF35B2 /* DashboardService.swift */; };
+		CA1188001000000000000001 /* CalibrationPromptStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1188002000000000000001 /* CalibrationPromptStore.swift */; };
+		CA1188001000000000000002 /* CalibrationBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1188002000000000000002 /* CalibrationBannerView.swift */; };
+		CA1188001000000000000003 /* CalibrationPromptStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1188002000000000000003 /* CalibrationPromptStoreTests.swift */; };
 		0C9B5C6F21124E98D62DC7A0 /* ContentModerationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8A218BB1743A1E5065904D /* ContentModerationView.swift */; };
 		0CA0CAB53AB35909E1475155 /* Competition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2853F8DEAE333FE16C95F943 /* Competition.swift */; };
 		0E631A6DF003FEFF1023E90F /* InterviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0F9B67703094B3C7DD9E2B /* InterviewService.swift */; };
@@ -86,6 +89,12 @@
 		4911077E23EB61BB3860B090 /* MyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30D3BDDEA1361685EFDA3F1 /* MyContentView.swift */; };
 		49B580738BFE6EC401726E75 /* SeeAllContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B321EABA6BE1BD2A99354C6 /* SeeAllContentView.swift */; };
 		4A7778CD73147E15F6E0355D /* ScaleUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */; };
+		C6A8D4887B38485EB027CAE5 /* OnboardingTopicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D71FD1322C8A4879BFF2027C /* OnboardingTopicService.swift */; };
+		A1B1C1D1E1F1A1B1C1D10010 /* SyllabusUploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B1C1D1E1F1A1B1C1D10011 /* SyllabusUploadService.swift */; };
+		A1B1C1D1E1F1A1B1C1D10012 /* SyllabusUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B1C1D1E1F1A1B1C1D10013 /* SyllabusUploadView.swift */; };
+		051BD20BB79B41C0BFFA86D1 /* OnboardingTopicServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF2268A8B9F94FC5B2344A76 /* OnboardingTopicServiceTests.swift */; };
+		A1B1C1D1E1F1A1B1C1D10001 /* TopicChipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B1C1D1E1F1A1B1C1D10002 /* TopicChipView.swift */; };
+		A1B1C1D1E1F1A1B1C1D10003 /* SelfRatingSubStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B1C1D1E1F1A1B1C1D10004 /* SelfRatingSubStepView.swift */; };
 		4B1D87910EB1315C4FE995DB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3F6A5A1E69F51B5356AA87A7 /* GoogleSignIn */; };
 		4C126C57B8894B132DEA36AA /* MyFlashcardsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 984FA33160CD76B88F706C37 /* MyFlashcardsView.swift */; };
 		4D23772A120D2FB1DA27B154 /* ObjectiveBriefView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36F3F8F172C303B25B148719 /* ObjectiveBriefView.swift */; };
@@ -349,6 +358,10 @@
 		636132594A373ED3F6732DEA /* LiveEventViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventViewModel.swift; sourceTree = "<group>"; };
 		6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorHistoryView.swift; sourceTree = "<group>"; };
 		661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpTests.swift; sourceTree = "<group>"; };
+		D71FD1322C8A4879BFF2027C /* OnboardingTopicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTopicService.swift; sourceTree = "<group>"; };
+		A1B1C1D1E1F1A1B1C1D10011 /* SyllabusUploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyllabusUploadService.swift; sourceTree = "<group>"; };
+		A1B1C1D1E1F1A1B1C1D10013 /* SyllabusUploadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyllabusUploadView.swift; sourceTree = "<group>"; };
+		BF2268A8B9F94FC5B2344A76 /* OnboardingTopicServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTopicServiceTests.swift; sourceTree = "<group>"; };
 		66B828D0A86A77D8A2CD67FE /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
 		6732B74BC0532E5BFC51E493 /* ShareScoreCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareScoreCardView.swift; sourceTree = "<group>"; };
 		684342DE4E8DF24815BB06CA /* ContributorCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContributorCardView.swift; sourceTree = "<group>"; };
@@ -382,6 +395,8 @@
 		7BED62C59C6A36689079698F /* ProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressRing.swift; sourceTree = "<group>"; };
 		7CC9363E7C3BDCE5D76CAE7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7CE94411C902C1553200970B /* ObjectiveStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveStepView.swift; sourceTree = "<group>"; };
+		A1B1C1D1E1F1A1B1C1D10002 /* TopicChipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicChipView.swift; sourceTree = "<group>"; };
+		A1B1C1D1E1F1A1B1C1D10004 /* SelfRatingSubStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfRatingSubStepView.swift; sourceTree = "<group>"; };
 		7D6BC22ED78047550814CD4D /* Diagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostic.swift; sourceTree = "<group>"; };
 		7DC257BE3138B8CC144A06A8 /* ChallengeResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeResultsView.swift; sourceTree = "<group>"; };
 		7F1D89751B6F59A00541B652 /* LiveEventSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventSessionView.swift; sourceTree = "<group>"; };
@@ -456,6 +471,9 @@
 		CDCB84D59D198D460B8B735C /* InterviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewViewModel.swift; sourceTree = "<group>"; };
 		CFF315BDB3AAE03E4E2795E0 /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		D021B8CA080F14C064EF35B2 /* DashboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardService.swift; sourceTree = "<group>"; };
+		CA1188002000000000000001 /* CalibrationPromptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationPromptStore.swift; sourceTree = "<group>"; };
+		CA1188002000000000000002 /* CalibrationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationBannerView.swift; sourceTree = "<group>"; };
+		CA1188002000000000000003 /* CalibrationPromptStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationPromptStoreTests.swift; sourceTree = "<group>"; };
 		D0287C7D11C3928D8C7288BE /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
 		D17141FD37287891A9725EA6 /* LiveEventResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventResultsView.swift; sourceTree = "<group>"; };
 		D22F18DCCE58CE3B311003EF /* CreatorApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorApplication.swift; sourceTree = "<group>"; };
@@ -602,6 +620,8 @@
 			isa = PBXGroup;
 			children = (
 				98C0952DA371E65B5BAEF48E /* OnboardingService.swift */,
+				D71FD1322C8A4879BFF2027C /* OnboardingTopicService.swift */,
+				A1B1C1D1E1F1A1B1C1D10011 /* SyllabusUploadService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -893,6 +913,7 @@
 				6BE09302AF43EC4201680CE4 /* HomeView.swift */,
 				72EF300B6A65B4CAEDA341E5 /* ReadinessScoreCard.swift */,
 				0B321EABA6BE1BD2A99354C6 /* SeeAllContentView.swift */,
+				CA1188002000000000000002 /* CalibrationBannerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -1134,6 +1155,7 @@
 			isa = PBXGroup;
 			children = (
 				D021B8CA080F14C064EF35B2 /* DashboardService.swift */,
+				CA1188002000000000000001 /* CalibrationPromptStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1172,6 +1194,7 @@
 		C49E4CAA5B44870D0DA84D88 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				A1B1C1D1E1F1A1B1C1D10005 /* Components */,
 				FE0C495A9BCD05583354587B /* Steps */,
 				E2CCD0AF3E6AF66E5A894554 /* OnboardingContainerView.swift */,
 			);
@@ -1368,6 +1391,8 @@
 			isa = PBXGroup;
 			children = (
 				661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */,
+				BF2268A8B9F94FC5B2344A76 /* OnboardingTopicServiceTests.swift */,
+				CA1188002000000000000003 /* CalibrationPromptStoreTests.swift */,
 			);
 			name = UnitTests;
 			path = Tests/UnitTests;
@@ -1411,8 +1436,18 @@
 				7CE94411C902C1553200970B /* ObjectiveStepView.swift */,
 				25A10244004AFF5CCBED32EC /* PreferencesStepView.swift */,
 				E91A395DB118F51FC07A29A6 /* ProfileStepView.swift */,
+				A1B1C1D1E1F1A1B1C1D10004 /* SelfRatingSubStepView.swift */,
+				A1B1C1D1E1F1A1B1C1D10013 /* SyllabusUploadView.swift */,
 			);
 			path = Steps;
+			sourceTree = "<group>";
+		};
+		A1B1C1D1E1F1A1B1C1D10005 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A1B1C1D1E1F1A1B1C1D10002 /* TopicChipView.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1552,6 +1587,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				4A7778CD73147E15F6E0355D /* ScaleUpTests.swift in Sources */,
+				051BD20BB79B41C0BFFA86D1 /* OnboardingTopicServiceTests.swift in Sources */,
+				CA1188001000000000000003 /* CalibrationPromptStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1630,6 +1667,8 @@
 				2013B559561303269E6DBAE3 /* DailyChallengeCarousel.swift in Sources */,
 				461F0AA439EB28CC49C975DE /* Dashboard.swift in Sources */,
 				0C279AD2C0A9FABF50C6DDC1 /* DashboardService.swift in Sources */,
+				CA1188001000000000000001 /* CalibrationPromptStore.swift in Sources */,
+				CA1188001000000000000002 /* CalibrationBannerView.swift in Sources */,
 				F9385E8C738982D0665EC7B0 /* Diagnostic.swift in Sources */,
 				823FEB71938AC8BA4F7553F0 /* DiagnosticContainerView.swift in Sources */,
 				AA1234BB5678CC9012DEF345 /* DiagnosticPreparingView.swift in Sources */,
@@ -1714,10 +1753,15 @@
 				1ED705F8CA8D7869C6416104 /* ObjectiveContext.swift in Sources */,
 				0A930E61B0982A739E2E5229 /* ObjectiveService.swift in Sources */,
 				51B2F8DA3819B514E7F1C820 /* ObjectiveStepView.swift in Sources */,
+				A1B1C1D1E1F1A1B1C1D10001 /* TopicChipView.swift in Sources */,
+				A1B1C1D1E1F1A1B1C1D10003 /* SelfRatingSubStepView.swift in Sources */,
 				1427C6D2828827448C0EEACD /* ObjectiveSwitcherView.swift in Sources */,
 				9A86C9D975069E65B4B0B097 /* Onboarding.swift in Sources */,
 				308E0F670C103DA954E8E6A7 /* OnboardingContainerView.swift in Sources */,
 				97F7F11B33093D12980B7204 /* OnboardingService.swift in Sources */,
+				C6A8D4887B38485EB027CAE5 /* OnboardingTopicService.swift in Sources */,
+				A1B1C1D1E1F1A1B1C1D10010 /* SyllabusUploadService.swift in Sources */,
+				A1B1C1D1E1F1A1B1C1D10012 /* SyllabusUploadView.swift in Sources */,
 				68267BE5D60429969BC09FE1 /* OnboardingViewModel.swift in Sources */,
 				3F3350E9AAC39FA5C48C3E08 /* OpenAILiveManager.swift in Sources */,
 				387C5195C3D2C66B935E445C /* PendingApplicationsView.swift in Sources */,

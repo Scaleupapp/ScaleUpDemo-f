@@ -72,7 +72,7 @@ struct ObjectiveCompetency: Codable, Sendable, Identifiable {
     let category: String?
     let prerequisites: [String]?
     let assessmentTypes: [String]?
-    let proficiencyLevels: [ProficiencyLevel]?
+    let proficiencyLevels: [ObjectiveProficiencyLevel]?
 
     // Enriched in brief response
     let currentScore: Double?
@@ -94,7 +94,7 @@ struct CompetencyContentItem: Codable, Sendable, Identifiable {
     }
 }
 
-struct ProficiencyLevel: Codable, Sendable, Identifiable {
+struct ObjectiveProficiencyLevel: Codable, Sendable, Identifiable {
     var id: Int { level }
     let level: Int
     let title: String

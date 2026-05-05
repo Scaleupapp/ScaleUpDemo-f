@@ -2,111 +2,155 @@ import SwiftUI
 
 struct InterestsStepView: View {
     @Bindable var viewModel: OnboardingViewModel
-
     @State private var appeared = false
+    @State private var infoTopic: SuggestedTopic?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: Spacing.xl) {
-                // Heading
-                VStack(spacing: Spacing.sm) {
-                    Text("Pick your interests")
-                        .font(Typography.displayMedium)
-                        .foregroundStyle(ColorTokens.textPrimary)
-
-                    Text("Select at least 3 topics")
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                }
-                .padding(.top, Spacing.lg)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 15)
-
-                // Selected count
-                if !viewModel.selectedTopics.isEmpty {
-                    HStack(spacing: Spacing.sm) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(viewModel.selectedTopics.count >= 3 ? ColorTokens.success : ColorTokens.gold)
-                        Text("\(viewModel.selectedTopics.count) selected")
-                            .font(Typography.bodyBold)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
-
-                // Topic Chips - Flow Layout
-                FlowLayout(spacing: Spacing.sm) {
-                    ForEach(viewModel.suggestedTopics, id: \.self) { topic in
-                        topicChip(topic)
-                    }
-
-                    // Show custom-added topics not in suggestions
-                    ForEach(Array(viewModel.selectedTopics.filter { !viewModel.suggestedTopics.contains($0) }), id: \.self) { topic in
-                        topicChip(topic)
-                    }
-                }
-                .padding(.horizontal, Spacing.lg)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 20)
-
-                // Custom topic input
-                HStack(spacing: Spacing.sm) {
-                    ScaleUpTextField(
-                        label: "Add your own topic",
-                        icon: "plus",
-                        text: $viewModel.customTopic,
-                        autocapitalization: .words
-                    )
-
-                    Button {
-                        viewModel.addCustomTopic()
-                    } label: {
-                        Text("Add")
-                            .font(Typography.bodyBold)
-                            .foregroundStyle(ColorTokens.buttonPrimaryText)
-                            .padding(.horizontal, Spacing.md)
-                            .padding(.vertical, 14)
-                            .background(ColorTokens.gold)
-                            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-                    }
-                    .padding(.top, 20) // align with text field (below label)
-                }
-                .padding(.horizontal, Spacing.lg)
-                .opacity(appeared ? 1 : 0)
-
-                Spacer().frame(height: Spacing.xxl)
+        Group {
+            if viewModel.showSyllabusUpload {
+                SyllabusUploadView(viewModel: viewModel)
+            } else if viewModel.isOnRatingSubStep {
+                SelfRatingSubStepView(viewModel: viewModel)
+            } else {
+                topicSelectionScreen
             }
         }
-        .scrollDismissesKeyboard(.interactively)
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.5)) {
-                appeared = true
+        .task {
+            viewModel.evaluateSyllabusGate()
+            if !viewModel.showSyllabusUpload && viewModel.suggestedTopics.isEmpty {
+                await viewModel.loadSuggestedTopics()
             }
         }
     }
 
-    // MARK: - Topic Chip
+    // MARK: - Topic selection
 
-    private func topicChip(_ topic: String) -> some View {
-        let isSelected = viewModel.selectedTopics.contains(topic)
-
-        return Button {
-            viewModel.toggleTopic(topic)
-        } label: {
-            Text(topic)
-                .font(Typography.bodySmall)
-                .foregroundStyle(isSelected ? ColorTokens.buttonPrimaryText : ColorTokens.textSecondary)
-                .padding(.horizontal, Spacing.md)
-                .padding(.vertical, Spacing.sm)
-                .background(isSelected ? ColorTokens.gold : Color.clear)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(isSelected ? Color.clear : ColorTokens.border, lineWidth: 1)
-                )
+    private var topicSelectionScreen: some View {
+        ScrollView {
+            VStack(spacing: Spacing.xl) {
+                heading
+                if viewModel.isLoadingTopics {
+                    ProgressView().padding(.top, Spacing.lg)
+                } else {
+                    selectionCounter
+                    chipFlow
+                    customAddRow
+                    nextButton
+                    Spacer().frame(height: Spacing.xxl)
+                }
+            }
         }
-        .buttonStyle(.plain)
-        .animation(Motion.springSnappy, value: isSelected)
+        .scrollDismissesKeyboard(.interactively)
+        .onAppear { withAnimation(.easeOut(duration: 0.5)) { appeared = true } }
+        .sheet(item: $infoTopic) { topic in
+            TopicInfoSheet(topic: topic)
+                .presentationDetents([.fraction(0.3)])
+        }
+    }
+
+    private var heading: some View {
+        VStack(spacing: Spacing.sm) {
+            Text("Pick your interests")
+                .font(Typography.displayMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
+            Text("We've suggested \(viewModel.suggestedTopics.count) — tap to remove or add up to \(8 - viewModel.totalSelectedCount) more.")
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.lg)
+        }
+        .padding(.top, Spacing.lg)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 15)
+    }
+
+    private var selectionCounter: some View {
+        HStack(spacing: Spacing.sm) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(viewModel.totalSelectedCount >= 3 ? ColorTokens.success : ColorTokens.gold)
+            Text("\(viewModel.totalSelectedCount) of 8 selected")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.textPrimary)
+        }
+        .transition(.scale.combined(with: .opacity))
+    }
+
+    private var chipFlow: some View {
+        FlowLayout(spacing: Spacing.sm) {
+            ForEach(Array(viewModel.allDisplayableTopics.enumerated()), id: \.element.id) { index, topic in
+                TopicChipView(
+                    topic: topic,
+                    isSelected: viewModel.selectedCanonicals.contains(topic.canonicalName),
+                    onToggle: { viewModel.toggleTopic(topic) },
+                    onInfo: { infoTopic = topic }
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 12)
+                .animation(.easeOut(duration: 0.35).delay(Double(index) * 0.03), value: appeared)
+            }
+        }
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    private var customAddRow: some View {
+        HStack(spacing: Spacing.sm) {
+            ScaleUpTextField(
+                label: "Add a topic",
+                icon: "plus",
+                text: $viewModel.customTopic,
+                autocapitalization: .words
+            )
+            Button {
+                viewModel.addCustomTopic()
+            } label: {
+                Text("Add")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.buttonPrimaryText)
+                    .padding(.horizontal, Spacing.md)
+                    .padding(.vertical, 14)
+                    .background(viewModel.totalSelectedCount < 8 ? ColorTokens.gold : ColorTokens.gold.opacity(0.4))
+                    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+            }
+            .disabled(viewModel.totalSelectedCount >= 8)
+            .padding(.top, 20)
+        }
+        .padding(.horizontal, Spacing.lg)
+    }
+
+    private var nextButton: some View {
+        Button {
+            Haptics.success()
+            withAnimation(.easeInOut(duration: 0.25)) { viewModel.isOnRatingSubStep = true }
+        } label: {
+            Text("Next — rate your level")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.buttonPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(viewModel.canProceedFromTopicSelection ? ColorTokens.gold : ColorTokens.gold.opacity(0.4))
+                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+        }
+        .disabled(!viewModel.canProceedFromTopicSelection)
+        .padding(.horizontal, Spacing.lg)
+    }
+}
+
+private struct TopicInfoSheet: View {
+    let topic: SuggestedTopic
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            HStack {
+                Text(topic.name).font(Typography.titleMedium)
+                if topic.isFutureProofing {
+                    Text("✦ Future-proofing")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+            Text(topic.description).font(Typography.body).foregroundStyle(ColorTokens.textSecondary)
+            Spacer()
+        }
+        .padding(Spacing.lg)
     }
 }
 
@@ -152,4 +196,15 @@ struct FlowLayout: Layout {
 
         return (positions, CGSize(width: maxX, height: currentY + lineHeight))
     }
+}
+
+#Preview {
+    let app = AppState()
+    let vm = OnboardingViewModel(initialStep: 4, appState: app)
+    vm.suggestedTopics = [
+        SuggestedTopic(canonicalName: "product-strategy", name: "Product Strategy", description: "Vision, roadmap, prioritisation.", isFutureProofing: false, baseDifficulty: "intermediate"),
+        SuggestedTopic(canonicalName: "ai-product-mgmt", name: "AI Product Management", description: "Scoping AI features and evals.", isFutureProofing: true, baseDifficulty: "intermediate")
+    ]
+    vm.selectedCanonicals = ["product-strategy", "ai-product-mgmt"]
+    return InterestsStepView(viewModel: vm)
 }

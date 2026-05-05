@@ -78,6 +78,18 @@ enum AnalyticsEvent {
     case diagnosticFinished(attemptId: String, durationSeconds: Int, score: Int)
     case diagnosticAbandoned(attemptId: String, atStep: String)
 
+    // MARK: Phase 2b — Onboarding (Topic Discovery + Calibration)
+
+    case onboardingTopicTaxonomyLoaded(cacheHit: Bool, source: String, topicCount: Int)
+    case onboardingTopicAddedCustom(canonicalName: String)
+    case onboardingTopicRemoved(canonicalName: String, source: String)
+    case onboardingSelfRatingCompleted(topicCount: Int, ratingDistribution: [String: Int])
+    case onboardingSyllabusUploaded(topicCount: Int, fileType: String)
+    case onboardingSyllabusSkipped
+    case existingUserCalibrationBannerShown(promptCount: Int)
+    case existingUserCalibrationBannerTapped
+    case existingUserCalibrationBannerDismissed
+
     // MARK: Phase 3 — Competition & Challenges
 
     case challengeStarted(challengeId: String, topic: String?)
@@ -138,6 +150,16 @@ enum AnalyticsEvent {
         case .diagnosticFinished:                 return "diagnostic_finished"
         case .diagnosticAbandoned:                return "diagnostic_abandoned"
 
+        case .onboardingTopicTaxonomyLoaded:        return "onboarding_topic_taxonomy_loaded"
+        case .onboardingTopicAddedCustom:           return "onboarding_topic_added_custom"
+        case .onboardingTopicRemoved:               return "onboarding_topic_removed"
+        case .onboardingSelfRatingCompleted:        return "onboarding_self_rating_completed"
+        case .onboardingSyllabusUploaded:           return "onboarding_syllabus_uploaded"
+        case .onboardingSyllabusSkipped:            return "onboarding_syllabus_skipped"
+        case .existingUserCalibrationBannerShown:   return "existing_user_calibration_banner_shown"
+        case .existingUserCalibrationBannerTapped:  return "existing_user_calibration_banner_tapped"
+        case .existingUserCalibrationBannerDismissed: return "existing_user_calibration_banner_dismissed"
+
         case .interviewStarted:                   return "interview_started"
         case .interviewCompleted:                 return "interview_completed"
         case .interviewAbandoned:                 return "interview_abandoned"
@@ -181,7 +203,10 @@ enum AnalyticsEvent {
     var properties: [String: Any] {
         switch self {
         case .appOpened, .sessionStarted, .dailyActive, .phoneEntered,
-             .otpRequested, .otpVerified, .onboardingCompleted:
+             .otpRequested, .otpVerified, .onboardingCompleted,
+             .onboardingSyllabusSkipped,
+             .existingUserCalibrationBannerTapped,
+             .existingUserCalibrationBannerDismissed:
             return [:]
 
         case .sessionEnded(let durationSeconds):
@@ -373,6 +398,31 @@ enum AnalyticsEvent {
 
         case .networkTimeout(let endpoint):
             return ["endpoint": endpoint]
+
+        case .onboardingTopicTaxonomyLoaded(let cacheHit, let source, let topicCount):
+            return [
+                "cache_hit": cacheHit,
+                "source": source,
+                "topic_count": topicCount
+            ]
+
+        case .onboardingTopicAddedCustom(let canonicalName):
+            return ["canonical_name": canonicalName]
+
+        case .onboardingTopicRemoved(let canonicalName, let source):
+            return ["canonical_name": canonicalName, "source": source]
+
+        case .onboardingSelfRatingCompleted(let topicCount, let ratingDistribution):
+            return [
+                "topic_count": topicCount,
+                "rating_distribution": ratingDistribution
+            ]
+
+        case .onboardingSyllabusUploaded(let topicCount, let fileType):
+            return ["topic_count": topicCount, "file_type": fileType]
+
+        case .existingUserCalibrationBannerShown(let promptCount):
+            return ["prompt_count": promptCount]
         }
     }
 }

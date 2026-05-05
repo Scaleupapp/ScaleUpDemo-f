@@ -59,6 +59,23 @@ enum ObjectiveType: String, Codable, Sendable, CaseIterable, Identifiable {
     }
 }
 
+extension ObjectiveType {
+    /// Whether the syllabus upload card should be offered.
+    /// True for academic_excellence and for non-standardized exam_prep targets.
+    func shouldOfferSyllabusUpload(examName: String?) -> Bool {
+        switch self {
+        case .academicExcellence:
+            return true
+        case .examPreparation:
+            let standardized: Set<String> = ["GMAT", "JEE", "NEET", "UPSC", "CAT", "GRE", "GATE", "SAT"]
+            let trimmed = (examName ?? "").trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            return !standardized.contains(trimmed)
+        default:
+            return false
+        }
+    }
+}
+
 // MARK: - Timeline
 
 enum Timeline: String, Codable, Sendable, CaseIterable, Identifiable {
@@ -142,4 +159,52 @@ struct WorkEntry: Identifiable {
     var company: String = ""
     var years: Int?
     var currentlyWorking: Bool = false
+}
+
+// MARK: - Proficiency Level (per-topic self-rating)
+
+enum ProficiencyLevel: String, Codable, Sendable, CaseIterable, Identifiable {
+    case novice, familiar, proficient, expert
+
+    var id: String { rawValue }
+
+    var displayName: String { rawValue.capitalized }
+
+    /// Anchor copy from spec Appendix A.
+    var anchorExample: String {
+        switch self {
+        case .novice:     return "I've heard of this but never really used it."
+        case .familiar:   return "I've used this a few times but still feel uncertain."
+        case .proficient: return "I use this confidently in most situations."
+        case .expert:     return "I could teach this to others or be the go-to person on my team."
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .novice:     return "leaf"
+        case .familiar:   return "lightbulb"
+        case .proficient: return "checkmark.seal"
+        case .expert:     return "star.fill"
+        }
+    }
+}
+
+// MARK: - Suggested Topic (taxonomy entry returned by BE)
+
+struct SuggestedTopic: Codable, Hashable, Identifiable, Sendable {
+    let canonicalName: String
+    let name: String
+    let description: String
+    let isFutureProofing: Bool
+    let baseDifficulty: String
+
+    var id: String { canonicalName }
+}
+
+// MARK: - Topic source (analytics)
+
+enum TopicSource: String, Codable, Sendable {
+    case taxonomy
+    case custom
 }
