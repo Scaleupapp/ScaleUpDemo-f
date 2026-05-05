@@ -127,10 +127,32 @@ If you skip staging and deploy directly, the rollback ladder is:
 2. Halt iOS/Android phased rollouts in their respective consoles
 3. (If needed) Database cleanup per the snippet above
 
-## Final SHAs (filled in after merges)
+## Final SHAs (recorded 2026-05-04)
 
-| Repo | Pre-merge tag SHA | Squash merge SHA |
-|---|---|---|
-| Backend | `<TBD>` | `<TBD>` |
-| iOS | `<TBD>` | `<TBD>` |
-| Android | `<TBD>` | `<TBD>` |
+| Repo | Pre-merge commit | Squash merge commit | Tag |
+|---|---|---|---|
+| Backend (`scaleup-backend`) | `516bd00` | `932be2a95f245742937ae51c30da9947423cf27c` | `backup/pre-day1-diagnostic-2026-05-04` |
+| iOS (`ScaleUpDemo-f`) | `0835c83` | `ddca955bff675cba17324750ce45e17efd42336e` | `backup/pre-day1-diagnostic-2026-05-04` |
+| Android (`ScaleUpAndroid`) | `6affa22` | `2ddb22d2442ce4c01bf74ca5911a2544747f072d` | `backup/pre-day1-diagnostic-2026-05-04` |
+
+### Quick rollback (copy-paste, soft method)
+
+```bash
+# Backend
+cd "/Users/nirpekshnandan/My Products/ScaleUpDemo/scaleup-backend"
+git checkout master && git pull
+git revert -m 1 932be2a95f245742937ae51c30da9947423cf27c
+git push origin master
+
+# iOS
+cd "/Users/nirpekshnandan/My Products/ScaleUpDemo-f"
+git checkout master && git pull
+git revert -m 1 ddca955bff675cba17324750ce45e17efd42336e
+git push origin master
+
+# Android
+cd "/Users/nirpekshnandan/My Products/ScaleUpAndroid"
+git checkout main && git pull
+git revert -m 1 2ddb22d2442ce4c01bf74ca5911a2544747f072d
+git push origin main
+```
