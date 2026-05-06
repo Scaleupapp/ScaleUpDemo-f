@@ -20,9 +20,15 @@ struct DiagnosticQuestion: Decodable, Identifiable, Sendable {
     let difficulty: String        // "easy" | "medium" | "hard"
     let prompt: String
     let options: [DiagnosticOption]
+    /// Plan 3a: canonical competency name returned by V2 next-question
+    /// for voice scoring + topic transition logic. Optional for V1 compat.
+    let canonicalCompetency: String?
+    /// Plan 3a: question type. V2 returns "voice" for voice-eligible
+    /// questions. Optional / nil treated as standard MCQ.
+    let type: String?
 
     enum CodingKeys: String, CodingKey {
-        case id = "_id", competency, difficulty, prompt, options
+        case id = "_id", competency, difficulty, prompt, options, canonicalCompetency, type
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct DiagnosticQuestionView: View {
     let viewModel: DiagnosticViewModel
@@ -213,6 +214,7 @@ struct DiagnosticQuestionView: View {
                 isLoading: viewModel.isLoading,
                 isDisabled: viewModel.currentSelection == nil
             ) {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 Task { await viewModel.submitCurrentAnswer() }
             }
             .padding(.horizontal, Spacing.lg)

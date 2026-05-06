@@ -78,6 +78,14 @@ enum AnalyticsEvent {
     case diagnosticFinished(attemptId: String, durationSeconds: Int, score: Int)
     case diagnosticAbandoned(attemptId: String, atStep: String)
 
+    // MARK: Phase 3a — Diagnostic V2 (fine-grained)
+
+    case diagnosticQuestionShown(questionId: String, competency: String, type: String, topicIndex: Int, topicTotal: Int)
+    case diagnosticQuestionAnswered(questionId: String, competency: String, type: String, timeMs: Int)
+    case diagnosticVoiceUsed(questionId: String, competency: String, durationSec: Double)
+    case diagnosticVoiceFailedFallbackTyped(questionId: String, reason: String)
+    case diagnosticTopicCompleted(competency: String, topicIndex: Int, topicTotal: Int)
+
     // MARK: Phase 2b — Onboarding (Topic Discovery + Calibration)
 
     case onboardingTopicTaxonomyLoaded(cacheHit: Bool, source: String, topicCount: Int)
@@ -145,10 +153,15 @@ enum AnalyticsEvent {
         case .quizCompleted:                      return "quiz_completed"
         case .quizAbandoned:                      return "quiz_abandoned"
 
-        case .diagnosticStarted:                  return "diagnostic_started"
-        case .diagnosticSelfRatingSubmitted:      return "diagnostic_self_rating_submitted"
-        case .diagnosticFinished:                 return "diagnostic_finished"
-        case .diagnosticAbandoned:                return "diagnostic_abandoned"
+        case .diagnosticStarted:                      return "diagnostic_started"
+        case .diagnosticSelfRatingSubmitted:          return "diagnostic_self_rating_submitted"
+        case .diagnosticFinished:                     return "diagnostic_finished"
+        case .diagnosticAbandoned:                    return "diagnostic_abandoned"
+        case .diagnosticQuestionShown:                return "diagnostic_question_shown"
+        case .diagnosticQuestionAnswered:             return "diagnostic_question_answered"
+        case .diagnosticVoiceUsed:                    return "diagnostic_voice_used"
+        case .diagnosticVoiceFailedFallbackTyped:     return "diagnostic_voice_failed_fallback_typed"
+        case .diagnosticTopicCompleted:               return "diagnostic_topic_completed"
 
         case .onboardingTopicTaxonomyLoaded:        return "onboarding_topic_taxonomy_loaded"
         case .onboardingTopicAddedCustom:           return "onboarding_topic_added_custom"
@@ -300,6 +313,32 @@ enum AnalyticsEvent {
 
         case .diagnosticAbandoned(let attemptId, let atStep):
             return ["attempt_id": attemptId, "at_step": atStep]
+
+        case .diagnosticQuestionShown(let questionId, let competency, let type, let topicIndex, let topicTotal):
+            return [
+                "question_id": questionId,
+                "competency": competency,
+                "type": type,
+                "topic_index": topicIndex,
+                "topic_total": topicTotal
+            ]
+
+        case .diagnosticQuestionAnswered(let questionId, let competency, let type, let timeMs):
+            return [
+                "question_id": questionId,
+                "competency": competency,
+                "type": type,
+                "time_ms": timeMs
+            ]
+
+        case .diagnosticVoiceUsed(let questionId, let competency, let durationSec):
+            return ["question_id": questionId, "competency": competency, "duration_sec": durationSec]
+
+        case .diagnosticVoiceFailedFallbackTyped(let questionId, let reason):
+            return ["question_id": questionId, "reason": reason]
+
+        case .diagnosticTopicCompleted(let competency, let topicIndex, let topicTotal):
+            return ["competency": competency, "topic_index": topicIndex, "topic_total": topicTotal]
 
         case .interviewStarted(let type, let targetRole, let difficulty):
             return ["interview_type": type, "target_role": targetRole, "difficulty": difficulty]

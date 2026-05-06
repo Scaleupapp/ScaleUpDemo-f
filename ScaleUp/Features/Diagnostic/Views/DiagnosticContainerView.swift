@@ -18,12 +18,13 @@ struct DiagnosticContainerView: View {
             case .preparing:
                 DiagnosticPreparingView()
             case .quiz:
-                DiagnosticQuestionView(viewModel: viewModel)
+                quizContent
             case .results:
                 DiagnosticResultsView(viewModel: viewModel) {
                     appState.markDiagnosticComplete()
                     appState.completeDiagnostic()
                 }
+                .overlay(CompletionConfettiView())
             case .error:
                 errorView
             }
@@ -31,6 +32,50 @@ struct DiagnosticContainerView: View {
                 ProgressView()
                     .scaleEffect(1.5)
                     .tint(ColorTokens.gold)
+            }
+        }
+    }
+
+    // Plan 3a Task 9: quiz content with per-topic progress chip + transition card.
+    // The chip is always visible at the top (when topic state is populated),
+    // and the transition card briefly replaces the question when the engine
+    // moves to a new topic.
+    @ViewBuilder
+    private var quizContent: some View {
+        VStack(spacing: 0) {
+            if viewModel.totalTopicCount > 0 {
+                TopicProgressChip(
+                    currentIndex: viewModel.currentTopicIndex,
+                    totalCount: viewModel.totalTopicCount,
+                    currentTopicName: viewModel.currentTopicName
+                )
+                .padding(.top, Spacing.md)
+                .padding(.bottom, Spacing.sm)
+            }
+
+            if viewModel.showingTransition {
+                Spacer()
+                TopicTransitionCard(nextTopicName: viewModel.nextTopicName) {
+                    viewModel.showingTransition = false
+                }
+                Spacer()
+            } else if viewModel.isVoiceQuestion, let q = viewModel.currentQuestion {
+                // Plan 3a Task 11: route voice-eligible questions to the
+                // voice answer view. `onFallbackToTyped` reverts to MCQ
+                // rendering for the same question.
+                DiagnosticVoiceAnswerView(
+                    questionId: q.id,
+                    questionText: q.prompt,
+                    canonicalCompetency: q.canonicalCompetency ?? q.competency,
+                    onComplete: { result in
+                        viewModel.handleVoiceAnswerComplete(result)
+                    },
+                    onFallbackToTyped: {
+                        viewModel.isVoiceQuestion = false
+                    }
+                )
+            } else {
+                DiagnosticQuestionView(viewModel: viewModel)
             }
         }
     }

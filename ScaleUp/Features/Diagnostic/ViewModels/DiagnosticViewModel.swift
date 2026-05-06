@@ -27,6 +27,23 @@ final class DiagnosticViewModel {
     var errorMessage: String?
     var isLoading = false
 
+    // MARK: - Plan 3a Task 9 / Task 11 — per-topic progress + voice routing
+    // Per-topic progress state. Task 11 wires these to the actual
+    // adaptive diagnostic engine state.
+    var currentTopicIndex: Int = 0
+    var totalTopicCount: Int = 0
+    var currentTopicName: String = ""
+    var nextTopicName: String = ""
+    var showingTransition: Bool = false
+    /// True when the currently-displayed question is a voice question
+    /// (BE V2 returns `type: "voice"`). Routes the container view to
+    /// render `DiagnosticVoiceAnswerView` instead of `DiagnosticQuestionView`.
+    var isVoiceQuestion: Bool = false
+
+    /// Tracks the most-recently-shown competency so we can detect topic
+    /// transitions when the next question arrives.
+    private var lastShownCompetency: String?
+
     private let service = DiagnosticService()
     private var startedAt: Date?
     private var flowType: String = "new_user"
@@ -53,6 +70,10 @@ final class DiagnosticViewModel {
             flowType = attempt.flowType
             competencies = attempt.competenciesToAssess
             totalQuestionsTarget = competencies.map(\.questionCap).reduce(0, +)
+            // Plan 3a Task 11: seed per-topic progress so the chip renders.
+            totalTopicCount = competencies.count
+            currentTopicIndex = 0
+            currentTopicName = competencies.first?.name ?? ""
             startedAt = Date()
             phase = .selfRating
             AnalyticsService.shared.track(.diagnosticStarted(flowType: attempt.flowType))
@@ -102,6 +123,12 @@ final class DiagnosticViewModel {
                 timeTaken: timeTaken
             )
             questionsAnswered += 1
+            MixpanelDiagnostic.trackQuestionAnswered(
+                questionId: question.id,
+                competency: question.canonicalCompetency ?? question.competency,
+                type: question.type ?? "mcq",
+                timeMs: Int(timeTaken * 1000)
+            )
             await loadNextQuestion()
         } catch {
             errorMessage = error.localizedDescription
@@ -116,15 +143,71 @@ final class DiagnosticViewModel {
             let next = try await service.nextQuestion(attemptId: attemptId)
             if next.done == true || next.question == nil {
                 await finish()
-            } else {
-                currentQuestion = next.question
+            } else if let question = next.question {
+                // Plan 3a Task 11: detect topic transition + voice routing
+                // before rendering the new question.
+                handleQuestionTransition(
+                    previousCompetency: lastShownCompetency,
+                    nextCompetency: question.canonicalCompetency ?? question.competency,
+                    nextQuestionType: question.type
+                )
+                currentQuestion = question
                 currentSelection = nil
                 currentQuestionStartedAt = Date()
+                lastShownCompetency = question.canonicalCompetency ?? question.competency
+                MixpanelDiagnostic.trackQuestionShown(
+                    questionId: question.id,
+                    competency: question.canonicalCompetency ?? question.competency,
+                    type: question.type ?? "mcq",
+                    topicIndex: currentTopicIndex,
+                    topicTotal: totalTopicCount
+                )
             }
         } catch {
             errorMessage = error.localizedDescription
             phase = .error
         }
+    }
+
+    // MARK: - Plan 3a Task 11 — Per-topic transition + voice routing
+
+    /// Update transition + voice-question state when moving from one question
+    /// to the next. Called from `loadNextQuestion` whenever a new question
+    /// arrives. If the topic changed, briefly shows the transition card.
+    func handleQuestionTransition(
+        previousCompetency: String?,
+        nextCompetency: String,
+        nextQuestionType: String?
+    ) {
+        if let prev = previousCompetency, prev != nextCompetency {
+            // Topic changed — fire topicCompleted for the outgoing topic, then advance.
+            MixpanelDiagnostic.trackTopicCompleted(
+                competency: prev,
+                topicIndex: currentTopicIndex,
+                topicTotal: totalTopicCount
+            )
+            nextTopicName = nextCompetency
+            showingTransition = true
+            currentTopicIndex = min(currentTopicIndex + 1, max(totalTopicCount - 1, 0))
+        }
+        currentTopicName = nextCompetency
+        isVoiceQuestion = (nextQuestionType == "voice")
+    }
+
+    /// Submit a successful voice answer result. The voice endpoint already
+    /// recorded scoring server-side; locally we just advance to the next
+    /// question. Voice scoring is a band, not correct/incorrect, so we
+    /// don't go through the typed `submitAnswer` flow.
+    func handleVoiceAnswerComplete(_ result: VoiceAnswerResult) {
+        if let q = currentQuestion {
+            MixpanelDiagnostic.trackVoiceUsed(
+                questionId: q.id,
+                competency: q.canonicalCompetency ?? q.competency,
+                durationSec: 0
+            )
+        }
+        questionsAnswered += 1
+        Task { await self.loadNextQuestion() }
     }
 
     func finish() async {
