@@ -102,7 +102,7 @@ enum Tab: String, CaseIterable, Identifiable {
         switch self {
         case .home: HomeView().trackScreen("home_tab")
         case .discover: DiscoverView().trackScreen("discover_tab")
-        case .journey: MyPlanView().trackScreen("myplan_tab")
+        case .journey: PlanTabView().trackScreen("myplan_tab")
         case .progress: ProgressTabView().trackScreen("progress_tab")
         case .profile: ProfileTabView().trackScreen("profile_tab")
         }

@@ -9,6 +9,8 @@ struct GapsDestination: Hashable {}
 struct ProgressTabView: View {
     @State private var viewModel = ProgressViewModel()
     @State private var showDetailedAnalytics = false
+    @State private var recalVM = RecalibrationViewModel()
+    @State private var showRecalibration = false
     @Environment(ObjectiveContext.self) private var objectiveContext
     @Environment(AppState.self) private var appState
 
@@ -54,6 +56,10 @@ struct ProgressTabView: View {
             }
             .task {
                 await viewModel.loadProfile(objectiveId: viewModel.showAllObjectives ? nil : objectiveContext.activeObjectiveId)
+                await recalVM.checkEligibility()
+            }
+            .fullScreenCover(isPresented: $showRecalibration) {
+                RecalibrationOrchestrationView(viewModel: recalVM)
             }
             .onChange(of: objectiveContext.activeObjective?.id) { oldId, newId in
                 guard newId != oldId, newId != nil else { return }
@@ -75,6 +81,13 @@ struct ProgressTabView: View {
     private var mainContent: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(spacing: Spacing.xl) {
+                // 0. Recalibration card when eligible
+                if let eligibility = recalVM.eligibility, eligibility.eligible {
+                    RecalibrationCard(eligibility: eligibility) {
+                        showRecalibration = true
+                    }
+                }
+
                 // 1. Knowledge Score Hero (with explanatory labels)
                 scoreHeroSection
 

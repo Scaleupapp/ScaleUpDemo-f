@@ -60,6 +60,23 @@ final class DiagnosticViewModel {
         return Double(questionsAnswered) / Double(totalQuestionsTarget)
     }
 
+    // MARK: - Recalibration Bootstrap
+    //
+    // Seeds the VM with a server-created recalibration attempt and immediately
+    // loads the first question. Skips welcome + self-rating phases entirely;
+    // those were captured during the original diagnostic.
+
+    func prepareForRecalibration(attemptId: String, totalQuestions: Int) async {
+        self.attemptId = attemptId
+        self.totalQuestionsTarget = totalQuestions
+        self.startedAt = Date()
+        self.phase = .preparing
+        await loadNextQuestion()
+        if currentQuestion != nil {
+            self.phase = .quiz
+        }
+    }
+
     // MARK: - Start
 
     func start() async {

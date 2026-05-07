@@ -18,6 +18,7 @@ struct HomeView: View {
     @State private var presentingDiagnostic = false
     @State private var calibStore = CalibrationPromptStore()
     @State private var showCalibration = false
+    @State private var brewingVM = PlanBrewingViewModel()
 
     var body: some View {
         NavigationStack {
@@ -65,6 +66,10 @@ struct HomeView: View {
             objectiveContext.updateFromDashboard(viewModel.dashboard?.objectives)
             await quizViewModel.loadQuizzes()
             await notificationVM.refreshUnreadCount()
+            brewingVM.start()
+        }
+        .onDisappear {
+            brewingVM.stop()
         }
         .onChange(of: objectiveContext.activeObjective?.id) { oldId, newId in
             guard newId != oldId, newId != nil else { return }
@@ -114,6 +119,15 @@ struct HomeView: View {
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.md)
                     .padding(.bottom, Spacing.sm)
+
+                // Plan brewing pill — visible while plan generation is in progress
+                if brewingVM.visibility == .brewing {
+                    PlanBrewingPill {
+                        appState.selectedTab = .journey
+                    }
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.bottom, Spacing.sm)
+                }
 
                 // Diagnostic tune-up banner for existing users who haven't completed diagnostic
                 if appState.currentUser?.diagnosticComplete != true {

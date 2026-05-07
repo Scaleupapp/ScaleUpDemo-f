@@ -131,6 +131,16 @@ enum AnalyticsEvent {
     case screenAbandoned(screen: String, timeOnScreenMs: Int)
     case networkTimeout(endpoint: String)
 
+    // MARK: Plan 4 — Diagnostic Plan
+
+    case planBrewingSeen
+    case planReadyNotificationTapped(planId: String)
+    case planGenerationCompleted
+    case planGenerationFallback(reason: String)
+    case recalibrationOffered
+    case recalibrationStarted
+    case recalibrationCompleted(topicsRetested: Int, biggestGrowth: Double)
+
     // MARK: Event Name (sent to Mixpanel)
 
     var name: String {
@@ -228,6 +238,14 @@ enum AnalyticsEvent {
         case .errorEncountered:                   return "error_encountered"
         case .screenAbandoned:                    return "screen_abandoned"
         case .networkTimeout:                     return "network_timeout"
+
+        case .planBrewingSeen:                    return "plan_brewing_seen"
+        case .planReadyNotificationTapped:        return "plan_ready_notification_tapped"
+        case .planGenerationCompleted:            return "plan_generation_completed"
+        case .planGenerationFallback:             return "plan_generation_fallback"
+        case .recalibrationOffered:               return "recalibration_offered"
+        case .recalibrationStarted:               return "recalibration_started"
+        case .recalibrationCompleted:             return "recalibration_completed"
         }
     }
 
@@ -483,6 +501,19 @@ enum AnalyticsEvent {
 
         case .networkTimeout(let endpoint):
             return ["endpoint": endpoint]
+
+        case .planBrewingSeen, .planGenerationCompleted,
+             .recalibrationOffered, .recalibrationStarted:
+            return [:]
+
+        case .planReadyNotificationTapped(let planId):
+            return ["plan_id": planId]
+
+        case .planGenerationFallback(let reason):
+            return ["reason": reason]
+
+        case .recalibrationCompleted(let topicsRetested, let biggestGrowth):
+            return ["topics_retested": topicsRetested, "biggest_growth": biggestGrowth]
 
         case .onboardingTopicTaxonomyLoaded(let cacheHit, let source, let topicCount):
             return [

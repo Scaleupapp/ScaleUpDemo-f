@@ -101,6 +101,12 @@ struct ScaleUpApp: App {
     // MARK: - Deep Link Routing
 
     private func handleDeepLink(_ deepLink: String) {
+        // Plan deep links
+        if deepLink.hasPrefix("plan://") {
+            appState.selectedTab = .journey
+            return
+        }
+
         // Competition deep links
         if deepLink.hasPrefix("challenge://") {
             appState.selectedTab = .home

@@ -65,6 +65,10 @@ final class PushNotificationManager: NSObject {
         let data = userInfo["data"] as? [String: Any] ?? [:]
 
         switch type {
+        case "plan_ready":
+            let planId = data["planId"] as? String ?? (userInfo["planId"] as? String ?? "")
+            AnalyticsService.shared.track(.planReadyNotificationTapped(planId: planId))
+            return "plan://ready"
         case "challenge_live":
             if let challengeId = data["challengeId"] as? String {
                 return "challenge://\(challengeId)"
