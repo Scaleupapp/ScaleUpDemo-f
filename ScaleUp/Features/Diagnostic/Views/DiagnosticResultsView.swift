@@ -1,166 +1,176 @@
 import SwiftUI
 
 struct DiagnosticResultsView: View {
-    let viewModel: DiagnosticViewModel
-    let onContinue: () -> Void
+    let attemptId: String
+    var onSeePlanTap: () -> Void
+
+    @StateObject private var vm: DiagnosticResultsViewModel
+    @AppStorage private var heroRevealed: Bool
+    @State private var showHero: Bool = false
+
+    init(attemptId: String, onSeePlanTap: @escaping () -> Void) {
+        self.attemptId = attemptId
+        self.onSeePlanTap = onSeePlanTap
+        self._vm = StateObject(wrappedValue: DiagnosticResultsViewModel(attemptId: attemptId))
+        self._heroRevealed = AppStorage(wrappedValue: false, "diagnostic_hero_revealed_\(attemptId)")
+    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Celebratory header
-            VStack(spacing: Spacing.sm) {
-                // Sparkles icon in a gold halo
-                ZStack {
-                    Circle()
-                        .fill(ColorTokens.gold.opacity(0.14))
-                        .frame(width: 100, height: 100)
-
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 46, weight: .semibold))
-                        .foregroundStyle(ColorTokens.gold)
+        ZStack {
+            ColorTokens.background.ignoresSafeArea()
+            switch vm.phase {
+            case .generating:
+                InsightsGeneratingView(isReady: false)
+            case .ready:
+                if showHero && !heroRevealed {
+                    HeroStoryRevealView(
+                        heroSentence: vm.hero,
+                        surpriseSentence: mostStrikingSentence(),
+                        planSentence: firstSentence(of: vm.planHeadline),
+                        overallScore: vm.overallScore,
+                        onDone: {
+                            heroRevealed = true
+                            withAnimation(.easeInOut(duration: 0.4)) { showHero = false }
+                            vm.onHeroRevealCompleted()
+                        }
+                    )
+                    .transition(.opacity)
+                } else {
+                    resultsScroll.transition(.opacity)
                 }
-                .padding(.bottom, Spacing.sm)
-
-                Text("Here's where you stand")
-                    .font(Typography.displayMedium)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                    .multilineTextAlignment(.center)
-
-                Text("We'll personalise your learning plan around these results.")
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .multilineTextAlignment(.center)
             }
-            .padding(.top, Spacing.xxl)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.bottom, Spacing.lg)
-
-            // Results list
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: Spacing.md) {
-                    ForEach(viewModel.results?.perCompetency ?? []) { result in
-                        AnimatedCompetencyResultCard(result: result)
-                    }
-                    Spacer().frame(height: 100)
+        }
+        .onAppear { vm.start() }
+        .onChange(of: vm.phase) { _, newPhase in
+            if newPhase == .ready && !heroRevealed { showHero = true }
+        }
+        .sheet(isPresented: $vm.showShareSheet, onDismiss: { vm.shareImage = nil }) {
+            if let img = vm.shareImage {
+                ShareSheet(activityItems: [img]) { destination in
+                    vm.onResultsShared(destination: destination)
                 }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.sm)
             }
-
-            // Continue button
-            VStack(spacing: 0) {
-                Divider()
-                    .background(ColorTokens.divider)
-
-                PrimaryButton(title: "Continue to my plan") {
-                    onContinue()
-                }
-                .padding(.horizontal, Spacing.lg)
-                .padding(.vertical, Spacing.md)
-            }
-            .background(ColorTokens.background)
         }
     }
-}
 
-// MARK: - Animated Competency Result Card
+    private var resultsScroll: some View {
+        ScrollView {
+            VStack(spacing: Spacing.md) {
+                HeroCard(heroSentence: vm.hero, onShareTap: triggerShare)
+                    .padding(.horizontal, Spacing.lg)
 
-private struct AnimatedCompetencyResultCard: View {
-    let result: DiagnosticCompetencyResult
+                CalibrationCard(
+                    summarySentence: vm.calibrationSummary,
+                    detailSentence: vm.calibrationDetail,
+                    topics: vm.topics
+                )
+                .padding(.horizontal, Spacing.lg)
 
-    @State private var displayedScore: Double = 0
+                ForEach(vm.topics) { t in
+                    TopicComparisonBarCard(topic: t, onExpand: vm.onTopicExpanded(_:))
+                        .padding(.horizontal, Spacing.lg)
+                }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            // Topic + band
-            HStack {
-                Text(result.competency)
-                    .font(Typography.titleMedium)
-                    .foregroundStyle(ColorTokens.textPrimary)
-
-                Spacer()
-
-                Text(result.band.capitalized)
-                    .font(Typography.captionBold)
-                    .foregroundStyle(bandColor(result.band))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(bandColor(result.band).opacity(0.12))
-                    .clipShape(Capsule())
-            }
-
-            // Animated score bar
-            VStack(alignment: .leading, spacing: 6) {
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(ColorTokens.surfaceElevated)
-                            .frame(height: 8)
-
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(ColorTokens.goldGradient)
-                            .frame(width: geo.size.width * (displayedScore / 100.0), height: 8)
+                if !vm.patterns.isEmpty {
+                    sectionHeader("Patterns we noticed")
+                    ForEach(Array(vm.patterns.enumerated()), id: \.offset) { idx, p in
+                        PatternCard(title: "Pattern \(idx + 1)", text: p, icon: patternIcon(for: idx))
+                            .padding(.horizontal, Spacing.lg)
                     }
                 }
-                .frame(height: 8)
 
-                Text("\(result.score) / 100")
+                replayDisclosure.padding(.horizontal, Spacing.lg)
+                planPreview.padding(.horizontal, Spacing.lg)
+                seePlanButton
+                    .padding(.horizontal, Spacing.lg)
+                    .padding(.top, Spacing.sm)
+                    .padding(.bottom, Spacing.xxl)
+            }
+            .padding(.top, Spacing.md)
+        }
+    }
+
+    private func sectionHeader(_ text: String) -> some View {
+        HStack {
+            Text(text).font(Typography.titleMedium).foregroundStyle(ColorTokens.textPrimary)
+            Spacer()
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.md)
+    }
+
+    private var replayDisclosure: some View {
+        DisclosureGroup {
+            Text("Question-by-question replay loads here.")
+                .font(Typography.bodySmall)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .padding(.vertical, Spacing.sm)
+        } label: {
+            HStack {
+                Image(systemName: "play.rectangle").foregroundStyle(ColorTokens.gold)
+                Text("Review your answers").font(Typography.bodyBold).foregroundStyle(ColorTokens.textPrimary)
+            }
+            .onTapGesture { vm.onReplayOpened() }
+        }
+        .padding(Spacing.md)
+        .background(RoundedRectangle(cornerRadius: CornerRadius.medium).fill(ColorTokens.surface))
+    }
+
+    private var planPreview: some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("Your plan").font(Typography.titleMedium).foregroundStyle(ColorTokens.textPrimary)
+            Text(vm.planHeadline)
+                .font(Typography.body)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .lineSpacing(3)
+            HStack {
+                Image(systemName: "hourglass").foregroundStyle(ColorTokens.gold)
+                Text("Your full plan is brewing — usually ~45s")
                     .font(Typography.caption)
                     .foregroundStyle(ColorTokens.textTertiary)
             }
-
-            // Calibration callout — info card style
-            if abs(result.calibrationDelta ?? 0) >= 2 {
-                HStack(alignment: .top, spacing: Spacing.sm) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(ColorTokens.info)
-                        .padding(.top, 1)
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Calibration note")
-                            .font(Typography.captionBold)
-                            .foregroundStyle(ColorTokens.info)
-
-                        Text("Your self-rating and assessed score differ — we'll fine-tune your plan as you go.")
-                            .font(Typography.caption)
-                            .foregroundStyle(ColorTokens.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-                .padding(Spacing.md)
-                .background(ColorTokens.info.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.small)
-                        .stroke(ColorTokens.info.opacity(0.20), lineWidth: 1)
-                )
-            }
+            .padding(.top, 2)
         }
         .padding(Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .fill(ColorTokens.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.medium)
-                        .stroke(ColorTokens.border, lineWidth: 1)
-                )
-        )
-        .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                displayedScore = Double(result.score)
-            }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: CornerRadius.medium).fill(ColorTokens.surface))
+    }
+
+    private var seePlanButton: some View {
+        Button(action: onSeePlanTap) {
+            Text("See your plan")
+                .font(Typography.bodyBold)
+                .foregroundStyle(ColorTokens.buttonPrimaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Spacing.md)
+                .background(Capsule().fill(ColorTokens.gold))
         }
     }
 
-    // MARK: - Helpers
+    private func mostStrikingSentence() -> String {
+        guard let t = vm.topics.max(by: { abs($0.calibrationDelta) < abs($1.calibrationDelta) }) else {
+            return vm.calibrationDetail
+        }
+        return t.topicTakeaway.isEmpty ? vm.calibrationDetail : t.topicTakeaway
+    }
 
-    private func bandColor(_ band: String) -> Color {
-        switch band.lowercased() {
-        case "expert":     return ColorTokens.gold
-        case "proficient": return ColorTokens.success
-        case "familiar":   return ColorTokens.info
-        case "novice":     return ColorTokens.textTertiary
-        default:           return ColorTokens.textSecondary
+    private func firstSentence(of s: String) -> String {
+        if let dot = s.firstIndex(of: ".") { return String(s[...dot]) }
+        return s
+    }
+
+    private func patternIcon(for idx: Int) -> String {
+        ["chart.line.uptrend.xyaxis", "scope", "lightbulb.fill", "target"][idx % 4]
+    }
+
+    private func triggerShare() {
+        let card = ShareableSummaryCard(
+            heroSentence: vm.hero,
+            topics: Array(vm.topics.sorted { abs($0.calibrationDelta) > abs($1.calibrationDelta) }.prefix(3))
+        )
+        if let image = ShareableSummaryCardGenerator.render(card) {
+            vm.shareImage = image
+            vm.showShareSheet = true
         }
     }
 }

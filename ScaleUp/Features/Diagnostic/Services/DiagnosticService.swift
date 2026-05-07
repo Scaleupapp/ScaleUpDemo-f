@@ -38,6 +38,10 @@ actor DiagnosticService {
         struct EmptyBody: Encodable, Sendable {}
         let _: EmptyData = try await api.request(DiagnosticEndpoints.abandon(id: attemptId), body: EmptyBody())
     }
+
+    func getResults(attemptId: String) async throws -> DiagnosticResultsResponse {
+        try await api.request(DiagnosticEndpoints.results(id: attemptId))
+    }
 }
 
 // MARK: - Endpoints
@@ -49,6 +53,7 @@ private enum DiagnosticEndpoints: Endpoint {
     case answer(id: String)
     case finish(id: String)
     case abandon(id: String)
+    case results(id: String)
 
     var path: String {
         switch self {
@@ -58,13 +63,48 @@ private enum DiagnosticEndpoints: Endpoint {
         case .answer(let id):         return "/diagnostic/\(id)/answer"
         case .finish(let id):         return "/diagnostic/\(id)/finish"
         case .abandon(let id):        return "/diagnostic/\(id)/abandon"
+        case .results(let id):        return "/diagnostic/\(id)/results"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .nextQuestion: return .get
-        default:            return .post
+        case .nextQuestion, .results: return .get
+        default:                      return .post
         }
     }
+}
+
+// MARK: - Results DTOs
+
+struct DiagnosticInsightsDTO: Decodable, Sendable {
+    let hero: String
+    let calibration: String
+    let patterns: [String]
+    let topicTakeaways: [String: String]
+    let planHeadline: String
+}
+
+struct DiagnosticResultDTO: Decodable, Sendable {
+    let competency: String
+    let canonicalCompetency: String?
+    let band: String
+    let score: Int
+    let calibrationDelta: Int
+    let calibrationClass: String
+    let questionsAsked: Int
+    let displayName: String?
+    let selfRating: String?
+    let strongestMoment: String?
+    let stretchMoment: String?
+    let missedDifficulties: [String]?
+}
+
+struct DiagnosticResultsResponse: Decodable, Sendable {
+    let attemptId: String
+    let status: String
+    let insightsStatus: String
+    let insights: DiagnosticInsightsDTO?
+    let planStatus: String
+    let results: [DiagnosticResultDTO]
 }

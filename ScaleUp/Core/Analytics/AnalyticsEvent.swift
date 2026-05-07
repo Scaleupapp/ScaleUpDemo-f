@@ -86,6 +86,17 @@ enum AnalyticsEvent {
     case diagnosticVoiceFailedFallbackTyped(questionId: String, reason: String)
     case diagnosticTopicCompleted(competency: String, topicIndex: Int, topicTotal: Int)
 
+    // MARK: Phase 3b — Insights Generation + Results Screen
+
+    case insightsGenerationStarted(attemptId: String)
+    case insightsGenerationCompleted(latencyMs: Int)
+    case insightsGenerationFallback(reason: String, latencyMs: Int)
+    case diagnosticResultsViewed(attemptId: String)
+    case diagnosticHeroRevealCompleted(attemptId: String)
+    case diagnosticTopicCardExpanded(topicCanonical: String)
+    case diagnosticReplaySectionOpened(attemptId: String)
+    case diagnosticResultsShared(attemptId: String, shareDestination: String?)
+
     // MARK: Phase 2b — Onboarding (Topic Discovery + Calibration)
 
     case onboardingTopicTaxonomyLoaded(cacheHit: Bool, source: String, topicCount: Int)
@@ -162,6 +173,15 @@ enum AnalyticsEvent {
         case .diagnosticVoiceUsed:                    return "diagnostic_voice_used"
         case .diagnosticVoiceFailedFallbackTyped:     return "diagnostic_voice_failed_fallback_typed"
         case .diagnosticTopicCompleted:               return "diagnostic_topic_completed"
+
+        case .insightsGenerationStarted:              return "insights_generation_started"
+        case .insightsGenerationCompleted:            return "insights_generation_completed"
+        case .insightsGenerationFallback:             return "insights_generation_fallback"
+        case .diagnosticResultsViewed:                return "diagnostic_results_viewed"
+        case .diagnosticHeroRevealCompleted:          return "diagnostic_hero_reveal_completed"
+        case .diagnosticTopicCardExpanded:            return "diagnostic_topic_card_expanded"
+        case .diagnosticReplaySectionOpened:          return "diagnostic_replay_section_opened"
+        case .diagnosticResultsShared:                return "diagnostic_results_shared"
 
         case .onboardingTopicTaxonomyLoaded:        return "onboarding_topic_taxonomy_loaded"
         case .onboardingTopicAddedCustom:           return "onboarding_topic_added_custom"
@@ -339,6 +359,32 @@ enum AnalyticsEvent {
 
         case .diagnosticTopicCompleted(let competency, let topicIndex, let topicTotal):
             return ["competency": competency, "topic_index": topicIndex, "topic_total": topicTotal]
+
+        case .insightsGenerationStarted(let attemptId):
+            return ["attempt_id": attemptId]
+
+        case .insightsGenerationCompleted(let latencyMs):
+            return ["latency_ms": latencyMs]
+
+        case .insightsGenerationFallback(let reason, let latencyMs):
+            return ["reason": reason, "latency_ms": latencyMs]
+
+        case .diagnosticResultsViewed(let attemptId):
+            return ["attempt_id": attemptId]
+
+        case .diagnosticHeroRevealCompleted(let attemptId):
+            return ["attempt_id": attemptId]
+
+        case .diagnosticTopicCardExpanded(let topicCanonical):
+            return ["topic_canonical": topicCanonical]
+
+        case .diagnosticReplaySectionOpened(let attemptId):
+            return ["attempt_id": attemptId]
+
+        case .diagnosticResultsShared(let attemptId, let shareDestination):
+            var props: [String: Any] = ["attempt_id": attemptId]
+            if let shareDestination { props["share_destination"] = shareDestination }
+            return props
 
         case .interviewStarted(let type, let targetRole, let difficulty):
             return ["interview_type": type, "target_role": targetRole, "difficulty": difficulty]

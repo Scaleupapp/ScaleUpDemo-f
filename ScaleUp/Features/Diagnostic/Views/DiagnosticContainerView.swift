@@ -20,7 +20,7 @@ struct DiagnosticContainerView: View {
             case .quiz:
                 quizContent
             case .results:
-                DiagnosticResultsView(viewModel: viewModel) {
+                DiagnosticResultsView(attemptId: viewModel.attemptId ?? "") {
                     appState.markDiagnosticComplete()
                     appState.completeDiagnostic()
                 }

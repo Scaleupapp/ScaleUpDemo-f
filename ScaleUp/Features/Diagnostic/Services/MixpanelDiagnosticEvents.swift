@@ -73,4 +73,38 @@ enum MixpanelDiagnostic {
             topicTotal: topicTotal
         ))
     }
+
+    // MARK: Phase 3b — Insights generation + results screen
+
+    static func insightsGenerationStarted(attemptId: String) {
+        AnalyticsService.shared.track(.insightsGenerationStarted(attemptId: attemptId))
+    }
+
+    static func insightsGenerationCompleted(latencyMs: Int) {
+        AnalyticsService.shared.track(.insightsGenerationCompleted(latencyMs: latencyMs))
+    }
+
+    static func insightsGenerationFallback(reason: String, latencyMs: Int) {
+        AnalyticsService.shared.track(.insightsGenerationFallback(reason: reason, latencyMs: latencyMs))
+    }
+
+    static func diagnosticResultsViewed(attemptId: String) {
+        AnalyticsService.shared.track(.diagnosticResultsViewed(attemptId: attemptId))
+    }
+
+    static func diagnosticHeroRevealCompleted(attemptId: String) {
+        AnalyticsService.shared.track(.diagnosticHeroRevealCompleted(attemptId: attemptId))
+    }
+
+    static func diagnosticTopicCardExpanded(topicCanonical: String) {
+        AnalyticsService.shared.track(.diagnosticTopicCardExpanded(topicCanonical: topicCanonical))
+    }
+
+    static func diagnosticReplaySectionOpened(attemptId: String) {
+        AnalyticsService.shared.track(.diagnosticReplaySectionOpened(attemptId: attemptId))
+    }
+
+    static func diagnosticResultsShared(attemptId: String, shareDestination: String?) {
+        AnalyticsService.shared.track(.diagnosticResultsShared(attemptId: attemptId, shareDestination: shareDestination))
+    }
 }
