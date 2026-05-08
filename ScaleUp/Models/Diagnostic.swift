@@ -4,7 +4,7 @@ import Foundation
 
 struct DiagnosticAttemptStart: Decodable, Sendable {
     let attemptId: String
-    let flowType: String          // "new_user" | "existing_user_tune"
+    let flowType: String          // "new_user" | "recalibration"
     let competenciesToAssess: [DiagnosticCompetency]
 }
 
@@ -20,8 +20,8 @@ struct DiagnosticQuestion: Decodable, Identifiable, Sendable {
     let difficulty: String        // "easy" | "medium" | "hard"
     let prompt: String
     let options: [DiagnosticOption]
-    /// Plan 3a: canonical competency name returned by V2 next-question
-    /// for voice scoring + topic transition logic. Optional for V1 compat.
+    /// Canonical competency name used for voice scoring and topic
+    /// transition logic. Optional defensively in case the wire omits it.
     let canonicalCompetency: String?
     /// Plan 3a: question type. V2 returns "voice" for voice-eligible
     /// questions. Optional / nil treated as standard MCQ.
