@@ -76,7 +76,7 @@ struct RecalibrationGrowth: Codable, Sendable {
     let summary: String
 }
 
-struct RecalibrationResultsDTO: Codable, Sendable {
+struct RecalibrationResultsDTO: Decodable, Sendable {
     let recalibrationGrowth: RecalibrationGrowth?
     let previousAttemptId: String?
     let insights: DiagnosticInsightsDTO?
