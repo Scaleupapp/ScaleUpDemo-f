@@ -46,7 +46,6 @@ final class DiagnosticViewModel {
 
     private let service = DiagnosticService()
     private var startedAt: Date?
-    private var flowType: String = "new_user"
 
     // MARK: - Computed
 
@@ -84,7 +83,6 @@ final class DiagnosticViewModel {
         do {
             let attempt = try await service.start()
             attemptId = attempt.attemptId
-            flowType = attempt.flowType
             competencies = attempt.competenciesToAssess
             totalQuestionsTarget = competencies.map(\.questionCap).reduce(0, +)
             // Plan 3a Task 11: seed per-topic progress so the chip renders.
