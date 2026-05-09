@@ -26,6 +26,7 @@
 		0CA0CAB53AB35909E1475155 /* Competition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2853F8DEAE333FE16C95F943 /* Competition.swift */; };
 		0E631A6DF003FEFF1023E90F /* InterviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E0F9B67703094B3C7DD9E2B /* InterviewService.swift */; };
 		0EC60F2FE3101317B49D74F9 /* APIDiagnosticResults.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBA6A7C600FDDFAF873C99C8 /* APIDiagnosticResults.swift */; };
+		0EE3F2EC11061EC763163E56 /* GeneratingPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B454D10F3752F3DD64CC39F3 /* GeneratingPlanView.swift */; };
 		10C67A9698F65160F05BDE67 /* NoteRequestsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB0828D6811638807F70828 /* NoteRequestsListView.swift */; };
 		10E3678AF9E3426A5D47BCD2 /* InterviewHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2268904DE8A4A97631F6699E /* InterviewHistoryView.swift */; };
 		116DCD5792CD320B7DC6FB8F /* NotesAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = F181F50AD12704A202AF59C7 /* NotesAnalytics.swift */; };
@@ -611,6 +612,7 @@
 		B310ABACDBD9E0B76B6759D1 /* APISpecifics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISpecifics.swift; sourceTree = "<group>"; };
 		B327CE146B3E17D1E814B993 /* APIUpdateOnboardingProfileRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIUpdateOnboardingProfileRequest.swift; sourceTree = "<group>"; };
 		B35FDBAC311EF8BD16012817 /* ObjectiveService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveService.swift; sourceTree = "<group>"; };
+		B454D10F3752F3DD64CC39F3 /* GeneratingPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneratingPlanView.swift; sourceTree = "<group>"; };
 		B4B2E8CB37CE6554E6680237 /* CalibrationBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationBannerView.swift; sourceTree = "<group>"; };
 		B6DC12117F52BB4B6D90EBB2 /* APIAuthRefreshToken200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIAuthRefreshToken200Response.swift; sourceTree = "<group>"; };
 		B715C441F6F5176EC9490185 /* ChallengeSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChallengeSessionView.swift; sourceTree = "<group>"; };
@@ -1343,6 +1345,7 @@
 		94328298B0B24EA0C2F5F23D /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				B454D10F3752F3DD64CC39F3 /* GeneratingPlanView.swift */,
 				9DC5D2C38A420F6650BB836F /* MilestonePreview.swift */,
 				9BEAF10C0B6BD3F6732019A1 /* WeeklyAllocationCard.swift */,
 			);
@@ -2119,6 +2122,7 @@
 				47DC4DD4AB857D1D3008E567 /* ForgotPasswordView.swift in Sources */,
 				1194B2B47A597687AA19B4CC /* GapsView.swift in Sources */,
 				AED260DD10C8FF805D704F39 /* GenerateJourneyView.swift in Sources */,
+				0EE3F2EC11061EC763163E56 /* GeneratingPlanView.swift in Sources */,
 				8EAD2D0C3F6E2DB68A2F4107 /* Haptics.swift in Sources */,
 				DC544065CB2005C476A4AA41 /* HeroStoryRevealView.swift in Sources */,
 				26BDAD61E8DB27421C25DD55 /* HomeView.swift in Sources */,

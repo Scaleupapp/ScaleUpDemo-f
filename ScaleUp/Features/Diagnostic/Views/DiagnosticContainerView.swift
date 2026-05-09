@@ -85,25 +85,44 @@ struct DiagnosticContainerView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Icon
+            // Soft, contextual icon — no harsh warning triangles. The
+            // onboarding-redirect path uses a "set up" feel; the generic
+            // error path uses a soft sparkle.
             ZStack {
                 Circle()
-                    .fill(ColorTokens.warning.opacity(0.12))
-                    .frame(width: 100, height: 100)
+                    .fill(
+                        RadialGradient(
+                            colors: [ColorTokens.gold.opacity(0.25), .clear],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 80
+                        )
+                    )
+                    .frame(width: 140, height: 140)
 
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 46))
-                    .foregroundStyle(ColorTokens.warning)
+                Circle()
+                    .strokeBorder(ColorTokens.gold.opacity(0.20), lineWidth: 1)
+                    .frame(width: 120, height: 120)
+
+                Circle()
+                    .fill(ColorTokens.gold.opacity(0.14))
+                    .frame(width: 96, height: 96)
+
+                Image(systemName: viewModel.requiresOnboarding ? "person.crop.circle.badge.checkmark" : "sparkle")
+                    .font(.system(size: 42, weight: .light))
+                    .foregroundStyle(ColorTokens.gold)
             }
             .padding(.bottom, Spacing.xl)
 
             // Title
-            Text(viewModel.requiresOnboarding ? "Let's finish setting up" : "We hit a snag")
+            Text(viewModel.requiresOnboarding ? "Let's finish setting up" : "Just a moment")
                 .font(Typography.titleLarge)
                 .foregroundStyle(ColorTokens.textPrimary)
+                .multilineTextAlignment(.center)
                 .padding(.bottom, Spacing.sm)
+                .padding(.horizontal, Spacing.xl)
 
-            // Body
+            // Body — fixedSize so it always wraps.
             Text(
                 (viewModel.errorMessage?.isEmpty == false)
                     ? viewModel.errorMessage!
@@ -113,6 +132,7 @@ struct DiagnosticContainerView: View {
             .foregroundStyle(ColorTokens.textSecondary)
             .multilineTextAlignment(.center)
             .lineSpacing(4)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, Spacing.xl)
 
             Spacer()

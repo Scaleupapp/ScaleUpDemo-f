@@ -40,8 +40,14 @@ struct PlanTabView: View {
 
     private var loadingState: some View {
         VStack(spacing: Spacing.lg) {
-            SkeletonLoader(height: 120)
+            SkeletonLoader(height: 160)
                 .padding(.horizontal, Spacing.lg)
+            HStack(spacing: Spacing.sm) {
+                SkeletonLoader(height: 90)
+                SkeletonLoader(height: 90)
+                SkeletonLoader(height: 90)
+            }
+            .padding(.horizontal, Spacing.lg)
             SkeletonLoader(height: 80)
                 .padding(.horizontal, Spacing.lg)
             SkeletonLoader(height: 80)
@@ -54,25 +60,7 @@ struct PlanTabView: View {
     // MARK: - Generating State
 
     private var generatingState: some View {
-        VStack(spacing: Spacing.lg) {
-            Spacer()
-
-            Image(systemName: "sparkles")
-                .font(.system(size: 48))
-                .foregroundStyle(ColorTokens.gold)
-
-            Text("Crafting your personalised plan…")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimary)
-                .multilineTextAlignment(.center)
-
-            Text("Usually takes about 45 seconds")
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondary)
-
-            Spacer()
-        }
-        .padding(.horizontal, Spacing.lg)
+        GeneratingPlanView()
     }
 
     // MARK: - Error State
@@ -81,28 +69,49 @@ struct PlanTabView: View {
         VStack(spacing: Spacing.lg) {
             Spacer()
 
-            Image(systemName: "exclamationmark.triangle")
-                .font(.system(size: 40))
-                .foregroundStyle(ColorTokens.warning)
+            // Soft warm glow behind icon — less alarming than a yellow triangle
+            ZStack {
+                Circle()
+                    .fill(ColorTokens.gold.opacity(0.10))
+                    .frame(width: 120, height: 120)
+                Circle()
+                    .stroke(ColorTokens.gold.opacity(0.20), lineWidth: 1)
+                    .frame(width: 140, height: 140)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(ColorTokens.gold)
+            }
 
-            Text("Couldn't load your plan")
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.textPrimary)
+            VStack(spacing: Spacing.xs) {
+                Text("Your plan isn't ready yet")
+                    .font(Typography.titleLarge)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .multilineTextAlignment(.center)
 
-            Text(message)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .multilineTextAlignment(.center)
+                Text("Finish your diagnostic and we'll build it for you in a minute.")
+                    .font(Typography.body)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, Spacing.xl)
+            }
 
-            Button("Try Again") {
+            // Tiny diagnostic note for advanced users
+            if !message.isEmpty {
+                Text(message)
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Spacing.xl)
+                    .padding(.top, Spacing.xs)
+            }
+
+            PrimaryButton(title: "Try again") {
                 Task { await viewModel.retry() }
             }
-            .font(Typography.bodyBold)
-            .foregroundStyle(ColorTokens.buttonPrimaryText)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.vertical, Spacing.sm)
-            .background(ColorTokens.gold)
-            .clipShape(Capsule())
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.md)
 
             Spacer()
         }
@@ -141,44 +150,93 @@ struct PlanTabView: View {
     // MARK: - Hero Card
 
     private func heroCard(_ plan: PlanDTO) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(plan.planHeadline)
-                .font(Typography.titleLarge)
-                .foregroundStyle(ColorTokens.textPrimary)
-
-            HStack(spacing: Spacing.lg) {
-                statBadge(value: "\(plan.totalWeeks)", label: "weeks")
-                statBadge(value: String(format: "%.0fh", plan.totalHours), label: "total")
-                statBadge(value: "\(plan.milestoneCount)", label: "milestones")
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            // Eyebrow
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("YOUR PLAN")
+                    .font(Typography.micro)
+                    .tracking(1.4)
+                    .foregroundStyle(ColorTokens.gold)
             }
 
-            if let buffer = plan.bufferRecommendation {
-                Text(buffer)
-                    .font(Typography.bodySmall)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .padding(.top, Spacing.xs)
+            Text(plan.planHeadline)
+                .font(Typography.displayMedium)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Stats row: bigger numbers, dividers between, animated count-in.
+            HStack(spacing: 0) {
+                statPill(value: "\(plan.totalWeeks)", label: plan.totalWeeks == 1 ? "week" : "weeks", icon: "calendar")
+                Divider().frame(height: 36).background(ColorTokens.border)
+                statPill(value: String(format: "%.0fh", plan.totalHours), label: "total", icon: "clock")
+                Divider().frame(height: 36).background(ColorTokens.border)
+                statPill(value: "\(plan.milestoneCount)", label: plan.milestoneCount == 1 ? "milestone" : "milestones", icon: "flag.fill")
+            }
+            .padding(.top, Spacing.xs)
+
+            if let buffer = plan.bufferRecommendation, !buffer.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.gold.opacity(0.8))
+                        .padding(.top, 2)
+                    Text(buffer)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .lineSpacing(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, Spacing.xs)
             }
         }
-        .padding(Spacing.md)
+        .padding(Spacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: CornerRadius.large)
-                .fill(ColorTokens.heroGradient)
-                .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.large)
-                        .stroke(ColorTokens.gold.opacity(0.3), lineWidth: 1)
-                )
+            ZStack {
+                // Layered gradient: dark teal base + gold glow top-right
+                RoundedRectangle(cornerRadius: CornerRadius.large)
+                    .fill(ColorTokens.surface)
+
+                RoundedRectangle(cornerRadius: CornerRadius.large)
+                    .fill(
+                        RadialGradient(
+                            colors: [ColorTokens.gold.opacity(0.18), .clear],
+                            center: .topTrailing,
+                            startRadius: 10,
+                            endRadius: 220
+                        )
+                    )
+
+                RoundedRectangle(cornerRadius: CornerRadius.large)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [ColorTokens.gold.opacity(0.45), ColorTokens.gold.opacity(0.10)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            }
         )
     }
 
-    private func statBadge(value: String, label: String) -> some View {
-        VStack(spacing: 2) {
+    private func statPill(value: String, label: String, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(ColorTokens.gold.opacity(0.85))
             Text(value)
-                .font(Typography.titleMedium)
-                .foregroundStyle(ColorTokens.gold)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(ColorTokens.textPrimary)
             Text(label)
                 .font(Typography.caption)
                 .foregroundStyle(ColorTokens.textTertiary)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Weekly Schedule Section

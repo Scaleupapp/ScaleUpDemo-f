@@ -79,16 +79,23 @@ struct DiagnosticQuestionView: View {
     private var progressBar: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 2)
+                RoundedRectangle(cornerRadius: 3)
                     .fill(ColorTokens.surfaceElevated)
 
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(ColorTokens.gold)
-                    .frame(width: geo.size.width * viewModel.progress)
-                    .animation(.easeInOut(duration: 0.3), value: viewModel.progress)
+                RoundedRectangle(cornerRadius: 3)
+                    .fill(
+                        LinearGradient(
+                            colors: [ColorTokens.gold, ColorTokens.goldLight],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(6, geo.size.width * viewModel.progress))
+                    .shadow(color: ColorTokens.gold.opacity(0.5), radius: 4, y: 0)
+                    .animation(.spring(response: 0.45, dampingFraction: 0.85), value: viewModel.progress)
             }
         }
-        .frame(height: 3)
+        .frame(height: 5)
         .padding(.horizontal, Spacing.lg)
     }
 
@@ -111,20 +118,39 @@ struct DiagnosticQuestionView: View {
             .clipShape(Capsule())
 
             Text(question.prompt)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 19, weight: .semibold))
                 .foregroundStyle(ColorTokens.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
+                .lineSpacing(4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(Spacing.lg)
         .background(
-            RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .fill(ColorTokens.surface)
+            ZStack {
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .fill(ColorTokens.surface)
+                // Subtle gold glow in top-right for depth
+                RoundedRectangle(cornerRadius: CornerRadius.medium)
+                    .fill(
+                        RadialGradient(
+                            colors: [ColorTokens.gold.opacity(0.10), .clear],
+                            center: .topTrailing,
+                            startRadius: 4,
+                            endRadius: 200
+                        )
+                    )
+            }
         )
         .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.medium)
-                .stroke(ColorTokens.gold.opacity(0.35), lineWidth: 1.5)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [ColorTokens.gold.opacity(0.45), ColorTokens.gold.opacity(0.12)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
         // Left accent bar
         .overlay(alignment: .leading) {
