@@ -30,7 +30,7 @@ final class PlanTabViewModel {
             case "ready", "completed":
                 let plan = try await service.fetchCurrent()
                 loadState = .ready(plan)
-                if plan.source == "template" {
+                if plan.source == .template {
                     AnalyticsService.shared.track(.planGenerationFallback(reason: "server_template"))
                 }
             case "generating", "pending":

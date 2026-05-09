@@ -1,43 +1,19 @@
 import Foundation
 
 // MARK: - Plan DTOs
+//
+// PlanCurrent / PlanWeeklyEntry / PlanAllocation / PlanMilestone are
+// generated from openapi.yaml — see ScaleUp/Generated/OpenAPI/. Don't
+// hand-roll equivalents here; if the wire shape changes, update the
+// backend's openapi.yaml and run scripts/regenerate-openapi-types.sh.
+
+/// Type alias to keep older view-model code referring to the historic name
+/// while the underlying type comes from the spec.
+typealias PlanDTO = APIPlanCurrent
 
 struct PlanStatusDTO: Decodable, Sendable {
     let status: String
     let planId: String?
-}
-
-struct WeeklyAllocation: Decodable, Sendable {
-    let topic: String
-    let canonicalTopic: String?
-    let hoursAllocated: Double
-    let focusActivity: String
-}
-
-struct WeeklyEntry: Decodable, Sendable {
-    let weekNumber: Int
-    let weekLabel: String
-    let totalHours: Double
-    let allocations: [WeeklyAllocation]
-}
-
-struct PlanMilestone: Decodable, Sendable {
-    let title: String
-    let measurableCriteria: String
-    let weekTarget: Int
-    let isUserStated: Bool
-}
-
-struct PlanDTO: Decodable, Sendable {
-    let planId: String
-    let planHeadline: String
-    let totalWeeks: Int
-    let totalHours: Double
-    let milestoneCount: Int
-    let bufferRecommendation: String?
-    let weeklySchedule: [WeeklyEntry]
-    let milestones: [PlanMilestone]
-    let source: String?
 }
 
 // MARK: - Plan Service
@@ -51,7 +27,7 @@ actor PlanService {
         try await api.request(PlanEndpoints.status)
     }
 
-    func fetchCurrent() async throws -> PlanDTO {
+    func fetchCurrent() async throws -> APIPlanCurrent {
         try await api.request(PlanEndpoints.current)
     }
 }

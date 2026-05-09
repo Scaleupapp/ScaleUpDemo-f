@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct MilestonePreview: View {
-    let milestones: [PlanMilestone]
+    let milestones: [APIPlanMilestone]
 
     @State private var revealedCount = 0
 
@@ -33,7 +33,7 @@ struct MilestonePreview: View {
         }
     }
 
-    private func milestoneRow(milestone: PlanMilestone, index: Int, isLast: Bool) -> some View {
+    private func milestoneRow(milestone: APIPlanMilestone, index: Int, isLast: Bool) -> some View {
         HStack(alignment: .top, spacing: Spacing.md) {
             // Timeline column
             VStack(spacing: 0) {

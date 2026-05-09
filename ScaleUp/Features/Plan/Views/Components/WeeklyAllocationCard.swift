@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WeeklyAllocationCard: View {
-    let entry: WeeklyEntry
+    let entry: APIPlanWeeklyEntry
 
     @State private var isExpanded = false
 
@@ -60,7 +60,7 @@ struct WeeklyAllocationCard: View {
         )
     }
 
-    private func allocationRow(_ allocation: WeeklyAllocation) -> some View {
+    private func allocationRow(_ allocation: APIPlanAllocation) -> some View {
         HStack(alignment: .top, spacing: Spacing.sm) {
             Circle()
                 .fill(ColorTokens.gold.opacity(0.6))

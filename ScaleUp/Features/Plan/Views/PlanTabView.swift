@@ -183,7 +183,7 @@ struct PlanTabView: View {
 
     // MARK: - Weekly Schedule Section
 
-    private func weeklySection(_ schedule: [WeeklyEntry]) -> some View {
+    private func weeklySection(_ schedule: [APIPlanWeeklyEntry]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(spacing: 6) {
                 Image(systemName: "calendar")
@@ -206,7 +206,7 @@ struct PlanTabView: View {
 
     // MARK: - Milestones Section
 
-    private func milestonesSection(_ milestones: [PlanMilestone]) -> some View {
+    private func milestonesSection(_ milestones: [APIPlanMilestone]) -> some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             HStack(spacing: 6) {
                 Image(systemName: "flag.fill")

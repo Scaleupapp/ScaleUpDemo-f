@@ -54,6 +54,5 @@ Pods/
 Thumbs.db
 build_sim/
 
-# Generated OpenAPI types — regen via scripts/regenerate-openapi-types.sh
-ScaleUp/Generated/OpenAPI/
+# OpenAPI generator config (npx scratch file)
 openapitools.json
