@@ -35,6 +35,9 @@ final class PlanTabViewModel {
                 }
             case "generating", "pending":
                 loadState = .generating
+            case "failed":
+                loadState = .error("We couldn't build your plan. Tap Retry to try again.")
+                AnalyticsService.shared.track(.planGenerationFallback(reason: "server_failed"))
             default:
                 loadState = .generating
             }
