@@ -105,9 +105,10 @@ final class AppState {
 
     /// Sends the user back through onboarding. Used when the backend signals
     /// the user is missing prerequisites (e.g. empty objective specifics or
-    /// no topic self-ratings) and the only way forward is to re-onboard.
+    /// no topic self-ratings). The server-side User model is not flipped
+    /// here — once they re-complete onboarding, the next /me call returns
+    /// the refreshed state.
     func sendToOnboarding(step: Int = 1) {
-        currentUser?.onboardingComplete = false
         launchState = .onboarding(step: max(1, step))
     }
 

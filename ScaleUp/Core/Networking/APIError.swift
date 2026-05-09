@@ -7,8 +7,9 @@ enum APIError: Error, LocalizedError, Sendable {
     case notFound
     case conflict(String)
     /// 409 with a stable machine code (e.g. "NEEDS_ONBOARDING") that callers
-    /// can branch on. The associated String is the user-facing message.
-    case conflictWithCode(code: String, message: String)
+    /// can branch on. `resumeStep` tells the client which onboarding step
+    /// to resume from when applicable (nil otherwise).
+    case conflictWithCode(code: String, message: String, resumeStep: Int?)
     case rateLimited
     case badRequest(String)
     case serverError
@@ -28,7 +29,7 @@ enum APIError: Error, LocalizedError, Sendable {
             return "The requested resource was not found."
         case .conflict(let msg):
             return msg
-        case .conflictWithCode(_, let msg):
+        case .conflictWithCode(_, let msg, _):
             return msg
         case .rateLimited:
             return "Too many requests. Please wait a moment."

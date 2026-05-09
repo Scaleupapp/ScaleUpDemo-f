@@ -121,7 +121,7 @@ struct DiagnosticContainerView: View {
             VStack(spacing: Spacing.md) {
                 if viewModel.requiresOnboarding {
                     PrimaryButton(title: "Complete onboarding") {
-                        appState.sendToOnboarding()
+                        appState.sendToOnboarding(step: viewModel.onboardingResumeStep ?? 3)
                     }
                 } else {
                     PrimaryButton(title: "Try again") {

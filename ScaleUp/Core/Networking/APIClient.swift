@@ -182,9 +182,14 @@ actor APIClient {
             trackError(endpoint: endpoint.path, code: 409, message: msg)
             // If the server attached a machine `code`, surface it so callers
             // can route on the cause (e.g. NEEDS_ONBOARDING) instead of just
-            // showing the message.
+            // showing the message. `resumeStep` (when present) tells us
+            // which onboarding step to land the user on.
             if let code = parseCode(from: data) {
-                throw APIError.conflictWithCode(code: code, message: msg)
+                throw APIError.conflictWithCode(
+                    code: code,
+                    message: msg,
+                    resumeStep: parseResumeStep(from: data),
+                )
             }
             throw APIError.conflict(msg)
         case 429:
@@ -343,6 +348,14 @@ actor APIClient {
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let code = json["code"] as? String {
             return code
+        }
+        return nil
+    }
+
+    private func parseResumeStep(from data: Data) -> Int? {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let step = json["resumeStep"] as? Int {
+            return step
         }
         return nil
     }
