@@ -23,8 +23,10 @@ public struct APIPlanCurrent: Codable, Hashable, Sendable {
     public var weeklySchedule: [APIPlanWeeklyEntry]
     public var milestones: [APIPlanMilestone]
     public var source: Source?
+    /** ISO timestamp of the next recalibration check-in (lastDiagnosticCompletedAt + 7 days). Null when the plan has no associated diagnostic attempt. */
+    public var nextCheckInAt: Date?
 
-    public init(planId: String, planHeadline: String, totalWeeks: Int, totalHours: Double, milestoneCount: Int, bufferRecommendation: String? = nil, weeklySchedule: [APIPlanWeeklyEntry], milestones: [APIPlanMilestone], source: Source? = nil) {
+    public init(planId: String, planHeadline: String, totalWeeks: Int, totalHours: Double, milestoneCount: Int, bufferRecommendation: String? = nil, weeklySchedule: [APIPlanWeeklyEntry], milestones: [APIPlanMilestone], source: Source? = nil, nextCheckInAt: Date? = nil) {
         self.planId = planId
         self.planHeadline = planHeadline
         self.totalWeeks = totalWeeks
@@ -34,6 +36,7 @@ public struct APIPlanCurrent: Codable, Hashable, Sendable {
         self.weeklySchedule = weeklySchedule
         self.milestones = milestones
         self.source = source
+        self.nextCheckInAt = nextCheckInAt
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
@@ -46,6 +49,7 @@ public struct APIPlanCurrent: Codable, Hashable, Sendable {
         case weeklySchedule
         case milestones
         case source
+        case nextCheckInAt
     }
 
     // Encodable protocol methods
@@ -61,6 +65,7 @@ public struct APIPlanCurrent: Codable, Hashable, Sendable {
         try container.encode(weeklySchedule, forKey: .weeklySchedule)
         try container.encode(milestones, forKey: .milestones)
         try container.encodeIfPresent(source, forKey: .source)
+        try container.encodeIfPresent(nextCheckInAt, forKey: .nextCheckInAt)
     }
 }
 
