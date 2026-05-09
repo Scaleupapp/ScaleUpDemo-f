@@ -98,7 +98,7 @@ struct DiagnosticContainerView: View {
             .padding(.bottom, Spacing.xl)
 
             // Title
-            Text("We hit a snag")
+            Text(viewModel.requiresOnboarding ? "Let's finish setting up" : "We hit a snag")
                 .font(Typography.titleLarge)
                 .foregroundStyle(ColorTokens.textPrimary)
                 .padding(.bottom, Spacing.sm)
@@ -119,8 +119,14 @@ struct DiagnosticContainerView: View {
 
             // Buttons
             VStack(spacing: Spacing.md) {
-                PrimaryButton(title: "Try again") {
-                    Task { await viewModel.retry() }
+                if viewModel.requiresOnboarding {
+                    PrimaryButton(title: "Complete onboarding") {
+                        appState.sendToOnboarding()
+                    }
+                } else {
+                    PrimaryButton(title: "Try again") {
+                        Task { await viewModel.retry() }
+                    }
                 }
 
                 Button("Skip for now") { appState.skipDiagnostic() }

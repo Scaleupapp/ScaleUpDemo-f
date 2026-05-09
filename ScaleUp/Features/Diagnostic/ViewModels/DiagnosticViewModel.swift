@@ -27,6 +27,11 @@ final class DiagnosticViewModel {
     var errorMessage: String?
     var isLoading = false
 
+    /// When the backend signals the user is missing prerequisites (e.g.
+    /// `code: "NEEDS_ONBOARDING"`), the view sets this so DiagnosticContainerView
+    /// can route them back to onboarding instead of showing the generic snag.
+    var requiresOnboarding: Bool = false
+
     // MARK: - Plan 3a Task 9 / Task 11 — per-topic progress + voice routing
     // Per-topic progress state. Task 11 wires these to the actual
     // adaptive diagnostic engine state.
@@ -80,6 +85,7 @@ final class DiagnosticViewModel {
 
     func start() async {
         isLoading = true
+        requiresOnboarding = false
         do {
             let attempt = try await service.start()
             attemptId = attempt.attemptId
@@ -92,6 +98,15 @@ final class DiagnosticViewModel {
             startedAt = Date()
             phase = .selfRating
             AnalyticsService.shared.track(.diagnosticStarted(flowType: attempt.flowType))
+        } catch APIError.conflictWithCode(let code, let message) {
+            // Backend signalled a structured reason. NEEDS_ONBOARDING is the
+            // only code that's recoverable by re-onboarding; everything else
+            // falls through to the standard snag screen.
+            errorMessage = message
+            if code == "NEEDS_ONBOARDING" {
+                requiresOnboarding = true
+            }
+            phase = .error
         } catch {
             errorMessage = error.localizedDescription
             phase = .error

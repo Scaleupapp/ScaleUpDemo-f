@@ -6,6 +6,9 @@ enum APIError: Error, LocalizedError, Sendable {
     case forbidden
     case notFound
     case conflict(String)
+    /// 409 with a stable machine code (e.g. "NEEDS_ONBOARDING") that callers
+    /// can branch on. The associated String is the user-facing message.
+    case conflictWithCode(code: String, message: String)
     case rateLimited
     case badRequest(String)
     case serverError
@@ -24,6 +27,8 @@ enum APIError: Error, LocalizedError, Sendable {
         case .notFound:
             return "The requested resource was not found."
         case .conflict(let msg):
+            return msg
+        case .conflictWithCode(_, let msg):
             return msg
         case .rateLimited:
             return "Too many requests. Please wait a moment."

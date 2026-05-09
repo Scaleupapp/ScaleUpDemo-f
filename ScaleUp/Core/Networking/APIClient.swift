@@ -180,6 +180,12 @@ actor APIClient {
         case 409:
             let msg = parseMessage(from: data)
             trackError(endpoint: endpoint.path, code: 409, message: msg)
+            // If the server attached a machine `code`, surface it so callers
+            // can route on the cause (e.g. NEEDS_ONBOARDING) instead of just
+            // showing the message.
+            if let code = parseCode(from: data) {
+                throw APIError.conflictWithCode(code: code, message: msg)
+            }
             throw APIError.conflict(msg)
         case 429:
             trackError(endpoint: endpoint.path, code: 429, message: "rate_limited")
@@ -326,11 +332,19 @@ actor APIClient {
     // MARK: - Helpers
 
     private func parseMessage(from data: Data) -> String {
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let message = json["message"] as? String {
-            return message
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            if let message = json["message"] as? String { return message }
+            if let error = json["error"] as? String { return error }
         }
         return "Something went wrong"
+    }
+
+    private func parseCode(from data: Data) -> String? {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let code = json["code"] as? String {
+            return code
+        }
+        return nil
     }
 }
 

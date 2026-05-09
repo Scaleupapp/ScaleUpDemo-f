@@ -103,6 +103,14 @@ final class AppState {
         launchState = .home
     }
 
+    /// Sends the user back through onboarding. Used when the backend signals
+    /// the user is missing prerequisites (e.g. empty objective specifics or
+    /// no topic self-ratings) and the only way forward is to re-onboard.
+    func sendToOnboarding(step: Int = 1) {
+        currentUser?.onboardingComplete = false
+        launchState = .onboarding(step: max(1, step))
+    }
+
     // MARK: - Logout
 
     func logout() async {
