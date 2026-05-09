@@ -53,3 +53,7 @@ Pods/
 *.tmp
 Thumbs.db
 build_sim/
+
+# Generated OpenAPI types — regen via scripts/regenerate-openapi-types.sh
+ScaleUp/Generated/OpenAPI/
+openapitools.json
