@@ -138,6 +138,10 @@ enum AnalyticsEvent {
     case planGenerationCompleted
     case planGenerationFallback(reason: String)
     case planTaskTapped(taskType: String, taskId: String)
+    case planTaskStarted(taskType: String, taskId: String, topicCanonical: String)
+    case planTaskCompleted(taskType: String, taskId: String, topicCanonical: String, selfRating: Int?)
+    case externalLinkOpened(taskId: String, url: String, topicCanonical: String)
+    case recalibrationOfferedFromPlan(source: String)
     case recalibrationOffered
     case recalibrationStarted
     case recalibrationCompleted(topicsRetested: Int, biggestGrowth: Double)
@@ -245,6 +249,10 @@ enum AnalyticsEvent {
         case .planGenerationCompleted:            return "plan_generation_completed"
         case .planGenerationFallback:             return "plan_generation_fallback"
         case .planTaskTapped:                     return "plan_task_tapped"
+        case .planTaskStarted:                    return "plan_task_started"
+        case .planTaskCompleted:                  return "plan_task_completed"
+        case .externalLinkOpened:                 return "external_link_opened"
+        case .recalibrationOfferedFromPlan:       return "recalibration_offered_from_plan"
         case .recalibrationOffered:               return "recalibration_offered"
         case .recalibrationStarted:               return "recalibration_started"
         case .recalibrationCompleted:             return "recalibration_completed"
@@ -516,6 +524,20 @@ enum AnalyticsEvent {
 
         case .planTaskTapped(let taskType, let taskId):
             return ["task_type": taskType, "task_id": taskId]
+
+        case .planTaskStarted(let taskType, let taskId, let topic):
+            return ["task_type": taskType, "task_id": taskId, "topic_canonical": topic]
+
+        case .planTaskCompleted(let taskType, let taskId, let topic, let selfRating):
+            var props: [String: Any] = ["task_type": taskType, "task_id": taskId, "topic_canonical": topic]
+            if let selfRating { props["self_rating"] = selfRating }
+            return props
+
+        case .externalLinkOpened(let taskId, let url, let topic):
+            return ["task_id": taskId, "url": url, "topic_canonical": topic]
+
+        case .recalibrationOfferedFromPlan(let source):
+            return ["source": source]
 
         case .recalibrationCompleted(let topicsRetested, let biggestGrowth):
             return ["topics_retested": topicsRetested, "biggest_growth": biggestGrowth]

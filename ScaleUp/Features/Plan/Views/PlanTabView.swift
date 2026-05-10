@@ -226,6 +226,11 @@ struct PlanTabView: View {
     private func handleTaskTap(_ task: APIPlanTask) {
         let typeRaw = task.type.rawValue
         AnalyticsService.shared.track(.planTaskTapped(taskType: typeRaw, taskId: task.taskId))
+        AnalyticsService.shared.track(.planTaskStarted(
+            taskType: typeRaw,
+            taskId: task.taskId,
+            topicCanonical: task.topic.canonicalName
+        ))
 
         switch task.type {
         case .quiz:
@@ -251,6 +256,11 @@ struct PlanTabView: View {
             if let urlString = task.payload?["url"]?.value as? String,
                let url = URL(string: urlString) {
                 UIApplication.shared.open(url)
+                AnalyticsService.shared.track(.externalLinkOpened(
+                    taskId: task.taskId,
+                    url: urlString,
+                    topicCanonical: task.topic.canonicalName
+                ))
             }
             presentedManualTask = task
         case .manual:
@@ -261,56 +271,54 @@ struct PlanTabView: View {
     // MARK: - Plan Content
 
     private func planContent(_ plan: PlanDTO) -> some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                ObjectiveBriefCard(plan: plan)
-                    .padding(.horizontal, Spacing.lg)
-
-                NextCheckInPill(
-                    nextCheckInAt: plan.nextCheckInAt,
-                    isEligibleNow: recalVM.eligibility?.eligible == true,
-                    onRecalibrateTap: { showRecalibration = true }
-                )
-                .padding(.horizontal, Spacing.lg)
-
-                if let current = viewModel.currentWeekTasks(in: plan) {
-                    ThisWeekTasksList(
-                        weekNumber: current.weekNumber,
-                        weekLabel: current.weekLabel,
-                        tasks: current.tasks,
-                        onTaskTap: { task in handleTaskTap(task) }
-                    )
-                }
-
-                if !plan.milestones.isEmpty {
-                    milestonesSection(plan.milestones)
-                }
-
-                Spacer().frame(height: Spacing.xxl)
-            }
-            .padding(.top, Spacing.md)
-        }
-    }
-
-    // MARK: - Weekly Schedule Section
-
-    private func weeklySection(_ schedule: [APIPlanWeeklyEntry]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            HStack(spacing: 6) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Weekly Schedule")
-                    .font(Typography.titleMedium)
-                    .foregroundStyle(ColorTokens.textPrimary)
-            }
-            .padding(.horizontal, Spacing.lg)
-
-            VStack(spacing: Spacing.sm) {
-                ForEach(schedule, id: \.weekNumber) { entry in
-                    WeeklyAllocationCard(entry: entry)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(alignment: .leading, spacing: Spacing.lg) {
+                    ObjectiveBriefCard(plan: plan)
                         .padding(.horizontal, Spacing.lg)
+
+                    NextCheckInPill(
+                        nextCheckInAt: plan.nextCheckInAt,
+                        isEligibleNow: recalVM.eligibility?.eligible == true,
+                        onRecalibrateTap: {
+                            AnalyticsService.shared.track(.recalibrationOfferedFromPlan(source: "pill"))
+                            showRecalibration = true
+                        }
+                    )
+                    .padding(.horizontal, Spacing.lg)
+                    .onAppear {
+                        if recalVM.eligibility?.eligible == true {
+                            AnalyticsService.shared.track(.recalibrationOfferedFromPlan(source: "pill_seen"))
+                        }
+                    }
+
+                    JourneyTimelineStrip(
+                        weeks: plan.weeklySchedule,
+                        currentWeekNumber: viewModel.currentWeekTasks(in: plan)?.weekNumber,
+                        onWeekTap: { weekNumber in
+                            withAnimation(.easeInOut(duration: 0.4)) {
+                                proxy.scrollTo(weekNumber, anchor: .top)
+                            }
+                        }
+                    )
+
+                    ForEach(plan.weeklySchedule, id: \.weekNumber) { week in
+                        ThisWeekTasksList(
+                            weekNumber: week.weekNumber,
+                            weekLabel: week.weekLabel,
+                            tasks: week.tasks ?? [],
+                            onTaskTap: { task in handleTaskTap(task) }
+                        )
+                        .id(week.weekNumber)
+                    }
+
+                    if !plan.milestones.isEmpty {
+                        milestonesSection(plan.milestones)
+                    }
+
+                    Spacer().frame(height: Spacing.xxl)
                 }
+                .padding(.top, Spacing.md)
             }
         }
     }
@@ -318,20 +326,19 @@ struct PlanTabView: View {
     // MARK: - Milestones Section
 
     private func milestonesSection(_ milestones: [APIPlanMilestone]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.md) {
             HStack(spacing: 6) {
                 Image(systemName: "flag.fill")
-                    .font(.system(size: 13))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
-                Text("Milestones")
-                    .font(Typography.titleMedium)
-                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("MILESTONES")
+                    .font(Typography.micro)
+                    .tracking(1.4)
+                    .foregroundStyle(ColorTokens.gold)
             }
-            .padding(.horizontal, Spacing.lg)
-
             MilestonePreview(milestones: milestones)
-                .padding(.horizontal, Spacing.lg)
         }
+        .padding(.horizontal, Spacing.lg)
     }
 }
 

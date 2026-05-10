@@ -116,6 +116,12 @@ struct ManualCompletionSheet: View {
                 taskId: task.taskId,
                 selfRating: selectedRating
             )
+            AnalyticsService.shared.track(.planTaskCompleted(
+                taskType: task.type.rawValue,
+                taskId: task.taskId,
+                topicCanonical: task.topic.canonicalName,
+                selfRating: selectedRating
+            ))
             onComplete()
             dismiss()
         } catch {
