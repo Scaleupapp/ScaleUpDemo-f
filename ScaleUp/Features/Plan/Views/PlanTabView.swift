@@ -134,15 +134,15 @@ struct PlanTabView: View {
     private func planContent(_ plan: PlanDTO) -> some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: Spacing.lg) {
-                if let eligibility = recalVM.eligibility, eligibility.eligible {
-                    RecalibrationNudge(eligibility: eligibility) {
-                        showRecalibration = true
-                    }
-                    .padding(.horizontal, Spacing.lg)
-                }
-
                 ObjectiveBriefCard(plan: plan)
                     .padding(.horizontal, Spacing.lg)
+
+                NextCheckInPill(
+                    nextCheckInAt: plan.nextCheckInAt,
+                    isEligibleNow: recalVM.eligibility?.eligible == true,
+                    onRecalibrateTap: { showRecalibration = true }
+                )
+                .padding(.horizontal, Spacing.lg)
 
                 if !plan.weeklySchedule.isEmpty {
                     weeklySection(plan.weeklySchedule)
