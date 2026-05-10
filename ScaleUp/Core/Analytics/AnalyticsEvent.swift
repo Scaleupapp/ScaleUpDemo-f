@@ -137,6 +137,7 @@ enum AnalyticsEvent {
     case planReadyNotificationTapped(planId: String)
     case planGenerationCompleted
     case planGenerationFallback(reason: String)
+    case planTaskTapped(taskType: String, taskId: String)
     case recalibrationOffered
     case recalibrationStarted
     case recalibrationCompleted(topicsRetested: Int, biggestGrowth: Double)
@@ -243,6 +244,7 @@ enum AnalyticsEvent {
         case .planReadyNotificationTapped:        return "plan_ready_notification_tapped"
         case .planGenerationCompleted:            return "plan_generation_completed"
         case .planGenerationFallback:             return "plan_generation_fallback"
+        case .planTaskTapped:                     return "plan_task_tapped"
         case .recalibrationOffered:               return "recalibration_offered"
         case .recalibrationStarted:               return "recalibration_started"
         case .recalibrationCompleted:             return "recalibration_completed"
@@ -511,6 +513,9 @@ enum AnalyticsEvent {
 
         case .planGenerationFallback(let reason):
             return ["reason": reason]
+
+        case .planTaskTapped(let taskType, let taskId):
+            return ["task_type": taskType, "task_id": taskId]
 
         case .recalibrationCompleted(let topicsRetested, let biggestGrowth):
             return ["topics_retested": topicsRetested, "biggest_growth": biggestGrowth]

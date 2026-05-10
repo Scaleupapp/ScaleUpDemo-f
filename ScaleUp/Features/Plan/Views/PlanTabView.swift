@@ -129,6 +129,17 @@ struct PlanTabView: View {
         .padding(.horizontal, Spacing.lg)
     }
 
+    // MARK: - Task Tap
+
+    private func handleTaskTap(_ task: APIPlanTask) {
+        // Phase 2 wiring: emit analytics + capture intent. Actual navigation
+        // into quiz/content viewers is Phase 2.5 (uses existing Home tab
+        // patterns — NavigationLink(value: contentObject) requires fetching
+        // the full doc by ID first; deferred to keep Phase 2 scoped).
+        let typeRaw = task.type.rawValue
+        AnalyticsService.shared.track(.planTaskTapped(taskType: typeRaw, taskId: task.taskId))
+    }
+
     // MARK: - Plan Content
 
     private func planContent(_ plan: PlanDTO) -> some View {
@@ -144,8 +155,13 @@ struct PlanTabView: View {
                 )
                 .padding(.horizontal, Spacing.lg)
 
-                if !plan.weeklySchedule.isEmpty {
-                    weeklySection(plan.weeklySchedule)
+                if let current = viewModel.currentWeekTasks(in: plan) {
+                    ThisWeekTasksList(
+                        weekNumber: current.weekNumber,
+                        weekLabel: current.weekLabel,
+                        tasks: current.tasks,
+                        onTaskTap: { task in handleTaskTap(task) }
+                    )
                 }
 
                 if !plan.milestones.isEmpty {

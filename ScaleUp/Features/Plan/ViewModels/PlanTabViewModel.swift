@@ -59,3 +59,21 @@ final class PlanTabViewModel {
         await load()
     }
 }
+
+extension PlanTabViewModel {
+    /// Returns the tasks of the smallest week index that still has any pending or in_progress task.
+    /// Mirrors backend `findCurrentWeekIndex` so the UI shows what the user should be doing now.
+    func currentWeekTasks(in plan: PlanDTO) -> (weekNumber: Int, weekLabel: String, tasks: [APIPlanTask])? {
+        let weeks = plan.weeklySchedule
+        for week in weeks {
+            let tasks = week.tasks ?? []
+            if tasks.contains(where: { $0.progress.status == .pending || $0.progress.status == .inProgress }) {
+                return (week.weekNumber, week.weekLabel, tasks)
+            }
+        }
+        if let last = weeks.last {
+            return (last.weekNumber, last.weekLabel, last.tasks ?? [])
+        }
+        return nil
+    }
+}
