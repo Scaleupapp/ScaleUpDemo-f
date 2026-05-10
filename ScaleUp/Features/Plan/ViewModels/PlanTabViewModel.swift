@@ -47,6 +47,9 @@ final class PlanTabViewModel {
             case "failed":
                 loadState = .error(.planGenerationFailed, "Something went wrong building your plan. Tap below to try again.")
                 AnalyticsService.shared.track(.planGenerationFallback(reason: "server_failed"))
+            case "no_diagnostic":
+                loadState = .error(.diagnosticIncomplete, "Take your 7-minute diagnostic to unlock your personalized plan.")
+                AnalyticsService.shared.track(.planGenerationFallback(reason: "no_diagnostic"))
             default:
                 loadState = .generating
             }

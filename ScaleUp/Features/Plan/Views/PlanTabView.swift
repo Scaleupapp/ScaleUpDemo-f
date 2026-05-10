@@ -210,11 +210,20 @@ struct PlanTabView: View {
                     .padding(.top, Spacing.xs)
             }
 
-            PrimaryButton(title: "Try again") {
-                Task { await viewModel.retry() }
+            switch kind {
+            case .diagnosticIncomplete:
+                PrimaryButton(title: "Start diagnostic") {
+                    presentingDiagnostic = true
+                }
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.md)
+            case .planGenerationFailed, .loadFailed:
+                PrimaryButton(title: "Try again") {
+                    Task { await viewModel.retry() }
+                }
+                .padding(.horizontal, Spacing.xl)
+                .padding(.top, Spacing.md)
             }
-            .padding(.horizontal, Spacing.xl)
-            .padding(.top, Spacing.md)
 
             Spacer()
         }
