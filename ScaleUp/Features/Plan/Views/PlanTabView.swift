@@ -4,6 +4,9 @@ struct PlanTabView: View {
     @State private var viewModel = PlanTabViewModel()
     @State private var recalVM = RecalibrationViewModel()
     @State private var showRecalibration = false
+    @State private var presentedQuizId: String?
+    @State private var presentedContentId: String?
+    @State private var presentedContentType: String?
 
     var body: some View {
         NavigationStack {
@@ -33,6 +36,53 @@ struct PlanTabView: View {
         }
         .fullScreenCover(isPresented: $showRecalibration) {
             RecalibrationOrchestrationView(viewModel: recalVM)
+        }
+        .sheet(item: Binding(
+            get: { presentedQuizId.map(IdentifiedString.init) },
+            set: { presentedQuizId = $0?.value }
+        )) { wrap in
+            PlanTaskQuizLoaderSheet(quizId: wrap.value, onDismiss: { presentedQuizId = nil })
+        }
+        .sheet(item: Binding(
+            get: { presentedContentId.map(IdentifiedString.init) },
+            set: { newValue in
+                presentedContentId = newValue?.value
+                if newValue == nil { presentedContentType = nil }
+            }
+        )) { wrap in
+            contentSheetView(contentId: wrap.value, contentType: presentedContentType)
+        }
+    }
+
+    // MARK: - Content Sheet
+
+    @ViewBuilder
+    private func contentSheetView(contentId: String, contentType: String?) -> some View {
+        NavigationStack {
+            // Route to NotesDetailView if the content is notes-shaped; otherwise PlayerView.
+            // The contentType string comes from the task payload (set by the backend
+            // generator) so we don't need to fetch the full Content document.
+            if contentType == "notes" {
+                NotesDetailView(contentId: contentId)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") {
+                                presentedContentId = nil
+                                presentedContentType = nil
+                            }
+                        }
+                    }
+            } else {
+                PlayerView(contentId: contentId)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") {
+                                presentedContentId = nil
+                                presentedContentType = nil
+                            }
+                        }
+                    }
+            }
         }
     }
 
@@ -132,12 +182,24 @@ struct PlanTabView: View {
     // MARK: - Task Tap
 
     private func handleTaskTap(_ task: APIPlanTask) {
-        // Phase 2 wiring: emit analytics + capture intent. Actual navigation
-        // into quiz/content viewers is Phase 2.5 (uses existing Home tab
-        // patterns — NavigationLink(value: contentObject) requires fetching
-        // the full doc by ID first; deferred to keep Phase 2 scoped).
         let typeRaw = task.type.rawValue
         AnalyticsService.shared.track(.planTaskTapped(taskType: typeRaw, taskId: task.taskId))
+
+        switch task.type {
+        case .quiz:
+            if let quizId = task.payload?["quizId"]?.value as? String {
+                presentedQuizId = quizId
+            }
+        case .inAppContent:
+            if let contentId = task.payload?["contentId"]?.value as? String {
+                // Set type before id so the sheet's body sees both on first render.
+                presentedContentType = task.payload?["contentType"]?.value as? String
+                presentedContentId = contentId
+            }
+        case .aiInterview, .externalLink, .competition, .manual:
+            // Phase 3+ task types — no nav wired yet. Analytics event still fires.
+            break
+        }
     }
 
     // MARK: - Plan Content
@@ -215,4 +277,14 @@ struct PlanTabView: View {
                 .padding(.horizontal, Spacing.lg)
         }
     }
+}
+
+// MARK: - Sheet Item Helper
+
+/// Identifiable wrapper around String so we can drive `.sheet(item:)` from a
+/// plain `String?` state. Used for quiz/content sheets where the item identity
+/// is just the id.
+private struct IdentifiedString: Identifiable {
+    let value: String
+    var id: String { value }
 }
