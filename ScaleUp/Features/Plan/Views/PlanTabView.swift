@@ -244,7 +244,16 @@ struct PlanTabView: View {
             presentedInterviewScenario = scenario
         case .competition:
             presentingCompetitionHub = true
-        case .manual, .externalLink:
+        case .externalLink:
+            // Open the URL externally first so the user can read the resource,
+            // then present the completion sheet immediately so they can
+            // self-rate when they tap back into the app.
+            if let urlString = task.payload?["url"]?.value as? String,
+               let url = URL(string: urlString) {
+                UIApplication.shared.open(url)
+            }
+            presentedManualTask = task
+        case .manual:
             presentedManualTask = task
         }
     }
