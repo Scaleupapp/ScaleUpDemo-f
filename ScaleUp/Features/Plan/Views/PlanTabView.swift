@@ -321,6 +321,10 @@ struct PlanTabView: View {
                         .id(week.weekNumber)
                     }
 
+                    if let mastery = viewModel.mastery {
+                        TopicMasterySection(mastery: mastery)
+                    }
+
                     if !plan.milestones.isEmpty {
                         milestonesSection(plan.milestones)
                     }

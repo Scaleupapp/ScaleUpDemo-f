@@ -31,6 +31,10 @@ actor PlanService {
         try await api.request(PlanEndpoints.current)
     }
 
+    func fetchMastery() async throws -> APIPlanMastery {
+        try await api.request(PlanEndpoints.mastery)
+    }
+
     /// POSTs `/plan/tasks/{taskId}/complete` with a self-rating (1...5) for
     /// `.manual` and `.externalLink` task types. Returns the generated
     /// completion result data block (taskId / planId / weekNumber).
@@ -80,12 +84,14 @@ struct RecalibrationResultsDTO: Decodable, Sendable {
 private enum PlanEndpoints: Endpoint {
     case status
     case current
+    case mastery
     case markTaskComplete(taskId: String)
 
     var path: String {
         switch self {
         case .status:  return "/plan/status"
         case .current: return "/plan/current"
+        case .mastery: return "/plan/mastery"
         case .markTaskComplete(let taskId):
             return "/plan/tasks/\(taskId)/complete"
         }
@@ -93,8 +99,8 @@ private enum PlanEndpoints: Endpoint {
 
     var method: HTTPMethod {
         switch self {
-        case .status, .current:    return .get
-        case .markTaskComplete:    return .post
+        case .status, .current, .mastery: return .get
+        case .markTaskComplete:           return .post
         }
     }
 }

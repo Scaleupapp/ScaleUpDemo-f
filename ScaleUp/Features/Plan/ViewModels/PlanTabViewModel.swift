@@ -26,6 +26,7 @@ enum PlanLoadState {
 final class PlanTabViewModel {
 
     var loadState: PlanLoadState = .idle
+    var mastery: APIPlanMastery?
 
     private let service = PlanService.shared
 
@@ -42,6 +43,8 @@ final class PlanTabViewModel {
                 if plan.source == .template {
                     AnalyticsService.shared.track(.planGenerationFallback(reason: "server_template"))
                 }
+                // Best-effort mastery load — section just hides if it fails.
+                do { mastery = try await service.fetchMastery() } catch { mastery = nil }
             case "generating", "pending":
                 loadState = .generating
             case "failed":

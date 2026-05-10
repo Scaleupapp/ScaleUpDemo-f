@@ -14,6 +14,7 @@ public struct APIPlanStatus: Codable, Hashable, Sendable {
         case generating = "generating"
         case ready = "ready"
         case failed = "failed"
+        case noDiagnostic = "no_diagnostic"
     }
     public var status: Status
     public var planId: String?
