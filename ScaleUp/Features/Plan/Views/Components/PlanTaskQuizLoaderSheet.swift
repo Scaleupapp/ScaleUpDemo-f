@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// A small sheet that fetches a Quiz by id and then shows QuizDetailView.
+/// A small sheet that fetches a Quiz by id and then goes straight to QuizSession.
 /// Used by PlanTabView when the user taps a quiz task — the plan stores
-/// only the quizId in the task payload, but QuizDetailView needs the full
-/// Quiz object.
+/// only the quizId in the task payload, so we hydrate the full Quiz here
+/// then drop the user directly into QuizSessionView (Phase 7: skip the
+/// QuizDetailView intermediate so Plan tasks launch the quiz immediately).
 struct PlanTaskQuizLoaderSheet: View {
     let quizId: String
     let onDismiss: () -> Void
@@ -17,7 +18,7 @@ struct PlanTaskQuizLoaderSheet: View {
         NavigationStack {
             Group {
                 if let quiz {
-                    QuizDetailView(quiz: quiz)
+                    QuizSessionView(quiz: quiz)
                 } else if let loadError {
                     VStack(spacing: Spacing.lg) {
                         Image(systemName: "exclamationmark.triangle")
