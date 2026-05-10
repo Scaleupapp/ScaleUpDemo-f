@@ -30,6 +30,23 @@ actor PlanService {
     func fetchCurrent() async throws -> APIPlanCurrent {
         try await api.request(PlanEndpoints.current)
     }
+
+    /// POSTs `/plan/tasks/{taskId}/complete` with a self-rating (1...5) for
+    /// `.manual` and `.externalLink` task types. Returns the generated
+    /// completion result data block (taskId / planId / weekNumber).
+    @discardableResult
+    func markTaskComplete(
+        taskId: String,
+        selfRating: Int
+    ) async throws -> APIMarkPlanTaskComplete200ResponseAllOfData {
+        struct Body: Encodable, Sendable {
+            let selfRating: Int
+        }
+        return try await api.request(
+            PlanEndpoints.markTaskComplete(taskId: taskId),
+            body: Body(selfRating: selfRating)
+        )
+    }
 }
 
 // MARK: - Recalibration Growth DTOs
@@ -63,13 +80,21 @@ struct RecalibrationResultsDTO: Decodable, Sendable {
 private enum PlanEndpoints: Endpoint {
     case status
     case current
+    case markTaskComplete(taskId: String)
 
     var path: String {
         switch self {
         case .status:  return "/plan/status"
         case .current: return "/plan/current"
+        case .markTaskComplete(let taskId):
+            return "/plan/tasks/\(taskId)/complete"
         }
     }
 
-    var method: HTTPMethod { .get }
+    var method: HTTPMethod {
+        switch self {
+        case .status, .current:    return .get
+        case .markTaskComplete:    return .post
+        }
+    }
 }

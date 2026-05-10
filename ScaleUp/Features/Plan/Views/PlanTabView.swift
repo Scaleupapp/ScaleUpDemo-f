@@ -7,6 +7,9 @@ struct PlanTabView: View {
     @State private var presentedQuizId: String?
     @State private var presentedContentId: String?
     @State private var presentedContentType: String?
+    @State private var presentedManualTask: APIPlanTask?
+    @State private var presentedInterviewScenario: String?
+    @State private var presentingCompetitionHub = false
 
     var body: some View {
         NavigationStack {
@@ -51,6 +54,47 @@ struct PlanTabView: View {
             }
         )) { wrap in
             contentSheetView(contentId: wrap.value, contentType: presentedContentType)
+        }
+        .sheet(item: $presentedManualTask) { task in
+            ManualCompletionSheet(task: task) {
+                Task { await viewModel.load() }
+            }
+        }
+        .sheet(item: Binding(
+            get: { presentedInterviewScenario.map(IdentifiedString.init) },
+            set: { presentedInterviewScenario = $0?.value }
+        )) { wrap in
+            interviewSheet(scenario: wrap.value)
+        }
+        .sheet(isPresented: $presentingCompetitionHub) {
+            NavigationStack {
+                CompetitionHubView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") { presentingCompetitionHub = false }
+                        }
+                    }
+            }
+        }
+    }
+
+    // MARK: - Interview Sheet
+
+    /// Presents the interview flow for an `.aiInterview` plan task.
+    /// `InterviewSessionView` requires an `InterviewViewModel`; the user picks
+    /// the scenario inside `InterviewSetupView`. The scenario string from the
+    /// plan task payload is forwarded for analytics; routing it directly into
+    /// the setup view requires a richer InterviewViewModel API not present in
+    /// Phase 3. See report for follow-up.
+    @ViewBuilder
+    private func interviewSheet(scenario: String) -> some View {
+        NavigationStack {
+            InterviewSessionView(viewModel: InterviewViewModel())
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Close") { presentedInterviewScenario = nil }
+                    }
+                }
         }
     }
 
@@ -196,9 +240,14 @@ struct PlanTabView: View {
                 presentedContentType = task.payload?["contentType"]?.value as? String
                 presentedContentId = contentId
             }
-        case .aiInterview, .externalLink, .competition, .manual:
-            // Phase 3+ task types — no nav wired yet. Analytics event still fires.
-            break
+        case .aiInterview:
+            let scenario = (task.payload?["scenario"]?.value as? String)
+                ?? "placement_behavioral"
+            presentedInterviewScenario = scenario
+        case .competition:
+            presentingCompetitionHub = true
+        case .manual, .externalLink:
+            presentedManualTask = task
         }
     }
 
@@ -287,4 +336,14 @@ struct PlanTabView: View {
 private struct IdentifiedString: Identifiable {
     let value: String
     var id: String { value }
+}
+
+// MARK: - APIPlanTask Identifiable
+
+/// Generated `APIPlanTask` doesn't conform to `Identifiable`. We need it to
+/// drive `.sheet(item:)` for the manual completion flow. Conformance is
+/// declared here (rather than mutating the generated file) so regen doesn't
+/// blow it away.
+extension APIPlanTask: Identifiable {
+    public var id: String { taskId }
 }
