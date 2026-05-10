@@ -69,6 +69,33 @@ final class InterviewViewModel {
 
     private let service = InterviewService()
 
+    // MARK: - Init
+
+    init() {}
+
+    /// Convenience init used when the Plan tab seeds the interview type
+    /// from a task's `payload.scenario` string. Unknown scenarios fall
+    /// back to the default `selectedType` (`.behavioral`).
+    init(seedScenario: String?) {
+        if let scenario = seedScenario,
+           let mapped = Self.interviewType(forScenario: scenario) {
+            self.selectedType = mapped
+        }
+    }
+
+    /// Maps the backend scenario string to an `InterviewType` enum case.
+    /// Returns nil for unknown scenarios — caller falls back to the default.
+    private static func interviewType(forScenario s: String) -> InterviewType? {
+        switch s {
+        case "placement_behavioral", "behavioral": return .behavioral
+        case "placement_technical": return .placement_technical
+        case "placement_hr": return .placement_hr
+        case "mba_admissions": return .mba_admissions
+        case "case_study": return .case_study
+        default: return nil
+        }
+    }
+
     // MARK: - Setup Actions
 
     var canStart: Bool { !targetRole.trimmingCharacters(in: .whitespaces).isEmpty }

@@ -81,15 +81,13 @@ struct PlanTabView: View {
     // MARK: - Interview Sheet
 
     /// Presents the interview flow for an `.aiInterview` plan task.
-    /// `InterviewSessionView` requires an `InterviewViewModel`; the user picks
-    /// the scenario inside `InterviewSetupView`. The scenario string from the
-    /// plan task payload is forwarded for analytics; routing it directly into
-    /// the setup view requires a richer InterviewViewModel API not present in
-    /// Phase 3. See report for follow-up.
+    /// The scenario string from the plan task payload is seeded into the
+    /// `InterviewViewModel` so `InterviewSetupView` opens with the right
+    /// interview type pre-selected. Users can still change it in setup.
     @ViewBuilder
     private func interviewSheet(scenario: String) -> some View {
         NavigationStack {
-            InterviewSessionView(viewModel: InterviewViewModel())
+            InterviewSessionView(viewModel: InterviewViewModel(seedScenario: scenario))
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Close") { presentedInterviewScenario = nil }
