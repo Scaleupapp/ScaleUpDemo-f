@@ -129,6 +129,12 @@ struct HomeView: View {
                     .padding(.bottom, Spacing.sm)
                 }
 
+                // Plan generation banner — polls /plan/status; morphs to "ready" CTA
+                PlanGenerationBanner(onTapReady: {
+                    appState.selectedTab = .journey
+                })
+                .padding(.bottom, Spacing.sm)
+
                 // Diagnostic tune-up banner for existing users who haven't completed diagnostic
                 if appState.currentUser?.diagnosticComplete != true {
                     DiagnosticTuneUpBanner(
