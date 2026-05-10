@@ -12,12 +12,14 @@ public struct APIPlanWeeklyEntry: Codable, Hashable, Sendable {
     public var weekLabel: String
     public var totalHours: Double
     public var allocations: [APIPlanAllocation]
+    public var tasks: [APIPlanTask]?
 
-    public init(weekNumber: Int, weekLabel: String, totalHours: Double, allocations: [APIPlanAllocation]) {
+    public init(weekNumber: Int, weekLabel: String, totalHours: Double, allocations: [APIPlanAllocation], tasks: [APIPlanTask]? = nil) {
         self.weekNumber = weekNumber
         self.weekLabel = weekLabel
         self.totalHours = totalHours
         self.allocations = allocations
+        self.tasks = tasks
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
@@ -25,6 +27,7 @@ public struct APIPlanWeeklyEntry: Codable, Hashable, Sendable {
         case weekLabel
         case totalHours
         case allocations
+        case tasks
     }
 
     // Encodable protocol methods
@@ -35,6 +38,7 @@ public struct APIPlanWeeklyEntry: Codable, Hashable, Sendable {
         try container.encode(weekLabel, forKey: .weekLabel)
         try container.encode(totalHours, forKey: .totalHours)
         try container.encode(allocations, forKey: .allocations)
+        try container.encodeIfPresent(tasks, forKey: .tasks)
     }
 }
 
