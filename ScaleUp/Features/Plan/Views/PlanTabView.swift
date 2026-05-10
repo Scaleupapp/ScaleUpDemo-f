@@ -141,7 +141,7 @@ struct PlanTabView: View {
                     .padding(.horizontal, Spacing.lg)
                 }
 
-                heroCard(plan)
+                ObjectiveBriefCard(plan: plan)
                     .padding(.horizontal, Spacing.lg)
 
                 if !plan.weeklySchedule.isEmpty {
@@ -156,98 +156,6 @@ struct PlanTabView: View {
             }
             .padding(.top, Spacing.md)
         }
-    }
-
-    // MARK: - Hero Card
-
-    private func heroCard(_ plan: PlanDTO) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.md) {
-            // Eyebrow
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("YOUR PLAN")
-                    .font(Typography.micro)
-                    .tracking(1.4)
-                    .foregroundStyle(ColorTokens.gold)
-            }
-
-            Text(plan.planHeadline)
-                .font(Typography.displayMedium)
-                .foregroundStyle(ColorTokens.textPrimary)
-                .lineSpacing(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            // Stats row: bigger numbers, dividers between, animated count-in.
-            HStack(spacing: 0) {
-                statPill(value: "\(plan.totalWeeks)", label: plan.totalWeeks == 1 ? "week" : "weeks", icon: "calendar")
-                Divider().frame(height: 36).background(ColorTokens.border)
-                statPill(value: String(format: "%.0fh", plan.totalHours), label: "total", icon: "clock")
-                Divider().frame(height: 36).background(ColorTokens.border)
-                statPill(value: "\(plan.milestoneCount)", label: plan.milestoneCount == 1 ? "milestone" : "milestones", icon: "flag.fill")
-            }
-            .padding(.top, Spacing.xs)
-
-            if let buffer = plan.bufferRecommendation, !buffer.isEmpty {
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.gold.opacity(0.8))
-                        .padding(.top, 2)
-                    Text(buffer)
-                        .font(Typography.bodySmall)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .lineSpacing(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.top, Spacing.xs)
-            }
-        }
-        .padding(Spacing.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            ZStack {
-                // Layered gradient: dark teal base + gold glow top-right
-                RoundedRectangle(cornerRadius: CornerRadius.large)
-                    .fill(ColorTokens.surface)
-
-                RoundedRectangle(cornerRadius: CornerRadius.large)
-                    .fill(
-                        RadialGradient(
-                            colors: [ColorTokens.gold.opacity(0.18), .clear],
-                            center: .topTrailing,
-                            startRadius: 10,
-                            endRadius: 220
-                        )
-                    )
-
-                RoundedRectangle(cornerRadius: CornerRadius.large)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [ColorTokens.gold.opacity(0.45), ColorTokens.gold.opacity(0.10)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            }
-        )
-    }
-
-    private func statPill(value: String, label: String, icon: String) -> some View {
-        VStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(ColorTokens.gold.opacity(0.85))
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(ColorTokens.textPrimary)
-            Text(label)
-                .font(Typography.caption)
-                .foregroundStyle(ColorTokens.textTertiary)
-        }
-        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Weekly Schedule Section
