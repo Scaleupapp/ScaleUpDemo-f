@@ -122,7 +122,7 @@ struct TopicMasterySection: View {
                 trendIcon(t.trend.rawValue)
             }
             if t.scoreHistory.count >= 2 {
-                Sparkline(scores: t.scoreHistory.map { $0.score })
+                Sparkline(scores: t.scoreHistory.compactMap { $0.score })
                     .frame(height: 32)
             }
         }

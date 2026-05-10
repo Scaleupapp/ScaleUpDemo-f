@@ -10,6 +10,8 @@ struct PlanTabView: View {
     @State private var presentedManualTask: APIPlanTask?
     @State private var presentedInterviewScenario: String?
     @State private var presentingCompetitionHub = false
+    @State private var presentingDiagnostic = false
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         NavigationStack {
@@ -36,6 +38,10 @@ struct PlanTabView: View {
         .task {
             await viewModel.load()
             await recalVM.checkEligibility()
+        }
+        .fullScreenCover(isPresented: $presentingDiagnostic) {
+            DiagnosticContainerView()
+                .environment(appState)
         }
         .fullScreenCover(isPresented: $showRecalibration) {
             RecalibrationOrchestrationView(viewModel: recalVM)
