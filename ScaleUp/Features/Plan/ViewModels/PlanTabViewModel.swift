@@ -2,12 +2,21 @@ import Foundation
 
 // MARK: - Load State
 
+enum PlanErrorKind {
+    /// User hasn't finished the diagnostic yet — plan can't be built.
+    case diagnosticIncomplete
+    /// Backend tried to build the plan and failed (planGenerationStatus = "failed").
+    case planGenerationFailed
+    /// Network / decode / unexpected error while loading.
+    case loadFailed
+}
+
 enum PlanLoadState {
     case idle
     case loading
     case ready(PlanDTO)
     case generating
-    case error(String)
+    case error(PlanErrorKind, String)
 }
 
 // MARK: - Plan Tab View Model
@@ -36,13 +45,13 @@ final class PlanTabViewModel {
             case "generating", "pending":
                 loadState = .generating
             case "failed":
-                loadState = .error("We couldn't build your plan. Tap Retry to try again.")
+                loadState = .error(.planGenerationFailed, "Something went wrong building your plan. Tap below to try again.")
                 AnalyticsService.shared.track(.planGenerationFallback(reason: "server_failed"))
             default:
                 loadState = .generating
             }
         } catch {
-            loadState = .error(error.localizedDescription)
+            loadState = .error(.loadFailed, error.localizedDescription)
         }
     }
 

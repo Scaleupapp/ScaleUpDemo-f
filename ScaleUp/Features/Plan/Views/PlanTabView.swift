@@ -20,8 +20,8 @@ struct PlanTabView: View {
                 case .ready(let plan):
                     planContent(plan)
 
-                case .error(let message):
-                    errorState(message)
+                case .error(let kind, let message):
+                    errorState(kind: kind, message: message)
                 }
             }
             .navigationTitle("My Plan")
@@ -65,8 +65,19 @@ struct PlanTabView: View {
 
     // MARK: - Error State
 
-    private func errorState(_ message: String) -> some View {
-        VStack(spacing: Spacing.lg) {
+    private func errorState(kind: PlanErrorKind, message: String) -> some View {
+        let (title, subtitle): (String, String) = {
+            switch kind {
+            case .diagnosticIncomplete:
+                return ("Your plan isn't ready yet", "Finish your diagnostic and we'll build it for you in a minute.")
+            case .planGenerationFailed:
+                return ("We couldn't build your plan", "Something went wrong on our end. Tap below to try again.")
+            case .loadFailed:
+                return ("Couldn't load your plan", "Check your connection and try again.")
+            }
+        }()
+
+        return VStack(spacing: Spacing.lg) {
             Spacer()
 
             // Soft warm glow behind icon — less alarming than a yellow triangle
@@ -83,12 +94,12 @@ struct PlanTabView: View {
             }
 
             VStack(spacing: Spacing.xs) {
-                Text("Your plan isn't ready yet")
+                Text(title)
                     .font(Typography.titleLarge)
                     .foregroundStyle(ColorTokens.textPrimary)
                     .multilineTextAlignment(.center)
 
-                Text("Finish your diagnostic and we'll build it for you in a minute.")
+                Text(subtitle)
                     .font(Typography.body)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
@@ -97,7 +108,7 @@ struct PlanTabView: View {
                     .padding(.horizontal, Spacing.xl)
             }
 
-            // Tiny diagnostic note for advanced users
+            // Tiny diagnostic note for advanced users / loadFailed details
             if !message.isEmpty {
                 Text(message)
                     .font(Typography.caption)
