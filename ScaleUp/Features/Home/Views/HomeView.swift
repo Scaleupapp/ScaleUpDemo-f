@@ -173,16 +173,9 @@ struct HomeView: View {
                         .padding(.bottom, Spacing.md)
                 }
 
-                // Daily Challenge — compact card(s) for objective-matching challenges
-                if !myObjectiveChallenges.isEmpty {
-                    VStack(spacing: 8) {
-                        ForEach(myObjectiveChallenges) { challenge in
-                            homeChallengeCard(challenge)
-                        }
-                    }
-                    .padding(.horizontal, Spacing.lg)
-                    .padding(.bottom, Spacing.sm)
-                }
+                // Daily Challenge section removed — moving to a future Analyze tab.
+                // Helper `homeChallengeCard` + `myObjectiveChallenges` left in place
+                // so the Live Events block below (which uses adjacent code) keeps working.
 
                 // Joined Live Events
                 if !joinedLiveEvents.isEmpty {
@@ -216,11 +209,8 @@ struct HomeView: View {
                     }
                 }
 
-                // Quiz section
-                if !quizViewModel.availableQuizzes.isEmpty {
-                    quizSection
-                        .padding(.bottom, Spacing.sm)
-                }
+                // Quiz section removed from Home — moving to a future Analyze tab.
+                // Plan tab is now the entry point for quizzes via task rows.
 
                 // Content sections
                 if hasAnyContent {
