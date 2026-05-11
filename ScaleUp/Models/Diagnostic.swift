@@ -6,12 +6,32 @@ struct DiagnosticAttemptStart: Decodable, Sendable {
     let attemptId: String
     let flowType: String          // "new_user" | "recalibration"
     let competenciesToAssess: [DiagnosticCompetency]
+    /// True when the backend already has self-ratings for every competency
+    /// (captured during onboarding). Lets the client skip its self-rating
+    /// screen instead of asking the user the same question twice.
+    let selfRatingsAlreadyProvided: Bool?
 }
 
 struct DiagnosticCompetency: Decodable, Identifiable, Hashable, Sendable {
     var id: String { name }
-    let name: String
+    let name: String                // canonical slug, e.g. "quantitative-reasoning"
+    let displayName: String?        // human-readable, e.g. "Quantitative Reasoning"
     let questionCap: Int
+    /// Self-rating echoed from onboarding (canonical raw value: "novice" | …).
+    /// Optional for older backends that didn't include it.
+    let selfRating: String?
+
+    /// Human-readable label for UI surfaces; falls back to a title-cased
+    /// version of the canonical slug when the backend didn't provide one.
+    var displayLabel: String {
+        if let displayName, !displayName.isEmpty { return displayName }
+        return name
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
 }
 
 struct DiagnosticQuestion: Decodable, Identifiable, Sendable {

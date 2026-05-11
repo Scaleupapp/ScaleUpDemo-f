@@ -113,7 +113,7 @@ struct DiagnosticSelfRatingView: View {
     private func competencyCard(_ competency: DiagnosticCompetency) -> some View {
         VStack(alignment: .leading, spacing: Spacing.md) {
             // Topic header
-            Text(competency.name)
+            Text(competency.displayLabel)
                 .font(Typography.titleMedium)
                 .foregroundStyle(ColorTokens.textPrimary)
 

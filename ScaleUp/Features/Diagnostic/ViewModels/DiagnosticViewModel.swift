@@ -94,11 +94,30 @@ final class DiagnosticViewModel {
             attemptId = attempt.attemptId
             competencies = attempt.competenciesToAssess
             totalQuestionsTarget = competencies.map(\.questionCap).reduce(0, +)
-            // Plan 3a Task 11: seed per-topic progress so the chip renders.
             totalTopicCount = competencies.count
             currentTopicIndex = 0
-            currentTopicName = competencies.first?.name ?? ""
+            currentTopicName = competencies.first?.displayLabel ?? ""
             startedAt = Date()
+
+            // If onboarding already collected self-ratings for every competency,
+            // skip the diagnostic's self-rating screen — it's the same question
+            // the user just answered. Auto-submit the prefilled ratings so pool
+            // assembly runs server-side, then drop into the quiz.
+            if attempt.selfRatingsAlreadyProvided == true {
+                for c in competencies {
+                    if let raw = c.selfRating, let rating = DiagnosticSelfRating(rawValue: raw) {
+                        selfRatings[c.name] = rating
+                    }
+                }
+                AnalyticsService.shared.track(.diagnosticStarted(flowType: attempt.flowType))
+                // Stay in .preparing while submitSelfRatings assembles the pool,
+                // then it flips us to .quiz on its own.
+                phase = .preparing
+                isLoading = false
+                await submitSelfRatings()
+                return
+            }
+
             phase = .selfRating
             AnalyticsService.shared.track(.diagnosticStarted(flowType: attempt.flowType))
         } catch APIError.conflictWithCode(let code, let message, let resumeStep) {
