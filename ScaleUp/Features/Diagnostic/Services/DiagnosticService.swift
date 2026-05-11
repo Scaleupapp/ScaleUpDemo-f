@@ -98,6 +98,29 @@ struct DiagnosticResultDTO: Decodable, Sendable {
     let strongestMoment: String?
     let stretchMoment: String?
     let missedDifficulties: [String]?
+    let timeTakenSec: Int?
+    let avgSecPerQuestion: Int?
+    let correctCount: Int?
+    let totalCount: Int?
+}
+
+struct DiagnosticAccuracyBucketDTO: Decodable, Sendable {
+    let correct: Int
+    let total: Int
+    let pct: Int?
+}
+
+struct DiagnosticAccuracyByDifficultyDTO: Decodable, Sendable {
+    let easy: DiagnosticAccuracyBucketDTO
+    let medium: DiagnosticAccuracyBucketDTO
+    let hard: DiagnosticAccuracyBucketDTO
+}
+
+struct DiagnosticStatsDTO: Decodable, Sendable {
+    let totalQuestions: Int
+    let totalTimeSec: Int
+    let avgSecPerQuestion: Int
+    let accuracyByDifficulty: DiagnosticAccuracyByDifficultyDTO
 }
 
 struct DiagnosticResultsResponse: Decodable, Sendable {
@@ -107,4 +130,5 @@ struct DiagnosticResultsResponse: Decodable, Sendable {
     let insights: DiagnosticInsightsDTO?
     let planStatus: String
     let results: [DiagnosticResultDTO]
+    let stats: DiagnosticStatsDTO?
 }

@@ -16,6 +16,24 @@ struct DiagnosticTopicResult: Identifiable, Hashable {
     let strongestMoment: String?
     let stretchMoment: String?
     let missedDifficulties: [String]
+    let timeTakenSec: Int
+    let correctCount: Int
+    let totalCount: Int
+
+    /// Pretty-printed time spent on this topic ("2m 14s" or "47s").
+    var timeTakenLabel: String {
+        let total = max(0, timeTakenSec)
+        if total >= 60 {
+            let m = total / 60
+            let s = total % 60
+            return s == 0 ? "\(m)m" : "\(m)m \(s)s"
+        }
+        return "\(total)s"
+    }
+    var accuracyPct: Int? {
+        guard totalCount > 0 else { return nil }
+        return Int(round(100.0 * Double(correctCount) / Double(totalCount)))
+    }
 }
 
 extension DiagnosticTopicResult {
@@ -100,6 +118,39 @@ struct CalibrationCard: View {
                 }
             }
             .padding(.top, 4)
+
+            // Legend. Without this the row of half-filled bars is gibberish —
+            // user can't tell what the dots mean or why some bars are green
+            // vs gold. Pairs the dot styles to copy.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Circle().fill(ColorTokens.textSecondary).frame(width: 8, height: 8)
+                    Text("Your self-rating")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                HStack(spacing: 8) {
+                    Circle().fill(ColorTokens.gold).frame(width: 10, height: 10)
+                    Text("Measured score")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                HStack(spacing: 12) {
+                    HStack(spacing: 4) {
+                        Capsule().fill(ColorTokens.warning.opacity(0.6)).frame(width: 14, height: 4)
+                        Text("Overestimated")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                    HStack(spacing: 4) {
+                        Capsule().fill(ColorTokens.info.opacity(0.6)).frame(width: 14, height: 4)
+                        Text("Underestimated")
+                            .font(Typography.caption)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+            }
+            .padding(.top, Spacing.sm)
         }
         .padding(Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -183,10 +234,15 @@ struct TopicComparisonBarCard: View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
             header
             bars
-            Text(topic.topicTakeaway)
-                .font(Typography.bodySmall)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .lineSpacing(3)
+            if topic.totalCount > 0 {
+                topicStatsStrip
+            }
+            if !topic.topicTakeaway.isEmpty {
+                Text(topic.topicTakeaway)
+                    .font(Typography.bodySmall)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .lineSpacing(3)
+            }
             if isExpanded { expandedDetail }
         }
         .padding(Spacing.md)
@@ -219,6 +275,30 @@ struct TopicComparisonBarCard: View {
         HStack(alignment: .center, spacing: Spacing.md) {
             barView(label: "Your rating", widthRatio: animatedSelf, color: ColorTokens.textSecondary, scoreText: topic.selfRating)
             barView(label: "Measured", widthRatio: animatedMeasured, color: topic.classColor, scoreText: "\(displayedScore)")
+        }
+    }
+
+    /// Per-topic stat strip: correct/total, time spent, accuracy %. Gives the
+    /// user something concrete beyond the abstract "Familiar vs 33" framing.
+    private var topicStatsStrip: some View {
+        HStack(spacing: Spacing.lg) {
+            statChip(icon: "checkmark.circle", text: "\(topic.correctCount)/\(topic.totalCount) right")
+            statChip(icon: "clock", text: topic.timeTakenLabel)
+            if let pct = topic.accuracyPct {
+                statChip(icon: "percent", text: "\(pct)% acc")
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    private func statChip(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(ColorTokens.textTertiary)
+            Text(text)
+                .font(Typography.caption)
+                .foregroundStyle(ColorTokens.textSecondary)
         }
     }
 

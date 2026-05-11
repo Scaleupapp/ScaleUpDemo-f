@@ -11,6 +11,7 @@ final class DiagnosticResultsViewModel: ObservableObject {
     @Published private(set) var planHeadline: String = ""
     @Published private(set) var topics: [DiagnosticTopicResult] = []
     @Published private(set) var overallScore: Int = 0
+    @Published private(set) var stats: DiagnosticStatsDTO? = nil
     @Published var showShareSheet: Bool = false
     @Published var shareImage: UIImage? = nil
 
@@ -39,6 +40,7 @@ final class DiagnosticResultsViewModel: ObservableObject {
             do {
                 let resp = try await service.getResults(attemptId: attemptId)
                 if (resp.insightsStatus == "completed" || resp.insightsStatus == "fallback"), let i = resp.insights {
+                    self.stats = resp.stats
                     apply(results: resp.results, insights: i)
                     let latency = attempts * 1000
                     if resp.insightsStatus == "fallback" {
@@ -101,7 +103,10 @@ final class DiagnosticResultsViewModel: ObservableObject {
                 topicTakeaway: insights.topicTakeaways[canonical] ?? "",
                 strongestMoment: r.strongestMoment,
                 stretchMoment: r.stretchMoment,
-                missedDifficulties: r.missedDifficulties ?? []
+                missedDifficulties: r.missedDifficulties ?? [],
+                timeTakenSec: r.timeTakenSec ?? 0,
+                correctCount: r.correctCount ?? 0,
+                totalCount: r.totalCount ?? r.questionsAsked
             )
         }
     }
