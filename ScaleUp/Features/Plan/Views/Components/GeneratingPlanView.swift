@@ -93,7 +93,7 @@ struct GeneratingPlanView: View {
                 }
             }
 
-            Text("Usually takes about 45 seconds")
+            Text("This usually takes a minute or two")
                 .font(Typography.caption)
                 .foregroundStyle(ColorTokens.textTertiary)
 

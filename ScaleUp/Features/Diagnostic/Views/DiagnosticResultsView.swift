@@ -79,7 +79,10 @@ struct DiagnosticResultsView: View {
                     }
                 }
 
-                replayDisclosure.padding(.horizontal, Spacing.lg)
+                // Replay disclosure is hidden until the per-question playback
+                // surface ships — showing the empty "loads here" stub was
+                // shipping a TODO into production. Reinstate once the data
+                // pipeline + per-question view exist.
                 planPreview.padding(.horizontal, Spacing.lg)
                 seePlanButton
                     .padding(.horizontal, Spacing.lg)
@@ -125,7 +128,7 @@ struct DiagnosticResultsView: View {
                 .lineSpacing(3)
             HStack {
                 Image(systemName: "hourglass").foregroundStyle(ColorTokens.gold)
-                Text("Your full plan is brewing — usually ~45s")
+                Text("Your full plan is brewing — usually a minute or two")
                     .font(Typography.caption)
                     .foregroundStyle(ColorTokens.textTertiary)
             }

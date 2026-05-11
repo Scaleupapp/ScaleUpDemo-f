@@ -64,14 +64,34 @@ final class DiagnosticResultsViewModel: ObservableObject {
         planHeadline = insights.planHeadline
 
         let wellCount = results.filter { $0.calibrationClass == "well-calibrated" }.count
-        calibrationSummary = "Well-calibrated on \(wellCount) of \(results.count) topics"
+        let overCount = results.filter { $0.calibrationClass == "over-confident" }.count
+        let underCount = results.filter { $0.calibrationClass == "under-confident" }.count
+        // When every topic is over- or under-confident the old "0 of 7 topics"
+        // copy was technically right but completely useless. Lead with the
+        // pattern we actually see in the data instead.
+        if wellCount > 0 {
+            calibrationSummary = "Well-calibrated on \(wellCount) of \(results.count) topics"
+        } else if overCount >= underCount && overCount > 0 {
+            calibrationSummary = "Overrated yourself on \(overCount) of \(results.count) topics"
+        } else if underCount > 0 {
+            calibrationSummary = "Underrated yourself on \(underCount) of \(results.count) topics"
+        } else {
+            calibrationSummary = "\(results.count) topics assessed"
+        }
         overallScore = results.isEmpty ? 0 : results.map { $0.score }.reduce(0, +) / results.count
 
         topics = results.map { r in
             let canonical = r.canonicalCompetency ?? r.competency
+            // Backend now sends displayName, but older builds and odd taxonomy
+            // misses can still leave us with the kebab-case competency. Fall
+            // back to title-casing the canonical slug so we never render
+            // "analytical-writing-assessment" as a heading.
+            let display = r.displayName?.isEmpty == false
+                ? r.displayName!
+                : (r.competency.contains("-") ? titleCase(r.competency) : r.competency)
             return DiagnosticTopicResult(
                 canonicalName: canonical,
-                displayName: r.displayName ?? r.competency,
+                displayName: display,
                 selfRating: r.selfRating ?? "Familiar",
                 measuredScore: r.score,
                 measuredBand: r.band,
@@ -100,5 +120,14 @@ final class DiagnosticResultsViewModel: ObservableObject {
 
     func onResultsShared(destination: String?) {
         MixpanelDiagnostic.diagnosticResultsShared(attemptId: attemptId, shareDestination: destination)
+    }
+
+    private func titleCase(_ slug: String) -> String {
+        slug
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
     }
 }
