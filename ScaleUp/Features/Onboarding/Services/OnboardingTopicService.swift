@@ -23,6 +23,18 @@ struct OnboardingCompletePayload: Codable, Sendable {
     let topicSelfRatings: [String: String]   // canonicalName → proficiency raw
     let syllabusId: String?
 
+    // Wire format must match backend's REQUIRED_FIELDS in
+    // onboardingController.completeOnboarding (weeklyCommitHours +
+    // preferredLearningStyle). We keep the friendlier Swift names but
+    // serialize to the backend's expected keys.
+    enum CodingKeys: String, CodingKey {
+        case firstName, lastName, educationEntries, workEntries
+        case objectiveType, specifics, timeline, currentLevel
+        case weeklyHours = "weeklyCommitHours"
+        case learningStyle = "preferredLearningStyle"
+        case topicsOfInterest, topicSelfRatings, syllabusId
+    }
+
     struct EducationPayload: Codable, Sendable {
         let degree: String
         let institution: String
