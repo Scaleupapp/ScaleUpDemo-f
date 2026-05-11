@@ -35,7 +35,9 @@ struct InterestsStepView: View {
                     selectionCounter
                     chipFlow
                     customAddRow
-                    nextButton
+                    // No body CTA here — the bottom-bar Continue advances
+                    // through the rating substep then to completion. Two
+                    // buttons doing similar-looking things confused users.
                     Spacer().frame(height: Spacing.xxl)
                 }
             }
@@ -48,12 +50,20 @@ struct InterestsStepView: View {
         }
     }
 
+    private var headingSubtitle: String {
+        let remaining = max(0, 8 - viewModel.totalSelectedCount)
+        if remaining == 0 {
+            return "All 8 slots used — tap a topic to swap it out."
+        }
+        return "We've suggested \(viewModel.suggestedTopics.count) — tap to remove or add up to \(remaining) more."
+    }
+
     private var heading: some View {
         VStack(spacing: Spacing.sm) {
             Text("Pick your interests")
                 .font(Typography.displayMedium)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text("We've suggested \(viewModel.suggestedTopics.count) — tap to remove or add up to \(8 - viewModel.totalSelectedCount) more.")
+            Text(headingSubtitle)
                 .font(Typography.bodySmall)
                 .foregroundStyle(ColorTokens.textSecondary)
                 .multilineTextAlignment(.center)
@@ -117,22 +127,6 @@ struct InterestsStepView: View {
         .padding(.horizontal, Spacing.lg)
     }
 
-    private var nextButton: some View {
-        Button {
-            Haptics.success()
-            withAnimation(.easeInOut(duration: 0.25)) { viewModel.isOnRatingSubStep = true }
-        } label: {
-            Text("Next — rate your level")
-                .font(Typography.bodyBold)
-                .foregroundStyle(ColorTokens.buttonPrimaryText)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(viewModel.canProceedFromTopicSelection ? ColorTokens.gold : ColorTokens.gold.opacity(0.4))
-                .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-        }
-        .disabled(!viewModel.canProceedFromTopicSelection)
-        .padding(.horizontal, Spacing.lg)
-    }
 }
 
 private struct TopicInfoSheet: View {
@@ -166,8 +160,13 @@ struct FlowLayout: Layout {
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let result = arrange(proposal: proposal, subviews: subviews)
+        let widthCap: CGFloat = (proposal.width ?? bounds.width)
+        let childProposal = ProposedViewSize(width: widthCap, height: nil)
         for (index, position) in result.positions.enumerated() {
-            subviews[index].place(at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y), proposal: .unspecified)
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+                proposal: childProposal
+            )
         }
     }
 
@@ -179,8 +178,17 @@ struct FlowLayout: Layout {
         var lineHeight: CGFloat = 0
         var maxX: CGFloat = 0
 
+        // Cap each chip's intrinsic width at the container width so a single
+        // long topic ("emerging technologies in product management") doesn't
+        // spill off the side of the screen. Subviews wrap their text within
+        // the cap. Previously we passed `.unspecified` and any chip wider than
+        // the screen drew over the edges.
+        let widthCap = maxWidth.isFinite ? maxWidth : .infinity
+        let childProposal = ProposedViewSize(width: widthCap, height: nil)
+
         for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
+            var size = subview.sizeThatFits(childProposal)
+            if size.width > widthCap { size.width = widthCap }
 
             if currentX + size.width > maxWidth && currentX > 0 {
                 currentX = 0

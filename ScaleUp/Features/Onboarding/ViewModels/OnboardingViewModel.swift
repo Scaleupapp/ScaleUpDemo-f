@@ -236,6 +236,18 @@ final class OnboardingViewModel {
         isLoading = false
         isMovingForward = true
 
+        // Step 5 has two sub-screens (topic selection → self-rating). The
+        // bottom-bar Continue should slide between them before advancing
+        // to step 6. Previously Continue skipped the rating substep entirely
+        // and dumped users straight on the completion screen.
+        if currentStep == 5 && !isOnRatingSubStep {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isOnRatingSubStep = true
+            }
+            Haptics.success()
+            return
+        }
+
         if currentStep < 6 {
             currentStep += 1
         }
@@ -249,6 +261,15 @@ final class OnboardingViewModel {
     }
 
     func back() {
+        // Symmetric with next(): if we're on the rating substep, Back should
+        // first return to topic selection rather than jumping out of step 5.
+        if currentStep == 5 && isOnRatingSubStep {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                isOnRatingSubStep = false
+            }
+            isMovingForward = false
+            return
+        }
         if currentStep > 1 {
             isMovingForward = false
             currentStep -= 1
