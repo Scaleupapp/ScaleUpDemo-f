@@ -12,10 +12,23 @@ struct Dashboard: Codable, Sendable {
     let journey: JourneyOverview?
     let upcomingMilestones: [Milestone]?
     let weeklyGrowth: WeeklyGrowth?
+    let planProgress: PlanProgressDTO?
 
     var knowledgeSnapshot: [KnowledgeSnapshot] {
         knowledgeProfile?.topicMastery ?? []
     }
+}
+
+// MARK: - Plan Progress (Phase-7-follow-up)
+// Source-of-truth for Home's objective progress bar: fraction of plan tasks
+// (across ALL weeks of the active plan) that are complete. Replaces the
+// legacy Journey contentConsumed/contentAssigned ratio for users on the new
+// task-based plan system. `nil` when user has no active plan.
+
+struct PlanProgressDTO: Codable, Sendable {
+    let tasksTotal: Int
+    let tasksComplete: Int
+    let fraction: Double
 }
 
 // MARK: - Objective

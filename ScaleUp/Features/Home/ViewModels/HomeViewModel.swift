@@ -101,6 +101,12 @@ final class HomeViewModel {
     }
 
     var objectiveProgressFraction: Double {
+        // Phase-7-follow-up: prefer plan-based progress (covers all 6 task types)
+        // over the legacy Journey content-only fraction. Fall back to journey
+        // when no plan exists (e.g., diagnostic skipped).
+        if let planProgress = dashboard?.planProgress {
+            return min(1, max(0, planProgress.fraction))
+        }
         guard let progress = journey?.progress else { return 0 }
         let assigned = progress.contentAssigned ?? 0
         let consumed = progress.contentConsumed ?? 0
@@ -287,7 +293,8 @@ final class HomeViewModel {
             objectives: nil,
             journey: nil,
             upcomingMilestones: nil,
-            weeklyGrowth: nil
+            weeklyGrowth: nil,
+            planProgress: nil
         )
     }
 }

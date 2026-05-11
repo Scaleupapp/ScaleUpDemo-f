@@ -205,7 +205,8 @@ final class ProgressViewModel {
             objectives: nil,
             journey: nil,
             upcomingMilestones: nil,
-            weeklyGrowth: WeeklyGrowth(contentDelta: 2, contentThisWeek: 7, contentLastWeek: 5)
+            weeklyGrowth: WeeklyGrowth(contentDelta: 2, contentThisWeek: 7, contentLastWeek: 5),
+            planProgress: nil
         )
 
         gapContent = [
