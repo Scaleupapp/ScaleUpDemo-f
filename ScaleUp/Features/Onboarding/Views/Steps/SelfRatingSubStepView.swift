@@ -15,7 +15,6 @@ struct SelfRatingSubStepView: View {
                 ForEach(topicsToRate) { topic in
                     topicCard(topic)
                 }
-                finishButton
                 Spacer().frame(height: Spacing.xxl)
             }
             .padding(.horizontal, Spacing.lg)
@@ -106,21 +105,4 @@ struct SelfRatingSubStepView: View {
         .buttonStyle(.plain)
     }
 
-    private var finishButton: some View {
-        Button {
-            Task { await viewModel.submitOnboarding() }
-        } label: {
-            HStack {
-                if viewModel.isLoading { ProgressView().tint(ColorTokens.buttonPrimaryText) }
-                Text("Start my diagnostic")
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.buttonPrimaryText)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(viewModel.canFinishStep5 ? ColorTokens.gold : ColorTokens.gold.opacity(0.4))
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
-        }
-        .disabled(!viewModel.canFinishStep5 || viewModel.isLoading)
-    }
 }

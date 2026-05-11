@@ -259,6 +259,12 @@ final class OnboardingViewModel {
         await submitOnboarding()
     }
 
+    /// Submits onboarding and then routes to home (bypassing the diagnostic).
+    /// Used by the "Skip for now" affordance on the completion screen.
+    func completeOnboardingAndSkipDiagnostic() async {
+        await submitOnboarding(routeAfter: .skipDiagnostic)
+    }
+
     // MARK: - Add/Remove Education & Work
 
     func addEducation() {
@@ -339,9 +345,22 @@ final class OnboardingViewModel {
 
     // MARK: - Submit Onboarding
 
-    func submitOnboarding() async {
+    enum PostSubmitRoute {
+        case startDiagnostic
+        case skipDiagnostic
+    }
+
+    /// Coarse progress indicator surfaced to the UI during `submitOnboarding`.
+    /// The submit request can take a few seconds (LLM-backed taxonomy save +
+    /// downstream side-effects). Without staged copy users see a spinner and
+    /// assume the app is frozen — which is exactly what just happened in
+    /// Build 116. Keep messages short.
+    var submitProgressMessage: String = ""
+
+    func submitOnboarding(routeAfter: PostSubmitRoute = .startDiagnostic) async {
         isLoading = true
-        defer { isLoading = false }
+        submitProgressMessage = "Saving your preferences…"
+        defer { isLoading = false; submitProgressMessage = "" }
 
         let topicsPayload: [OnboardingCompletePayload.TopicSelectionPayload] = allDisplayableTopics
             .filter { selectedCanonicals.contains($0.canonicalName) }
@@ -382,13 +401,20 @@ final class OnboardingViewModel {
 
         do {
             let service = await makeTopicService()
+            submitProgressMessage = "Building your learning plan…"
             _ = try await service.submitOnboarding(payload)
+            submitProgressMessage = "Almost there…"
             AnalyticsService.shared.track(.onboardingSelfRatingCompleted(
                 topicCount: ratings.count,
                 ratingDistribution: ratingDistribution(from: ratings)
             ))
             AnalyticsService.shared.track(.onboardingCompleted)
-            appState?.completeOnboarding()
+            switch routeAfter {
+            case .startDiagnostic:
+                appState?.completeOnboarding()
+            case .skipDiagnostic:
+                appState?.skipDiagnostic()
+            }
         } catch {
             errorMessage = (error as? OnboardingTopicError)?.errorDescription ?? error.localizedDescription
         }

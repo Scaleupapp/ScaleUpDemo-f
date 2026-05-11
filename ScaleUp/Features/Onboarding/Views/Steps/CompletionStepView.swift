@@ -9,12 +9,38 @@ struct CompletionStepView: View {
     @State private var buttonOpacity: Double = 0
 
     var body: some View {
+        ZStack {
+            mainContent
+            if viewModel.isLoading {
+                progressOverlay
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isLoading)
+        .alert("Couldn't finish setup", isPresented: errorBinding, actions: {
+            Button("Try again") {
+                Task { await viewModel.completeOnboarding() }
+            }
+            Button("Cancel", role: .cancel) { viewModel.errorMessage = nil }
+        }, message: {
+            Text(viewModel.errorMessage ?? "Please try again.")
+        })
+    }
+
+    private var errorBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil && !viewModel.isLoading },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )
+    }
+
+    // MARK: - Main content
+
+    private var mainContent: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Gold glow
             ZStack {
-                // Ambient glow
                 RadialGradient(
                     colors: [ColorTokens.gold.opacity(0.15), .clear],
                     center: .center,
@@ -24,7 +50,6 @@ struct CompletionStepView: View {
                 .frame(width: 320, height: 320)
                 .opacity(glowOpacity)
 
-                // Checkmark circle
                 ZStack {
                     Circle()
                         .fill(ColorTokens.gold.opacity(0.1))
@@ -43,13 +68,12 @@ struct CompletionStepView: View {
 
             Spacer().frame(height: Spacing.xl)
 
-            // Text
             VStack(spacing: Spacing.sm) {
                 Text("You're all set!")
                     .font(Typography.displayMedium)
                     .foregroundStyle(ColorTokens.textPrimary)
 
-                Text("Your personalized learning\njourney begins now")
+                Text("Take a short diagnostic so we can\ntailor your plan, or jump in now.")
                     .font(Typography.body)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .multilineTextAlignment(.center)
@@ -58,7 +82,6 @@ struct CompletionStepView: View {
 
             Spacer().frame(height: Spacing.lg)
 
-            // Summary
             if let objective = viewModel.selectedObjective {
                 VStack(spacing: Spacing.sm) {
                     summaryRow(icon: "target", label: "Goal", value: objective.displayName)
@@ -74,36 +97,67 @@ struct CompletionStepView: View {
 
             Spacer()
 
-            // CTA
-            PrimaryButton(title: "Start Learning", icon: "arrow.right", isLoading: viewModel.isLoading) {
-                Task { await viewModel.completeOnboarding() }
+            // Primary: take the diagnostic (recommended, gold).
+            // Secondary: skip to home — still completes onboarding on the server
+            // so the user doesn't get sent back into the flow next launch.
+            VStack(spacing: Spacing.sm) {
+                PrimaryButton(title: "Start assessment", icon: "arrow.right", isLoading: false) {
+                    Task { await viewModel.completeOnboarding() }
+                }
+
+                Button {
+                    Task { await viewModel.completeOnboardingAndSkipDiagnostic() }
+                } label: {
+                    Text("Skip assessment for now")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .padding(.vertical, 8)
+                }
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.xxl)
             .opacity(buttonOpacity)
+            .disabled(viewModel.isLoading)
         }
         .onAppear {
-            // Checkmark bounce in
             withAnimation(.spring(response: 0.6, dampingFraction: 0.5).delay(0.1)) {
                 checkmarkScale = 1
             }
-
-            // Glow
-            withAnimation(.easeOut(duration: 0.8).delay(0.3)) {
-                glowOpacity = 1
-            }
-
-            // Text
-            withAnimation(.easeOut(duration: 0.5).delay(0.5)) {
-                textOpacity = 1
-            }
-
-            // Button
-            withAnimation(.easeOut(duration: 0.5).delay(0.8)) {
-                buttonOpacity = 1
-            }
-
+            withAnimation(.easeOut(duration: 0.8).delay(0.3)) { glowOpacity = 1 }
+            withAnimation(.easeOut(duration: 0.5).delay(0.5)) { textOpacity = 1 }
+            withAnimation(.easeOut(duration: 0.5).delay(0.8)) { buttonOpacity = 1 }
             Haptics.success()
+        }
+    }
+
+    // MARK: - Progress overlay
+
+    /// Full-screen overlay shown while the onboarding submit is in flight.
+    /// Crucial UX: without it the user taps the button, sees nothing change,
+    /// and assumes the app is broken (see Build 116 feedback).
+    private var progressOverlay: some View {
+        ZStack {
+            ColorTokens.background.opacity(0.92).ignoresSafeArea()
+            VStack(spacing: Spacing.lg) {
+                ZStack {
+                    Circle()
+                        .stroke(ColorTokens.gold.opacity(0.15), lineWidth: 4)
+                        .frame(width: 64, height: 64)
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: ColorTokens.gold))
+                        .scaleEffect(1.4)
+                }
+                VStack(spacing: 6) {
+                    Text(viewModel.submitProgressMessage.isEmpty ? "Setting up…" : viewModel.submitProgressMessage)
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("This usually takes a few seconds.")
+                        .font(Typography.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                .multilineTextAlignment(.center)
+            }
+            .padding(Spacing.xl)
         }
     }
 
