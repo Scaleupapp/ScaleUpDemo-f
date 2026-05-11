@@ -151,7 +151,15 @@ final class DiagnosticViewModel {
             try await service.submitSelfRating(attemptId: attemptId, ratings: ratingsPayload)
             AnalyticsService.shared.track(.diagnosticSelfRatingSubmitted(attemptId: attemptId))
             await loadNextQuestion()
-            phase = .quiz
+            // Only enter .quiz once we actually have a question to show. If the
+            // backend's pool build was slow (LLM round-trip) or the request
+            // failed, stay in .preparing — the loading screen has copy that
+            // makes it clear we're working on it. Previously we flipped to
+            // .quiz unconditionally and the user saw a blank stage with just
+            // "Question 1 of N" and no prompt.
+            if currentQuestion != nil {
+                phase = .quiz
+            }
         } catch {
             errorMessage = error.localizedDescription
             phase = .error

@@ -19,6 +19,12 @@ struct DiagnosticQuestionView: View {
                     if let question = viewModel.currentQuestion {
                         questionCard(question)
                         optionsList(question)
+                    } else {
+                        // Backend pool assembly can take a few seconds (LLM
+                        // round-trip). Without this fallback the user saw the
+                        // top chip + a blank scroll area and concluded the
+                        // app was broken.
+                        loadingPlaceholder
                     }
                     Spacer().frame(height: 100)
                 }
@@ -97,6 +103,28 @@ struct DiagnosticQuestionView: View {
         }
         .frame(height: 5)
         .padding(.horizontal, Spacing.lg)
+    }
+
+    // MARK: - Loading Placeholder
+
+    private var loadingPlaceholder: some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer().frame(height: 60)
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: ColorTokens.gold))
+                .scaleEffect(1.4)
+            VStack(spacing: 4) {
+                Text("Loading your next question…")
+                    .font(Typography.bodyBold)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("Sit tight — this takes a few seconds.")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
+            .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, Spacing.xl)
     }
 
     // MARK: - Question Card
