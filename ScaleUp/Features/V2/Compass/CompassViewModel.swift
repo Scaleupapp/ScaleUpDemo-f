@@ -123,10 +123,26 @@ final class CompassViewModel {
     /// Used for fallback if backend is unreachable. Keeps UX coherent during outages.
     private var allowFallback = true
 
-    func startConversation() {
+    func startConversation(context: V2Tab = .compass) {
         guard messages.isEmpty else { return }
-        Task { await callGreeting() }
+        Task { await callGreeting(context: context) }
     }
+
+    /// Archive the current thread server-side and clear UI so the user starts fresh.
+    func resetConversation() async {
+        do {
+            struct EmptyBody: Codable {}
+            let _: V2APIResponse<ResetResponse> = try await V2APIClient.shared.post("/compass/reset", body: EmptyBody())
+        } catch {
+            // Even if the server fails, clear locally — the next message starts a new thread.
+        }
+        messages.removeAll()
+        activeConfig = nil
+        showSuggestions = false
+        startConversation()
+    }
+
+    private struct ResetResponse: Codable { let reset: Bool? }
 
     func handleSuggestion(_ chip: String) {
         let userMsg = chip
@@ -153,21 +169,45 @@ final class CompassViewModel {
         Task { await callConversation(message: userText) }
     }
 
-    func startConfiguredAction() {
+    /// Route into the v1 detail screen for whichever action the user configured.
+    /// Caller passes the shared V2TaskRouter so the sheet appears at the root.
+    func startConfiguredAction(router: V2TaskRouter) {
         guard let config = activeConfig else { return }
-        messages.append(.init(role: .compass, text: "Starting now…"))
+        let taskType: String
+        switch config.mode {
+        case "quiz_config":      taskType = "quiz"
+        case "interview_config": taskType = "interview"
+        default:                 taskType = "manual"
+        }
+        // For Compass-launched flows we don't have a quizId / interviewId yet —
+        // the v1 endpoint will mint one. iOS routes via the unavailable→sheet path
+        // until the configurator's start hook returns the id. For interview, the
+        // setup view picks scenario itself.
+        router.open(
+            taskType: taskType,
+            payload: nil,
+            title: config.fields.first?.value ?? "Starting now"
+        )
+        messages.append(.init(role: .compass, text: "Opening now…"))
         activeConfig = nil
-        // TODO: route to detail page via deep link or NavigationPath
-        // For now, the iOS host should observe startConfiguredAction and navigate.
-        _ = config.startEndpoint
     }
 
     // MARK: - Backend calls
 
-    private func callGreeting() async {
+    private func callGreeting(context: V2Tab = .compass) async {
         isWaitingForReply = true
         defer { isWaitingForReply = false }
-        let body = CompassRequest(mode: "greeting", payload: CompassPayload(message: nil, history: nil))
+        let contextHint: String?
+        switch context {
+        case .home:    contextHint = "User is on the Home tab. Offer to help pick today's task."
+        case .learn:   contextHint = "User is on Learn (content browse). Offer to find content."
+        case .you:     contextHint = "User is on You (their progress). Offer to summarize the week."
+        case .compass: contextHint = nil
+        }
+        let body = CompassRequest(
+            mode: "greeting",
+            payload: CompassPayload(message: contextHint, history: nil)
+        )
         do {
             let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post("/compass", body: body)
             let msg = resp.data.output.message ?? "Hi — what do you want to do?"

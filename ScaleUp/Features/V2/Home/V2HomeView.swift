@@ -14,6 +14,7 @@ import SwiftUI
 /// No carousels, no stacking banners, no streak flames on Home.
 struct V2HomeView: View {
     @State private var vm = V2HomeViewModel()
+    @Environment(V2TaskRouter.self) private var taskRouter
 
     var body: some View {
         NavigationStack {
@@ -209,7 +210,7 @@ struct V2HomeView: View {
             .padding(.bottom, 20)
 
             Button {
-                // TODO: route into task
+                taskRouter.open(taskType: hero.taskType, payload: hero.payload, title: hero.title)
             } label: {
                 HStack {
                     Image(systemName: "play.fill")
@@ -293,36 +294,41 @@ struct V2HomeView: View {
                 .padding(.bottom, 4)
 
             ForEach(items) { item in
-                HStack(spacing: 14) {
-                    Text(item.icon)
-                        .font(.system(size: 22))
-                        .frame(width: 40, height: 40)
-                        .background(ColorTokens.surfaceElevated.opacity(0.6))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                Button {
+                    taskRouter.open(taskType: item.taskType, payload: item.payload, title: item.title)
+                } label: {
+                    HStack(spacing: 14) {
+                        Text(item.icon)
+                            .font(.system(size: 22))
+                            .frame(width: 40, height: 40)
+                            .background(ColorTokens.surfaceElevated.opacity(0.6))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.title)
-                            .font(V2Theme.bodyMedium)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                        Text("\(item.durationMin) min · \(item.reason)")
-                            .font(.system(size: 11))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title)
+                                .font(V2Theme.bodyMedium)
+                                .foregroundStyle(ColorTokens.textPrimary)
+                            Text("\(item.durationMin) min · \(item.reason)")
+                                .font(.system(size: 11))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12))
                             .foregroundStyle(ColorTokens.textTertiary)
                     }
-
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.textTertiary)
+                    .padding(14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .fill(ColorTokens.surface)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+                    )
                 }
-                .padding(14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(ColorTokens.surface)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                )
+                .buttonStyle(.plain)
             }
         }
     }

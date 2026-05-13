@@ -6,6 +6,7 @@ import SwiftUI
 /// floating above the tab bar on every tab.
 struct V2MainTabView: View {
     @State private var nav = V2NavState()
+    @State private var taskRouter = V2TaskRouter()
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -37,10 +38,14 @@ struct V2MainTabView: View {
             }
         }
         .environment(nav)
+        .environment(taskRouter)
         .sheet(isPresented: $nav.compassSheetOpen) {
-            V2CompassSheetView()
+            V2CompassSheetView(currentScreen: nav.selectedTab)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .sheet(item: Binding(get: { taskRouter.route }, set: { taskRouter.route = $0 })) { route in
+            V2TaskSheet(route: route) { taskRouter.close() }
         }
     }
 }

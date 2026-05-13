@@ -140,8 +140,11 @@ struct V2CalibrationInsightsView: View {
         }
 
         Button {
-            // Land on home with v2 flag still on
-            V2FeatureFlag.shared.v2OnboardingEnabled = false
+            // Tell the v1 bridge (or v2 onboarding flow) that the user wants
+            // to exit. v2 main tab IA remains active (V2FeatureFlag.isEnabled).
+            // The v2OnboardingEnabled flag stays where it is so testers don't
+            // get bounced back into the v2 onboarding next time.
+            NotificationCenter.default.post(name: .v2OnboardingExit, object: nil)
         } label: {
             Text("Got it — let's start")
                 .font(.system(size: 15, weight: .semibold))

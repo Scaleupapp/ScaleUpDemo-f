@@ -9,7 +9,12 @@ import SwiftUI
 ///   4. User taps Start → routes to the detail page (quiz session, interview, etc.)
 struct V2CompassView: View {
     @State private var vm = CompassViewModel()
+    @Environment(V2TaskRouter.self) private var taskRouter
     @FocusState private var inputFocused: Bool
+
+    /// Optional — the tab the user was on when Compass was launched via FAB.
+    /// Used for mode-detection ("I can see you're on Home").
+    var launchContext: V2Tab = .compass
 
     var body: some View {
         NavigationStack {
@@ -32,7 +37,7 @@ struct V2CompassView: View {
 
                             if let config = vm.activeConfig {
                                 ConfigCardView(config: config) {
-                                    vm.startConfiguredAction()
+                                    vm.startConfiguredAction(router: taskRouter)
                                 }
                                 .id("config")
                             }
@@ -51,7 +56,17 @@ struct V2CompassView: View {
             }
             .background(ColorTokens.background.ignoresSafeArea())
         }
-        .onAppear { vm.startConversation() }
+        .onAppear { vm.startConversation(context: launchContext) }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await vm.resetConversation() }
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+        }
     }
 
     // MARK: - Header
@@ -142,8 +157,9 @@ struct V2CompassView: View {
 // MARK: - Compass sheet (FAB-triggered)
 
 struct V2CompassSheetView: View {
+    var currentScreen: V2Tab = .home
     var body: some View {
-        V2CompassView()
+        V2CompassView(launchContext: currentScreen)
     }
 }
 

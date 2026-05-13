@@ -6,9 +6,10 @@ import SwiftUI
 /// Below-fold: collapsed sections (Plan, Progress, Objectives, Compass, Content, Settings).
 struct V2YouView: View {
     @State private var vm = V2YouViewModel()
+    @State private var path = NavigationPath()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 if vm.isLoading && vm.data == nil {
                     loadingState
@@ -19,6 +20,9 @@ struct V2YouView: View {
                 }
             }
             .background(ColorTokens.background.ignoresSafeArea())
+            .navigationDestination(for: V2YouRoute.self) { route in
+                V2YouSectionDestination(route: route)
+            }
         }
         .task { await vm.load() }
         .refreshable { await vm.load() }
@@ -158,42 +162,47 @@ struct V2YouView: View {
 
     private func sectionsList(weekProgress: V2YouOverview.WeekProgressBlock?, isCreator: Bool, isAdmin: Bool) -> some View {
         VStack(spacing: 0) {
-            sectionRow(icon: "📊", label: "My progress & analytics")
+            sectionRow(icon: "📊", label: "My progress & analytics", route: .progress)
             if let wp = weekProgress {
-                sectionRow(icon: "🎯", label: "My plan", meta: "Week \(wp.week)")
+                sectionRow(icon: "🎯", label: "My plan", meta: "Week \(wp.week)", route: .plan)
             } else {
-                sectionRow(icon: "🎯", label: "My plan")
+                sectionRow(icon: "🎯", label: "My plan", route: .plan)
             }
-            sectionRow(icon: "🎓", label: "My objectives", meta: "1 active")
-            sectionRow(icon: "🧭", label: "My Compass activity")
-            sectionRow(icon: "📺", label: "My content")
-            sectionRow(icon: "⚙️", label: "Settings")
+            sectionRow(icon: "🎓", label: "My objectives", meta: "1 active", route: .objectives)
+            sectionRow(icon: "🧭", label: "My Compass activity", route: .compassHistory)
+            sectionRow(icon: "📺", label: "My content", route: .content)
+            sectionRow(icon: "⚙️", label: "Settings", route: .settings)
             if isCreator {
-                sectionRow(icon: "🎬", label: "Creator hub")
+                sectionRow(icon: "🎬", label: "Creator hub", route: .creator)
             }
             if isAdmin {
-                sectionRow(icon: "🛠️", label: "Admin tools")
+                sectionRow(icon: "🛠️", label: "Admin tools", route: .admin)
             }
         }
     }
 
-    private func sectionRow(icon: String, label: String, meta: String? = nil) -> some View {
-        HStack(spacing: 14) {
-            Text(icon).font(.system(size: 14))
-                .frame(width: 32, height: 32)
-                .background(ColorTokens.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            Text(label).font(V2Theme.bodyMedium).foregroundStyle(ColorTokens.textPrimary)
-            Spacer()
-            if let meta = meta {
-                Text(meta).font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+    private func sectionRow(icon: String, label: String, meta: String? = nil, route: V2YouRoute) -> some View {
+        Button {
+            path.append(route)
+        } label: {
+            HStack(spacing: 14) {
+                Text(icon).font(.system(size: 14))
+                    .frame(width: 32, height: 32)
+                    .background(ColorTokens.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                Text(label).font(V2Theme.bodyMedium).foregroundStyle(ColorTokens.textPrimary)
+                Spacer()
+                if let meta = meta {
+                    Text(meta).font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+                }
+                Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
             }
-            Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+            .padding(.vertical, 14)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+            }
         }
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
-        }
+        .buttonStyle(.plain)
     }
 
     private var creatorCTA: some View {

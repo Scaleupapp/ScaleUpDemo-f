@@ -80,6 +80,8 @@ struct SettingsView: View {
 
     // MARK: - App
 
+    @State private var v2Flag = V2FeatureFlag.shared
+
     private var appSection: some View {
         Section {
             settingsInfoRow(icon: "paintbrush.fill", title: "Appearance", value: "Dark")
@@ -88,13 +90,12 @@ struct SettingsView: View {
                 NotificationSettingsView()
             }
 
-            // v2 experiment opt-in — testers flip this to try the new tab structure.
-            // Defaults OFF; flipping it ON reveals the v2 redesign on the next app launch
-            // (or on the next return to the home tab). Roll back any time by toggling OFF.
+            // v2 experiment opt-in — observing v2Flag (an @Observable) so this
+            // row's "On / Off" status updates immediately when the toggle flips.
             settingsNavigableRow(
                 icon: "sparkles",
                 title: "Try v2 redesign",
-                value: V2FeatureFlag.shared.isEnabled ? "On" : "Off"
+                value: v2Flag.isEnabled ? "On" : "Off"
             ) {
                 V2DevSettingsView()
             }

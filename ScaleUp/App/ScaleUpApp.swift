@@ -83,11 +83,24 @@ struct ScaleUpApp: App {
                 .trackScreen("phone_verification")
 
         case .onboarding(let step):
-            OnboardingContainerView(initialStep: step, appState: appState)
-                .transition(.opacity)
-                .trackScreen("onboarding_step_\(step)")
+            // v2 onboarding is opt-in via the v2OnboardingEnabled flag.
+            // Default OFF — testers flip it from Settings → Try v2 redesign.
+            if V2FeatureFlag.shared.v2OnboardingEnabled {
+                V2OnboardingFlowView()
+                    .transition(.opacity)
+                    .trackScreen("v2_onboarding")
+            } else {
+                OnboardingContainerView(initialStep: step, appState: appState)
+                    .transition(.opacity)
+                    .trackScreen("onboarding_step_\(step)")
+            }
 
         case .diagnostic:
+            // When v2 onboarding is on, the diagnostic still uses v1's pool +
+            // adaptive engine — but on completion we hand off to the v2
+            // calibration insights screen (V2CalibrationInsightsView) instead
+            // of v1's results. DiagnosticContainerView reads the flag and
+            // routes accordingly.
             DiagnosticContainerView()
                 .transition(.opacity)
                 .trackScreen("diagnostic")

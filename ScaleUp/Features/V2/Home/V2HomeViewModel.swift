@@ -41,6 +41,7 @@ struct V2HomeData: Codable {
         let durationMin: Int
         let difficulty: String
         let primaryTopic: String?
+        let payload: Payload?
         let impact: Impact?
 
         var id: String { taskId ?? UUID().uuidString }
@@ -68,9 +69,18 @@ struct V2HomeData: Codable {
         let title: String
         let durationMin: Int
         let primaryTopic: String?
+        let payload: Payload?
         let reason: String
 
         var id: String { taskId ?? UUID().uuidString }
+    }
+
+    /// Routing payload — tells iOS which v1 detail screen to push.
+    struct Payload: Codable {
+        let contentId: String?
+        let quizId: String?
+        let interviewId: String?
+        let url: String?
     }
 }
 
@@ -137,6 +147,7 @@ final class V2HomeViewModel {
                 durationMin: 22,
                 difficulty: "hard",
                 primaryTopic: "dp",
+                payload: nil,
                 impact: .init(
                     expectedFrom: 30,
                     expectedTo: 36,
@@ -148,15 +159,15 @@ final class V2HomeViewModel {
             alternatives: [
                 .init(taskId: "alt-1", taskType: "quiz", icon: "🧠",
                       title: "Quick quiz · Last week's funnel topics",
-                      durationMin: 5, primaryTopic: "funnel",
+                      durationMin: 5, primaryTopic: "funnel", payload: nil,
                       reason: "Quick win to warm up"),
                 .init(taskId: "alt-2", taskType: "interview", icon: "🎙️",
                       title: "Practice behavioral interview",
-                      durationMin: 30, primaryTopic: "behavioral",
+                      durationMin: 30, primaryTopic: "behavioral", payload: nil,
                       reason: "For Google L4 · you're ready"),
                 .init(taskId: "alt-3", taskType: "notes_create", icon: "📝",
                       title: "Recap your Week 2 notes",
-                      durationMin: 10, primaryTopic: "review",
+                      durationMin: 10, primaryTopic: "review", payload: nil,
                       reason: "Spaced repetition due"),
             ],
             fallback: nil,
