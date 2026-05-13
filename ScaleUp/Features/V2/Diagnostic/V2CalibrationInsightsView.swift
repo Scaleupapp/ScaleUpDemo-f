@@ -5,8 +5,9 @@ import SwiftUI
 /// Honest mirror — you-said-vs-you-actually + behavioral patterns + trajectory + top 3 actions.
 /// Fetches from GET /api/v2/diagnostic/:attemptId/insights.
 struct V2CalibrationInsightsView: View {
-    @State private var data: InsightsData = .sample
+    @State private var vm = V2CalibrationInsightsViewModel()
     @Binding var path: NavigationPath
+    var attemptId: String?
 
     var body: some View {
         ScrollView {
@@ -23,102 +24,176 @@ struct V2CalibrationInsightsView: View {
                     .font(V2Theme.body).foregroundStyle(ColorTokens.textSecondary)
                     .padding(.top, 6).padding(.bottom, 20)
 
-                // Baseline readiness
-                VStack(spacing: 4) {
-                    Text("Your baseline readiness".uppercased())
-                        .font(.system(size: 10, weight: .semibold)).tracking(1)
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text("\(data.baselineReadiness)")
-                            .font(.system(size: 64, weight: .bold))
-                            .foregroundStyle(ColorTokens.warning)
-                        Text("%").font(.system(size: 28, weight: .bold))
-                            .foregroundStyle(ColorTokens.warning.opacity(0.7))
-                    }
-                    Text(data.baselineSub)
-                        .font(V2Theme.small)
-                        .foregroundStyle(ColorTokens.textSecondary)
+                if vm.isLoading && vm.data == nil {
+                    loadingState.padding(.vertical, 40)
+                } else if let data = vm.data {
+                    loadedContent(data: data)
+                } else {
+                    errorState
                 }
-                .frame(maxWidth: .infinity)
-                .padding(24)
-                .background(RoundedRectangle(cornerRadius: 20).fill(V2Theme.heroGradient))
-                .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(ColorTokens.warning.opacity(0.3), lineWidth: 1))
-                .padding(.bottom, 18)
-
-                // Calibration gap
-                Text("Calibration gap").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
-                HStack(spacing: 10) {
-                    calibCol(label: "You said", entries: data.youSaid)
-                    calibCol(label: "You actually", entries: data.youActually, isActual: true)
-                }
-                .padding(.bottom, 18)
-
-                // Patterns
-                Text("Patterns we noticed").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(data.patterns, id: \.self) { p in
-                        HStack(alignment: .top, spacing: 8) {
-                            Text("·").foregroundStyle(ColorTokens.textTertiary)
-                            Text(p).font(V2Theme.body).foregroundStyle(ColorTokens.textPrimary)
-                        }
-                    }
-                }
-                .padding(14)
-                .v2Card(padding: 14)
-                .padding(.bottom, 18)
-
-                // Trajectory
-                Text("Where you'll be").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
-                VStack(spacing: 0) {
-                    trajRow(label: "TODAY", value: "\(data.trajectoryNow)%", color: ColorTokens.warning)
-                    trajDivider
-                    trajRow(label: "30 DAYS (AT 25 HRS/WK)", value: "\(data.trajectory30)%", color: ColorTokens.success)
-                    trajDivider
-                    trajRow(label: "WEEK 24 (TARGET)", value: "\(data.trajectoryTarget)%+", color: ColorTokens.gold)
-                }
-                .padding(.vertical, 4)
-                .v2Card(padding: 0)
-                .padding(.bottom, 18)
-
-                // Top 3 actions
-                Text("3 things that move you fastest").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
-                VStack(alignment: .leading, spacing: 12) {
-                    ForEach(Array(data.topActions.enumerated()), id: \.offset) { idx, action in
-                        HStack(alignment: .top, spacing: 8) {
-                            Text("\(idx + 1).").foregroundStyle(ColorTokens.gold).fontWeight(.bold)
-                            Text(action).font(V2Theme.body).foregroundStyle(ColorTokens.textPrimary)
-                        }
-                    }
-                }
-                .padding(14)
-                .v2Card(padding: 14)
-                .padding(.bottom, 22)
-
-                Button {
-                    // TODO: dismiss to home / set flag
-                    V2FeatureFlag.shared.v2OnboardingEnabled = false // exit onboarding for now
-                } label: {
-                    Text("Got it — let's start")
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 15)
-                        .background(ColorTokens.gold)
-                        .foregroundStyle(ColorTokens.background)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-
-                Text("Your plan is being personalized while you explore.")
-                    .font(V2Theme.small)
-                    .foregroundStyle(ColorTokens.textTertiary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 10)
             }
             .padding(.horizontal, V2Theme.pad)
             .padding(.top, 14)
             .padding(.bottom, 60)
         }
         .background(ColorTokens.background.ignoresSafeArea())
+        .task {
+            if let id = attemptId {
+                await vm.load(attemptId: id)
+            } else {
+                await vm.loadLatestAttempt()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func loadedContent(data: V2InsightsData) -> some View {
+        // Baseline readiness
+        VStack(spacing: 4) {
+            Text("Your baseline readiness".uppercased())
+                .font(.system(size: 10, weight: .semibold)).tracking(1)
+                .foregroundStyle(ColorTokens.textTertiary)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(data.baseline.readiness)")
+                    .font(.system(size: 64, weight: .bold))
+                    .foregroundStyle(baselineColor(data.baseline.readiness))
+                Text("%").font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(baselineColor(data.baseline.readiness).opacity(0.7))
+            }
+            Text(data.baseline.headline)
+                .font(V2Theme.small)
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(RoundedRectangle(cornerRadius: 20).fill(V2Theme.heroGradient))
+        .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(baselineColor(data.baseline.readiness).opacity(0.3), lineWidth: 1))
+        .padding(.bottom, 18)
+
+        // Calibration gap
+        Text("Calibration gap").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
+
+        if !data.calibration.summary.isEmpty {
+            Text(data.calibration.summary)
+                .font(V2Theme.small)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .padding(.bottom, 10)
+        }
+
+        HStack(spacing: 10) {
+            calibCol(label: "You said", entries: data.calibration.selfRated.map { ($0.topic, $0.level) })
+            calibCol(label: "You actually", entries: data.calibration.actual.map { ($0.topic, "\($0.scorePct)%") }, isActual: true)
+        }
+        .padding(.bottom, 18)
+
+        // Patterns
+        if !data.patterns.isEmpty {
+            Text("Patterns we noticed").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(data.patterns, id: \.self) { p in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("·").foregroundStyle(ColorTokens.textTertiary)
+                        Text(p).font(V2Theme.body).foregroundStyle(ColorTokens.textPrimary)
+                    }
+                }
+            }
+            .padding(14)
+            .v2Card(padding: 14)
+            .padding(.bottom, 18)
+        }
+
+        // Trajectory
+        if let traj = data.trajectory {
+            Text("Where you'll be").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
+            VStack(spacing: 0) {
+                trajRow(label: "TODAY", value: "\(traj.today)%", color: baselineColor(traj.today))
+                trajDivider
+                trajRow(label: "30 DAYS", value: "\(traj.in30Days)%", color: ColorTokens.success)
+                trajDivider
+                trajRow(label: "TARGET (WEEK \(traj.timelineWeeks))", value: "\(traj.atTargetDate)%", color: ColorTokens.gold)
+            }
+            .padding(.vertical, 4)
+            .v2Card(padding: 0)
+            .padding(.bottom, 18)
+        }
+
+        // Top 3 actions
+        if !data.topActions.isEmpty {
+            Text("3 things that move you fastest").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(data.topActions, id: \.rank) { action in
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("\(action.rank).").foregroundStyle(ColorTokens.gold).fontWeight(.bold)
+                            Text(action.title).font(V2Theme.body).foregroundStyle(ColorTokens.textPrimary)
+                        }
+                        Text(action.reason)
+                            .font(V2Theme.small)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .padding(.leading, 20)
+                    }
+                }
+            }
+            .padding(14)
+            .v2Card(padding: 14)
+            .padding(.bottom, 22)
+        }
+
+        Button {
+            // Land on home with v2 flag still on
+            V2FeatureFlag.shared.v2OnboardingEnabled = false
+        } label: {
+            Text("Got it — let's start")
+                .font(.system(size: 15, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 15)
+                .background(ColorTokens.gold)
+                .foregroundStyle(ColorTokens.background)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+
+        Text(data.planHeadline)
+            .font(V2Theme.small)
+            .foregroundStyle(ColorTokens.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 10)
+    }
+
+    // MARK: - States
+
+    private var loadingState: some View {
+        VStack(spacing: 14) {
+            ProgressView().tint(ColorTokens.gold)
+            Text("Generating your insights…")
+                .font(V2Theme.body)
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var errorState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "chart.bar.xaxis").font(.system(size: 30)).foregroundStyle(ColorTokens.warning)
+            Text(vm.error ?? "Couldn't load insights.")
+                .font(V2Theme.body)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+            if let id = vm.attemptId {
+                Button("Retry") { Task { await vm.load(attemptId: id) } }
+                    .buttonStyle(.bordered).tint(ColorTokens.gold)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+
+    // MARK: - Helpers
+
+    private func baselineColor(_ pct: Int) -> Color {
+        if pct < 40 { return ColorTokens.warning }
+        if pct < 65 { return ColorTokens.gold }
+        return ColorTokens.success
     }
 
     private func calibCol(label: String, entries: [(String, String)], isActual: Bool = false) -> some View {
@@ -161,38 +236,6 @@ struct V2CalibrationInsightsView: View {
     private var trajDivider: some View {
         Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
     }
-}
-
-private struct InsightsData {
-    let baselineReadiness: Int
-    let baselineSub: String
-    let youSaid: [(String, String)]
-    let youActually: [(String, String)]
-    let patterns: [String]
-    let trajectoryNow: Int
-    let trajectory30: Int
-    let trajectoryTarget: Int
-    let topActions: [String]
-
-    static let sample = InsightsData(
-        baselineReadiness: 32,
-        baselineSub: "For SDE @ Google in 6 months",
-        youSaid: [("DP", "Proficient"), ("Graphs", "Intermediate"), ("OS", "Beginner")],
-        youActually: [("DP", "30%"), ("Graphs", "42%"), ("OS", "68%")],
-        patterns: [
-            "You rush quantitative questions (18s avg, accuracy drops).",
-            "You over-think case questions (4 min avg, accuracy holds).",
-            "After 2 wrong in a row, your next 3 are 60% likely to be wrong.",
-        ],
-        trajectoryNow: 32,
-        trajectory30: 58,
-        trajectoryTarget: 80,
-        topActions: [
-            "Deliberate slowdown on quant — read fully before picking",
-            "Focus DP from foundation — your gap there is highest leverage",
-            "Active recovery technique when you get 2 wrong",
-        ]
-    )
 }
 
 #Preview {

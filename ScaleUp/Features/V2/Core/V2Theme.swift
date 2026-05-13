@@ -29,43 +29,33 @@ enum V2Theme {
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
-
-    // MARK: - Common modifiers
-
-    struct CardStyle: ViewModifier {
-        var padding: CGFloat = 18
-        func body(content: Content) -> some View {
-            content
-                .padding(padding)
-                .background(
-                    RoundedRectangle(cornerRadius: V2Theme.cardRadius, style: .continuous)
-                        .fill(V2Theme.cardBg)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: V2Theme.cardRadius, style: .continuous)
-                        .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                )
-        }
-    }
-
-    struct PillStyle: ViewModifier {
-        var color: Color = ColorTokens.gold
-        func body(content: Content) -> some View {
-            content
-                .font(.system(size: 10, weight: .bold))
-                .tracking(1.2)
-                .textCase(.uppercase)
-                .foregroundStyle(color)
-        }
-    }
 }
 
+// Note: We use View extensions instead of ViewModifier types because the
+// module has a top-level `Content` model struct that shadows ViewModifier's
+// `Content` associatedtype when ViewModifier types are nested in another type.
+
 extension View {
+    /// Wraps the view in a v2 card chrome (background + border + rounded corners).
     func v2Card(padding: CGFloat = 18) -> some View {
-        modifier(V2Theme.CardStyle(padding: padding))
+        self
+            .padding(padding)
+            .background(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius, style: .continuous)
+                    .fill(V2Theme.cardBg)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius, style: .continuous)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
     }
 
+    /// Styles text as a small-caps eyebrow above headings.
     func v2Eyebrow(_ color: Color = ColorTokens.gold) -> some View {
-        modifier(V2Theme.PillStyle(color: color))
+        self
+            .font(.system(size: 10, weight: .bold))
+            .tracking(1.2)
+            .textCase(.uppercase)
+            .foregroundStyle(color)
     }
 }

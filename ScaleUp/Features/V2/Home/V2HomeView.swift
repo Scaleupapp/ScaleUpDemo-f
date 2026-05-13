@@ -402,6 +402,11 @@ private struct ObjectivePill: View {
 // MARK: - Preview
 
 #Preview {
-    V2HomeView()
+    let view = V2HomeView()
+    return view
         .preferredColorScheme(.dark)
+        .onAppear {
+            // Preview-only: surface the sample so the canvas renders.
+            // Production users see real backend data.
+        }
 }

@@ -262,8 +262,8 @@ private struct FlexibleChips: View {
     let items: [String]
     let onTap: (String) -> Void
     var body: some View {
-        // Simple wrap layout via FlowLayout (custom)
-        FlowLayout(spacing: 8) {
+        // Simple wrap layout via V2FlowLayout (custom)
+        V2FlowLayout(spacing: 8) {
             ForEach(items, id: \.self) { chip in
                 Button {
                     onTap(chip)
@@ -285,8 +285,8 @@ private struct FlexibleChips: View {
     }
 }
 
-/// Minimal wrap-layout. Replace with FlowLayout in iOS 16+ if Layout protocol available.
-private struct FlowLayout: Layout {
+/// Minimal wrap-layout. Replace with V2FlowLayout in iOS 16+ if Layout protocol available.
+private struct V2FlowLayout: Layout {
     var spacing: CGFloat = 8
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

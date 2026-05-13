@@ -84,20 +84,37 @@ final class V2HomeViewModel {
     var error: String?
     var showAlternatives = false
 
+    /// Set to true only in #Preview / debug builds. Production renders genuine
+    /// empty/error states so testers see real personalized state.
+    var usePreviewSample = false
+
     func load() async {
+        if usePreviewSample {
+            data = Self.sampleData
+            return
+        }
         isLoading = true
         error = nil
         do {
             let response: V2APIResponse<V2HomeData> = try await V2APIClient.shared.get("/plan/today")
             data = response.data
-        } catch {
-            // Sample-data fallback so the UI renders during dev / before the user
-            // has an active objective + plan. Remove once the v2 backend is wired
-            // end-to-end on the test environment.
-            self.error = nil
-            self.data = Self.sampleData
+        } catch let e {
+            self.error = Self.friendlyError(e)
+            self.data = nil
         }
         isLoading = false
+    }
+
+    private static func friendlyError(_ e: Error) -> String {
+        if let apiErr = e as? V2APIError {
+            switch apiErr {
+            case .invalidURL:         return "Couldn't reach ScaleUp. Check your connection."
+            case .serverError(let s) where s == 401: return "Please sign in again."
+            case .serverError(let s): return "Server issue (\(s)). Try again in a moment."
+            case .decodingFailed:     return "We got a response but couldn't read it."
+            }
+        }
+        return "Couldn't load your day. Pull to refresh."
     }
 
     static var sampleData: V2HomeData {
