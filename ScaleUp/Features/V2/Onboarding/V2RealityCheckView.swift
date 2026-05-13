@@ -5,7 +5,10 @@ import SwiftUI
 /// Calls POST /api/v2/objective/required-time to fetch the honest hours/week
 /// for the user's objective + timeline + proficiency.
 struct V2RealityCheckView: View {
+    @Environment(V2OnboardingState.self) private var state
     @State private var vm = V2RealityCheckViewModel()
+    @State private var saving: Bool = false
+    @State private var saveError: String?
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -59,7 +62,7 @@ struct V2RealityCheckView: View {
                         sub: data.paths.commit.label,
                         isPrimary: true
                     ) {
-                        path.append(V2OnboardingRoute.calibrationInsights)
+                        Task { await pickPathAndSave(hours: data.paths.commit.hoursPerWeek) }
                     }
                     pathCard(
                         color: ColorTokens.warning,
@@ -67,7 +70,7 @@ struct V2RealityCheckView: View {
                         title: "I can do less — adjust",
                         sub: data.paths.lessTime.timelineLabel
                     ) {
-                        // TODO: open adjustment sheet
+                        Task { await pickPathAndSave(hours: data.paths.lessTime.hoursPerWeek) }
                     }
                     pathCard(
                         color: ColorTokens.gold,
@@ -75,7 +78,7 @@ struct V2RealityCheckView: View {
                         title: "I can do more — faster path",
                         sub: data.paths.moreTime.timelineLabel
                     ) {
-                        // TODO: confirm and proceed
+                        Task { await pickPathAndSave(hours: data.paths.moreTime.hoursPerWeek) }
                     }
                     if !data.warnings.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
@@ -108,11 +111,62 @@ struct V2RealityCheckView: View {
             .padding(.bottom, 40)
         }
         .background(ColorTokens.background.ignoresSafeArea())
+        .overlay {
+            if saving {
+                ZStack {
+                    Color.black.opacity(0.45).ignoresSafeArea()
+                    VStack(spacing: 14) {
+                        ProgressView().tint(ColorTokens.gold)
+                        Text("Saving your plan…")
+                            .font(V2Theme.body)
+                            .foregroundStyle(.white)
+                    }
+                    .padding(28)
+                    .background(RoundedRectangle(cornerRadius: 16).fill(ColorTokens.surface))
+                }
+            }
+        }
+        .alert("Couldn't save", isPresented: Binding(get: { saveError != nil }, set: { if !$0 { saveError = nil } })) {
+            Button("OK") { saveError = nil }
+        } message: {
+            Text(saveError ?? "")
+        }
         .task {
-            await vm.load()
+            // Call the v2 required-time endpoint with the user's specific objective
+            // captured in V2OnboardingState — falls back to defaults if not yet set.
+            let req = state.requiredTimeBody()
+            await vm.load(
+                objectiveType: req.objectiveType,
+                specifics: req.specifics,
+                timeline: req.timeline,
+                currentLevel: req.currentLevel
+            )
         }
         .refreshable {
-            await vm.load()
+            let req = state.requiredTimeBody()
+            await vm.load(
+                objectiveType: req.objectiveType,
+                specifics: req.specifics,
+                timeline: req.timeline,
+                currentLevel: req.currentLevel
+            )
+        }
+    }
+
+    /// User picked a commitment path → save the objective to v1 → route to insights.
+    /// On save failure we keep them on this screen with an alert and retry chance.
+    @MainActor
+    private func pickPathAndSave(hours: Int) async {
+        state.chosenWeeklyHours = hours
+        saving = true
+        defer { saving = false }
+        let body = state.objectiveSaveBody(weeklyCommitHours: hours)
+        do {
+            let id = try await V2ObjectiveSaveService.shared.saveObjective(body: body)
+            state.savedObjectiveId = id
+            path.append(V2OnboardingRoute.calibrationInsights)
+        } catch {
+            saveError = "We couldn't save your goal. Check your connection and try again."
         }
     }
 

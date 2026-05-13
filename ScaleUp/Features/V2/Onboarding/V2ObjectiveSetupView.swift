@@ -5,11 +5,10 @@ import SwiftUI
 /// Popular full-sentence suggestions tap to fill.
 /// Specifics use proper input fields with autocomplete chips.
 struct V2ObjectiveSetupView: View {
+    @Environment(V2OnboardingState.self) private var state
     @State private var goalText: String = "SDE placement at Google"
     @State private var matched: Bool = true
-    @State private var targetCompanies: [String] = ["Google", "Microsoft"]
     @State private var newCompany: String = ""
-    @State private var location: String = ""
     @Binding var path: NavigationPath
 
     var body: some View {
@@ -95,10 +94,14 @@ struct V2ObjectiveSetupView: View {
                         .font(.system(size: 10, weight: .semibold)).tracking(0.8)
                         .foregroundStyle(ColorTokens.textTertiary)
                     HStack(spacing: 6) {
-                        ForEach(targetCompanies, id: \.self) { company in
+                        ForEach(state.targetCompanies, id: \.self) { company in
                             HStack(spacing: 4) {
                                 Text(company).font(.system(size: 11, weight: .semibold))
-                                Text("×").foregroundStyle(ColorTokens.gold)
+                                Button {
+                                    state.targetCompanies.removeAll { $0 == company }
+                                } label: {
+                                    Text("×").foregroundStyle(ColorTokens.gold)
+                                }
                             }
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
@@ -109,6 +112,13 @@ struct V2ObjectiveSetupView: View {
                         TextField("type to add…", text: $newCompany)
                             .font(.system(size: 12))
                             .foregroundStyle(ColorTokens.textSecondary)
+                            .onSubmit {
+                                let trimmed = newCompany.trimmingCharacters(in: .whitespaces)
+                                if !trimmed.isEmpty {
+                                    state.targetCompanies.append(trimmed)
+                                    newCompany = ""
+                                }
+                            }
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
@@ -117,11 +127,17 @@ struct V2ObjectiveSetupView: View {
                 }
                 .padding(.bottom, 12)
 
-                specificsField(label: "Achieve it by", value: "August 2026 · ~6 months", dropdown: true)
-                specificsFieldInput(label: "Where are you right now?", placeholder: "Your college or workplace…", text: $location)
+                specificsField(label: "Achieve it by", value: "\(state.timeline.label) from now", dropdown: true)
+                specificsFieldInput(label: "Where are you right now?", placeholder: "Your college or workplace…", text: bindingFor(\.location))
                     .padding(.bottom, 22)
 
                 Button {
+                    // Persist the user's choices into shared state so Reality Check
+                    // and the save service can read them. We DON'T POST the objective
+                    // yet — that happens after the user picks a commitment path on
+                    // the Reality Check screen.
+                    state.rawGoalText = goalText
+                    captureGoalIntoState()
                     path.append(V2OnboardingRoute.realityCheck)
                 } label: {
                     HStack {
@@ -143,6 +159,49 @@ struct V2ObjectiveSetupView: View {
         }
         .background(ColorTokens.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            // Seed state defaults from the example so first-time tester
+            // sees a coherent flow even with no prior input.
+            if state.targetCompanies.isEmpty {
+                state.targetCompanies = ["Google", "Microsoft"]
+            }
+            if state.targetRole.isEmpty { state.targetRole = "SDE" }
+            captureGoalIntoState()
+        }
+    }
+
+    // Bridge for V2OnboardingState's `var` properties to TextField bindings.
+    private func bindingFor(_ keyPath: ReferenceWritableKeyPath<V2OnboardingState, String>) -> Binding<String> {
+        Binding(
+            get: { state[keyPath: keyPath] },
+            set: { state[keyPath: keyPath] = $0 }
+        )
+    }
+
+    /// Translate the user's free-text goal + chosen chips into the structured
+    /// V2OnboardingState fields. v0 keyword classifier — replaced by the LLM
+    /// extension flow when the user enters a truly novel goal.
+    private func captureGoalIntoState() {
+        let text = goalText.lowercased()
+        if text.contains("placement") || text.contains("campus") {
+            // v1 maps placement to interview_preparation
+            state.objectiveType = .interviewPreparation
+        } else if text.contains("switch") {
+            state.objectiveType = .careerSwitch
+        } else if text.contains("interview") {
+            state.objectiveType = .interviewPreparation
+        } else if text.contains("cat") || text.contains("upsc") || text.contains("gate") || text.contains("gmat") || text.contains("gre") {
+            state.objectiveType = .competitiveExam
+            // Pull the exam name out
+            for exam in ["cat", "upsc", "gate", "gmat", "gre"] where text.contains(exam) {
+                state.examName = exam.uppercased()
+            }
+        } else if text.contains("master") || text.contains("learn") {
+            state.objectiveType = .upskilling
+            state.targetSkill = state.rawGoalText.replacingOccurrences(of: "master ", with: "", options: .caseInsensitive)
+        } else {
+            state.objectiveType = .interviewPreparation
+        }
     }
 
     // MARK: - Helpers

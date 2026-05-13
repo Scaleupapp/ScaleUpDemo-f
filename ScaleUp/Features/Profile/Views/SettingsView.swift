@@ -87,6 +87,17 @@ struct SettingsView: View {
             settingsNavigableRow(icon: "bell.fill", title: "Notifications", value: "Enabled") {
                 NotificationSettingsView()
             }
+
+            // v2 experiment opt-in — testers flip this to try the new tab structure.
+            // Defaults OFF; flipping it ON reveals the v2 redesign on the next app launch
+            // (or on the next return to the home tab). Roll back any time by toggling OFF.
+            settingsNavigableRow(
+                icon: "sparkles",
+                title: "Try v2 redesign",
+                value: V2FeatureFlag.shared.isEnabled ? "On" : "Off"
+            ) {
+                V2DevSettingsView()
+            }
         } header: {
             sectionHeader("App")
         }
