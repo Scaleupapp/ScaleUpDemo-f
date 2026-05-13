@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ScaleUp v2 — UX Mockup</title>
+<style>
+  /* ---------- Reset & Base ---------- */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+    background: #0B0F1A;
+    color: #E8EDF7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+  /* ---------- Page Layout ---------- */
+  .page {
+    display: grid;
+    grid-template-columns: 240px 1fr 320px;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0B0F1A 0%, #0E1424 100%);
+  }
+  @media (max-width: 1100px) {
+    .page { grid-template-columns: 200px 1fr 280px; }
+  }
+
+  .topbar {
+    grid-column: 1 / -1;
+    padding: 18px 32px;
+    border-bottom: 1px solid #1A2238;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(11,15,26,0.95);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .topbar h1 span { color: #F5B642; }
+  .topbar .meta {
+    font-size: 12px;
+    color: #6B7895;
+  }
+
+  /* ---------- Left Sidebar (Screen List) ---------- */
+  .sidebar-left {
+    padding: 24px 16px;
+    border-right: 1px solid #1A2238;
+    overflow-y: auto;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+  }
+  .sidebar-left h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6B7895;
+    margin-bottom: 14px;
+    padding-left: 8px;
+  }
+  .screen-btn {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #8FA0BD;
+    text-align: left;
+    transition: all 0.15s ease;
+    margin-bottom: 2px;
+    font-weight: 500;
+  }
+  .screen-btn .num {
+    display: inline-block;
+    width: 22px;
+    color: #4A5878;
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+  }
+  .screen-btn:hover {
+    background: #141B2E;
+    color: #E8EDF7;
+  }
+  .screen-btn.active {
+    background: linear-gradient(90deg, rgba(245,182,66,0.12) 0%, rgba(245,182,66,0.04) 100%);
+    color: #F5B642;
+    border-left: 2px solid #F5B642;
+    padding-left: 10px;
+  }
+  .screen-btn.active .num { color: #F5B642; }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #4A5878;
+    margin: 20px 0 8px 8px;
+    font-weight: 600;
+  }
+
+  /* ---------- Phone Frame ---------- */
+  .phone-stage {
+    padding: 40px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: #000;
+    border-radius: 54px;
+    padding: 12px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px #2A3550, inset 0 0 0 2px #1A2238;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .phone::before {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 32px;
+    background: #000;
+    border-radius: 18px;
+    z-index: 10;
+  }
+  .phone-screen {
+    width: 100%;
+    height: 100%;
+    background: #0F1424;
+    border-radius: 42px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ---------- In-Phone: Status Bar ---------- */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 32px 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #E8EDF7;
+  }
+  .status-bar .icons { font-size: 11px; letter-spacing: 0.5px; }
+
+  /* ---------- In-Phone: Top Header ---------- */
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 16px;
+  }
+  .objective-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    padding: 7px 12px 7px 10px;
+    border-radius: 100px;
+    font-size: 12px;
+    color: #E8EDF7;
+    font-weight: 500;
+  }
+  .objective-pill .target { color: #F5B642; }
+  .objective-pill .caret { color: #6B7895; font-size: 9px; margin-left: 2px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .icon-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    position: relative;
+  }
+  .icon-btn .dot {
+    position: absolute;
+    top: 6px; right: 7px;
+    width: 7px; height: 7px;
+    background: #F5B642;
+    border-radius: 50%;
+    border: 2px solid #1A2238;
+  }
+
+  /* ---------- In-Phone: Content Area ---------- */
+  .content {
+    padding: 4px 20px 100px;
+    overflow-y: auto;
+    height: calc(100% - 130px);
+  }
+  .content::-webkit-scrollbar { width: 0; }
+
+  /* ---------- In-Phone: Tab Bar ---------- */
+  .tab-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 84px;
+    background: rgba(15,20,36,0.92);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid #1A2238;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 10px;
+  }
+  .tab {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: #6B7895;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .tab .tab-icon { font-size: 20px; line-height: 1; }
+  .tab.active { color: #F5B642; }
+
+  /* ---------- In-Phone: Compass FAB ---------- */
+  .fab {
+    position: absolute;
+    right: 18px;
+    bottom: 100px;
+    width: 54px; height: 54px;
+    background: linear-gradient(135deg, #F5B642 0%, #E89A1F 100%);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(245,182,66,0.4), 0 0 0 4px rgba(245,182,66,0.1);
+    font-size: 24px;
+    z-index: 20;
+  }
+
+  /* ---------- Common Components ---------- */
+  .h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+  .h2 { font-size: 20px; font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; }
+  .h3 { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .body { font-size: 14px; color: #C5D0E6; line-height: 1.5; }
+  .small { font-size: 12px; color: #8FA0BD; line-height: 1.45; }
+  .mute { color: #6B7895; }
+  .accent { color: #F5B642; }
+  .success { color: #3FB68B; }
+  .warning { color: #FF9F4E; }
+
+  .card {
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    border-radius: 16px;
+    padding: 18px;
+  }
+  .card-hero {
+    background: linear-gradient(155deg, #1A2440 0%, #161D33 100%);
+    border: 1px solid #2A3760;
+    border-radius: 20px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-hero::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 140px; height: 140px;
+    background: radial-gradient(circle, rgba(245,182,66,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: #F5B642;
+    color: #0B0F1A;
+    font-size: 14px; font-weight: 600;
+    padding: 13px 20px;
+    border-radius: 12px;
+    width: 100%;
+    transition: transform 0.1s;
+  }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: #1F2942;
+    color: #E8EDF7;
+    border: 1px solid #2A3550;
+    font-size: 14px; font-weight: 500;
+    padding: 12px 18px;
+    border-radius: 12px;
+    width: 100%;
+  }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #8FA0BD;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 0;
+  }
+  .btn-ghost:hover { color: #F5B642; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    color: #C5D0E6;
+    font-size: 12px; font-weight: 500;
+    padding: 7px 12px;
+    border-radius: 100px;
+  }
+  .chip.selected { background: rgba(245,182,66,0.12); border-color: #F5B642; color: #F5B642; }
+
+  .progress-bar {
+    width: 100%; height: 4px;
+    background: #1A2238;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-bar .fill { height: 100%; background: #F5B642; border-radius: 4px; }
+
+  /* Dotted week progress */
+  .week-dots { display: flex; gap: 5px; }
+  .week-dot { width: 8px; height: 8px; border-radius: 50%; background: #2A3550; }
+  .week-dot.done { background: #F5B642; }
+
+  /* Readiness Ring */
+  .ring-wrap {
+    position: relative;
+    width: 130px; height: 130px;
+    margin: 0 auto;
+  }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-track { fill: none; stroke: #1F2942; stroke-width: 9; }
+  .ring-fill { fill: none; stroke: #F5B642; stroke-width: 9; stroke-linecap: round; }
+  .ring-label {
+    position: absolute;
+    inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-label .pct { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; }
+  .ring-label .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: #6B7895; margin-top: 2px; }
+
+  /* MCQ option */
+  .mcq-option {
+    display: flex; align-items: center; gap: 12px;
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    padding: 14px 16px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #E8EDF7;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .mcq-option:hover { border-color: #2A3760; background: #161D33; }
+  .mcq-option.correct { border-color: #3FB68B; background: rgba(63,182,139,0.08); }
+  .mcq-option.wrong { border-color: #FF6B6B; background: rgba(255,107,107,0.06); }
+  .mcq-letter {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    background: #1F2942;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* Activity card (smaller, used in Home Expanded) */
+  .activity-row {
+    display: flex; align-items: center; gap: 14px;
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    padding: 14px 16px;
+    border-radius: 14px;
+    margin-bottom: 8px;
+  }
+  .activity-row .icon {
+    width: 38px; height: 38px;
+    background: #1F2942;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .activity-row .text { flex: 1; }
+  .activity-row .title { font-size: 13px; font-weight: 600; }
+  .activity-row .meta { font-size: 11px; color: #8FA0BD; margin-top: 2px; }
+  .activity-row .arrow { color: #6B7895; }
+
+  /* Calibration two-column */
+  .calib-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .calib-col {
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .calib-col .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #6B7895; margin-bottom: 8px; }
+  .calib-col .row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; }
+  .calib-col .row .val { font-weight: 600; }
+
+  /* Conversation bubbles */
+  .bubble {
+    max-width: 80%;
+    padding: 12px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.45;
+    margin-bottom: 10px;
+  }
+  .bubble.compass {
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: rgba(245,182,66,0.14);
+    border: 1px solid rgba(245,182,66,0.25);
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+    color: #F5D58F;
+  }
+  .compass-input {
+    position: absolute;
+    bottom: 96px; left: 16px; right: 16px;
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    border-radius: 100px;
+    padding: 8px 8px 8px 16px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .compass-input input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: #E8EDF7; font-size: 13px;
+    font-family: inherit;
+  }
+  .compass-input input::placeholder { color: #6B7895; }
+  .compass-input .send {
+    width: 32px; height: 32px;
+    background: #F5B642; color: #0B0F1A;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+
+  /* Compass FAB Sheet */
+  .sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(2px);
+  }
+  .sheet {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    background: #0F1424;
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    border-top: 1px solid #2A3550;
+    height: 78%;
+    padding: 12px 20px 0;
+  }
+  .sheet-handle {
+    width: 40px; height: 4px; background: #2A3550;
+    border-radius: 4px;
+    margin: 0 auto 14px;
+  }
+
+  /* Section dividers */
+  .divider { height: 1px; background: #1F2942; margin: 18px 0; }
+
+  /* Tiles grid (Compass tiles fallback) */
+  .tiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0;
+  }
+  .tile {
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    border-radius: 14px;
+    padding: 14px;
+    aspect-ratio: 1.2 / 1;
+    display: flex; flex-direction: column;
+    justify-content: space-between;
+  }
+  .tile .ico { font-size: 22px; }
+  .tile .nm { font-size: 13px; font-weight: 600; }
+  .tile.locked { opacity: 0.45; }
+  .tile.locked .nm::after { content: ' 🔒'; }
+
+  /* List rows (Profile sections) */
+  .list-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid #1F2942;
+  }
+  .list-row:last-child { border-bottom: none; }
+  .list-row .ico {
+    width: 32px; height: 32px;
+    background: #1A2238;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .list-row .lbl { flex: 1; font-size: 14px; font-weight: 500; }
+  .list-row .meta { font-size: 12px; color: #6B7895; }
+  .list-row .arr { color: #6B7895; }
+
+  /* Above-fold stats grid (Profile) */
+  .stat-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #1F2942;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-row .lbl { font-size: 13px; color: #8FA0BD; }
+  .stat-row .val { font-size: 14px; font-weight: 600; }
+  .stat-row .val .accent { color: #F5B642; }
+
+  /* Search bar in Learn */
+  .search-bar {
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: #6B7895;
+    margin-bottom: 18px;
+  }
+
+  /* Continue card */
+  .continue-card {
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    border-radius: 14px;
+    padding: 14px;
+    display: flex; gap: 12px;
+    margin-bottom: 8px;
+  }
+  .continue-thumb {
+    width: 70px; height: 50px;
+    background: linear-gradient(135deg, #2A3760 0%, #1A2238 100%);
+    border-radius: 8px;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .continue-card .info { flex: 1; min-width: 0; }
+  .continue-card .ttl { font-size: 13px; font-weight: 600; }
+  .continue-card .meta { font-size: 11px; color: #8FA0BD; margin: 2px 0 6px; }
+
+  /* Carousel-like row */
+  .row-header {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 18px 0 10px;
+  }
+  .row-header .ttl { font-size: 14px; font-weight: 600; }
+  .row-header .more { font-size: 12px; color: #8FA0BD; }
+  .h-scroll {
+    display: flex; gap: 10px;
+    overflow-x: auto;
+    margin: 0 -20px;
+    padding: 0 20px;
+  }
+  .h-scroll::-webkit-scrollbar { display: none; }
+  .v-card {
+    flex-shrink: 0;
+    width: 140px;
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .v-card .thumb {
+    width: 100%; height: 84px;
+    background: linear-gradient(135deg, #2A3760 0%, #1A2238 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  .v-card .info { padding: 10px; }
+  .v-card .ttl { font-size: 12px; font-weight: 600; line-height: 1.3; }
+  .v-card .meta { font-size: 10px; color: #8FA0BD; margin-top: 4px; }
+
+  /* Browse links (Learn footer) */
+  .browse-link {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid #1F2942;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .browse-link:last-child { border-bottom: none; }
+
+  /* Video Player area */
+  .player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, #1A2440 0%, #0F1424 100%);
+    border-radius: 14px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+  }
+  .player .play {
+    width: 56px; height: 56px;
+    background: rgba(245,182,66,0.95);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #0B0F1A; font-size: 18px;
+  }
+  .player .pbar {
+    position: absolute;
+    bottom: 14px; left: 14px; right: 14px;
+    height: 3px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px;
+  }
+  .player .pbar::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 100%;
+    background: #F5B642;
+    border-radius: 2px;
+  }
+  .player .ctrl-time {
+    position: absolute;
+    bottom: 22px; left: 18px;
+    font-size: 10px; color: #C5D0E6;
+  }
+
+  /* Auto-quiz banner */
+  .auto-quiz-banner {
+    background: linear-gradient(135deg, rgba(245,182,66,0.10) 0%, rgba(245,182,66,0.04) 100%);
+    border: 1px solid rgba(245,182,66,0.3);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 14px 0;
+  }
+  .auto-quiz-banner .ttl {
+    font-size: 12px;
+    color: #F5B642;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .auto-quiz-banner .sub {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  /* ---------- Right Sidebar (Notes) ---------- */
+  .sidebar-right {
+    padding: 24px 20px;
+    border-left: 1px solid #1A2238;
+    overflow-y: auto;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+  }
+  .sidebar-right h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6B7895;
+    margin-bottom: 12px;
+  }
+  .note-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 14px;
+    line-height: 1.25;
+  }
+  .note-body {
+    font-size: 13px;
+    color: #C5D0E6;
+    line-height: 1.6;
+  }
+  .note-body p { margin-bottom: 12px; }
+  .note-body strong { color: #F5B642; font-weight: 600; }
+  .note-body ul { padding-left: 18px; margin-bottom: 12px; }
+  .note-body li { margin-bottom: 6px; }
+  .note-tag {
+    display: inline-block;
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #8FA0BD;
+    margin-right: 4px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .note-tag.hot { background: rgba(245,182,66,0.12); border-color: rgba(245,182,66,0.3); color: #F5B642; }
+
+  /* Screen visibility */
+  .screen { display: none; height: 100%; }
+  .screen.active { display: block; }
+
+  /* Top breadcrumbs on certain screens (subtle small label above hero) */
+  .breadcrumb-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px;
+    color: #6B7895;
+    margin: 10px 0 16px;
+  }
+  .breadcrumb-bar .week-dots { gap: 4px; }
+  .breadcrumb-bar .week-dot { width: 6px; height: 6px; }
+
+  /* Quietly muted streak indicator */
+  .quiet-streak {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #8FA0BD;
+    font-size: 12px;
+  }
+
+  /* Why-recommended footnote */
+  .why {
+    font-size: 11px;
+    color: #F5B642;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+
+  /* Onboarding step indicator */
+  .onboard-progress {
+    display: flex; align-items: center; gap: 4px;
+    margin-bottom: 20px;
+  }
+  .onboard-progress .step {
+    flex: 1; height: 3px; background: #1A2238; border-radius: 3px;
+  }
+  .onboard-progress .step.done { background: #F5B642; }
+  .onboard-progress .step.current { background: #F5B642; opacity: 0.5; }
+
+  /* Trajectory chart for insights */
+  .trajectory {
+    background: #141B2E;
+    border: 1px solid #1F2942;
+    border-radius: 14px;
+    padding: 14px;
+    margin: 12px 0;
+  }
+  .trajectory-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .trajectory-row.now .when { color: #FF9F4E; }
+  .trajectory-row.future .when { color: #3FB68B; }
+  .trajectory-row.target .when { color: #F5B642; }
+  .trajectory-row .when { font-weight: 600; font-size: 12px; }
+  .trajectory-row .val { font-weight: 700; font-size: 16px; font-variant-numeric: tabular-nums; }
+
+  /* Suggestion chips for compass */
+  .suggest-chips {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin: 16px 0;
+  }
+  .suggest-chips .chip { cursor: pointer; }
+  .suggest-chips .chip:hover { background: #1F2942; }
+
+  /* small kbd */
+  kbd {
+    background: #1A2238;
+    border: 1px solid #2A3550;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    color: #C5D0E6;
+    font-family: inherit;
+  }
+
+  /* Subtle reveal animation when switching */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .screen.active { animation: fadeIn 0.25s ease; }
+
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ========================= TOP BAR ========================= -->
+  <div class="topbar">
+    <h1>ScaleUp <span>v2</span> · UX Mockup</h1>
+    <div class="meta">Click any screen on the left to preview</div>
+  </div>
+
+  <!-- ========================= LEFT SIDEBAR ========================= -->
+  <aside class="sidebar-left">
+    <h3>Screens</h3>
+
+    <div class="section-label">Onboarding</div>
+    <button class="screen-btn active" data-screen="objective">
+      <span class="num">01</span> Objective Setup
+    </button>
+    <button class="screen-btn" data-screen="time">
+      <span class="num">02</span> Reality Check
+    </button>
+    <button class="screen-btn" data-screen="diagnostic">
+      <span class="num">03</span> Diagnostic Question
+    </button>
+    <button class="screen-btn" data-screen="insights">
+      <span class="num">04</span> Calibration + Trajectory
+    </button>
+
+    <div class="section-label">Daily App</div>
+    <button class="screen-btn" data-screen="home-hero">
+      <span class="num">05</span> Home — One Hero
+    </button>
+    <button class="screen-btn" data-screen="home-expanded">
+      <span class="num">06</span> Home — Expanded
+    </button>
+    <button class="screen-btn" data-screen="player">
+      <span class="num">07</span> Content + Auto-Quiz
+    </button>
+    <button class="screen-btn" data-screen="learn">
+      <span class="num">08</span> Learn Tab
+    </button>
+
+    <div class="section-label">Compass</div>
+    <button class="screen-btn" data-screen="compass-chat">
+      <span class="num">09</span> Compass — Conversation
+    </button>
+    <button class="screen-btn" data-screen="compass-tiles">
+      <span class="num">10</span> Compass — Tiles
+    </button>
+    <button class="screen-btn" data-screen="compass-fab">
+      <span class="num">11</span> Compass FAB Sheet
+    </button>
+
+    <div class="section-label">You</div>
+    <button class="screen-btn" data-screen="profile">
+      <span class="num">12</span> Profile / You
+    </button>
+  </aside>
+
+  <!-- ========================= PHONE STAGE ========================= -->
+  <main class="phone-stage">
+    <div class="phone">
+      <div class="phone-screen">
+
+        <!-- ============== STATUS BAR (common) ============== -->
+        <div class="status-bar">
+          <div>9:41</div>
+          <div class="icons">●●●● 5G ▮▮▮</div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 01 — OBJECTIVE SETUP (TEXT-LED)              -->
+        <!-- =================================================== -->
+        <div class="screen active" id="screen-objective">
+          <div class="content" style="padding-top: 8px;">
+            <div class="onboard-progress">
+              <div class="step done"></div>
+              <div class="step current"></div>
+              <div class="step"></div>
+              <div class="step"></div>
+            </div>
+
+            <div class="h1" style="margin-bottom: 8px;">What's your goal?</div>
+            <div class="body mute" style="margin-bottom: 22px;">Tell us in your own words. We'll figure out the rest.</div>
+
+            <!-- Big text search -->
+            <div style="background: #141B2E; border: 1.5px solid #2A3760; border-radius: 14px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 16px; color: #6B7895;">🔍</span>
+              <input type="text" value="SDE placement at Google" style="flex: 1; background: transparent; border: none; outline: none; color: #F5B642; font-size: 15px; font-weight: 600; font-family: inherit; min-width: 0;" />
+              <span style="color: #3FB68B; font-size: 11px; font-weight: 600; white-space: nowrap;">✓ matched</span>
+            </div>
+            <div class="small mute" style="margin-bottom: 24px; font-size: 11px;">Try: "Crack CAT 2026" · "Switch from service to product" · "Master AI/ML"</div>
+
+            <!-- Popular full-sentence suggestions -->
+            <div style="font-size: 10px; color: #6B7895; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 10px;">Popular goals</div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 26px;">
+              <button class="card" style="padding: 12px 14px; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Crack <strong style="color:#F5B642; font-weight:600;">SDE placement</strong> at Google or FAANG</span>
+                <span class="mute" style="font-size: 14px;">↗</span>
+              </button>
+              <button class="card" style="padding: 12px 14px; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Switch from service to <strong style="color:#F5B642; font-weight:600;">product engineering</strong></span>
+                <span class="mute" style="font-size: 14px;">↗</span>
+              </button>
+              <button class="card" style="padding: 12px 14px; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+                <span><strong style="color:#F5B642; font-weight:600;">CAT 2026</strong> — target IIM A/B/C</span>
+                <span class="mute" style="font-size: 14px;">↗</span>
+              </button>
+              <button class="card" style="padding: 12px 14px; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Become <strong style="color:#F5B642; font-weight:600;">AI/ML</strong> engineer in 6 months</span>
+                <span class="mute" style="font-size: 14px;">↗</span>
+              </button>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Once goal is recognized, show specifics as inputs -->
+            <div style="display: flex; align-items: center; gap: 8px; margin: 16px 0 14px;">
+              <div class="h3">A few specifics</div>
+              <span class="small mute" style="font-weight: 500;">— quick, then we're done</span>
+            </div>
+
+            <!-- Target role -->
+            <div style="margin-bottom: 12px;">
+              <div class="small mute" style="margin-bottom: 6px; font-size: 11px;">Target role</div>
+              <div style="background: #141B2E; border: 1px solid #2A3550; border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                <span>Software Development Engineer</span>
+                <span class="mute" style="font-size: 11px;">▾</span>
+              </div>
+            </div>
+
+            <!-- Target companies -->
+            <div style="margin-bottom: 12px;">
+              <div class="small mute" style="margin-bottom: 6px; font-size: 11px;">Target companies <span class="mute" style="font-weight: 500;">(optional)</span></div>
+              <div style="background: #141B2E; border: 1px solid #2A3550; border-radius: 10px; padding: 10px 12px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                <span class="chip selected" style="padding: 4px 10px; font-size: 11px;">Google ×</span>
+                <span class="chip selected" style="padding: 4px 10px; font-size: 11px;">Microsoft ×</span>
+                <input type="text" placeholder="type to add..." style="background: transparent; border: none; outline: none; color: #C5D0E6; font-size: 12px; font-family: inherit; flex: 1; min-width: 80px;" />
+              </div>
+            </div>
+
+            <!-- By when -->
+            <div style="margin-bottom: 12px;">
+              <div class="small mute" style="margin-bottom: 6px; font-size: 11px;">Achieve it by</div>
+              <div style="background: #141B2E; border: 1px solid #2A3550; border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 14px;">
+                <span>August 2026 <span class="mute" style="font-size: 12px;">· ~6 months</span></span>
+                <span class="mute" style="font-size: 11px;">▾</span>
+              </div>
+            </div>
+
+            <!-- Where you are -->
+            <div style="margin-bottom: 22px;">
+              <div class="small mute" style="margin-bottom: 6px; font-size: 11px;">Where are you right now?</div>
+              <div style="background: #141B2E; border: 1px solid #2A3550; border-radius: 10px; padding: 12px 14px; font-size: 14px;">
+                <input type="text" placeholder="Your college or workplace…" style="background: transparent; border: none; outline: none; color: #C5D0E6; font-size: 14px; font-family: inherit; width: 100%;" />
+              </div>
+            </div>
+
+            <button class="btn-primary">Continue →</button>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 02 — REALITY CHECK (TIME COMPUTATION)        -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-time">
+          <div class="content" style="padding-top: 8px;">
+            <div class="onboard-progress">
+              <div class="step done"></div>
+              <div class="step done"></div>
+              <div class="step current"></div>
+              <div class="step"></div>
+            </div>
+
+            <div style="font-size: 11px; color: #F5B642; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; margin-bottom: 10px;">Reality check</div>
+            <div class="h1" style="margin-bottom: 16px;">Here's what it actually takes</div>
+            <div class="body mute" style="margin-bottom: 22px;">For <span class="accent" style="font-weight:600;">SDE @ Google/Microsoft in 6 months</span>, based on your inputs:</div>
+
+            <div class="card-hero" style="text-align: center; margin-bottom: 16px;">
+              <div style="font-size: 11px; color: #8FA0BD; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">You'll need to invest</div>
+              <div style="font-size: 56px; font-weight: 700; letter-spacing: -0.03em; color: #F5B642; line-height: 1;">25</div>
+              <div style="font-size: 14px; color: #C5D0E6; margin-top: 6px; font-weight: 500;">hours per week</div>
+              <div class="small mute" style="margin-top: 8px;">≈ 3.5 hours / day if studying daily</div>
+            </div>
+
+            <div class="body" style="margin-bottom: 16px; font-size: 13px;">We don't pretend the impossible is possible. Choose honestly:</div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px;">
+              <button class="card" style="text-align: left; padding: 16px; border: 1px solid #3FB68B; background: rgba(63,182,139,0.05);">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="color: #3FB68B; font-size: 18px;">✓</div>
+                  <div>
+                    <div class="h3" style="color: #3FB68B;">I can commit to 25 hrs/week</div>
+                    <div class="small" style="margin-top: 2px;">Plan generates for 6 months. Realistic.</div>
+                  </div>
+                </div>
+              </button>
+
+              <button class="card" style="text-align: left; padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="color: #FF9F4E; font-size: 18px;">⚠</div>
+                  <div>
+                    <div class="h3">I can do less — adjust</div>
+                    <div class="small" style="margin-top: 2px;">At 15 hrs/wk, realistic timeline is 10 months. Pick what fits.</div>
+                  </div>
+                </div>
+              </button>
+
+              <button class="card" style="text-align: left; padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <div style="color: #F5B642; font-size: 18px;">↑</div>
+                  <div>
+                    <div class="h3">I can do more — faster path</div>
+                    <div class="small" style="margin-top: 2px;">At 40 hrs/wk you could target 4 months. Burnout risk is real.</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div class="small mute" style="text-align: center;">No silent acceptance of unrealistic combinations. <br/>You always see the tradeoff.</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 03 — DIAGNOSTIC QUESTION                     -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-diagnostic">
+          <div class="content" style="padding-top: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+              <span class="chip" style="background: rgba(245,182,66,0.1); border-color: rgba(245,182,66,0.3); color: #F5B642;">
+                Data Structures · Q 5 of 18
+              </span>
+              <span class="small mute">~6 min left</span>
+            </div>
+
+            <div class="progress-bar" style="margin-bottom: 24px;">
+              <div class="fill" style="width: 28%;"></div>
+            </div>
+
+            <div class="h2" style="margin-bottom: 8px; line-height: 1.3;">What's the time complexity of the optimal solution to find the longest common subsequence of two strings?</div>
+            <div class="small mute" style="margin-bottom: 22px;">Take your time. We're measuring how you think, not just what you know.</div>
+
+            <div>
+              <div class="mcq-option">
+                <div class="mcq-letter">A</div>
+                <div>O(n)</div>
+              </div>
+              <div class="mcq-option">
+                <div class="mcq-letter">B</div>
+                <div>O(n log n)</div>
+              </div>
+              <div class="mcq-option" style="border-color: #F5B642; background: rgba(245,182,66,0.06);">
+                <div class="mcq-letter" style="background: #F5B642; color: #0B0F1A;">C</div>
+                <div>O(m × n) using DP</div>
+              </div>
+              <div class="mcq-option">
+                <div class="mcq-letter">D</div>
+                <div>O(2^n) recursive</div>
+              </div>
+            </div>
+
+            <div style="margin: 18px 0;">
+              <div class="small mute" style="margin-bottom: 8px;">How confident are you?</div>
+              <div style="display: flex; gap: 8px;">
+                <span class="chip">Guessing</span>
+                <span class="chip selected">Pretty sure</span>
+                <span class="chip">Certain</span>
+              </div>
+            </div>
+
+            <button class="btn-primary">Submit Answer</button>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 04 — CALIBRATION + TRAJECTORY                -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-insights">
+          <div class="content" style="padding-top: 8px;">
+            <div style="font-size: 11px; color: #F5B642; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; margin-bottom: 10px;">Diagnostic complete</div>
+            <div class="h1" style="margin-bottom: 6px;">Here's where you actually are.</div>
+            <div class="body mute" style="margin-bottom: 20px;">Honest mirror. No softening.</div>
+
+            <!-- Readiness now -->
+            <div class="card-hero" style="text-align: center; margin-bottom: 16px;">
+              <div style="font-size: 11px; color: #8FA0BD; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">Your baseline readiness</div>
+              <div style="font-size: 64px; font-weight: 700; letter-spacing: -0.03em; color: #FF9F4E; line-height: 1;">32<span style="font-size: 28px; opacity: 0.6;">%</span></div>
+              <div class="small" style="margin-top: 6px;">For SDE @ Google in 6 months</div>
+            </div>
+
+            <!-- Calibration gap -->
+            <div class="h3" style="margin: 18px 0 8px;">Calibration gap</div>
+            <div class="calib-grid">
+              <div class="calib-col">
+                <div class="lbl">You said</div>
+                <div class="row"><span>DP</span><span class="val">Proficient</span></div>
+                <div class="row"><span>Graphs</span><span class="val">Intermediate</span></div>
+                <div class="row"><span>OS</span><span class="val">Beginner</span></div>
+              </div>
+              <div class="calib-col">
+                <div class="lbl">You actually</div>
+                <div class="row"><span>DP</span><span class="val warning">30%</span></div>
+                <div class="row"><span>Graphs</span><span class="val warning">42%</span></div>
+                <div class="row"><span>OS</span><span class="val success">68%</span></div>
+              </div>
+            </div>
+
+            <!-- Behavioral -->
+            <div class="h3" style="margin: 18px 0 8px;">Patterns we noticed</div>
+            <div class="card" style="padding: 14px;">
+              <div class="small" style="line-height: 1.7;">
+                · You rush quantitative questions <span class="mute">(18s avg, accuracy drops)</span><br>
+                · You over-think case questions <span class="mute">(4 min avg, accuracy holds)</span><br>
+                · After 2 wrong in a row, your next 3 are <span class="warning">60% likely to be wrong</span>
+              </div>
+            </div>
+
+            <!-- Trajectory (the "trajectory framing" we added) -->
+            <div class="h3" style="margin: 18px 0 8px;">Where you'll be</div>
+            <div class="trajectory">
+              <div class="trajectory-row now">
+                <span class="when">TODAY</span>
+                <span class="val warning">32%</span>
+              </div>
+              <div style="height: 1px; background: #1F2942;"></div>
+              <div class="trajectory-row future">
+                <span class="when">30 DAYS (at 25 hrs/wk)</span>
+                <span class="val success">58%</span>
+              </div>
+              <div style="height: 1px; background: #1F2942;"></div>
+              <div class="trajectory-row target">
+                <span class="when">WEEK 24 (TARGET)</span>
+                <span class="val accent">80%+</span>
+              </div>
+            </div>
+
+            <!-- Top 3 highest leverage -->
+            <div class="h3" style="margin: 18px 0 8px;">3 things that move you fastest</div>
+            <div class="card" style="padding: 14px; margin-bottom: 20px;">
+              <div class="small" style="line-height: 1.7;">
+                <strong style="color: #F5B642;">1.</strong> Deliberate slowdown on quant — read fully before picking<br>
+                <strong style="color: #F5B642;">2.</strong> Focus DP from foundation — your gap there is highest leverage<br>
+                <strong style="color: #F5B642;">3.</strong> Active recovery technique when you get 2 wrong
+              </div>
+            </div>
+
+            <button class="btn-primary">Got it — let's start</button>
+            <div class="small mute" style="text-align: center; margin-top: 10px;">Your plan is being personalized while you explore.</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 05 — HOME — ONE HERO (redesigned)            -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-home-hero">
+          <div class="app-header">
+            <button class="objective-pill">
+              <span>🎯</span>
+              <span><span class="target">SDE @ Google</span> · 6mo</span>
+              <span class="caret">▾</span>
+            </button>
+            <div class="header-actions">
+              <button class="icon-btn">🔔<span class="dot"></span></button>
+            </div>
+          </div>
+          <div class="content">
+
+            <!-- Warm greeting -->
+            <div style="margin-top: 4px; margin-bottom: 24px;">
+              <div style="font-size: 26px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 6px;">Hi, Nirpeksh.</div>
+              <div style="font-size: 14px; color: #C5D0E6; line-height: 1.5;">You're on track for August. <span style="color: #F5B642; font-weight: 600;">74% ready</span>, 11 weeks to go.</div>
+            </div>
+
+            <!-- Slim trajectory bar -->
+            <div style="margin-bottom: 26px;">
+              <div style="height: 6px; background: #1A2238; border-radius: 6px; overflow: hidden; position: relative;">
+                <div style="height: 100%; width: 74%; background: linear-gradient(90deg, #F5B642 0%, #FFD17A 100%); border-radius: 6px; box-shadow: 0 0 12px rgba(245,182,66,0.4);"></div>
+                <div style="position: absolute; right: 26%; top: -2px; bottom: -2px; width: 2px; background: rgba(255,255,255,0.4);"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 10px; color: #6B7895;">
+                <span>Week 11 of 24</span>
+                <span style="color: #F5B642;">▲ +6% this week</span>
+                <span>Aug 2026</span>
+              </div>
+            </div>
+
+            <!-- TODAY label -->
+            <div style="font-size: 10px; color: #F5B642; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 12px;">Today · 25 min</div>
+
+            <!-- THE ONE HERO -->
+            <div class="card-hero" style="margin-bottom: 14px; padding: 22px;">
+              <div style="font-size: 36px; margin-bottom: 14px; line-height: 1;">📺</div>
+              <div class="h2" style="margin-bottom: 6px; line-height: 1.2;">Dynamic Programming</div>
+              <div class="h3 mute" style="font-weight: 500; margin-bottom: 14px;">Memoization deep-dive</div>
+
+              <div style="display: flex; gap: 14px; font-size: 12px; color: #8FA0BD; margin-bottom: 20px;">
+                <span>⏱ 22 min</span>
+                <span>·</span>
+                <span>📚 Striver</span>
+                <span>·</span>
+                <span style="color: #FF9F4E;">🔥 Hard</span>
+              </div>
+
+              <!-- Why this — predicted impact -->
+              <div style="background: rgba(63,182,139,0.07); border: 1px solid rgba(63,182,139,0.22); border-radius: 12px; padding: 12px 14px; margin-bottom: 20px;">
+                <div style="font-size: 10px; color: #3FB68B; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 6px;">Why this matters today</div>
+                <div style="font-size: 13px; color: #E8EDF7; line-height: 1.5;">Closes your top gap. After this, you'll be at <strong style="color: #3FB68B;">~36% on DP</strong>, up from 30%.</div>
+              </div>
+
+              <button class="btn-primary" style="padding: 15px 20px; font-size: 15px; font-weight: 600;">▶ Begin</button>
+            </div>
+
+            <!-- Soft alternatives — flexibility without clutter -->
+            <div style="display: flex; gap: 8px; margin-top: 16px;">
+              <button class="btn-secondary" style="flex: 1; padding: 11px; font-size: 12px;">⏱ Only 5 min?</button>
+              <button class="btn-secondary" style="flex: 1; padding: 11px; font-size: 12px;">↓ Show alternatives</button>
+            </div>
+
+            <div class="small mute" style="text-align: center; margin: 26px 4px 12px; line-height: 1.6; font-size: 11px;">
+              One job at a time.<br>
+              We picked this for you so you don't have to.
+            </div>
+
+          </div>
+          <div class="fab">🧭</div>
+          <div class="tab-bar">
+            <div class="tab active"><div class="tab-icon">🏠</div>Home</div>
+            <div class="tab"><div class="tab-icon">📚</div>Learn</div>
+            <div class="tab"><div class="tab-icon">🧭</div>Compass</div>
+            <div class="tab"><div class="tab-icon">👤</div>You</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 06 — HOME — EXPANDED (alternatives shown)    -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-home-expanded">
+          <div class="app-header">
+            <button class="objective-pill">
+              <span>🎯</span>
+              <span><span class="target">SDE @ Google</span> · 6mo</span>
+              <span class="caret">▾</span>
+            </button>
+            <div class="header-actions">
+              <button class="icon-btn">🔔<span class="dot"></span></button>
+            </div>
+          </div>
+          <div class="content">
+
+            <!-- Warm greeting (same) -->
+            <div style="margin-top: 4px; margin-bottom: 18px;">
+              <div style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 4px;">Hi, Nirpeksh.</div>
+              <div style="font-size: 13px; color: #C5D0E6;">You're on track. <span style="color: #F5B642; font-weight: 600;">74% ready</span>, 11 weeks left.</div>
+            </div>
+
+            <!-- Trajectory bar (slimmer) -->
+            <div style="margin-bottom: 22px;">
+              <div style="height: 5px; background: #1A2238; border-radius: 5px; overflow: hidden;">
+                <div style="height: 100%; width: 74%; background: linear-gradient(90deg, #F5B642 0%, #FFD17A 100%); border-radius: 5px;"></div>
+              </div>
+              <div style="display: flex; justify-content: space-between; margin-top: 6px; font-size: 10px; color: #6B7895;">
+                <span>Week 11 / 24</span>
+                <span style="color: #F5B642;">▲ +6%</span>
+                <span>Aug 2026</span>
+              </div>
+            </div>
+
+            <!-- Today label -->
+            <div style="font-size: 10px; color: #F5B642; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 10px;">Today · primary</div>
+
+            <!-- Hero (compact form) -->
+            <div class="card-hero" style="margin-bottom: 18px; padding: 16px;">
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <div style="width: 46px; height: 46px; background: rgba(245,182,66,0.15); border: 1px solid rgba(245,182,66,0.3); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">📺</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div class="h3" style="margin-bottom: 2px;">Dynamic Programming — Memoization</div>
+                  <div class="small mute" style="font-size: 11px;">22 min · Closes your top gap</div>
+                </div>
+                <button style="background: #F5B642; color: #0B0F1A; padding: 10px 14px; border-radius: 10px; font-weight: 600; font-size: 13px; flex-shrink: 0;">▶</button>
+              </div>
+            </div>
+
+            <!-- Alternatives section -->
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
+              <div class="h3">If not, try one of these</div>
+              <button class="btn-ghost" style="color: #F5B642; padding: 4px 0; font-size: 11px;">Hide ▲</button>
+            </div>
+
+            <div>
+              <div class="activity-row">
+                <div class="icon">🧠</div>
+                <div class="text">
+                  <div class="title">Quick quiz · Last week's funnel topics</div>
+                  <div class="meta">5 min · Quick win to warm up</div>
+                </div>
+                <div class="arrow">→</div>
+              </div>
+
+              <div class="activity-row">
+                <div class="icon">🎙️</div>
+                <div class="text">
+                  <div class="title">Practice behavioral interview</div>
+                  <div class="meta">30 min · For Google L4 · You're ready</div>
+                </div>
+                <div class="arrow">→</div>
+              </div>
+
+              <div class="activity-row">
+                <div class="icon">📝</div>
+                <div class="text">
+                  <div class="title">Recap your Week 2 notes</div>
+                  <div class="meta">10 min · Spaced repetition due</div>
+                </div>
+                <div class="arrow">→</div>
+              </div>
+            </div>
+
+            <button class="btn-ghost" style="width: 100%; justify-content: center; margin-top: 16px; padding: 12px;">
+              View full week →
+            </button>
+
+          </div>
+          <div class="fab">🧭</div>
+          <div class="tab-bar">
+            <div class="tab active"><div class="tab-icon">🏠</div>Home</div>
+            <div class="tab"><div class="tab-icon">📚</div>Learn</div>
+            <div class="tab"><div class="tab-icon">🧭</div>Compass</div>
+            <div class="tab"><div class="tab-icon">👤</div>You</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 07 — CONTENT PLAYER + AUTO-QUIZ              -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-player">
+          <div class="app-header">
+            <button class="icon-btn">←</button>
+            <div class="small" style="text-align: center;">
+              <div style="font-weight: 600; color: #E8EDF7;">Dynamic Programming</div>
+              <div style="font-size: 10px; color: #8FA0BD;">by Striver</div>
+            </div>
+            <button class="icon-btn">⋯</button>
+          </div>
+          <div class="content">
+
+            <div class="player">
+              <div class="play">▶</div>
+              <div class="ctrl-time">22:00 / 22:00</div>
+              <div class="pbar"></div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+              <span style="color: #3FB68B; font-size: 14px;">✓</span>
+              <span class="small" style="color: #3FB68B; font-weight: 600;">You watched this video</span>
+            </div>
+
+            <!-- AUTO-QUIZ INLINE (the felt C2O moment) -->
+            <div class="auto-quiz-banner">
+              <div class="ttl">⚡ Quick check · 3 questions · 90 seconds</div>
+              <div class="sub">Lock it in while it's fresh</div>
+              <div class="small mute" style="margin-top: 4px;">Auto-generated from what you just watched.</div>
+            </div>
+
+            <div class="small mute" style="margin-bottom: 8px;">Question 1 of 3</div>
+            <div class="h3" style="margin-bottom: 16px; line-height: 1.3;">In memoization, what's the primary trade-off compared to plain recursion?</div>
+
+            <div class="mcq-option">
+              <div class="mcq-letter">A</div>
+              <div>Slower execution but less memory</div>
+            </div>
+            <div class="mcq-option" style="border-color: rgba(245,182,66,0.4); background: rgba(245,182,66,0.05);">
+              <div class="mcq-letter" style="background: #F5B642; color: #0B0F1A;">B</div>
+              <div>Faster execution at the cost of memory</div>
+            </div>
+            <div class="mcq-option">
+              <div class="mcq-letter">C</div>
+              <div>Same execution time, more memory</div>
+            </div>
+            <div class="mcq-option">
+              <div class="mcq-letter">D</div>
+              <div>Memoization always uses less memory</div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin: 16px 0; padding: 12px 14px; background: rgba(245,182,66,0.05); border: 1px dashed rgba(245,182,66,0.3); border-radius: 10px;">
+              <span style="font-size: 16px;">🧭</span>
+              <div class="small">Stuck? Ask Compass to explain this question.</div>
+            </div>
+
+            <button class="btn-primary">Submit</button>
+
+          </div>
+          <div class="fab">🧭</div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 08 — LEARN TAB                               -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-learn">
+          <div class="app-header">
+            <button class="objective-pill">
+              <span>🎯</span>
+              <span><span class="target">SDE @ Google</span></span>
+              <span class="caret">▾</span>
+            </button>
+            <div class="header-actions">
+              <button class="icon-btn">⋯</button>
+              <button class="icon-btn">🔔</button>
+            </div>
+          </div>
+          <div class="content">
+
+            <div class="search-bar">
+              🔍 <span>Search topics, creators, videos…</span>
+            </div>
+
+            <div class="h3" style="margin-bottom: 10px;">Continue watching</div>
+            <div class="continue-card">
+              <div class="continue-thumb">📺</div>
+              <div class="info">
+                <div class="ttl">Estimation frameworks</div>
+                <div class="meta">12 min left · by Lewis Lin</div>
+                <div class="progress-bar"><div class="fill" style="width: 80%;"></div></div>
+              </div>
+            </div>
+            <div class="continue-card">
+              <div class="continue-thumb">🎧</div>
+              <div class="info">
+                <div class="ttl">Time complexity basics</div>
+                <div class="meta">7 min left · by Abdul Bari</div>
+                <div class="progress-bar"><div class="fill" style="width: 45%;"></div></div>
+              </div>
+            </div>
+
+            <div class="row-header">
+              <span class="ttl">Recommended for you</span>
+              <span class="more">See all</span>
+            </div>
+            <div class="h-scroll">
+              <div class="v-card">
+                <div class="thumb">📺</div>
+                <div class="info">
+                  <div class="ttl">Trees & BST mastery</div>
+                  <div class="meta">28 min · Hard</div>
+                </div>
+              </div>
+              <div class="v-card">
+                <div class="thumb">📺</div>
+                <div class="info">
+                  <div class="ttl">System Design basics</div>
+                  <div class="meta">35 min · Medium</div>
+                </div>
+              </div>
+              <div class="v-card">
+                <div class="thumb">🎧</div>
+                <div class="info">
+                  <div class="ttl">OS concepts podcast</div>
+                  <div class="meta">42 min</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row-header">
+              <span class="ttl">Trending in SDE placement</span>
+              <span class="more">See all</span>
+            </div>
+            <div class="h-scroll">
+              <div class="v-card">
+                <div class="thumb">📺</div>
+                <div class="info">
+                  <div class="ttl">Google interview decoded</div>
+                  <div class="meta">18 min · 12k views</div>
+                </div>
+              </div>
+              <div class="v-card">
+                <div class="thumb">📺</div>
+                <div class="info">
+                  <div class="ttl">Graph traversal patterns</div>
+                  <div class="meta">22 min · 8k views</div>
+                </div>
+              </div>
+              <div class="v-card">
+                <div class="thumb">📺</div>
+                <div class="info">
+                  <div class="ttl">DBMS for placement</div>
+                  <div class="meta">30 min · 6k views</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <a class="browse-link">
+              <span>📚 Browse by topic</span><span class="mute">→</span>
+            </a>
+            <a class="browse-link">
+              <span>🎬 Browse by content type</span><span class="mute">→</span>
+            </a>
+            <a class="browse-link">
+              <span>👥 Browse by creator</span><span class="mute">→</span>
+            </a>
+
+          </div>
+          <div class="fab">🧭</div>
+          <div class="tab-bar">
+            <div class="tab"><div class="tab-icon">🏠</div>Home</div>
+            <div class="tab active"><div class="tab-icon">📚</div>Learn</div>
+            <div class="tab"><div class="tab-icon">🧭</div>Compass</div>
+            <div class="tab"><div class="tab-icon">👤</div>You</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 09 — COMPASS — CONVERSATION → CONFIG → DETAIL -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-compass-chat">
+          <div class="app-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #F5B642 0%, #E89A1F 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 0 0 3px rgba(245,182,66,0.12);">🧭</div>
+              <div>
+                <div style="font-size: 15px; font-weight: 700;">Compass</div>
+                <div style="font-size: 10px; color: #3FB68B;">● knows your full context</div>
+              </div>
+            </div>
+            <button class="icon-btn">⋯</button>
+          </div>
+          <div class="content" style="height: calc(100% - 220px); padding-bottom: 20px;">
+
+            <!-- Opening greeting -->
+            <div class="bubble compass">
+              Hi Nirpeksh — what do you want to do?
+            </div>
+
+            <!-- Quick options (always available) -->
+            <div class="suggest-chips" style="margin-bottom: 18px;">
+              <span class="chip">⚡ Quiz me</span>
+              <span class="chip">🎙️ Practice interview</span>
+              <span class="chip">📝 Make a note</span>
+              <span class="chip">📄 Build my resume</span>
+              <span class="chip">↗ Plan my next 2 days</span>
+              <span class="chip">🤔 Explain something</span>
+            </div>
+
+            <!-- User picked one -->
+            <div class="bubble user">
+              Quiz me
+            </div>
+
+            <!-- Compass shows configuration INLINE in the chat -->
+            <div class="bubble compass">
+              Got it. Here's how I'd set it up — change anything you want.
+            </div>
+
+            <!-- Inline configurator -->
+            <div style="background: #141B2E; border: 1px solid #2A3550; border-radius: 14px; overflow: hidden; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid #1F2942;">
+                <div style="min-width: 0;">
+                  <div style="font-size: 10px; color: #6B7895; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">Topic</div>
+                  <div style="font-size: 13px; font-weight: 500;">Last 7 days of content</div>
+                </div>
+                <span class="mute" style="font-size: 11px;">change ▾</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid #1F2942;">
+                <div style="min-width: 0;">
+                  <div style="font-size: 10px; color: #6B7895; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">Format</div>
+                  <div style="font-size: 13px; font-weight: 500;">Mix · recall + application</div>
+                </div>
+                <span class="mute" style="font-size: 11px;">change ▾</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-bottom: 1px solid #1F2942;">
+                <div style="min-width: 0;">
+                  <div style="font-size: 10px; color: #6B7895; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">Difficulty · count</div>
+                  <div style="font-size: 13px; font-weight: 500;">Medium · 10 questions</div>
+                </div>
+                <span class="mute" style="font-size: 11px;">change ▾</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;">
+                <div style="min-width: 0;">
+                  <div style="font-size: 10px; color: #6B7895; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 2px;">Count toward objective</div>
+                  <div style="font-size: 13px; font-weight: 500; color: #3FB68B;">Yes — readiness will update</div>
+                </div>
+                <div style="width: 36px; height: 20px; background: #3FB68B; border-radius: 100px; position: relative;">
+                  <div style="width: 16px; height: 16px; background: white; border-radius: 50%; position: absolute; right: 2px; top: 2px;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="small mute" style="margin-bottom: 14px; line-height: 1.5;">About 8 minutes · I'll explain anything you get wrong, and you can talk to me mid-quiz.</div>
+
+            <!-- The "go" — this would route to the actual quiz session screen -->
+            <button class="btn-primary" style="padding: 14px; font-size: 14px;">Start quiz →</button>
+
+            <div class="small mute" style="text-align: center; margin-top: 14px; font-size: 11px;">
+              Routes to the quiz session screen<br/>(detail page for the section)
+            </div>
+
+          </div>
+
+          <div class="compass-input">
+            <span style="color: #6B7895; font-size: 16px; padding-left: 4px;">+</span>
+            <input type="text" placeholder="Or type what you need..." />
+            <button class="send">↑</button>
+          </div>
+
+          <div class="tab-bar">
+            <div class="tab"><div class="tab-icon">🏠</div>Home</div>
+            <div class="tab"><div class="tab-icon">📚</div>Learn</div>
+            <div class="tab active"><div class="tab-icon">🧭</div>Compass</div>
+            <div class="tab"><div class="tab-icon">👤</div>You</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 10 — COMPASS — TILES FALLBACK                -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-compass-tiles">
+          <div class="app-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #F5B642 0%, #E89A1F 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">🧭</div>
+              <div>
+                <div style="font-size: 15px; font-weight: 700;">More tools</div>
+                <div style="font-size: 10px; color: #8FA0BD;">Or just talk to me ↑</div>
+              </div>
+            </div>
+            <button class="icon-btn">⋯</button>
+          </div>
+          <div class="content">
+
+            <div class="small mute" style="margin-bottom: 10px;">All AI capabilities. One companion. Different modes.</div>
+
+            <div class="tiles">
+              <div class="tile">
+                <div class="ico">⚡</div>
+                <div>
+                  <div class="nm">Quiz me</div>
+                  <div class="small mute" style="margin-top: 2px;">7 formats · adaptive</div>
+                </div>
+              </div>
+              <div class="tile">
+                <div class="ico">🎙️</div>
+                <div>
+                  <div class="nm">Practice interview</div>
+                  <div class="small mute" style="margin-top: 2px;">Technical · behavioral</div>
+                </div>
+              </div>
+              <div class="tile">
+                <div class="ico">📝</div>
+                <div>
+                  <div class="nm">Make a note</div>
+                  <div class="small mute" style="margin-top: 2px;">Upload → AI processes</div>
+                </div>
+              </div>
+              <div class="tile">
+                <div class="ico">📄</div>
+                <div>
+                  <div class="nm">Resume builder</div>
+                  <div class="small mute" style="margin-top: 2px;">From your activity</div>
+                </div>
+              </div>
+              <div class="tile locked">
+                <div class="ico">📐</div>
+                <div>
+                  <div class="nm">Code practice</div>
+                  <div class="small mute" style="margin-top: 2px;">Unlocks Day 21+</div>
+                </div>
+              </div>
+              <div class="tile locked">
+                <div class="ico">🏆</div>
+                <div>
+                  <div class="nm">Compete</div>
+                  <div class="small mute" style="margin-top: 2px;">Friday quiz battles</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="h3" style="margin-bottom: 10px;">My activity</div>
+
+            <a class="browse-link">
+              <span>⚡ <span style="margin-left: 4px;">14 quizzes</span></span><span class="mute">History →</span>
+            </a>
+            <a class="browse-link">
+              <span>🎙️ <span style="margin-left: 4px;">5 interviews</span></span><span class="mute">Recordings →</span>
+            </a>
+            <a class="browse-link">
+              <span>📝 <span style="margin-left: 4px;">18 notes</span></span><span class="mute">Library →</span>
+            </a>
+            <a class="browse-link">
+              <span>💬 <span style="margin-left: 4px;">23 Compass chats</span></span><span class="mute">Resume →</span>
+            </a>
+            <a class="browse-link">
+              <span>❓ <span style="margin-left: 4px;">42 in-content Q&A</span></span><span class="mute">Review →</span>
+            </a>
+
+          </div>
+          <div class="tab-bar">
+            <div class="tab"><div class="tab-icon">🏠</div>Home</div>
+            <div class="tab"><div class="tab-icon">📚</div>Learn</div>
+            <div class="tab active"><div class="tab-icon">🧭</div>Compass</div>
+            <div class="tab"><div class="tab-icon">👤</div>You</div>
+          </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 11 — COMPASS FAB SHEET                       -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-compass-fab">
+
+          <!-- Background screen (Home) blurred -->
+          <div class="app-header" style="opacity: 0.35;">
+            <button class="objective-pill">
+              <span>🎯</span>
+              <span><span class="target">SDE @ Google</span> · 6mo</span>
+              <span class="caret">▾</span>
+            </button>
+            <div class="header-actions">
+              <button class="icon-btn">⋯</button>
+              <button class="icon-btn">🔔<span class="dot"></span></button>
+            </div>
+          </div>
+          <div class="content" style="opacity: 0.35;">
+            <div class="card-hero" style="margin-bottom: 16px;">
+              <div style="font-size: 11px; color: #8FA0BD; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px;">Your next 25 minutes</div>
+              <div class="h2">Dynamic Programming — Memoization</div>
+              <div class="small mute" style="margin-top: 4px;">by Striver · 22 min</div>
+            </div>
+          </div>
+
+          <!-- Sheet overlay -->
+          <div class="sheet-backdrop"></div>
+          <div class="sheet">
+            <div class="sheet-handle"></div>
+
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
+              <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #F5B642 0%, #E89A1F 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px;">🧭</div>
+              <div>
+                <div style="font-size: 15px; font-weight: 700;">Compass</div>
+                <div style="font-size: 10px; color: #8FA0BD;">I can see you're on Home</div>
+              </div>
+            </div>
+
+            <div class="bubble compass">
+              Want help picking what to do next? Based on the time of day and your energy yesterday, I'd suggest the 5-min quiz first — quick win to warm up.
+            </div>
+
+            <div class="suggest-chips">
+              <span class="chip">🎯 What should I do right now?</span>
+              <span class="chip">📊 How am I doing this week?</span>
+              <span class="chip">⏭ Skip today's hardest task</span>
+              <span class="chip">📖 Explain my weakest topic</span>
+            </div>
+
+            <div class="bubble user">
+              How am I doing this week?
+            </div>
+
+            <div class="bubble compass">
+              You're at <strong style="color:#F5B642;">53%</strong> of the week's planned hours, and <strong style="color:#F5B642;">3 of 7</strong> activities done. <br><br>
+              Two patterns I noticed: <br>
+              · You skipped Tuesday's interview practice — want me to reschedule? <br>
+              · Your quiz accuracy on graphs dropped to 48%. We should slot a graph deep-dive.
+            </div>
+
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+              <button class="btn-primary" style="flex: 1; padding: 11px 16px;">Reschedule interview</button>
+              <button class="btn-secondary" style="flex: 0 0 auto; padding: 11px 16px; width: auto;">Plan graph deep-dive</button>
+            </div>
+
+          </div>
+
+          <div class="compass-input" style="bottom: 16px;">
+            <span style="color: #6B7895; font-size: 16px; padding-left: 4px;">+</span>
+            <input type="text" placeholder="Ask Compass anything..." />
+            <button class="send">↑</button>
+          </div>
+
+        </div>
+
+        <!-- =================================================== -->
+        <!-- SCREEN 12 — PROFILE / YOU                           -->
+        <!-- =================================================== -->
+        <div class="screen" id="screen-profile">
+          <div class="app-header">
+            <button class="objective-pill">
+              <span>🎯</span>
+              <span><span class="target">SDE @ Google</span> · 6mo</span>
+              <span class="caret">▾</span>
+            </button>
+            <div class="header-actions">
+              <button class="icon-btn">⋯</button>
+              <button class="icon-btn">🔔</button>
+            </div>
+          </div>
+          <div class="content">
+
+            <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 22px;">
+              <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #2A3760 0%, #1A2238 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #F5B642;">N</div>
+              <div>
+                <div style="font-size: 17px; font-weight: 700;">Nirpeksh Nandan</div>
+                <div class="small mute">Edit profile</div>
+              </div>
+            </div>
+
+            <!-- READINESS RING - the single hero metric -->
+            <div style="text-align: center; margin-bottom: 14px;">
+              <div class="ring-wrap">
+                <svg width="130" height="130">
+                  <circle class="ring-track" cx="65" cy="65" r="56" />
+                  <circle class="ring-fill" cx="65" cy="65" r="56" stroke-dasharray="351.86" stroke-dashoffset="91.5" />
+                </svg>
+                <div class="ring-label">
+                  <div class="pct">74<span style="font-size: 18px;">%</span></div>
+                  <div class="lbl">Readiness</div>
+                </div>
+              </div>
+              <div class="small accent" style="margin-top: 10px; font-weight: 600;">↗ On track for Aug 2026</div>
+              <div class="small mute" style="margin-top: 2px;">11 weeks remaining</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- 4 above-fold facts only -->
+            <div class="stat-row">
+              <div class="lbl">This week</div>
+              <div class="val"><span class="accent">3</span> of 7 done</div>
+            </div>
+            <div class="stat-row">
+              <div class="lbl">Streak</div>
+              <div class="val quiet-streak">12 days</div>
+            </div>
+            <div class="stat-row">
+              <div class="lbl">Top gap</div>
+              <div class="val">Estimation frameworks <span style="color:#F5B642; font-size:12px; margin-left:4px;">→ Fix</span></div>
+            </div>
+            <div class="stat-row">
+              <div class="lbl">Time invested</div>
+              <div class="val">67 hours</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="small mute" style="margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; font-size: 10px;">More about you</div>
+
+            <!-- Collapsed sections — depth is here, not on top -->
+            <div class="list-row">
+              <div class="ico">📊</div>
+              <div class="lbl">My progress & analytics</div>
+              <div class="arr">→</div>
+            </div>
+            <div class="list-row">
+              <div class="ico">🎯</div>
+              <div class="lbl">My plan</div>
+              <div class="meta">Week 3 of 24</div>
+              <div class="arr">→</div>
+            </div>
+            <div class="list-row">
+              <div class="ico">🎓</div>
+              <div class="lbl">My objectives</div>
+              <div class="meta">1 active</div>
+              <div class="arr">→</div>
+            </div>
+            <div class="list-row">
+              <div class="ico">🧭</div>
+              <div class="lbl">My Compass activity</div>
+              <div class="arr">→</div>
+            </div>
+            <div class="list-row">
+              <div class="ico">📺</div>
+              <div class="lbl">My content</div>
+              <div class="meta">42 watched</div>
+              <div class="arr">→</div>
+            </div>
+            <div class="list-row">
+              <div class="ico">⚙️</div>
+              <div class="lbl">Settings</div>
+              <div class="arr">→</div>
+            </div>
+
+            <div style="margin: 22px 0; padding: 14px; background: rgba(245,182,66,0.05); border: 1px dashed rgba(245,182,66,0.25); border-radius: 12px;">
+              <div class="small accent" style="font-weight: 600; margin-bottom: 4px;">✦ Become a Creator</div>
+              <div class="small mute">Apply to share content with other learners.</div>
+            </div>
+
+          </div>
+          <div class="fab">🧭</div>
+          <div class="tab-bar">
+            <div class="tab"><div class="tab-icon">🏠</div>Home</div>
+            <div class="tab"><div class="tab-icon">📚</div>Learn</div>
+            <div class="tab"><div class="tab-icon">🧭</div>Compass</div>
+            <div class="tab active"><div class="tab-icon">👤</div>You</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ========================= RIGHT SIDEBAR ========================= -->
+  <aside class="sidebar-right">
+    <h3>What this demonstrates</h3>
+    <div id="notes-content">
+      <!-- Populated by JS -->
+    </div>
+  </aside>
+
+</div>
+
+<script>
+  // Screen contents for the notes panel
+  const notes = {
+    'objective': {
+      title: 'Objective Setup — text-led',
+      tags: ['Text-first input', 'Revised per your feedback'],
+      body: `
+        <p>You wanted text input, not button cards. This redesign leads with a <strong>free-form search bar</strong> — the user types their goal in their own words ("SDE placement at Google").</p>
+        <p>As they type, the taxonomy matches it. If matched: "✓ matched" indicator and specifics inputs appear inline below. If novel: "Don't see your goal?" route triggers LLM expansion.</p>
+        <p><strong>Popular goals</strong> below the search are written as full sentences, not category buttons — same shape as what a real user would type. Tapping one fills the search field.</p>
+        <p><strong>Specifics</strong> use proper input fields with autocomplete, not chip-only selection: role dropdown, type-to-add companies (with × to remove), date picker, free-text college/workplace.</p>
+        <ul>
+          <li>Search-first, taxonomy-backed</li>
+          <li>Full-sentence suggestions, not category buttons</li>
+          <li>Real inputs for specifics, not chip grids</li>
+          <li>Optional fields clearly labeled (companies, location)</li>
+        </ul>
+      `
+    },
+    'time': {
+      title: 'Reality Check',
+      tags: ['Required Time Computed', 'PRD §20, §25'],
+      body: `
+        <p>The single sharpest idea in the PRD: <strong>the system computes required hours/week. The user doesn't declare it.</strong></p>
+        <p>Asking "how many hours can you commit?" produces wish-fulfillment answers. Computing it from the taxonomy + timeline + diagnostic baseline and surfacing the tradeoff honestly is psychological integrity.</p>
+        <p>Three honest paths — commit, do less (adjust scope), or do more (faster but burnout risk). No silent acceptance of impossible combinations.</p>
+        <ul>
+          <li>If a user insists on "UPSC in 1 month at 2 hr/day," the system says: "you'll cover ~15% of syllabus" — full information, user's call</li>
+        </ul>
+      `
+    },
+    'diagnostic': {
+      title: 'Diagnostic Question',
+      tags: ['Adaptive', 'Behavioral signals'],
+      body: `
+        <p>Customized to objective type — SDE gets DSA + coding + system design; PM gets product sense + case; Consulting gets cases + estimation.</p>
+        <p>Beyond correctness, the system captures: <strong>time per question, time on read vs answer, confidence pattern, topic streaks, choking under difficulty.</strong></p>
+        <p>The confidence selector below the answer choices isn't decorative — it's what powers the calibration gap on the next screen.</p>
+        <ul>
+          <li>"We're measuring how you think, not just what you know"</li>
+          <li>Adaptive: correct on baseline → harder question; wrong → foundation question</li>
+        </ul>
+      `
+    },
+    'insights': {
+      title: 'Calibration + Trajectory',
+      tags: ['Honest mirror', 'My addition: trajectory', 'PRD §28 + amendment'],
+      body: `
+        <p>Psychological honesty over validation. Shows the user where they said they were vs. where they actually are, with behavioral patterns.</p>
+        <p><strong>My amendment to the PRD:</strong> always pair honesty with trajectory. A 20-yr-old in Nagpur seeing "32%" with no path forward will quit on Day 1. Always show <span class="note-tag hot">today</span> → <span class="note-tag hot">30 days</span> → <span class="note-tag hot">target</span>.</p>
+        <p>Plus the 3 highest-leverage things to do first — concrete next steps, not generic encouragement.</p>
+        <ul>
+          <li>"Got it — let's start" → land on Home (plan generates in background)</li>
+          <li>Never sit on a loading screen</li>
+        </ul>
+      `
+    },
+    'home-hero': {
+      title: 'Home — One Hero (redesigned)',
+      tags: ['Warmer & alive', 'Revised per your feedback'],
+      body: `
+        <p>Complete redesign per your "don't like it, make it drastically better" feedback. What changed:</p>
+        <ul>
+          <li><strong>Personal greeting</strong> ("Hi, Nirpeksh") + one-line status that anchors why you're here today</li>
+          <li><strong>Trajectory bar</strong> — slim, with "+6% this week" callout. The single most motivating number on the screen.</li>
+          <li>The hero card is <strong>visually richer</strong> — bigger emoji, two-line title, metadata row, predicted-impact callout</li>
+          <li><strong>"Why this matters today"</strong> — a green-tinted card showing the predicted readiness change (~30% → ~36% on DP). Every task feels like it has consequence.</li>
+          <li>Removed the boxy breadcrumb dots</li>
+          <li>Replaced the awkward "3 other options" text link with two side-by-side buttons: <strong>"Only 5 min?"</strong> and <strong>"Show alternatives"</strong> — gives flex without clutter</li>
+          <li>Closing line is warmer: "We picked this for you so you don't have to."</li>
+        </ul>
+        <p>Still strictly one hero job. The depth ("alternatives") is one tap away, not visible by default.</p>
+      `
+    },
+    'home-expanded': {
+      title: 'Home — Alternatives shown',
+      tags: ['Progressive disclosure', 'Within-screen'],
+      body: `
+        <p>Same Home, with alternatives expanded inline. The hero compacts to a single row (still primary, still prominent) and three alternatives sit below as activity rows.</p>
+        <p>Notice the section heading is <em>"If not, try one of these"</em> — soft, conversational, not corporate ("3 Other Options For Today").</p>
+        <p>"View full week →" at the bottom drops into the plan deep view (Profile → My Plan).</p>
+        <p>Most users will never expand this. That's the point.</p>
+      `
+    },
+    'player': {
+      title: 'Content + Auto-Quiz Inline',
+      tags: ['C2O loop made visceral', 'Other Claude\'s sharpest insight'],
+      body: `
+        <p>The felt moment of "Content to Outcome." The quiz <strong>does not</strong> exist as a separate destination — it appears inline, in the same screen, as soon as the video ends.</p>
+        <p>One scroll. Watch → "you watched this" → "Quick check, 90 seconds" → first question. The user feels their consumption converting to retention in real time.</p>
+        <p>Compass is one tap away if the user gets stuck on a question (note the gentle prompt above Submit).</p>
+        <ul>
+          <li>Target attach rate: <strong>60%+</strong> of completed videos take the auto-quiz</li>
+          <li>If user skips, the question gets re-surfaced via spaced repetition</li>
+        </ul>
+      `
+    },
+    'learn': {
+      title: 'Learn Tab',
+      tags: ['Pull-based discovery', 'PRD §36–43'],
+      body: `
+        <p>Where users go when they want to explore <em>beyond</em> what Home recommended. Most won't, most days. That's fine.</p>
+        <p>Continue Watching surfaces first. Then 2-3 plan-aware carousels. Then explicit "Browse by" links for those who want to dig.</p>
+        <p>Critically: <strong>no social feed, no follow suggestions, no streak banner, no "Hero" card competing with Home's recommendation.</strong> This tab is for browsing — Home is for doing.</p>
+      `
+    },
+    'compass-chat': {
+      title: 'Compass — Conversation → Config → Detail',
+      tags: ['Revised per your feedback', 'Conversational config'],
+      body: `
+        <p>Rebuilt around your "conversation → details → detail page" flow.</p>
+        <p><strong>Step 1 — Conversation opens with intent:</strong><br/>Compass: "Hi Nirpeksh — what do you want to do?" Six tappable chips for common verbs (Quiz, Interview, Note, Resume, Plan, Explain) + free text input.</p>
+        <p><strong>Step 2 — Configuration in the chat:</strong><br/>When the user picks "Quiz me," Compass doesn't navigate away. It shows a <strong>configurator card inline</strong> in the conversation with 4 editable fields: topic, format, difficulty + count, count-toward-objective toggle. Each row is tappable to change.</p>
+        <p><strong>Step 3 — Route to detail page:</strong><br/>Once configured, "Start quiz →" routes to the actual quiz session screen. Same pattern for every action: Interview, Note, Resume — conversation → inline configurator → detail screen.</p>
+        <p>This makes Compass feel like one continuous intelligent entity that knows what you want, helps you shape it, then gets out of the way for the work itself.</p>
+        <ul>
+          <li>Every AI feature reachable through the same conversational pattern</li>
+          <li>No "switch to a separate screen to configure" friction</li>
+          <li>Compass identifies as AI when asked; off-topic / harmful / professional-advice content is refused</li>
+        </ul>
+      `
+    },
+    'compass-tiles': {
+      title: 'Compass — Tiles Fallback',
+      tags: ['Discoverability', 'PRD §45'],
+      body: `
+        <p>Accessed via "More tools" link in the conversation view. Same Compass, organized as task-shaped tiles for users who prefer that mental model.</p>
+        <p>Progressive unlock visible: Code, Compete locked until Day 21+. This is the cleanest way to show platform depth without overwhelming Day-1 users.</p>
+        <p>Below the tiles: "My Activity" — every AI interaction the user has ever had with Compass, browsable and resumable. This is where the existing depth of features pays off without crowding the daily flow.</p>
+      `
+    },
+    'compass-fab': {
+      title: 'Compass FAB Sheet',
+      tags: ['Always accessible', 'Contextual'],
+      body: `
+        <p>The Compass FAB is on every screen — Home, Learn, Player, Profile. Tapping it slides up a sheet that <strong>knows where the user is.</strong></p>
+        <p>On Home: "Want help picking what to do?" In the Player: "Want me to explain this concept?" On Profile: "Want me to summarize your week?" On Learn: "Want me to find content on a specific topic?"</p>
+        <p>The same Compass that lives in the Tab. Two surfaces, one entity, full context everywhere.</p>
+      `
+    },
+    'profile': {
+      title: 'Profile / You',
+      tags: ['Calm by default', 'Depth on tap'],
+      body: `
+        <p>Replaces today's 15-section Progress scroll-of-doom + separate Profile tab.</p>
+        <p><strong>Above the fold:</strong> readiness ring (one number that matters) + 4 facts (week / streak / top gap / time invested). That's it. Nothing else visible without scrolling.</p>
+        <p><strong>Below the fold:</strong> 6 collapsed sections containing all the depth — full plan, analytics, objectives, Compass history, content library, settings. Power users tap in; casual users don't have to.</p>
+        <p>Streak is intentionally <em>quiet</em> — "12 days," no flame animation, no badge. Engagement is a side effect of progress, not the primary surface.</p>
+        <p>"Become a Creator" sits below the main flow as a soft prompt for those who care, not promoted aggressively.</p>
+      `
+    }
+  };
+
+  // Init: set up screen switching
+  const screenBtns = document.querySelectorAll('.screen-btn');
+  const screens = document.querySelectorAll('.screen');
+  const notesPanel = document.getElementById('notes-content');
+
+  function updateNotes(key) {
+    const n = notes[key];
+    if (!n) return;
+    let html = `<div class="note-title">${n.title}</div>`;
+    if (n.tags && n.tags.length) {
+      html += '<div style="margin-bottom: 14px;">';
+      n.tags.forEach((t, i) => {
+        html += `<span class="note-tag ${i === 0 ? 'hot' : ''}">${t}</span>`;
+      });
+      html += '</div>';
+    }
+    html += `<div class="note-body">${n.body}</div>`;
+    notesPanel.innerHTML = html;
+  }
+
+  function setScreen(name) {
+    screenBtns.forEach(b => b.classList.toggle('active', b.dataset.screen === name));
+    screens.forEach(s => s.classList.toggle('active', s.id === 'screen-' + name));
+    updateNotes(name);
+  }
+
+  screenBtns.forEach(btn => {
+    btn.addEventListener('click', () => setScreen(btn.dataset.screen));
+  });
+
+  // Init
+  updateNotes('objective');
+
+  // Keyboard nav: arrow keys
+  document.addEventListener('keydown', (e) => {
+    const order = Array.from(screenBtns).map(b => b.dataset.screen);
+    const current = document.querySelector('.screen-btn.active').dataset.screen;
+    const idx = order.indexOf(current);
+    if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      setScreen(order[(idx + 1) % order.length]);
+    } else if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      setScreen(order[(idx - 1 + order.length) % order.length]);
+    }
+  });
+</script>
+
+</body>
+</html>

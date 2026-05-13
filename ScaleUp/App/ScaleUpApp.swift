@@ -93,7 +93,8 @@ struct ScaleUpApp: App {
                 .trackScreen("diagnostic")
 
         case .home:
-            MainTabView()
+            // V2 routing: if the v2 flag is on, show v2 tab IA; otherwise show v1 MainTabView untouched.
+            V2RootView()
                 .transition(.opacity)
         }
     }
