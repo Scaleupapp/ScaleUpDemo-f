@@ -226,6 +226,12 @@ final class QuizSessionViewModel {
             if scorePercent < 60 {
                 AnalyticsService.shared.recordQuizCompleted(quizId: quiz.id, weakTopics: [quiz.topic])
             }
+            // Let the v2 task router auto-complete a plan task tied to this quiz.
+            NotificationCenter.default.post(
+                name: .v2QuizCompleted,
+                object: nil,
+                userInfo: ["quizId": quiz.id]
+            )
         } catch {
             // Build local result
             hasCompleted = true

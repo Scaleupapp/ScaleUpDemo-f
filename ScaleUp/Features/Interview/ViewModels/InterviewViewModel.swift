@@ -207,6 +207,12 @@ final class InterviewViewModel {
                     fullSession = session
                     evaluation = session.evaluation
                     state = .results
+                    // Let the v2 task router auto-complete a plan interview task.
+                    NotificationCenter.default.post(
+                        name: .v2InterviewCompleted,
+                        object: nil,
+                        userInfo: ["sessionId": sessionId]
+                    )
                     return
                 }
             } catch {}

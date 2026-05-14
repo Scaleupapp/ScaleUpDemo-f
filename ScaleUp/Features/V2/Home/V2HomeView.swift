@@ -8,6 +8,7 @@ import SwiftUI
 /// Reshuffle brings skipped tasks back.
 struct V2HomeView: View {
     @State private var vm = V2HomeViewModel()
+    @State private var showNotifications = false
     @Environment(V2TaskRouter.self) private var taskRouter
 
     var body: some View {
@@ -31,6 +32,10 @@ struct V2HomeView: View {
         }
         .task { await vm.load() }
         .refreshable { await vm.load() }
+        .onReceive(NotificationCenter.default.publisher(for: .v2PlanTaskCompleted)) { _ in
+            // A task the router auto-completed — refresh so the day reflects it.
+            Task { await vm.load() }
+        }
     }
 
     // MARK: - Header
@@ -40,7 +45,7 @@ struct V2HomeView: View {
             ObjectivePill(label: vm.data?.objectiveLabel ?? "Set your objective")
             Spacer()
             Button {
-                // TODO: notifications
+                showNotifications = true
             } label: {
                 ZStack {
                     Circle()
@@ -50,6 +55,11 @@ struct V2HomeView: View {
                     Image(systemName: "bell.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(ColorTokens.textPrimary)
+                }
+            }
+            .sheet(isPresented: $showNotifications) {
+                NavigationStack {
+                    NotificationListView()
                 }
             }
         }
@@ -190,7 +200,7 @@ struct V2HomeView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    taskRouter.open(taskType: task.taskType, payload: task.payload, title: task.title)
+                    taskRouter.open(taskType: task.taskType, payload: task.payload, title: task.title, taskId: task.taskId)
                 } label: {
                     HStack {
                         Image(systemName: "play.fill").font(.system(size: 11))

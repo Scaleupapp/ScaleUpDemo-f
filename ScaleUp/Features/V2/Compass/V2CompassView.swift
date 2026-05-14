@@ -106,7 +106,13 @@ struct V2CompassView: View {
                 }
             }
             Spacer()
-            Button { /* TODO: settings */ } label: {
+            Menu {
+                Button {
+                    Task { await vm.resetConversation() }
+                } label: {
+                    Label("New conversation", systemImage: "square.and.pencil")
+                }
+            } label: {
                 Image(systemName: "ellipsis")
                     .font(.system(size: 16))
                     .foregroundStyle(ColorTokens.textSecondary)
@@ -130,7 +136,7 @@ struct V2CompassView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            Button { /* TODO: attachment */ } label: {
+            Button { vm.noteFlowRequested = true } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(ColorTokens.textTertiary)

@@ -356,6 +356,12 @@ final class PlayerViewModel {
             ))
             // Seed the content→quiz transition window
             AnalyticsService.shared.recordContentCompleted(contentId: contentId)
+            // Let the v2 task router auto-complete a plan task tied to this content.
+            NotificationCenter.default.post(
+                name: .v2ContentCompleted,
+                object: nil,
+                userInfo: ["contentId": contentId]
+            )
         }
     }
 
