@@ -49,8 +49,13 @@ final class V2APIClient {
     private struct EmptyBody: Codable {}
 
     private func baseURL(for version: APIVersion) -> String {
+        // Production backend — must match the v1 APIClient. An optional
+        // API_BASE_URL Info.plist key can override it for local dev, but the
+        // default is production so device / TestFlight builds work without
+        // any extra config. (Previously defaulted to localhost, which made
+        // every /api/v2 call fail silently on real devices.)
         let configured = Bundle.main.object(forInfoDictionaryKey: "API_BASE_URL") as? String
-        let v1Base = (configured?.isEmpty == false ? configured! : "http://localhost:3000/api/v1")
+        let v1Base = (configured?.isEmpty == false ? configured! : "https://api.scaleupapp.club/api/v1")
         switch version {
         case .v1: return v1Base
         case .v2: return v1Base.replacingOccurrences(of: "/api/v1", with: "/api/v2")
