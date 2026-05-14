@@ -1,17 +1,11 @@
 import SwiftUI
 
-/// V2 Home — One-Hero design.
+/// V2 Home — the STRUCTURED DAY.
 ///
-/// Layout (top to bottom):
-///   1. Objective pill + notification bell (compact header)
-///   2. Warm greeting + status line
-///   3. Slim trajectory bar (today / weekly delta / target)
-///   4. "Today · 25 min" eyebrow
-///   5. ONE hero task card with predicted impact ("why this matters")
-///   6. Two soft alternative buttons (5-min quick / show alternatives)
-///   7. Calm closing line
-///
-/// No carousels, no stacking banners, no streak flames on Home.
+/// Not one hero card — a set of plan-aligned tasks for today. The user picks
+/// what fits their energy/time. Each task can be started (routes to the v1
+/// detail screen) or skipped (the next task from the week slots in). A
+/// Reshuffle brings skipped tasks back.
 struct V2HomeView: View {
     @State private var vm = V2HomeViewModel()
     @Environment(V2TaskRouter.self) private var taskRouter
@@ -56,11 +50,6 @@ struct V2HomeView: View {
                     Image(systemName: "bell.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(ColorTokens.textPrimary)
-                    Circle()
-                        .fill(ColorTokens.gold)
-                        .frame(width: 8, height: 8)
-                        .overlay(Circle().strokeBorder(ColorTokens.surface, lineWidth: 2))
-                        .offset(x: 9, y: -9)
                 }
             }
         }
@@ -81,7 +70,7 @@ struct V2HomeView: View {
                 .font(V2Theme.body)
                 .foregroundStyle(ColorTokens.textSecondary)
         }
-        .padding(.bottom, 22)
+        .padding(.bottom, 20)
 
         // Trajectory bar
         if let traj = data.trajectory {
@@ -89,151 +78,151 @@ struct V2HomeView: View {
                 .padding(.bottom, 22)
         }
 
-        if let hero = data.hero {
-            Text("Today · \(hero.durationMin) min")
-                .v2Eyebrow()
-                .padding(.bottom, 10)
-
-            heroCard(hero: hero)
-                .padding(.bottom, 14)
-
-            HStack(spacing: 8) {
-                Button { /* TODO short alternative */ } label: {
-                    Text("⏱ Only 5 min?")
-                        .font(V2Theme.small.weight(.medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                }
-                .buttonStyle(.plain)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(ColorTokens.surfaceElevated.opacity(0.5))
-                )
-                .foregroundStyle(ColorTokens.textPrimary)
-
-                Button { vm.showAlternatives.toggle() } label: {
-                    Text(vm.showAlternatives ? "↑ Hide alternatives" : "↓ Show alternatives")
-                        .font(V2Theme.small.weight(.medium))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
-                }
-                .buttonStyle(.plain)
-                .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(ColorTokens.surfaceElevated.opacity(0.5))
-                )
-                .foregroundStyle(ColorTokens.textPrimary)
-            }
-            .padding(.top, 6)
-
-            if vm.showAlternatives, !data.alternatives.isEmpty {
-                alternativesSection(items: data.alternatives)
-                    .padding(.top, 18)
+        // The structured day
+        if !vm.visibleTasks.isEmpty {
+            todayHeader(data: data)
+            ForEach(vm.visibleTasks) { task in
+                taskCard(task)
+                    .padding(.bottom, 10)
             }
 
-            Text("One job at a time.\nWe picked this for you so you don't have to.")
+            // Reshuffle affordance — only when there are skipped tasks to bring back
+            if (data.skippedCount ?? 0) > 0 {
+                Button {
+                    Task { await vm.reshuffle() }
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("Bring back \(data.skippedCount ?? 0) skipped \((data.skippedCount ?? 0) == 1 ? "task" : "tasks")")
+                    }
+                    .font(V2Theme.small.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(ColorTokens.gold)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+
+            Text("Pick what fits your energy. Skip anything — your plan stays on track.")
                 .font(.system(size: 11))
-                .multilineTextAlignment(.center)
                 .foregroundStyle(ColorTokens.textTertiary)
                 .frame(maxWidth: .infinity)
-                .padding(.top, 26)
+                .multilineTextAlignment(.center)
+                .padding(.top, 18)
+
+        } else if data.fallback == "day_done" {
+            dayDoneSection(data: data)
         } else if data.fallback == "plan_brewing" {
             planBrewingFallback
         } else if data.fallback == "no_objective" {
-            VStack(spacing: 14) {
-                Text("Let's set up your goal")
-                    .font(V2Theme.h2)
+            noObjectiveFallback
+        } else {
+            // All visible tasks optimistically skipped this session.
+            VStack(spacing: 12) {
+                Text("That's the set for now.")
+                    .font(V2Theme.h3)
                     .foregroundStyle(ColorTokens.textPrimary)
-                Text("About 10 minutes. Worth it.")
-                    .font(V2Theme.small)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                Button("Start") { /* TODO: route */ }
+                Button("Reshuffle") { Task { await vm.reshuffle() } }
                     .buttonStyle(.borderedProminent)
                     .tint(ColorTokens.gold)
-                    .controlSize(.large)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 40)
         }
     }
 
-    // MARK: - Hero card
+    // MARK: - Today header (count + total time)
 
-    private func heroCard(hero: V2HomeData.Hero) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(hero.icon)
-                .font(.system(size: 36))
-                .padding(.bottom, 14)
-
-            Text(hero.title)
-                .font(V2Theme.h2)
-                .foregroundStyle(ColorTokens.textPrimary)
-
-            if !hero.subtitle.isEmpty {
-                Text(hero.subtitle)
-                    .font(V2Theme.h3)
-                    .fontWeight(.medium)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .padding(.top, 2)
+    private func todayHeader(data: V2HomeData) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Today")
+                .v2Eyebrow()
+            Spacer()
+            if let total = data.totalDurationMin {
+                Text("\(vm.visibleTasks.count) \(vm.visibleTasks.count == 1 ? "thing" : "things") · ~\(total) min")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
             }
-
-            HStack(spacing: 12) {
-                Label("\(hero.durationMin) min", systemImage: "clock")
-                Text("·")
-                Label(hero.author, systemImage: "person.fill")
-                Text("·")
-                Label(hero.difficulty.capitalized, systemImage: "flame.fill")
-                    .foregroundStyle(difficultyColor(hero.difficulty))
-            }
-            .font(.system(size: 11))
-            .foregroundStyle(ColorTokens.textSecondary)
-            .padding(.top, 14)
-            .padding(.bottom, 18)
-
-            // Why this matters
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Why this matters today")
-                    .v2Eyebrow(ColorTokens.success)
-                Text(hero.whyText)
-                    .font(V2Theme.body)
-                    .foregroundStyle(ColorTokens.textPrimary)
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(ColorTokens.success.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(ColorTokens.success.opacity(0.25), lineWidth: 1)
-                    )
-            )
-            .padding(.bottom, 20)
-
-            Button {
-                taskRouter.open(taskType: hero.taskType, payload: hero.payload, title: hero.title)
-            } label: {
-                HStack {
-                    Image(systemName: "play.fill")
-                    Text("Begin")
-                }
-                .font(.system(size: 15, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 15)
-                .background(ColorTokens.gold)
-                .foregroundStyle(ColorTokens.background)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
         }
-        .padding(22)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(V2Theme.heroGradient)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(ColorTokens.gold.opacity(0.25), lineWidth: 1)
-        )
+        .padding(.bottom, 10)
+    }
+
+    // MARK: - Task card
+
+    private func taskCard(_ task: V2HomeData.Task) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 12) {
+                // Mark-done checkmark — tap-completion, explicit + always available
+                Button {
+                    Task { await vm.markComplete(task.taskId) }
+                } label: {
+                    Image(systemName: "circle")
+                        .font(.system(size: 22))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .buttonStyle(.plain)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(task.icon)
+                        Text(task.title)
+                            .font(V2Theme.bodyMedium)
+                            .foregroundStyle(ColorTokens.textPrimary)
+                    }
+                    HStack(spacing: 8) {
+                        Text("\(task.durationMin) min")
+                        if !task.subtitle.isEmpty { Text("· \(task.subtitle)") }
+                        Text("· \(task.difficulty.capitalized)")
+                            .foregroundStyle(difficultyColor(task.difficulty))
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textTertiary)
+
+                    // Why this — predicted-impact line
+                    Text(task.whyText)
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.success)
+                        .padding(.top, 2)
+                }
+                Spacer()
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    taskRouter.open(taskType: task.taskType, payload: task.payload, title: task.title)
+                } label: {
+                    HStack {
+                        Image(systemName: "play.fill").font(.system(size: 11))
+                        Text("Begin")
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(ColorTokens.gold)
+                    .foregroundStyle(ColorTokens.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Task { await vm.skip(task) }
+                } label: {
+                    Text("Skip")
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(ColorTokens.surfaceElevated.opacity(0.5))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 14)
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: V2Theme.cardRadius).fill(ColorTokens.surface))
+        .overlay(RoundedRectangle(cornerRadius: V2Theme.cardRadius).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
     }
 
     private func difficultyColor(_ d: String) -> Color {
@@ -254,22 +243,16 @@ struct V2HomeView: View {
                         .fill(ColorTokens.surface)
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(
-                            LinearGradient(
-                                colors: [ColorTokens.gold, ColorTokens.goldLight],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
+                        .fill(LinearGradient(colors: [ColorTokens.gold, ColorTokens.goldLight],
+                                             startPoint: .leading, endPoint: .trailing))
                         .frame(width: geo.size.width * CGFloat(traj.today) / 100.0, height: 6)
-                        .shadow(color: ColorTokens.gold.opacity(0.4), radius: 6)
                 }
             }
             .frame(height: 6)
 
             HStack {
                 if let wp = weekProgress {
-                    Text("Week \(wp.week) of \(wp.totalWeeks)")
+                    Text("Week \(wp.week) of \(wp.totalWeeks) · \(wp.done)/\(wp.total) done")
                 } else {
                     Text("\(traj.today)% ready")
                 }
@@ -284,83 +267,62 @@ struct V2HomeView: View {
         }
     }
 
-    // MARK: - Alternatives
+    // MARK: - Fallbacks
 
-    private func alternativesSection(items: [V2HomeData.Alternative]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("If not, try one of these")
+    private func dayDoneSection(data: V2HomeData) -> some View {
+        VStack(spacing: 14) {
+            Text("🎉").font(.system(size: 40))
+            Text(data.message ?? "You're done for now.")
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
-                .padding(.bottom, 4)
-
-            ForEach(items) { item in
-                Button {
-                    taskRouter.open(taskType: item.taskType, payload: item.payload, title: item.title)
-                } label: {
-                    HStack(spacing: 14) {
-                        Text(item.icon)
-                            .font(.system(size: 22))
-                            .frame(width: 40, height: 40)
-                            .background(ColorTokens.surfaceElevated.opacity(0.6))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.title)
-                                .font(V2Theme.bodyMedium)
-                                .foregroundStyle(ColorTokens.textPrimary)
-                            Text("\(item.durationMin) min · \(item.reason)")
-                                .font(.system(size: 11))
-                                .foregroundStyle(ColorTokens.textTertiary)
-                        }
-
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14)
-                            .fill(ColorTokens.surface)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
+                .multilineTextAlignment(.center)
+            if (data.skippedCount ?? 0) > 0 {
+                Button("Reshuffle skipped tasks") { Task { await vm.reshuffle() } }
+                    .buttonStyle(.borderedProminent)
+                    .tint(ColorTokens.gold)
             }
         }
-    }
-
-    // MARK: - Loading / fallback / error
-
-    private var loadingSection: some View {
-        VStack(spacing: 20) {
-            ProgressView()
-                .tint(ColorTokens.gold)
-            Text("Loading your day…")
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-        }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 60)
+        .padding(.vertical, 40)
     }
 
     private var planBrewingFallback: some View {
         VStack(spacing: 12) {
-            Text("✨")
-                .font(.system(size: 40))
+            ProgressView().tint(ColorTokens.gold)
             Text("Your plan is being personalized.")
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text("Meanwhile, here's content relevant to your goal.")
+            Text("This usually takes under a minute — pull to refresh.")
                 .font(V2Theme.small)
                 .foregroundStyle(ColorTokens.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
+    }
+
+    private var noObjectiveFallback: some View {
+        VStack(spacing: 14) {
+            Text("Let's set up your goal")
+                .font(V2Theme.h2)
+                .foregroundStyle(ColorTokens.textPrimary)
+            Text("About 10 minutes. Worth it.")
+                .font(V2Theme.small)
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 40)
+    }
+
+    private var loadingSection: some View {
+        VStack(spacing: 20) {
+            ProgressView().tint(ColorTokens.gold)
+            Text("Loading your day…")
+                .font(V2Theme.body)
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
     }
 
     private var errorSection: some View {
@@ -371,8 +333,10 @@ struct V2HomeView: View {
             Text(vm.error ?? "Something went wrong.")
                 .font(V2Theme.body)
                 .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
             Button("Try again") { Task { await vm.load() } }
                 .buttonStyle(.bordered)
+                .tint(ColorTokens.gold)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 40)
@@ -385,8 +349,7 @@ private struct ObjectivePill: View {
     let label: String
     var body: some View {
         HStack(spacing: 8) {
-            Text("🎯")
-                .font(.system(size: 12))
+            Text("🎯").font(.system(size: 12))
             Text(label)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(ColorTokens.textPrimary)
@@ -396,23 +359,13 @@ private struct ObjectivePill: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(
-            Capsule().fill(ColorTokens.surface)
-        )
-        .overlay(
-            Capsule().strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-        )
+        .background(Capsule().fill(ColorTokens.surface))
+        .overlay(Capsule().strokeBorder(V2Theme.cardBorder, lineWidth: 1))
     }
 }
 
-// MARK: - Preview
-
 #Preview {
-    let view = V2HomeView()
-    return view
+    V2HomeView()
+        .environment(V2TaskRouter())
         .preferredColorScheme(.dark)
-        .onAppear {
-            // Preview-only: surface the sample so the canvas renders.
-            // Production users see real backend data.
-        }
 }

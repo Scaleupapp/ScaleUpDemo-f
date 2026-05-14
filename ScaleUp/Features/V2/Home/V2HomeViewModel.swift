@@ -2,15 +2,17 @@ import Foundation
 
 // MARK: - V2 Home Data Models
 
-/// Decoded shape from GET /api/v2/plan/today.
+/// Decoded shape from GET /api/v2/plan/today — the STRUCTURED DAY.
 struct V2HomeData: Codable {
     let greeting: String
     let statusLine: String
     let objectiveLabel: String?
     let trajectory: Trajectory?
     let weekProgress: WeekProgress?
-    let hero: Hero?
-    let alternatives: [Alternative]
+    let todaysTasks: [Task]?
+    let totalDurationMin: Int?
+    let hasMoreThisWeek: Bool?
+    let skippedCount: Int?
     let fallback: String?
     let message: String?
 
@@ -32,8 +34,9 @@ struct V2HomeData: Codable {
         let totalWeeks: Int
     }
 
-    struct Hero: Codable, Identifiable {
-        let taskId: String?
+    /// One task in the structured day. Unified shape — no more hero/alternative split.
+    struct Task: Codable, Identifiable {
+        let taskId: String
         let taskType: String
         let icon: String
         let title: String
@@ -41,16 +44,17 @@ struct V2HomeData: Codable {
         let durationMin: Int
         let difficulty: String
         let primaryTopic: String?
+        let reason: String
         let payload: Payload?
         let impact: Impact?
 
-        var id: String { taskId ?? UUID().uuidString }
-        var author: String { subtitle.isEmpty ? "ScaleUp" : subtitle }
+        var id: String { taskId }
+
         var whyText: String {
             if let i = impact, let from = i.expectedFrom, let to = i.expectedTo {
-                return "\(i.whyText ?? "") After this, you'll be at ~\(to)%, up from \(from)%."
+                return "\(i.whyText ?? "") After this, ~\(to)% on \(primaryTopic ?? "this topic"), up from \(from)%."
             }
-            return impact?.whyText ?? "Plan-aligned for today."
+            return impact?.whyText ?? reason
         }
 
         struct Impact: Codable {
@@ -60,19 +64,6 @@ struct V2HomeData: Codable {
             let whyText: String?
             let scope: String?
         }
-    }
-
-    struct Alternative: Codable, Identifiable {
-        let taskId: String?
-        let taskType: String
-        let icon: String
-        let title: String
-        let durationMin: Int
-        let primaryTopic: String?
-        let payload: Payload?
-        let reason: String
-
-        var id: String { taskId ?? UUID().uuidString }
     }
 
     /// Routing payload — tells iOS which v1 detail screen to push.
@@ -92,11 +83,18 @@ final class V2HomeViewModel {
     var data: V2HomeData?
     var isLoading = false
     var error: String?
-    var showAlternatives = false
 
-    /// Set to true only in #Preview / debug builds. Production renders genuine
-    /// empty/error states so testers see real personalized state.
+    /// taskIds the user has tapped Skip on this session — hidden optimistically
+    /// while the network call settles.
+    private var pendingSkips: Set<String> = []
+
+    /// Set true only in #Preview / debug.
     var usePreviewSample = false
+
+    /// The tasks to actually render — today's set minus optimistic skips.
+    var visibleTasks: [V2HomeData.Task] {
+        (data?.todaysTasks ?? []).filter { !pendingSkips.contains($0.taskId) }
+    }
 
     func load() async {
         if usePreviewSample {
@@ -108,11 +106,60 @@ final class V2HomeViewModel {
         do {
             let response: V2APIResponse<V2HomeData> = try await V2APIClient.shared.get("/plan/today")
             data = response.data
+            pendingSkips.removeAll()
         } catch let e {
             self.error = Self.friendlyError(e)
             self.data = nil
         }
         isLoading = false
+    }
+
+    /// Skip a task — optimistic hide, then persist. The next `load()` reflects
+    /// the server state (the skipped task drops out, the next one slots in).
+    func skip(_ task: V2HomeData.Task) async {
+        pendingSkips.insert(task.taskId)
+        struct Empty: Codable {}
+        do {
+            let _: V2APIResponse<SkipResponse> =
+                try await V2APIClient.shared.post("/plan/task/\(task.taskId)/skip", body: Empty())
+            // Refresh so the next task from the week slots into the set.
+            await load()
+        } catch {
+            // Roll back the optimistic hide on failure.
+            pendingSkips.remove(task.taskId)
+        }
+    }
+
+    /// Tap-completion — flips the plan task to complete (called when the user
+    /// finishes a task in its detail screen, or via the row's Done affordance).
+    func markComplete(_ taskId: String) async {
+        struct Empty: Codable {}
+        do {
+            let _: V2APIResponse<SkipResponse> =
+                try await V2APIClient.shared.post("/plan/task/\(taskId)/complete", body: Empty())
+            await load()
+        } catch {
+            // Non-fatal — a later load() will reconcile.
+        }
+    }
+
+    /// Reshuffle — un-skip the week's skipped tasks and re-fetch the set.
+    func reshuffle() async {
+        struct Empty: Codable {}
+        do {
+            let _: V2APIResponse<SkipResponse> =
+                try await V2APIClient.shared.post("/plan/reshuffle", body: Empty())
+            pendingSkips.removeAll()
+            await load()
+        } catch {
+            // ignore — user can pull-to-refresh
+        }
+    }
+
+    private struct SkipResponse: Codable {
+        let taskId: String?
+        let status: String?
+        let reshuffled: Bool?
     }
 
     private static func friendlyError(_ e: Error) -> String {
@@ -138,38 +185,29 @@ final class V2HomeViewModel {
                 onTrack: true, headline: nil
             ),
             weekProgress: .init(done: 3, total: 7, week: 11, totalWeeks: 24),
-            hero: .init(
-                taskId: "sample-hero",
-                taskType: "watch",
-                icon: "📺",
-                title: "Dynamic Programming",
-                subtitle: "Memoization deep-dive",
-                durationMin: 22,
-                difficulty: "hard",
-                primaryTopic: "dp",
-                payload: nil,
-                impact: .init(
-                    expectedFrom: 30,
-                    expectedTo: 36,
-                    expectedGain: 6,
-                    whyText: "Closes your top gap.",
-                    scope: "topic"
-                )
-            ),
-            alternatives: [
-                .init(taskId: "alt-1", taskType: "quiz", icon: "🧠",
-                      title: "Quick quiz · Last week's funnel topics",
-                      durationMin: 5, primaryTopic: "funnel", payload: nil,
-                      reason: "Quick win to warm up"),
-                .init(taskId: "alt-2", taskType: "interview", icon: "🎙️",
-                      title: "Practice behavioral interview",
-                      durationMin: 30, primaryTopic: "behavioral", payload: nil,
-                      reason: "For Google L4 · you're ready"),
-                .init(taskId: "alt-3", taskType: "notes_create", icon: "📝",
-                      title: "Recap your Week 2 notes",
-                      durationMin: 10, primaryTopic: "review", payload: nil,
-                      reason: "Spaced repetition due"),
+            todaysTasks: [
+                .init(taskId: "t1", taskType: "watch", icon: "📺",
+                      title: "Dynamic Programming — Memoization", subtitle: "Striver",
+                      durationMin: 22, difficulty: "hard", primaryTopic: "DP",
+                      reason: "Closes your top gap", payload: nil,
+                      impact: .init(expectedFrom: 30, expectedTo: 36, expectedGain: 6,
+                                    whyText: "Closes your top gap.", scope: "topic")),
+                .init(taskId: "t2", taskType: "quiz", icon: "🧠",
+                      title: "Quiz: last week's funnel topics", subtitle: "",
+                      durationMin: 5, difficulty: "easy", primaryTopic: "Funnels",
+                      reason: "Quick retention check", payload: nil, impact: nil),
+                .init(taskId: "t3", taskType: "interview", icon: "🎙️",
+                      title: "Behavioral interview practice", subtitle: "",
+                      durationMin: 30, difficulty: "medium", primaryTopic: "Behavioral",
+                      reason: "For Google L4", payload: nil, impact: nil),
+                .init(taskId: "t4", taskType: "reflection", icon: "📝",
+                      title: "Recap your Week 2 notes", subtitle: "",
+                      durationMin: 10, difficulty: "easy", primaryTopic: "Review",
+                      reason: "Spaced repetition due", payload: nil, impact: nil),
             ],
+            totalDurationMin: 67,
+            hasMoreThisWeek: true,
+            skippedCount: 0,
             fallback: nil,
             message: nil
         )
