@@ -20,11 +20,11 @@ struct DiagnosticContainerView: View {
             case .quiz:
                 quizContent
             case .results:
-                // v2 routing: when the v2 onboarding flag is ON, route to the
-                // V2 calibration + trajectory insights screen instead of v1's
-                // results. Same `markDiagnosticComplete` callback closes the
-                // launch state.
-                if V2FeatureFlag.shared.v2OnboardingEnabled {
+                // v2 routing: v2 users get the V2 calibration + trajectory
+                // insights screen (Reality Check → Plan Creation) instead of
+                // v1's results. Same `markDiagnosticComplete` callback closes
+                // the launch state.
+                if V2FeatureFlag.shared.isEnabled {
                     V2DiagnosticResultsBridge(attemptId: viewModel.attemptId ?? "") {
                         appState.markDiagnosticComplete()
                         appState.completeDiagnostic()

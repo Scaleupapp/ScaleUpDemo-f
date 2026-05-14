@@ -13,7 +13,7 @@ import SwiftUI
 /// (handled by V2DiagnosticResultsBridge once the diagnostic completes).
 ///
 /// v1 OnboardingContainerView is untouched — this is only shown when
-/// V2FeatureFlag.shared.v2OnboardingEnabled is ON.
+/// the user is on v2 (V2FeatureFlag.shared.isEnabled).
 struct V2OnboardingFlowView: View {
     @State private var path = NavigationPath()
     @State private var state = V2OnboardingState()

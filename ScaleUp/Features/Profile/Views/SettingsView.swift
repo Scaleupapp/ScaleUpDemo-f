@@ -80,24 +80,12 @@ struct SettingsView: View {
 
     // MARK: - App
 
-    @State private var v2Flag = V2FeatureFlag.shared
-
     private var appSection: some View {
         Section {
             settingsInfoRow(icon: "paintbrush.fill", title: "Appearance", value: "Dark")
 
             settingsNavigableRow(icon: "bell.fill", title: "Notifications", value: "Enabled") {
                 NotificationSettingsView()
-            }
-
-            // v2 experiment opt-in — observing v2Flag (an @Observable) so this
-            // row's "On / Off" status updates immediately when the toggle flips.
-            settingsNavigableRow(
-                icon: "sparkles",
-                title: "Try v2 redesign",
-                value: v2Flag.isEnabled ? "On" : "Off"
-            ) {
-                V2DevSettingsView()
             }
         } header: {
             sectionHeader("App")

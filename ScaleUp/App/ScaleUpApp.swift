@@ -83,9 +83,9 @@ struct ScaleUpApp: App {
                 .trackScreen("phone_verification")
 
         case .onboarding(let step):
-            // v2 onboarding is opt-in via the v2OnboardingEnabled flag.
-            // Default OFF — testers flip it from Settings → Try v2 redesign.
-            if V2FeatureFlag.shared.v2OnboardingEnabled {
+            // v2 users get the rebuilt v2 onboarding flow; v1 users keep the
+            // existing onboarding. The v2 flag is server-driven — no toggle.
+            if V2FeatureFlag.shared.isEnabled {
                 V2OnboardingFlowView()
                     .transition(.opacity)
                     .trackScreen("v2_onboarding")

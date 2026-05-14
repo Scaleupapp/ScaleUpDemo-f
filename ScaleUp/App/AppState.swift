@@ -38,25 +38,34 @@ final class AppState {
             currentUser = user
             AnalyticsService.shared.identify(userId: user.id)
 
-            // v2 remote config — server kill switch + fresh-user routing.
-            // Awaited before launchState so the first render reflects the flag.
-            let isNewUser = user.onboardingComplete != true
-            await V2FeatureFlag.shared.syncRemoteConfig(isNewUser: isNewUser)
-
-            if user.onboardingComplete == true {
-                if user.diagnosticComplete == true {
-                    launchState = .home
-                } else {
-                    launchState = .diagnostic
-                }
-            } else {
-                launchState = .onboarding(step: max(1, user.onboardingStep ?? 1))
-            }
+            // v2 per-user status — server decides v1 vs v2 and whether the
+            // user still needs the v2 onboarding flow. Awaited before
+            // launchState so the first render reflects it.
+            await V2FeatureFlag.shared.syncUserStatus()
+            launchState = resolveLaunchState(for: user)
         } catch {
             await KeychainManager.shared.clearTokens()
         }
 
         isCheckingAuth = false
+    }
+
+    /// Decides the launch state for a freshly-fetched user.
+    ///
+    /// A v2 user who still needs the v2 onboarding flow (new user, or an
+    /// existing user who just accepted v2) is routed into onboarding
+    /// regardless of their v1 onboarding flag — `ScaleUpApp` then renders
+    /// `V2OnboardingFlowView` because the v2 flag is on. Everyone else
+    /// follows the normal v1 progression.
+    private func resolveLaunchState(for user: User) -> AppLaunchState {
+        let flag = V2FeatureFlag.shared
+        if flag.isEnabled && flag.needsV2Onboarding {
+            return .onboarding(step: 1)
+        }
+        if user.onboardingComplete == true {
+            return user.diagnosticComplete == true ? .home : .diagnostic
+        }
+        return .onboarding(step: max(1, user.onboardingStep ?? 1))
     }
 
     // MARK: - Login Success
@@ -69,20 +78,10 @@ final class AppState {
         currentUser = authData.user
         AnalyticsService.shared.identify(userId: authData.user.id)
 
-        // v2 remote config — server kill switch + fresh-user routing.
-        // A user who just registered has onboardingComplete=false → isNewUser.
-        let isNewUser = authData.user.onboardingComplete != true
-        await V2FeatureFlag.shared.syncRemoteConfig(isNewUser: isNewUser)
-
-        if authData.user.onboardingComplete == true {
-            if authData.user.diagnosticComplete == true {
-                launchState = .home
-            } else {
-                launchState = .diagnostic
-            }
-        } else {
-            launchState = .onboarding(step: max(1, authData.user.onboardingStep ?? 1))
-        }
+        // v2 per-user status — server decides v1 vs v2 and whether the user
+        // (a fresh registration is forced onto v2) still needs onboarding.
+        await V2FeatureFlag.shared.syncUserStatus()
+        launchState = resolveLaunchState(for: authData.user)
     }
 
     // MARK: - Onboarding
