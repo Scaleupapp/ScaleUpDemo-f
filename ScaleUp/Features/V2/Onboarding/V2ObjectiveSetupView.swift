@@ -1,157 +1,159 @@
 import SwiftUI
 
-/// V2 Objective Setup — text-led (mockup screen 01).
-/// User types their goal in their own words; taxonomy autocompletes.
-/// Popular full-sentence suggestions tap to fill.
-/// Specifics use proper input fields with autocomplete chips.
+/// V2 Objective Setup — Step 1 of onboarding.
+///
+/// Free-text entry + live catalog typeahead. On Continue, the text goes to
+/// the v2 NLU parser (/api/v2/objective/parse) and the result routes to the
+/// confirmation gate. Nothing is hardcoded — popular goals + suggestions all
+/// come from the ObjectiveCatalog.
 struct V2ObjectiveSetupView: View {
     @Environment(V2OnboardingState.self) private var state
-    @State private var goalText: String = "SDE placement at Google"
-    @State private var matched: Bool = true
-    @State private var newCompany: String = ""
     @Binding var path: NavigationPath
+
+    @State private var goalText: String = ""
+    @State private var suggestions: [V2CatalogEntry] = []
+    @State private var popular: [V2CatalogEntry] = []
+    @State private var isParsing = false
+    @State private var parseError: String?
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-
-                OnboardProgressBar(currentStep: 2, totalSteps: 4)
+                OnboardProgressBar(currentStep: 1, totalSteps: 4)
                     .padding(.bottom, 22)
 
                 Text("What's your goal?")
                     .font(V2Theme.h1)
                     .foregroundStyle(ColorTokens.textPrimary)
-                Text("Tell us in your own words. We'll figure out the rest.")
+                Text("Tell us in your own words — a role, an exam, a skill. We'll figure out the rest.")
                     .font(V2Theme.body)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .padding(.top, 8)
                     .padding(.bottom, 22)
 
-                // Big search input
+                // Free-text input
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .foregroundStyle(ColorTokens.textTertiary)
-                    TextField("", text: $goalText)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(matched ? ColorTokens.gold : ColorTokens.textPrimary)
-                    if matched {
-                        HStack(spacing: 4) {
-                            Image(systemName: "checkmark").font(.system(size: 11, weight: .bold))
-                            Text("matched").font(.system(size: 11, weight: .semibold))
+                    TextField("e.g. SDE placement at Google", text: $goalText)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .autocorrectionDisabled()
+                        .submitLabel(.go)
+                        .onSubmit { Task { await parseAndContinue() } }
+                        .onChange(of: goalText) { _, newValue in
+                            scheduleSearch(newValue)
                         }
-                        .foregroundStyle(ColorTokens.success)
+                    if !goalText.isEmpty {
+                        Button { goalText = ""; suggestions = [] } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(ColorTokens.surface)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(ColorTokens.surfaceElevated, lineWidth: 1.5)
-                )
+                .background(RoundedRectangle(cornerRadius: 14).fill(ColorTokens.surface))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(ColorTokens.surfaceElevated, lineWidth: 1.5))
 
-                Text("Try: \"Crack CAT 2026\" · \"Switch from service to product\" · \"Master AI/ML\"")
+                // Live typeahead suggestions
+                if !suggestions.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(suggestions) { entry in
+                            Button {
+                                goalText = entry.name
+                                suggestions = []
+                            } label: {
+                                HStack {
+                                    Text(catalogIcon(entry.type))
+                                    Text(entry.name)
+                                        .font(V2Theme.body)
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                    Spacer()
+                                    Text(entry.type.capitalized)
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundStyle(ColorTokens.textTertiary)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 11)
+                            }
+                            .buttonStyle(.plain)
+                            if entry.id != suggestions.last?.id {
+                                Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+                            }
+                        }
+                    }
+                    .background(RoundedRectangle(cornerRadius: 12).fill(ColorTokens.surface))
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+                    .padding(.top, 8)
+                }
+
+                Text("Try: \"crack CAT 2026\" · \"switch from service to product\" · \"master AI/ML\"")
                     .font(.system(size: 11))
                     .foregroundStyle(ColorTokens.textTertiary)
                     .padding(.top, 8)
                     .padding(.bottom, 24)
 
-                Text("Popular goals".uppercased())
-                    .font(.system(size: 10, weight: .semibold)).tracking(1)
-                    .foregroundStyle(ColorTokens.textTertiary)
-                    .padding(.bottom, 10)
-
-                VStack(spacing: 8) {
-                    popularGoalCard(highlighted: "SDE placement", suffix: "at Google or FAANG")
-                    popularGoalCard(prefix: "Switch from service to ", highlighted: "product engineering")
-                    popularGoalCard(highlighted: "CAT 2026", suffix: "— target IIM A/B/C")
-                    popularGoalCard(prefix: "Become ", highlighted: "AI/ML", suffix: " engineer in 6 months")
-                }
-                .padding(.bottom, 26)
-
-                Divider().background(V2Theme.cardBorder).padding(.vertical, 8)
-
-                // Specifics
-                HStack(alignment: .firstTextBaseline) {
-                    Text("A few specifics")
-                        .font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary)
-                    Text("— quick, then we're done")
-                        .font(.system(size: 12, weight: .medium))
+                // Popular goals — from the catalog, not hardcoded
+                if !popular.isEmpty && suggestions.isEmpty {
+                    Text("Popular goals".uppercased())
+                        .font(.system(size: 10, weight: .semibold)).tracking(1)
                         .foregroundStyle(ColorTokens.textTertiary)
-                }
-                .padding(.top, 14)
-                .padding(.bottom, 14)
+                        .padding(.bottom, 10)
 
-                // Target role
-                specificsField(label: "Target role", value: "Software Development Engineer", dropdown: true)
-
-                // Target companies
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Target companies (optional)".uppercased())
-                        .font(.system(size: 10, weight: .semibold)).tracking(0.8)
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    HStack(spacing: 6) {
-                        ForEach(state.targetCompanies, id: \.self) { company in
-                            HStack(spacing: 4) {
-                                Text(company).font(.system(size: 11, weight: .semibold))
-                                Button {
-                                    state.targetCompanies.removeAll { $0 == company }
-                                } label: {
-                                    Text("×").foregroundStyle(ColorTokens.gold)
+                    VStack(spacing: 8) {
+                        ForEach(popular) { entry in
+                            Button {
+                                goalText = entry.name
+                            } label: {
+                                HStack {
+                                    Text(catalogIcon(entry.type))
+                                    Text(entry.name)
+                                        .font(V2Theme.body)
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                    Spacer()
+                                    Image(systemName: "arrow.up.left")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(ColorTokens.textTertiary)
                                 }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                                .v2Card(padding: 0)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(ColorTokens.gold.opacity(0.15)))
-                            .overlay(Capsule().strokeBorder(ColorTokens.gold, lineWidth: 1))
-                            .foregroundStyle(ColorTokens.gold)
+                            .buttonStyle(.plain)
                         }
-                        TextField("type to add…", text: $newCompany)
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textSecondary)
-                            .onSubmit {
-                                let trimmed = newCompany.trimmingCharacters(in: .whitespaces)
-                                if !trimmed.isEmpty {
-                                    state.targetCompanies.append(trimmed)
-                                    newCompany = ""
-                                }
-                            }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(RoundedRectangle(cornerRadius: 10).fill(ColorTokens.surface))
-                    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+                    .padding(.bottom, 24)
                 }
-                .padding(.bottom, 12)
 
-                specificsField(label: "Achieve it by", value: "\(state.timeline.label) from now", dropdown: true)
-                specificsFieldInput(label: "Where are you right now?", placeholder: "Your college or workplace…", text: bindingFor(\.location))
-                    .padding(.bottom, 22)
+                if let parseError = parseError {
+                    Text(parseError)
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.warning)
+                        .padding(.bottom, 12)
+                }
 
                 Button {
-                    // Persist the user's choices into shared state so Reality Check
-                    // and the save service can read them. We DON'T POST the objective
-                    // yet — that happens after the user picks a commitment path on
-                    // the Reality Check screen.
-                    state.rawGoalText = goalText
-                    captureGoalIntoState()
-                    path.append(V2OnboardingRoute.realityCheck)
+                    Task { await parseAndContinue() }
                 } label: {
                     HStack {
-                        Text("Continue")
-                        Image(systemName: "arrow.right")
+                        if isParsing {
+                            ProgressView().tint(ColorTokens.background)
+                        } else {
+                            Text("Continue")
+                            Image(systemName: "arrow.right")
+                        }
                     }
                     .font(.system(size: 15, weight: .semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 15)
-                    .background(ColorTokens.gold)
-                    .foregroundStyle(ColorTokens.background)
+                    .background(goalText.trimmingCharacters(in: .whitespaces).isEmpty ? ColorTokens.surfaceElevated : ColorTokens.gold)
+                    .foregroundStyle(goalText.trimmingCharacters(in: .whitespaces).isEmpty ? ColorTokens.textTertiary : ColorTokens.background)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
+                .disabled(goalText.trimmingCharacters(in: .whitespaces).isEmpty || isParsing)
             }
             .padding(.horizontal, V2Theme.pad)
             .padding(.top, 14)
@@ -159,122 +161,64 @@ struct V2ObjectiveSetupView: View {
         }
         .background(ColorTokens.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
-        .onAppear {
-            // Seed state defaults from the example so first-time tester
-            // sees a coherent flow even with no prior input.
-            if state.targetCompanies.isEmpty {
-                state.targetCompanies = ["Google", "Microsoft"]
-            }
-            if state.targetRole.isEmpty { state.targetRole = "SDE" }
-            captureGoalIntoState()
+        .task {
+            // Load popular goals from the catalog (no hardcoding).
+            popular = (try? await V2OnboardingService.shared.popular(limit: 6)) ?? []
         }
     }
 
-    // Bridge for V2OnboardingState's `var` properties to TextField bindings.
-    private func bindingFor(_ keyPath: ReferenceWritableKeyPath<V2OnboardingState, String>) -> Binding<String> {
-        Binding(
-            get: { state[keyPath: keyPath] },
-            set: { state[keyPath: keyPath] = $0 }
-        )
-    }
+    // MARK: - Typeahead (debounced)
 
-    /// Translate the user's free-text goal + chosen chips into the structured
-    /// V2OnboardingState fields. v0 keyword classifier — replaced by the LLM
-    /// extension flow when the user enters a truly novel goal.
-    private func captureGoalIntoState() {
-        let text = goalText.lowercased()
-        if text.contains("placement") || text.contains("campus") {
-            // v1 maps placement to interview_preparation
-            state.objectiveType = .interviewPreparation
-        } else if text.contains("switch") {
-            state.objectiveType = .careerSwitch
-        } else if text.contains("interview") {
-            state.objectiveType = .interviewPreparation
-        } else if text.contains("cat") || text.contains("upsc") || text.contains("gate") || text.contains("gmat") || text.contains("gre") {
-            state.objectiveType = .competitiveExam
-            // Pull the exam name out
-            for exam in ["cat", "upsc", "gate", "gmat", "gre"] where text.contains(exam) {
-                state.examName = exam.uppercased()
+    private func scheduleSearch(_ query: String) {
+        searchTask?.cancel()
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard q.count >= 2 else { suggestions = []; return }
+        searchTask = Task {
+            try? await Task.sleep(for: .milliseconds(250))
+            if Task.isCancelled { return }
+            let results = (try? await V2OnboardingService.shared.suggest(query: q, limit: 8)) ?? []
+            if !Task.isCancelled {
+                await MainActor.run { suggestions = results }
             }
-        } else if text.contains("master") || text.contains("learn") {
-            state.objectiveType = .upskilling
-            state.targetSkill = state.rawGoalText.replacingOccurrences(of: "master ", with: "", options: .caseInsensitive)
-        } else {
-            state.objectiveType = .interviewPreparation
         }
     }
 
-    // MARK: - Helpers
+    // MARK: - Parse + route
 
-    private func popularGoalCard(prefix: String = "", highlighted: String, suffix: String = "") -> some View {
-        Button {
-            goalText = "\(prefix)\(highlighted)\(suffix)"
-            matched = true
-        } label: {
-            HStack {
-                HStack(spacing: 0) {
-                    if !prefix.isEmpty {
-                        Text(prefix).foregroundStyle(ColorTokens.textPrimary)
-                    }
-                    Text(highlighted)
-                        .foregroundStyle(ColorTokens.gold)
-                        .fontWeight(.semibold)
-                    if !suffix.isEmpty {
-                        Text(suffix).foregroundStyle(ColorTokens.textPrimary)
-                    }
-                }
-                .font(V2Theme.body)
-                Spacer()
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.textTertiary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .v2Card(padding: 0)
+    private func parseAndContinue() async {
+        let text = goalText.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+        isParsing = true
+        parseError = nil
+        defer { isParsing = false }
+        do {
+            let result = try await V2OnboardingService.shared.parseObjective(text)
+            state.rawGoalText = text
+            state.applyParse(result)
+            path.append(V2OnboardingRoute.confirm)
+        } catch {
+            parseError = "Couldn't process that. Check your connection and try again."
         }
-        .buttonStyle(.plain)
     }
 
-    private func specificsField(label: String, value: String, dropdown: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold)).tracking(0.8)
-                .foregroundStyle(ColorTokens.textTertiary)
-            HStack {
-                Text(value).font(V2Theme.body).foregroundStyle(ColorTokens.textPrimary)
-                Spacer()
-                if dropdown {
-                    Image(systemName: "chevron.down").font(.system(size: 11)).foregroundStyle(ColorTokens.textTertiary)
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(RoundedRectangle(cornerRadius: 10).fill(ColorTokens.surface))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
-        }
-        .padding(.bottom, 12)
-    }
-
-    private func specificsFieldInput(label: String, placeholder: String, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold)).tracking(0.8)
-                .foregroundStyle(ColorTokens.textTertiary)
-            TextField(placeholder, text: text)
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textPrimary)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(RoundedRectangle(cornerRadius: 10).fill(ColorTokens.surface))
-                .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+    private func catalogIcon(_ type: String) -> String {
+        switch type {
+        case "role": return "💼"
+        case "exam": return "📝"
+        case "skill": return "⚡"
+        case "company": return "🏢"
+        case "college_prep": return "🎓"
+        default: return "🎯"
         }
     }
 }
 
+// MARK: - Onboarding routes + progress bar
+
 enum V2OnboardingRoute: Hashable {
-    case realityCheck
-    case calibrationInsights
+    case confirm
+    case topicSelection
+    case topicProficiency
 }
 
 struct OnboardProgressBar: View {
@@ -284,16 +228,10 @@ struct OnboardProgressBar: View {
         HStack(spacing: 4) {
             ForEach(0..<totalSteps, id: \.self) { idx in
                 Capsule()
-                    .fill(idx < currentStep ? ColorTokens.gold : (idx == currentStep ? ColorTokens.gold.opacity(0.5) : ColorTokens.surfaceElevated))
+                    .fill(idx < currentStep ? ColorTokens.gold
+                          : (idx == currentStep ? ColorTokens.gold.opacity(0.5) : ColorTokens.surfaceElevated))
                     .frame(height: 3)
             }
         }
     }
-}
-
-#Preview {
-    NavigationStack {
-        V2ObjectiveSetupView(path: .constant(NavigationPath()))
-    }
-    .preferredColorScheme(.dark)
 }

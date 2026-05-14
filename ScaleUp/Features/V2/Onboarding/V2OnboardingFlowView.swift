@@ -1,9 +1,18 @@
 import SwiftUI
 
-/// V2 Onboarding flow container — drives the v2 objective → reality check →
-/// (existing diagnostic flow) → calibration insights → home progression.
+/// V2 Onboarding flow container.
 ///
-/// Existing v1 OnboardingContainerView is untouched. This is only shown when
+/// Correct order (the rebuild):
+///   1. Objective Setup    — free text + typeahead
+///   2. Confirmation Gate  — NLU parse result, confirm or fix
+///   3. Topic Selection    — suggested topics, add/remove
+///   4. Topic Proficiency  — per-topic self-rating → save w/ computed hours
+///                           → advance app to .diagnostic
+///
+/// The diagnostic, then Reality Check + Calibration, happen AFTER this flow
+/// (handled by V2DiagnosticResultsBridge once the diagnostic completes).
+///
+/// v1 OnboardingContainerView is untouched — this is only shown when
 /// V2FeatureFlag.shared.v2OnboardingEnabled is ON.
 struct V2OnboardingFlowView: View {
     @State private var path = NavigationPath()
@@ -15,15 +24,15 @@ struct V2OnboardingFlowView: View {
                 .environment(state)
                 .navigationDestination(for: V2OnboardingRoute.self) { route in
                     switch route {
-                    case .realityCheck:
-                        V2RealityCheckView(path: $path)
+                    case .confirm:
+                        V2ObjectiveConfirmView(path: $path)
                             .environment(state)
-                    case .calibrationInsights:
-                        V2CalibrationInsightsView(
-                            path: $path,
-                            attemptId: state.diagnosticAttemptId
-                        )
-                        .environment(state)
+                    case .topicSelection:
+                        V2TopicSelectionView(path: $path)
+                            .environment(state)
+                    case .topicProficiency:
+                        V2TopicProficiencyView(path: $path)
+                            .environment(state)
                     }
                 }
         }
