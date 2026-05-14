@@ -262,6 +262,7 @@
 		969A5717BAB89C49592E9E1F /* CreatorPromotionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FEB8741140EABB6AED1369B /* CreatorPromotionView.swift */; };
 		976845613AD4A8AFFCD7E15C /* APIAuthForgotPasswordRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699847379111FF36E65E6E94 /* APIAuthForgotPasswordRequest.swift */; };
 		97F7F11B33093D12980B7204 /* OnboardingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98C0952DA371E65B5BAEF48E /* OnboardingService.swift */; };
+		98BD425A7657BE394FB2117C /* V2QuizRequestLoaderSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFA4BF87E8633246934B0AF4 /* V2QuizRequestLoaderSheet.swift */; };
 		98D8EB6513E822F0646E1F40 /* APIUserObjectiveTopicsOfInterestInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C34274F3BE3F031FFC2E67 /* APIUserObjectiveTopicsOfInterestInner.swift */; };
 		9A4C3237DF8F63AF0A6E3B40 /* MyContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D05DAB1044B3215C83D630B /* MyContentViewModel.swift */; };
 		9A86C9D975069E65B4B0B097 /* Onboarding.swift in Sources */ = {isa = PBXBuildFile; fileRef = E12E645CC5045EF597C4A5EF /* Onboarding.swift */; };
@@ -792,6 +793,7 @@
 		ED7DA6EF7023C089AF69BD6D /* APISetOnboardingObjectiveRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISetOnboardingObjectiveRequest.swift; sourceTree = "<group>"; };
 		EE16BA2A2251EAA614CAD6F7 /* NoteRequestDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteRequestDetailView.swift; sourceTree = "<group>"; };
 		EF0548A68E66F3F98772616E /* FollowUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FollowUser.swift; sourceTree = "<group>"; };
+		EFA4BF87E8633246934B0AF4 /* V2QuizRequestLoaderSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2QuizRequestLoaderSheet.swift; sourceTree = "<group>"; };
 		EFC5934B99ABE40A47475483 /* APIUpdateProgressRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIUpdateProgressRequest.swift; sourceTree = "<group>"; };
 		F022C7578A1752B041EF7FCD /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		F0C80A263135918BC60DE368 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeViewModel.swift; sourceTree = "<group>"; };
@@ -1459,6 +1461,7 @@
 				1ABE4584C3464CD685DF5BF5 /* V2APIClient.swift */,
 				594BDDC53959E2E1A04EFDAE /* V2FeatureFlag.swift */,
 				B616B55EEC231D50E4933CA3 /* V2MainTabView.swift */,
+				EFA4BF87E8633246934B0AF4 /* V2QuizRequestLoaderSheet.swift */,
 				B7C1D46E1470F9EDD52FA5C1 /* V2RootView.swift */,
 				1DEC54A9F1CA0E1D229CBE73 /* V2Tab.swift */,
 				9A142F8AF709CC63312F1242 /* V2TaskRouter.swift */,
@@ -2555,6 +2558,7 @@
 				2A5ED5A6DE4B1E1648326DFA /* V2OnboardingState.swift in Sources */,
 				255FF657885F98B5D89C1B25 /* V2PlanCreationView.swift in Sources */,
 				0C88881AA6026C42462F9B0E /* V2PostDiagnosticRealityCheckView.swift in Sources */,
+				98BD425A7657BE394FB2117C /* V2QuizRequestLoaderSheet.swift in Sources */,
 				37C9EC028B8946A232D103B1 /* V2RootView.swift in Sources */,
 				CF8AB9E06F5B2DE8B6075645 /* V2Tab.swift in Sources */,
 				7290BDFE59FC31E34B4886A3 /* V2TaskRouter.swift in Sources */,
@@ -2668,7 +2672,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 124;
+				CURRENT_PROJECT_VERSION = 125;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -2744,7 +2748,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 124;
+				CURRENT_PROJECT_VERSION = 125;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

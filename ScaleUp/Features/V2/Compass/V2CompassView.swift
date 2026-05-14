@@ -55,6 +55,7 @@ struct V2CompassView: View {
                     }
                 }
 
+                quickActionsBar
                 inputBar
             }
             .background(ColorTokens.background.ignoresSafeArea())
@@ -132,6 +133,40 @@ struct V2CompassView: View {
         }
     }
 
+    // MARK: - Quick actions (always-visible capability strip)
+
+    /// What Compass can do, surfaced persistently above the input so users
+    /// never have to guess. Tapping one kicks off that flow.
+    private var quickActionsBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(CompassQuickAction.all, id: \.label) { action in
+                    Button {
+                        vm.handleSuggestion(action.chip)
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: action.icon)
+                                .font(.system(size: 11, weight: .semibold))
+                            Text(action.label)
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundStyle(ColorTokens.gold)
+                        .padding(.horizontal, 11)
+                        .padding(.vertical, 7)
+                        .background(
+                            Capsule()
+                                .fill(ColorTokens.gold.opacity(0.10))
+                                .overlay(Capsule().strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, V2Theme.pad)
+        }
+        .padding(.top, 8)
+    }
+
     // MARK: - Input bar
 
     private var inputBar: some View {
@@ -170,6 +205,26 @@ struct V2CompassView: View {
         .padding(.bottom, 18)
         .padding(.top, 8)
     }
+}
+
+// MARK: - Compass quick actions
+
+/// The capability set Compass exposes, surfaced as an always-visible strip.
+/// `chip` text is what gets fed to CompassViewModel.handleSuggestion — keep
+/// the keywords ("Quiz", "interview", "note", "resume") so inferMode routes.
+struct CompassQuickAction {
+    let label: String
+    let icon: String
+    let chip: String
+
+    static let all: [CompassQuickAction] = [
+        .init(label: "Quiz me", icon: "bolt.fill", chip: "Quiz me"),
+        .init(label: "Practice interview", icon: "mic.fill", chip: "Practice interview"),
+        .init(label: "Make a note", icon: "doc.text.fill", chip: "Make a note"),
+        .init(label: "Build my resume", icon: "person.text.rectangle.fill", chip: "Build my resume"),
+        .init(label: "Plan my days", icon: "calendar", chip: "Plan my next 2 days"),
+        .init(label: "Explain something", icon: "questionmark.circle.fill", chip: "Explain something"),
+    ]
 }
 
 // MARK: - Compass sheet (FAB-triggered)

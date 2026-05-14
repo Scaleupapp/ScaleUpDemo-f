@@ -7,6 +7,10 @@ struct V2TaskSheet: View {
     let route: V2TaskRouter.Route
     let onClose: () -> Void
 
+    /// Injected by V2MainTabView — forwarded into the nested tutor sheet so
+    /// V2CompassView has its required environment.
+    @Environment(V2TaskRouter.self) private var taskRouter
+
     /// Tutor-mode Compass sheet, opened from inside a content view via "Ask Compass".
     @State private var tutorSheet: CompassTutorContext?
 
@@ -33,7 +37,9 @@ struct V2TaskSheet: View {
                         }
                 }
                 .sheet(item: $tutorSheet) { ctx in
+                    // Re-inject the router env — nested sheets don't inherit it.
                     V2CompassSheetView(tutorContext: ctx)
+                        .environment(taskRouter)
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
                 }
@@ -41,9 +47,22 @@ struct V2TaskSheet: View {
             case .quiz(let id):
                 PlanTaskQuizLoaderSheet(quizId: id, onDismiss: onClose)
 
+            case .quizByTopic(let topic):
+                V2QuizRequestLoaderSheet(topic: topic, onClose: onClose)
+
             case .interview(let scenarioId):
                 NavigationStack {
                     V2InterviewLauncher(scenarioId: scenarioId, onClose: onClose)
+                }
+
+            case .competition:
+                NavigationStack {
+                    CompetitionHubView()
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Close", action: onClose)
+                            }
+                        }
                 }
 
             case .external(let url):

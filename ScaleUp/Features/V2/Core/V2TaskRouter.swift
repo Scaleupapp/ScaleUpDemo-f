@@ -45,7 +45,10 @@ final class V2TaskRouter {
     enum Route: Identifiable, Equatable {
         case content(contentId: String, title: String)
         case quiz(quizId: String)
+        /// Quiz task with no pre-baked quizId — request one for this topic.
+        case quizByTopic(topic: String)
         case interview(scenarioId: String?)
+        case competition
         case external(url: URL)
         case unavailable(message: String)
 
@@ -53,7 +56,9 @@ final class V2TaskRouter {
             switch self {
             case .content(let id, _):  return "content-\(id)"
             case .quiz(let id):        return "quiz-\(id)"
+            case .quizByTopic(let t):  return "quiztopic-\(t)"
             case .interview(let id):   return "interview-\(id ?? "default")"
+            case .competition:         return "competition"
             case .external(let url):   return "external-\(url.absoluteString)"
             case .unavailable(let m):  return "unavailable-\(m)"
             }
@@ -69,7 +74,7 @@ final class V2TaskRouter {
     /// `taskId` is the v2 plan task id. Pass it from plan-driven launches
     /// (Home) so the router can auto-complete; leave nil for ad-hoc launches
     /// (Compass configurator) that aren't tied to a plan task.
-    func open(taskType: String, payload: V2HomeData.Payload?, title: String, taskId: String? = nil) {
+    func open(taskType: String, payload: V2HomeData.Payload?, title: String, taskId: String? = nil, topic: String? = nil) {
         switch taskType {
         case "watch", "listen", "read":
             if let id = payload?.contentId {
@@ -83,6 +88,10 @@ final class V2TaskRouter {
             if let id = payload?.quizId {
                 route = .quiz(quizId: id)
                 setActiveTask(taskId: taskId, taskType: taskType, resourceId: id)
+            } else if let topic = topic, !topic.isEmpty {
+                // No pre-baked quiz — generate one for the task's topic.
+                route = .quizByTopic(topic: topic)
+                setActiveTask(taskId: taskId, taskType: "quiz", resourceId: nil)
             } else {
                 route = .unavailable(message: "Quiz isn't ready yet. Check back soon.")
             }
@@ -98,7 +107,10 @@ final class V2TaskRouter {
                 route = .unavailable(message: "External link unavailable.")
             }
 
-        case "compete", "mock_exam", "reflection", "notes_create", "conversation":
+        case "compete":
+            route = .competition
+
+        case "mock_exam", "reflection", "notes_create", "conversation":
             // Phase 2: route to dedicated v2 detail screens. For now, show stub.
             route = .unavailable(message: "Coming next: dedicated \(taskType) screen.")
 

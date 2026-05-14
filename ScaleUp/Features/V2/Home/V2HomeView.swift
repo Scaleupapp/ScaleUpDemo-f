@@ -200,7 +200,7 @@ struct V2HomeView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    taskRouter.open(taskType: task.taskType, payload: task.payload, title: task.title, taskId: task.taskId)
+                    taskRouter.open(taskType: task.taskType, payload: task.payload, title: task.title, taskId: task.taskId, topic: task.primaryTopic)
                 } label: {
                     HStack {
                         Image(systemName: "play.fill").font(.system(size: 11))

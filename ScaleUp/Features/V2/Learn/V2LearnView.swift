@@ -3,6 +3,7 @@ import SwiftUI
 /// V2 Learn Tab — pull-based content discovery, wired to v1 recommendations.
 struct V2LearnView: View {
     @State private var vm = V2LearnViewModel()
+    @State private var showDiscover = false
     @Environment(V2TaskRouter.self) private var taskRouter
 
     var body: some View {
@@ -10,24 +11,27 @@ struct V2LearnView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
 
-                    // Search (still a stub — search lives in v1 DiscoverView)
-                    HStack {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(ColorTokens.textTertiary)
-                        Text("Search topics, creators, videos…")
-                            .font(V2Theme.body)
-                            .foregroundStyle(ColorTokens.textTertiary)
-                        Spacer()
+                    // Search — opens v1 Discover (full search + browse).
+                    Button { showDiscover = true } label: {
+                        HStack {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(ColorTokens.textTertiary)
+                            Text("Search topics, creators, videos…")
+                                .font(V2Theme.body)
+                                .foregroundStyle(ColorTokens.textTertiary)
+                            Spacer()
+                        }
+                        .padding(14)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(ColorTokens.surface)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+                        )
                     }
-                    .padding(14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(ColorTokens.surface)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                    )
+                    .buttonStyle(.plain)
 
                     if vm.isLoading && vm.recommendations.isEmpty && vm.continueWatching.isEmpty {
                         loadingState
@@ -49,6 +53,40 @@ struct V2LearnView: View {
             .refreshable { await vm.load() }
         }
         .task { await vm.load() }
+        .sheet(isPresented: $showDiscover) {
+            NavigationStack { DiscoverView() }
+        }
+    }
+
+    // MARK: - Thumbnail
+
+    /// Real content thumbnail with a graceful play-glyph placeholder.
+    @ViewBuilder
+    private func thumbnail(_ item: Content, width: CGFloat, height: CGFloat) -> some View {
+        ZStack {
+            if let urlStr = item.thumbnailURL, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().aspectRatio(contentMode: .fill)
+                    default:
+                        LinearGradient(
+                            colors: [ColorTokens.surfaceElevated, ColorTokens.surface],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                        .overlay(Image(systemName: "play.fill").foregroundStyle(ColorTokens.gold))
+                    }
+                }
+            } else {
+                LinearGradient(
+                    colors: [ColorTokens.surfaceElevated, ColorTokens.surface],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .overlay(Image(systemName: "play.fill").foregroundStyle(ColorTokens.gold))
+            }
+        }
+        .frame(width: width, height: height)
+        .clipped()
     }
 
     @ViewBuilder
@@ -88,10 +126,8 @@ struct V2LearnView: View {
             )
         } label: {
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(ColorTokens.surfaceElevated)
-                    .frame(width: 70, height: 50)
-                    .overlay(Image(systemName: "play.fill").foregroundStyle(ColorTokens.gold))
+                thumbnail(item, width: 70, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(V2Theme.bodyMedium)
@@ -124,12 +160,7 @@ struct V2LearnView: View {
                         )
                     } label: {
                         VStack(alignment: .leading, spacing: 0) {
-                            Rectangle()
-                                .fill(LinearGradient(
-                                    colors: [ColorTokens.surfaceElevated, ColorTokens.surface],
-                                    startPoint: .top, endPoint: .bottom))
-                                .frame(width: 140, height: 84)
-                                .overlay(Image(systemName: "play.fill").foregroundStyle(ColorTokens.gold))
+                            thumbnail(item, width: 140, height: 84)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(item.title)
                                     .font(.system(size: 12, weight: .semibold))
@@ -173,20 +204,23 @@ struct V2LearnView: View {
     }
 
     private func browseLink(icon: String, label: String) -> some View {
-        HStack {
-            Text(icon)
-            Text(label)
-                .font(V2Theme.bodyMedium)
-                .foregroundStyle(ColorTokens.textPrimary)
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12))
-                .foregroundStyle(ColorTokens.textTertiary)
+        Button { showDiscover = true } label: {
+            HStack {
+                Text(icon)
+                Text(label)
+                    .font(V2Theme.bodyMedium)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.vertical, 14)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+            }
         }
-        .padding(.vertical, 14)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
-        }
+        .buttonStyle(.plain)
     }
 
     private var loadingState: some View {

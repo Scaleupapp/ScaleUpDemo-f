@@ -7,6 +7,9 @@ import SwiftUI
 struct V2MainTabView: View {
     @State private var nav = V2NavState()
     @State private var taskRouter = V2TaskRouter()
+    /// Forwarded into the task sheet so v1 screens that need it (e.g.
+    /// CompetitionHubView) have it — sheets don't reliably inherit it.
+    @Environment(ObjectiveContext.self) private var objectiveContext
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -39,13 +42,21 @@ struct V2MainTabView: View {
         }
         .environment(nav)
         .environment(taskRouter)
+        // Sheet content does NOT reliably inherit @Observable environment
+        // objects — re-inject explicitly so V2CompassView / V2TaskSheet
+        // (which depend on V2TaskRouter) don't crash when presented here.
         .sheet(isPresented: $nav.compassSheetOpen) {
             V2CompassSheetView(currentScreen: nav.selectedTab)
+                .environment(nav)
+                .environment(taskRouter)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(item: Binding(get: { taskRouter.route }, set: { taskRouter.route = $0 })) { route in
             V2TaskSheet(route: route) { taskRouter.close() }
+                .environment(nav)
+                .environment(taskRouter)
+                .environment(objectiveContext)
         }
     }
 }
