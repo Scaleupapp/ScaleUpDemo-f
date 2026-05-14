@@ -90,8 +90,13 @@ struct DiagnosticWelcomeView: View {
                             Task { await viewModel.start() }
                         }
 
-                        SecondaryButton(title: "Skip for now") {
-                            onSkip()
+                        // v2 users can't skip — the v2 plan (Reality Check →
+                        // Plan Creation) is built entirely on diagnostic
+                        // results, so skipping would leave them planless.
+                        if !V2FeatureFlag.shared.isEnabled {
+                            SecondaryButton(title: "Skip for now") {
+                                onSkip()
+                            }
                         }
                     }
                     .padding(.horizontal, Spacing.lg)

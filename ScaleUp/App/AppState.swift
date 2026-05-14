@@ -90,6 +90,17 @@ final class AppState {
         launchState = .onboarding(step: step)
     }
 
+    /// Routes a freshly-registered user into onboarding.
+    ///
+    /// Must sync v2 status FIRST: a brand-new account has no data, so
+    /// `/api/v2/me/status` forces them onto v2 and `ScaleUpApp` then renders
+    /// `V2OnboardingFlowView` instead of v1 onboarding. Skipping this sync
+    /// (setting `.onboarding` directly) is what left new users on v1.
+    func routeFreshRegistrationToOnboarding() async {
+        await V2FeatureFlag.shared.syncUserStatus()
+        launchState = .onboarding(step: 1)
+    }
+
     func completeOnboarding() {
         if currentUser?.diagnosticComplete == true {
             launchState = .home

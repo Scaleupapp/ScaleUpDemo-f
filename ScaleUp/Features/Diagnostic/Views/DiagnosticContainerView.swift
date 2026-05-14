@@ -161,9 +161,14 @@ struct DiagnosticContainerView: View {
                     }
                 }
 
-                Button("Skip for now") { appState.skipDiagnostic() }
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.textSecondary)
+                // v2 users can't skip — the v2 plan is built on diagnostic
+                // results. On a persistent error they retry; relaunching also
+                // re-routes them back here for a fresh attempt.
+                if !V2FeatureFlag.shared.isEnabled {
+                    Button("Skip for now") { appState.skipDiagnostic() }
+                        .font(Typography.bodyBold)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
             }
             .padding(.horizontal, Spacing.lg)
             .padding(.bottom, Spacing.xl)
