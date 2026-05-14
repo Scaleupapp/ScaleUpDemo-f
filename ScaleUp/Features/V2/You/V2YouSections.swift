@@ -26,7 +26,7 @@ struct V2YouSectionDestination: View {
             PlanTabView()
 
         case .progress:
-            ProgressTabView()
+            V2YouAnalyticsView()
 
         case .objectives:
             ObjectivesListShim()
