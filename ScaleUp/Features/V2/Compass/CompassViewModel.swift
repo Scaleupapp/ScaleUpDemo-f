@@ -132,6 +132,10 @@ final class CompassViewModel {
     /// Non-nil when Compass is scoped to a content piece (tutor mode).
     var tutorContext: CompassTutorContext?
 
+    /// Set when the user asks Compass to "make a note" — the view presents
+    /// the V2NoteFlowView sheet in response.
+    var noteFlowRequested = false
+
     /// Used for fallback if backend is unreachable. Keeps UX coherent during outages.
     private var allowFallback = true
 
@@ -249,7 +253,8 @@ final class CompassViewModel {
         case "quiz_config", "interview_config":
             await callConfigMode(mode: mode)
         case "note":
-            messages.append(.init(role: .compass, text: "Upload a PDF, image, or audio file. I'll process it into a summary, mind map, flashcards, and audio narration."))
+            messages.append(.init(role: .compass, text: "Upload a PDF, slide deck, or image — I'll turn it into a summary, audio narration, mind map, flashcards, and a quiz."))
+            noteFlowRequested = true
         default:
             await callConversation(message: userMessage)
         }

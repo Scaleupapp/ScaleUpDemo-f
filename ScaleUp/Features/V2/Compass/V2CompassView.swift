@@ -63,6 +63,11 @@ struct V2CompassView: View {
             if let tc = tutorContext { vm.tutorContext = tc }
             vm.startConversation(context: launchContext)
         }
+        .sheet(isPresented: $vm.noteFlowRequested) {
+            V2NoteFlowView(onClose: { vm.noteFlowRequested = false })
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
