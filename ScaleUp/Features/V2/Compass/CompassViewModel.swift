@@ -35,6 +35,7 @@ private struct CompassRequest: Codable {
 private struct CompassPayload: Codable {
     var message: String?
     var history: [CompassHistoryEntry]?
+    var contentId: String?   // tutor mode — the content this turn is scoped to
 }
 
 private struct CompassHistoryEntry: Codable {
@@ -109,6 +110,14 @@ private struct InsightItem: Codable {
 
 // MARK: - View model
 
+/// When Compass is opened scoped to a piece of content, it runs in TUTOR mode —
+/// the same Compass brain + history, grounded in that video/article.
+struct CompassTutorContext: Equatable, Identifiable {
+    let contentId: String
+    let title: String
+    var id: String { contentId }
+}
+
 @Observable
 @MainActor
 final class CompassViewModel {
@@ -120,12 +129,25 @@ final class CompassViewModel {
     var isWaitingForReply = false
     var error: String?
 
+    /// Non-nil when Compass is scoped to a content piece (tutor mode).
+    var tutorContext: CompassTutorContext?
+
     /// Used for fallback if backend is unreachable. Keeps UX coherent during outages.
     private var allowFallback = true
 
     func startConversation(context: V2Tab = .compass) {
         guard messages.isEmpty else { return }
-        Task { await callGreeting(context: context) }
+        if tutorContext != nil {
+            // Tutor mode opens with a scoped greeting, not the generic one.
+            messages.append(.init(
+                role: .compass,
+                text: "Ask me anything about \(tutorContext!.title) — I can explain concepts, give examples, or quiz you on it."
+            ))
+            suggestions = ["Explain the key idea simply", "Give me a real example", "Quiz me on this"]
+            showSuggestions = true
+        } else {
+            Task { await callGreeting(context: context) }
+        }
     }
 
     /// Archive the current thread server-side and clear UI so the user starts fresh.
@@ -261,7 +283,16 @@ final class CompassViewModel {
         let history = messages.suffix(10).map { msg in
             CompassHistoryEntry(role: msg.role == .user ? "user" : "assistant", content: msg.text)
         }
-        let body = CompassRequest(mode: "conversation", payload: CompassPayload(message: message, history: history))
+        // Tutor mode when scoped to content — same Compass brain, grounded in the lesson.
+        let mode = tutorContext != nil ? "tutor" : "conversation"
+        let body = CompassRequest(
+            mode: mode,
+            payload: CompassPayload(
+                message: message,
+                history: history,
+                contentId: tutorContext?.contentId
+            )
+        )
         do {
             let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post("/compass", body: body)
             let reply = resp.data.output.reply ?? "Tell me more."

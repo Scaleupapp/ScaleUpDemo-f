@@ -42,6 +42,41 @@ final class V2FeatureFlag {
         v2OnboardingEnabled = false
     }
 
+    // MARK: - Remote config (fresh-user routing + server kill switch)
+
+    private struct V2RemoteConfig: Codable {
+        let v2ApiEnabled: Bool
+        let v2ForNewUsers: Bool
+    }
+
+    /// Fetched at launch (after auth). Two jobs:
+    ///   1. Server kill switch — if the backend reports v2ApiEnabled=false,
+    ///      force both local flags OFF so every client cleanly reverts to v1.
+    ///   2. Fresh-user routing — a brand-new user (onboarding not complete)
+    ///      is auto-opted into v2 when the server has v2ForNewUsers=true.
+    /// Best-effort: on network failure the local flag stands.
+    func syncRemoteConfig(isNewUser: Bool) async {
+        do {
+            let resp: V2APIResponse<V2RemoteConfig> = try await V2APIClient.shared.get("/config")
+            let cfg = resp.data
+
+            // Server kill switch wins over everything.
+            if !cfg.v2ApiEnabled {
+                if isEnabled { isEnabled = false }
+                if v2OnboardingEnabled { v2OnboardingEnabled = false }
+                return
+            }
+
+            // Brand-new user + server says fresh users get v2 → opt them in.
+            if isNewUser && cfg.v2ForNewUsers && !isEnabled {
+                isEnabled = true
+                v2OnboardingEnabled = true
+            }
+        } catch {
+            // best-effort — keep the local flag as-is
+        }
+    }
+
     /// Tell the backend the user has opted in/out so server-side workers can
     /// suppress v1 anti-thesis prompts. Best-effort; failures don't break the
     /// local flag.

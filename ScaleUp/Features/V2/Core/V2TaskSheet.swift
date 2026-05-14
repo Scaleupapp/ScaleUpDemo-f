@@ -7,17 +7,35 @@ struct V2TaskSheet: View {
     let route: V2TaskRouter.Route
     let onClose: () -> Void
 
+    /// Tutor-mode Compass sheet, opened from inside a content view via "Ask Compass".
+    @State private var tutorSheet: CompassTutorContext?
+
     var body: some View {
         Group {
             switch route {
-            case .content(let id, _):
+            case .content(let id, let title):
                 NavigationStack {
                     PlayerView(contentId: id)
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button("Close", action: onClose)
                             }
+                            // The merged AI Tutor — opens Compass in tutor mode,
+                            // scoped to this content. Same Compass, same history.
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    tutorSheet = CompassTutorContext(contentId: id, title: title)
+                                } label: {
+                                    Label("Ask Compass", systemImage: "location.north.circle.fill")
+                                        .foregroundStyle(ColorTokens.gold)
+                                }
+                            }
                         }
+                }
+                .sheet(item: $tutorSheet) { ctx in
+                    V2CompassSheetView(tutorContext: ctx)
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
                 }
 
             case .quiz(let id):

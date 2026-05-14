@@ -16,6 +16,9 @@ struct V2CompassView: View {
     /// Used for mode-detection ("I can see you're on Home").
     var launchContext: V2Tab = .compass
 
+    /// When set, Compass opens in TUTOR mode scoped to this content.
+    var tutorContext: CompassTutorContext?
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -56,7 +59,10 @@ struct V2CompassView: View {
             }
             .background(ColorTokens.background.ignoresSafeArea())
         }
-        .onAppear { vm.startConversation(context: launchContext) }
+        .onAppear {
+            if let tc = tutorContext { vm.tutorContext = tc }
+            vm.startConversation(context: launchContext)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -83,14 +89,15 @@ struct V2CompassView: View {
                     .rotationEffect(.degrees(-45))
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text("Compass")
+                Text(vm.tutorContext != nil ? "Compass · Tutor" : "Compass")
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(ColorTokens.textPrimary)
                 HStack(spacing: 4) {
                     Circle().fill(ColorTokens.success).frame(width: 6, height: 6)
-                    Text("knows your full context")
+                    Text(vm.tutorContext.map { "on “\($0.title)”" } ?? "knows your full context")
                         .font(.system(size: 10))
                         .foregroundStyle(ColorTokens.textTertiary)
+                        .lineLimit(1)
                 }
             }
             Spacer()
@@ -158,8 +165,10 @@ struct V2CompassView: View {
 
 struct V2CompassSheetView: View {
     var currentScreen: V2Tab = .home
+    /// When set, the sheet opens Compass in tutor mode for this content.
+    var tutorContext: CompassTutorContext?
     var body: some View {
-        V2CompassView(launchContext: currentScreen)
+        V2CompassView(launchContext: currentScreen, tutorContext: tutorContext)
     }
 }
 

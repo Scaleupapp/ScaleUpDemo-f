@@ -38,6 +38,11 @@ final class AppState {
             currentUser = user
             AnalyticsService.shared.identify(userId: user.id)
 
+            // v2 remote config — server kill switch + fresh-user routing.
+            // Awaited before launchState so the first render reflects the flag.
+            let isNewUser = user.onboardingComplete != true
+            await V2FeatureFlag.shared.syncRemoteConfig(isNewUser: isNewUser)
+
             if user.onboardingComplete == true {
                 if user.diagnosticComplete == true {
                     launchState = .home
@@ -63,6 +68,11 @@ final class AppState {
         )
         currentUser = authData.user
         AnalyticsService.shared.identify(userId: authData.user.id)
+
+        // v2 remote config — server kill switch + fresh-user routing.
+        // A user who just registered has onboardingComplete=false → isNewUser.
+        let isNewUser = authData.user.onboardingComplete != true
+        await V2FeatureFlag.shared.syncRemoteConfig(isNewUser: isNewUser)
 
         if authData.user.onboardingComplete == true {
             if authData.user.diagnosticComplete == true {
