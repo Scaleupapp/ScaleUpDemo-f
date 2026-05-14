@@ -10,6 +10,9 @@ import SwiftUI
 /// Self-contained: fetches the user's primary objective (V2OnboardingState is
 /// gone by this point — different view tree).
 struct V2PostDiagnosticRealityCheckView: View {
+    /// The diagnostic attempt — needed to trigger plan generation (the v2 order
+    /// is Diagnostic → Reality Check → Plan Creation, so plan gen fires HERE).
+    let attemptId: String
     let onContinue: () -> Void
 
     @State private var objective: V2ActiveObjective?
@@ -226,22 +229,31 @@ struct V2PostDiagnosticRealityCheckView: View {
     }
 
     private func confirmAndContinue() async {
-        guard let objective = objective,
-              let objId = objective.objectiveId,
-              let hours = chosenHours else {
-            onContinue()
-            return
-        }
-        // Only update if the user changed it from what's already saved.
-        if hours != objective.weeklyCommitHours {
-            isSaving = true
+        isSaving = true
+        defer { isSaving = false }
+
+        // 1. If the user changed the weekly hours, persist the change.
+        if let objId = objective?.objectiveId,
+           let hours = chosenHours,
+           hours != objective?.weeklyCommitHours {
             do {
                 try await V2OnboardingService.shared.updateWeeklyHours(objectiveId: objId, hours: hours)
             } catch {
                 self.error = "Couldn't save your change — continuing with the original."
             }
-            isSaving = false
         }
+
+        // 2. NOW trigger plan generation — this is the v2 order:
+        //    Diagnostic → Reality Check → Plan Creation. The diagnostic-finish
+        //    deferred this; the user confirming their commitment kicks it off.
+        do {
+            _ = try await V2OnboardingService.shared.triggerPlanGeneration(attemptId: attemptId)
+        } catch {
+            // Non-fatal — the Plan Creation screen polls + can retry.
+            print("[V2RealityCheck] plan generation trigger failed: \(error)")
+        }
+
+        // 3. Advance to Calibration insights → Plan Creation.
         onContinue()
     }
 

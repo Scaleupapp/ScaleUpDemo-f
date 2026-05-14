@@ -70,6 +70,7 @@
 		24F72891096DD67A8EBAEAFE /* ProgressInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 246F59029776866E55CDE9FA /* ProgressInsights.swift */; };
 		254BDEB2A659A8482A46A960 /* OnboardingTopicService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D54EFF71CEC11AB7F8EBDE49 /* OnboardingTopicService.swift */; };
 		255F3202059BEF4FA053CC15 /* DiagnosticHappyPathUITest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12ECA8505CEAA4D9C498276 /* DiagnosticHappyPathUITest.swift */; };
+		255FF657885F98B5D89C1B25 /* V2PlanCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFED1014FB807E48D22A965B /* V2PlanCreationView.swift */; };
 		266DAA2446035E714FDE4534 /* DiagnosticService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF43B5C17C1F466D43674424 /* DiagnosticService.swift */; };
 		26AD3868F569FDA6984107E0 /* PlanTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2136325581705D88D44FB44F /* PlanTabView.swift */; };
 		26B7CDA6E99F030EE7AE3E7E /* InterviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDCB84D59D198D460B8B735C /* InterviewViewModel.swift */; };
@@ -692,6 +693,7 @@
 		AF4360C561A62E9E17EAF559 /* AITutorSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorSheetView.swift; sourceTree = "<group>"; };
 		AF43B5C17C1F466D43674424 /* DiagnosticService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticService.swift; sourceTree = "<group>"; };
 		AFA06FB7B0C7ACBA7C600233 /* TopicProgressChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicProgressChip.swift; sourceTree = "<group>"; };
+		AFED1014FB807E48D22A965B /* V2PlanCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2PlanCreationView.swift; sourceTree = "<group>"; };
 		B0F60870B68E2A84D48946C6 /* QuizDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizDetailView.swift; sourceTree = "<group>"; };
 		B0F6CDF4BAFAB818C8A2F319 /* CreateContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateContentView.swift; sourceTree = "<group>"; };
 		B173C866068BF70D6579A235 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -1044,6 +1046,7 @@
 				09B43D3C6339815E5DEBD5BA /* V2CalibrationInsightsView.swift */,
 				E7BBEB5D9CCBA8907DBEC1B7 /* V2CalibrationInsightsViewModel.swift */,
 				EBB22CE22AB85B4C5534AC7B /* V2DiagnosticResultsBridge.swift */,
+				AFED1014FB807E48D22A965B /* V2PlanCreationView.swift */,
 				6B39FA4CFE728234293A6309 /* V2PostDiagnosticRealityCheckView.swift */,
 			);
 			path = Diagnostic;
@@ -2547,6 +2550,7 @@
 				E48C7A9A29762D7AEFBC55DA /* V2OnboardingFlowView.swift in Sources */,
 				DC8BCB0CF71B853D6A34DED7 /* V2OnboardingService.swift in Sources */,
 				2A5ED5A6DE4B1E1648326DFA /* V2OnboardingState.swift in Sources */,
+				255FF657885F98B5D89C1B25 /* V2PlanCreationView.swift in Sources */,
 				0C88881AA6026C42462F9B0E /* V2PostDiagnosticRealityCheckView.swift in Sources */,
 				37C9EC028B8946A232D103B1 /* V2RootView.swift in Sources */,
 				CF8AB9E06F5B2DE8B6075645 /* V2Tab.swift in Sources */,

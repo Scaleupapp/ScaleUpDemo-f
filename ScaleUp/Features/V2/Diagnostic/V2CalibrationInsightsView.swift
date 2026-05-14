@@ -8,6 +8,9 @@ struct V2CalibrationInsightsView: View {
     @State private var vm = V2CalibrationInsightsViewModel()
     @Binding var path: NavigationPath
     var attemptId: String?
+    /// Set by the post-diagnostic bridge — advances to the Plan Creation step.
+    /// When nil (standalone use), the "Got it" button just exits.
+    var onContinueToPlanCreation: (() -> Void)?
 
     var body: some View {
         ScrollView {
@@ -140,11 +143,14 @@ struct V2CalibrationInsightsView: View {
         }
 
         Button {
-            // Tell the v1 bridge (or v2 onboarding flow) that the user wants
-            // to exit. v2 main tab IA remains active (V2FeatureFlag.isEnabled).
-            // The v2OnboardingEnabled flag stays where it is so testers don't
-            // get bounced back into the v2 onboarding next time.
-            NotificationCenter.default.post(name: .v2OnboardingExit, object: nil)
+            // Order: Diagnostic → Reality Check → [this: Calibration] → Plan Creation.
+            // Advance to the Plan Creation screen. If we're not in a flow with a
+            // plan-creation route (e.g. opened standalone), fall back to exit.
+            if let onContinue = onContinueToPlanCreation {
+                onContinue()
+            } else {
+                NotificationCenter.default.post(name: .v2OnboardingExit, object: nil)
+            }
         } label: {
             Text("Got it — let's start")
                 .font(.system(size: 15, weight: .semibold))

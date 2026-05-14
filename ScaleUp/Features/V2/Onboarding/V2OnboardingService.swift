@@ -59,6 +59,27 @@ final class V2OnboardingService {
         )
     }
 
+    // MARK: - Plan generation (v2 order: triggered AFTER the Reality Check)
+
+    struct GeneratePlanBody: Codable { let attemptId: String }
+    struct GeneratePlanResponse: Codable { let status: String; let alreadyTriggered: Bool }
+    struct PlanGenStatusResponse: Codable { let status: String; let planId: String? }
+
+    /// POST /api/v2/plan/generate — kicks off plan generation once the user has
+    /// confirmed their weekly commitment on the Reality Check screen.
+    func triggerPlanGeneration(attemptId: String) async throws -> GeneratePlanResponse {
+        let resp: V2APIResponse<GeneratePlanResponse> =
+            try await V2APIClient.shared.post("/plan/generate", body: GeneratePlanBody(attemptId: attemptId))
+        return resp.data
+    }
+
+    /// GET /api/v2/plan/generation-status — poll for the Plan Creation screen.
+    func planGenerationStatus(attemptId: String) async throws -> PlanGenStatusResponse {
+        let resp: V2APIResponse<PlanGenStatusResponse> =
+            try await V2APIClient.shared.get("/plan/generation-status?attemptId=\(attemptId)")
+        return resp.data
+    }
+
     // MARK: - Update weekly hours after the post-diagnostic Reality Check
 
     struct UpdateHoursBody: Codable { let weeklyCommitHours: Int }
