@@ -54,7 +54,16 @@ struct V2LearnView: View {
         }
         .task { await vm.load() }
         .sheet(isPresented: $showDiscover) {
-            NavigationStack { DiscoverView() }
+            NavigationStack {
+                DiscoverView()
+                    .navigationTitle("Discover")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") { showDiscover = false }
+                        }
+                    }
+            }
         }
     }
 
@@ -112,9 +121,9 @@ struct V2LearnView: View {
             .background(V2Theme.cardBorder)
             .padding(.vertical, 6)
 
-        browseLink(icon: "📚", label: "Browse by topic")
-        browseLink(icon: "🎬", label: "Browse by content type")
-        browseLink(icon: "👥", label: "Browse by creator")
+        browseLink(icon: "square.grid.2x2", label: "Browse by topic")
+        browseLink(icon: "play.rectangle", label: "Browse by content type")
+        browseLink(icon: "person.2", label: "Browse by creator")
     }
 
     private func contentRow(_ item: Content) -> some View {
@@ -196,17 +205,25 @@ struct V2LearnView: View {
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
             Spacer()
-            Text("See all")
-                .font(.system(size: 12))
-                .foregroundStyle(ColorTokens.textTertiary)
+            Button { showDiscover = true } label: {
+                Text("See all")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.top, 8)
     }
 
     private func browseLink(icon: String, label: String) -> some View {
         Button { showDiscover = true } label: {
-            HStack {
-                Text(icon)
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 28, height: 28)
+                    .background(ColorTokens.surface)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 Text(label)
                     .font(V2Theme.bodyMedium)
                     .foregroundStyle(ColorTokens.textPrimary)

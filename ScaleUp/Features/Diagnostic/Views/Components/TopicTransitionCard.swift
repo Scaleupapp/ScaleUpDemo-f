@@ -12,6 +12,17 @@ struct TopicTransitionCard: View {
     let nextTopicName: String
     let onComplete: () -> Void
 
+    /// Canonical names arrive kebab-cased ("verbal-reasoning"). Show them
+    /// human-readable.
+    private var displayName: String {
+        nextTopicName
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
+    }
+
     var body: some View {
         VStack(spacing: Spacing.md) {
             Image(systemName: "sparkles")
@@ -19,7 +30,7 @@ struct TopicTransitionCard: View {
                 .foregroundStyle(ColorTokens.gold)
                 .symbolEffect(.pulse, options: .repeating)
 
-            Text("Nice — moving to \(nextTopicName)")
+            Text("Nice — moving to \(displayName)")
                 .font(Typography.titleLarge)
                 .foregroundStyle(ColorTokens.textPrimary)
                 .multilineTextAlignment(.center)
@@ -35,12 +46,13 @@ struct TopicTransitionCard: View {
         .padding(.horizontal, Spacing.lg)
         .transition(.opacity.combined(with: .scale(scale: 0.95)))
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            // ~2.2s — long enough to actually read, short enough not to drag.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
                 onComplete()
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Moving to \(nextTopicName)")
+        .accessibilityLabel("Moving to \(displayName)")
     }
 }
 

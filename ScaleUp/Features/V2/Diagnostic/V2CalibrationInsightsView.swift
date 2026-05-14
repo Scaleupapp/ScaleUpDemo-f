@@ -83,10 +83,52 @@ struct V2CalibrationInsightsView: View {
                 .padding(.bottom, 10)
         }
 
-        HStack(spacing: 10) {
-            calibCol(label: "You said", entries: data.calibration.selfRated.map { ($0.topic, $0.level) })
-            calibCol(label: "You actually", entries: data.calibration.actual.map { ($0.topic, "\($0.scorePct)%") }, isActual: true)
+        // One row per topic — self-rating and measured score side by side so
+        // they're actually comparable (was two unaligned columns).
+        VStack(spacing: 0) {
+            HStack {
+                Text("TOPIC").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Spacer()
+                Text("YOU SAID").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(width: 90, alignment: .trailing)
+                Text("SCORED").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(width: 56, alignment: .trailing)
+            }
+            .padding(.bottom, 8)
+
+            ForEach(mergedCalibrationRows(data), id: \.topic) { row in
+                HStack {
+                    Text(row.topic.replacingOccurrences(of: "-", with: " ").capitalized)
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(row.said)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .frame(width: 90, alignment: .trailing)
+                    Text(row.scored)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(row.scoredColor)
+                        .frame(width: 56, alignment: .trailing)
+                }
+                .padding(.vertical, 7)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+                }
+            }
+
+            Text("Baseline readiness is the average of your measured scores.")
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 8)
         }
+        .padding(12)
+        .v2Card(padding: 12)
         .padding(.bottom, 18)
 
         // Patterns
@@ -205,31 +247,33 @@ struct V2CalibrationInsightsView: View {
         return ColorTokens.success
     }
 
-    private func calibCol(label: String, entries: [(String, String)], isActual: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label.uppercased())
-                .font(.system(size: 10, weight: .semibold)).tracking(0.8)
-                .foregroundStyle(ColorTokens.textTertiary)
-            ForEach(entries, id: \.0) { entry in
-                HStack {
-                    Text(entry.0).font(V2Theme.small).foregroundStyle(ColorTokens.textSecondary)
-                    Spacer()
-                    Text(entry.1).font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(isActual ? actualColor(entry.1) : ColorTokens.textPrimary)
-                }
-            }
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .v2Card(padding: 12)
+    /// One comparable row per topic — merges the self-rating and the
+    /// measured score, keyed by topic, so they line up.
+    private struct CalibRow {
+        let topic: String
+        let said: String
+        let scored: String
+        let scoredColor: Color
     }
 
-    private func actualColor(_ v: String) -> Color {
-        if let pct = Int(v.replacingOccurrences(of: "%", with: "")) {
-            if pct < 50 { return ColorTokens.warning }
-            if pct >= 65 { return ColorTokens.success }
+    private func mergedCalibrationRows(_ data: V2InsightsData) -> [CalibRow] {
+        var byTopic: [String: (said: String, scored: String?)] = [:]
+        for s in data.calibration.selfRated {
+            byTopic[s.topic, default: (said: "—", scored: nil)].said = s.level.capitalized
         }
-        return ColorTokens.textPrimary
+        for a in data.calibration.actual {
+            byTopic[a.topic, default: (said: "—", scored: nil)].scored = "\(a.scorePct)%"
+        }
+        return byTopic
+            .sorted { ($0.value.scored.flatMap { Int($0.dropLast()) } ?? -1) < ($1.value.scored.flatMap { Int($0.dropLast()) } ?? -1) }
+            .map { topic, v in
+                let pct = v.scored.flatMap { Int($0.dropLast()) }
+                let color: Color = pct == nil ? ColorTokens.textTertiary
+                    : pct! < 50 ? ColorTokens.warning
+                    : pct! >= 65 ? ColorTokens.success
+                    : ColorTokens.textPrimary
+                return CalibRow(topic: topic, said: v.said, scored: v.scored ?? "—", scoredColor: color)
+            }
     }
 
     private func trajRow(label: String, value: String, color: Color) -> some View {
