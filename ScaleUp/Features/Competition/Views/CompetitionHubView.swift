@@ -25,9 +25,21 @@ struct CompetitionHubView: View {
         }
     }
 
+    /// True if a challenge/event topic is relevant to the user's objective.
+    /// Mirrors the fuzzy match used to pin `myChallenge`. With no objective
+    /// topic we can't filter, so everything passes through.
+    private func matchesObjective(_ challengeTopic: String) -> Bool {
+        guard let topic = objectiveTopic?.lowercased(), !topic.isEmpty else { return true }
+        let t = challengeTopic.lowercased()
+        return t == topic || t.contains(topic) || topic.contains(t)
+    }
+
     private var otherChallenges: [DailyChallenge] {
-        guard let myId = myChallenge?.id else { return challenges }
-        return challenges.filter { $0.id != myId }
+        // Only surface challenges relevant to the user's objective — not the
+        // entire global catalogue.
+        let relevant = challenges.filter { matchesObjective($0.topic) }
+        guard let myId = myChallenge?.id else { return relevant }
+        return relevant.filter { $0.id != myId }
     }
 
     private var filteredOtherChallenges: [DailyChallenge] {
@@ -42,7 +54,7 @@ struct CompetitionHubView: View {
 
     private var otherEvents: [LiveEvent] {
         let myTopic = objectiveTopic?.lowercased()
-        return events.filter { $0.topic.lowercased() != myTopic }
+        return events.filter { matchesObjective($0.topic) && $0.topic.lowercased() != myTopic }
     }
 
     var body: some View {
@@ -73,8 +85,8 @@ struct CompetitionHubView: View {
                             otherChallengesSection
                         }
 
-                        // Live Events
-                        if !events.isEmpty {
+                        // Live Events — objective-relevant only
+                        if !otherEvents.isEmpty {
                             liveEventsSection
                         } else {
                             nextLiveEventInfo
