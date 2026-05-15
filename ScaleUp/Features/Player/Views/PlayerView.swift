@@ -272,8 +272,9 @@ struct PlayerView: View {
             .presentationDragIndicator(.visible)
         }
         // v2: same Compass surface used everywhere else, scoped to this content.
-        // Provide a local V2TaskRouter so PlayerView works regardless of the
-        // surrounding context (v2 sheet — env present — or v1 tab — absent).
+        // Provide local V2TaskRouter + V2NavState so PlayerView works
+        // regardless of context (v2 sheet — env present — or v1 tab —
+        // absent). V2CompassView reads both; without them it would crash.
         .sheet(isPresented: $showCompassTutorSheet) {
             V2CompassSheetView(
                 tutorContext: CompassTutorContext(
@@ -283,6 +284,7 @@ struct PlayerView: View {
             )
             .environment(appState)
             .environment(V2TaskRouter())
+            .environment(V2NavState())
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }

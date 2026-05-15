@@ -37,9 +37,10 @@ struct V2TaskSheet: View {
                         }
                 }
                 .sheet(item: $tutorSheet) { ctx in
-                    // Re-inject the router env — nested sheets don't inherit it.
+                    // Re-inject env — nested sheets don't inherit Observables.
                     V2CompassSheetView(tutorContext: ctx)
                         .environment(taskRouter)
+                        .environment(V2NavState())
                         .presentationDetents([.large])
                         .presentationDragIndicator(.visible)
                 }

@@ -9,6 +9,9 @@ struct V2HomeData: Codable {
     let objectiveLabel: String?
     let trajectory: Trajectory?
     let weekProgress: WeekProgress?
+    let streak: Streak?
+    let weekActivity: [WeekDayActivity]?
+    let topGap: TopGap?
     let todaysTasks: [Task]?
     let totalDurationMin: Int?
     let hasMoreThisWeek: Bool?
@@ -25,6 +28,15 @@ struct V2HomeData: Codable {
         let weeklyDelta: Int
         let onTrack: Bool
         let headline: String?
+        /// Curve points the backend returns for the readiness line chart.
+        let points: [TrajectoryPoint]?
+
+        struct TrajectoryPoint: Codable, Identifiable {
+            let whenLabel: String
+            let readiness: Int
+            let weeks: Int
+            var id: String { whenLabel }
+        }
     }
 
     struct WeekProgress: Codable {
@@ -32,6 +44,25 @@ struct V2HomeData: Codable {
         let total: Int
         let week: Int
         let totalWeeks: Int
+    }
+
+    struct Streak: Codable {
+        let current: Int
+        let longest: Int
+    }
+
+    struct WeekDayActivity: Codable, Identifiable {
+        let label: String
+        let hadActivity: Bool
+        let isToday: Bool
+        // Labels repeat (T, S) so include position context via array index in the view.
+        var id: String { "\(label)-\(isToday)-\(hadActivity)" }
+    }
+
+    struct TopGap: Codable {
+        let topic: String
+        let score: Int
+        let band: String?
     }
 
     /// One task in the structured day. Unified shape — no more hero/alternative split.
@@ -182,9 +213,20 @@ final class V2HomeViewModel {
             trajectory: .init(
                 today: 74, in30Days: 80, atTargetDate: 85,
                 targetReadiness: 80, timelineWeeks: 24, weeklyDelta: 6,
-                onTrack: true, headline: nil
+                onTrack: true, headline: nil, points: nil
             ),
             weekProgress: .init(done: 3, total: 7, week: 11, totalWeeks: 24),
+            streak: .init(current: 3, longest: 7),
+            weekActivity: [
+                .init(label: "M", hadActivity: true, isToday: false),
+                .init(label: "T", hadActivity: true, isToday: false),
+                .init(label: "W", hadActivity: true, isToday: true),
+                .init(label: "T", hadActivity: false, isToday: false),
+                .init(label: "F", hadActivity: false, isToday: false),
+                .init(label: "S", hadActivity: false, isToday: false),
+                .init(label: "S", hadActivity: false, isToday: false),
+            ],
+            topGap: .init(topic: "dynamic-programming", score: 30, band: "novice"),
             todaysTasks: [
                 .init(taskId: "t1", taskType: "watch", icon: "📺",
                       title: "Dynamic Programming — Memoization", subtitle: "Striver",

@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 /// V2 Home — the STRUCTURED DAY.
 ///
@@ -9,6 +10,9 @@ import SwiftUI
 struct V2HomeView: View {
     @State private var vm = V2HomeViewModel()
     @State private var showNotifications = false
+    /// Which task is the expanded hero in the active+next-up deck. Tapping
+    /// a "next up" row swaps it into this slot.
+    @State private var activeTaskIndex: Int = 0
     @Environment(V2TaskRouter.self) private var taskRouter
 
     var body: some View {
@@ -82,19 +86,22 @@ struct V2HomeView: View {
         }
         .padding(.bottom, 20)
 
-        // Trajectory bar
+        // Trajectory curve — the hero
         if let traj = data.trajectory {
-            trajectorySection(traj: traj, weekProgress: data.weekProgress)
+            trajectoryCard(traj: traj, weekProgress: data.weekProgress)
+                .padding(.bottom, 16)
+        }
+
+        // Streak + weekly rhythm
+        if data.streak != nil || data.weekActivity != nil {
+            streakStrip(streak: data.streak, days: data.weekActivity ?? [])
                 .padding(.bottom, 22)
         }
 
-        // The structured day
+        // The structured day — active task + compact "next up" rows
         if !vm.visibleTasks.isEmpty {
             todayHeader(data: data)
-            ForEach(vm.visibleTasks) { task in
-                taskCard(task)
-                    .padding(.bottom, 10)
-            }
+            activeTaskDeck(tasks: vm.visibleTasks)
 
             // Reshuffle affordance — only when there are skipped tasks to bring back
             if (data.skippedCount ?? 0) > 0 {
@@ -158,12 +165,212 @@ struct V2HomeView: View {
         .padding(.bottom, 10)
     }
 
-    // MARK: - Task card
+    private func difficultyColor(_ d: String) -> Color {
+        switch d.lowercased() {
+        case "hard": return ColorTokens.warning
+        case "easy": return ColorTokens.success
+        default:     return ColorTokens.textSecondary
+        }
+    }
 
-    private func taskCard(_ task: V2HomeData.Task) -> some View {
+    // MARK: - Trajectory card — readiness curve + week progress
+
+    private func trajectoryCard(traj: V2HomeData.Trajectory, weekProgress: V2HomeData.WeekProgress?) -> some View {
+        // Build curve points: prefer server-sent points, else synthesize from
+        // today / 30d / 90d / target so there's always *something* to draw.
+        let points: [(label: String, value: Int)] = {
+            if let pts = traj.points, !pts.isEmpty {
+                return pts.map { ($0.whenLabel, $0.readiness) }
+            }
+            return [
+                ("Today",  traj.today),
+                ("30d",    traj.in30Days),
+                ("Target", traj.atTargetDate),
+            ]
+        }()
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("READINESS")
+                    .v2Eyebrow()
+                Spacer()
+                HStack(spacing: 4) {
+                    Image(systemName: traj.onTrack ? "arrow.up.right" : "exclamationmark.triangle")
+                        .font(.system(size: 9, weight: .bold))
+                    Text(traj.onTrack ? "On track" : "Behind pace")
+                        .font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(traj.onTrack ? ColorTokens.success : ColorTokens.warning)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("\(traj.today)%")
+                    .font(.system(size: 38, weight: .bold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Text("\(traj.targetReadiness)%")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("target")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+
+            // Curve
+            Chart {
+                ForEach(Array(points.enumerated()), id: \.offset) { idx, point in
+                    AreaMark(
+                        x: .value("When", idx),
+                        y: .value("Readiness", point.value)
+                    )
+                    .foregroundStyle(LinearGradient(
+                        colors: [ColorTokens.gold.opacity(0.35), ColorTokens.gold.opacity(0.02)],
+                        startPoint: .top, endPoint: .bottom
+                    ))
+                    .interpolationMethod(.catmullRom)
+
+                    LineMark(
+                        x: .value("When", idx),
+                        y: .value("Readiness", point.value)
+                    )
+                    .foregroundStyle(ColorTokens.gold)
+                    .interpolationMethod(.catmullRom)
+                    .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+
+                    PointMark(
+                        x: .value("When", idx),
+                        y: .value("Readiness", point.value)
+                    )
+                    .foregroundStyle(ColorTokens.gold)
+                    .symbolSize(idx == 0 ? 60 : 30)
+                }
+            }
+            .chartXAxis {
+                AxisMarks(values: Array(0..<points.count)) { v in
+                    if let i = v.as(Int.self), i < points.count {
+                        AxisValueLabel {
+                            Text(points[i].label)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                    }
+                }
+            }
+            .chartYAxis(.hidden)
+            .chartYScale(domain: 0...100)
+            .frame(height: 110)
+
+            if let wp = weekProgress {
+                HStack(spacing: 8) {
+                    Text("Week \(wp.week) of \(wp.totalWeeks)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                    Text("·")
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text("\(wp.done)/\(wp.total) done")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Spacer()
+                    Text("▲ \(traj.weeklyDelta)% / week")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .fill(ColorTokens.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+        )
+    }
+
+    // MARK: - Streak strip — weekly rhythm + streak chip
+
+    private func streakStrip(streak: V2HomeData.Streak?, days: [V2HomeData.WeekDayActivity]) -> some View {
+        HStack(spacing: 12) {
+            // Streak chip
+            if let s = streak, s.current > 0 {
+                HStack(spacing: 5) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(s.current == 1 ? "1-day streak" : "\(s.current)-day streak")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundStyle(ColorTokens.gold)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(ColorTokens.gold.opacity(0.12)))
+                .overlay(Capsule().strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+            } else {
+                Text("Start a streak today")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+
+            Spacer()
+
+            // Weekly grid Mon→Sun
+            HStack(spacing: 8) {
+                ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+                    VStack(spacing: 4) {
+                        Circle()
+                            .fill(day.hadActivity
+                                  ? ColorTokens.gold
+                                  : (day.isToday ? ColorTokens.gold.opacity(0.25) : ColorTokens.surfaceElevated))
+                            .frame(width: 8, height: 8)
+                            .overlay(
+                                Circle()
+                                    .strokeBorder(day.isToday ? ColorTokens.gold : Color.clear, lineWidth: 1.5)
+                                    .frame(width: 12, height: 12)
+                            )
+                        Text(day.label)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(day.isToday ? ColorTokens.textPrimary : ColorTokens.textTertiary)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    // MARK: - Active task deck — hero + compact "next up" rows
+
+    @ViewBuilder
+    private func activeTaskDeck(tasks: [V2HomeData.Task]) -> some View {
+        let clampedActive = min(max(0, activeTaskIndex), max(0, tasks.count - 1))
+        let active = tasks[clampedActive]
+        let others = tasks.enumerated().filter { $0.offset != clampedActive }
+
+        VStack(spacing: 0) {
+            heroTaskCard(active)
+                .padding(.bottom, 14)
+
+            if !others.isEmpty {
+                HStack {
+                    Text("NEXT UP")
+                        .v2Eyebrow()
+                    Spacer()
+                }
+                .padding(.bottom, 8)
+
+                VStack(spacing: 8) {
+                    ForEach(others, id: \.offset) { idx, task in
+                        nextUpRow(task, atIndex: idx)
+                    }
+                }
+            }
+        }
+    }
+
+    private func heroTaskCard(_ task: V2HomeData.Task) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                // Mark-done checkmark — tap-completion, explicit + always available
                 Button {
                     Task { await vm.markComplete(task.taskId) }
                 } label: {
@@ -189,11 +396,10 @@ struct V2HomeView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(ColorTokens.textTertiary)
 
-                    // Why this — predicted-impact line
                     Text(task.whyText)
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundStyle(ColorTokens.success)
-                        .padding(.top, 2)
+                        .padding(.top, 4)
                 }
                 Spacer()
             }
@@ -208,7 +414,7 @@ struct V2HomeView: View {
                     }
                     .font(.system(size: 13, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 11)
                     .background(ColorTokens.gold)
                     .foregroundStyle(ColorTokens.background)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -220,8 +426,8 @@ struct V2HomeView: View {
                 } label: {
                     Text("Skip")
                         .font(.system(size: 13, weight: .medium))
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 11)
                         .background(ColorTokens.surfaceElevated.opacity(0.5))
                         .foregroundStyle(ColorTokens.textSecondary)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
@@ -231,50 +437,64 @@ struct V2HomeView: View {
             .padding(.top, 14)
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: V2Theme.cardRadius).fill(ColorTokens.surface))
-        .overlay(RoundedRectangle(cornerRadius: V2Theme.cardRadius).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+        .background(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .fill(LinearGradient(
+                    colors: [ColorTokens.surface, ColorTokens.surface.opacity(0.6)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .strokeBorder(ColorTokens.gold.opacity(0.35), lineWidth: 1)
+        )
     }
 
-    private func difficultyColor(_ d: String) -> Color {
-        switch d.lowercased() {
-        case "hard": return ColorTokens.warning
-        case "easy": return ColorTokens.success
-        default:     return ColorTokens.textSecondary
-        }
-    }
-
-    // MARK: - Trajectory
-
-    private func trajectorySection(traj: V2HomeData.Trajectory, weekProgress: V2HomeData.WeekProgress?) -> some View {
-        VStack(spacing: 8) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(ColorTokens.surface)
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(LinearGradient(colors: [ColorTokens.gold, ColorTokens.goldLight],
-                                             startPoint: .leading, endPoint: .trailing))
-                        .frame(width: geo.size.width * CGFloat(traj.today) / 100.0, height: 6)
-                }
+    private func nextUpRow(_ task: V2HomeData.Task, atIndex idx: Int) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.22)) {
+                activeTaskIndex = idx
             }
-            .frame(height: 6)
+        } label: {
+            HStack(spacing: 12) {
+                Button {
+                    Task { await vm.markComplete(task.taskId) }
+                } label: {
+                    Image(systemName: "circle")
+                        .font(.system(size: 18))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .buttonStyle(.plain)
 
-            HStack {
-                if let wp = weekProgress {
-                    Text("Week \(wp.week) of \(wp.totalWeeks) · \(wp.done)/\(wp.total) done")
-                } else {
-                    Text("\(traj.today)% ready")
+                Text(task.icon)
+                    .font(.system(size: 14))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(task.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .lineLimit(1)
+                    Text("\(task.durationMin) min · \(task.difficulty.capitalized)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
                 Spacer()
-                Text("▲ \(traj.weeklyDelta)% / week")
-                    .foregroundStyle(ColorTokens.gold)
-                Spacer()
-                Text("Target \(traj.targetReadiness)%")
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textTertiary)
             }
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(ColorTokens.textTertiary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(ColorTokens.surface.opacity(0.6))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Fallbacks

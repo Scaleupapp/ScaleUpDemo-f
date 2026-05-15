@@ -118,6 +118,29 @@ struct CompassTutorContext: Equatable, Identifiable {
     var id: String { contentId }
 }
 
+/// Destination home screens the Compass quick-action chips route into.
+/// Plan and Explain stay inside the conversation (no dedicated home).
+enum CompassHomeRoute: String, Identifiable, CaseIterable {
+    case quiz
+    case interview
+    case notes
+    case resume
+    case plan
+    var id: String { rawValue }
+
+    /// Maps a chip label (e.g. "⚡ Quiz me", "Practice interview") onto the
+    /// route. Returns nil for chips that should stay conversational.
+    static func fromChip(_ chip: String) -> CompassHomeRoute? {
+        let s = chip.lowercased()
+        if s.contains("quiz")      { return .quiz }
+        if s.contains("interview") { return .interview }
+        if s.contains("note")      { return .notes }
+        if s.contains("resume")    { return .resume }
+        if s.contains("plan")      { return .plan }
+        return nil
+    }
+}
+
 @Observable
 @MainActor
 final class CompassViewModel {
@@ -132,9 +155,10 @@ final class CompassViewModel {
     /// Non-nil when Compass is scoped to a content piece (tutor mode).
     var tutorContext: CompassTutorContext?
 
-    /// Set when the user asks Compass to "make a note" — the view presents
-    /// the V2NoteFlowView sheet in response.
-    var noteFlowRequested = false
+    /// Set when the user picks a Compass quick-action chip that maps to a
+    /// dedicated destination screen (Quiz/Interview/Notes/Resume Home). The
+    /// view presents the right home via .sheet(item:) on this value.
+    var presentedHome: CompassHomeRoute?
 
     /// Used for fallback if backend is unreachable. Keeps UX coherent during outages.
     private var allowFallback = true
@@ -171,6 +195,14 @@ final class CompassViewModel {
     private struct ResetResponse: Codable { let reset: Bool? }
 
     func handleSuggestion(_ chip: String) {
+        // First check if this chip maps to a dedicated home screen — those
+        // open as destinations, NOT as one-shot config cards. Tutor-mode
+        // chips ("Quiz me on this") stay conversational.
+        if tutorContext == nil, let route = CompassHomeRoute.fromChip(chip) {
+            presentedHome = route
+            return
+        }
+
         let userMsg = chip
             .replacingOccurrences(of: "⚡ ", with: "")
             .replacingOccurrences(of: "🎙️ ", with: "")
@@ -182,6 +214,16 @@ final class CompassViewModel {
         showSuggestions = false
 
         Task { await callMode(for: chip, userMessage: userMsg) }
+    }
+
+    /// Trigger the conversational quiz_config flow — used when "Generate a
+    /// new quiz" is tapped from inside Quiz Home, so customisation still
+    /// happens through Compass.
+    func startQuizConfigFromHome() {
+        let userMsg = "Quiz me"
+        messages.append(.init(role: .user, text: userMsg))
+        showSuggestions = false
+        Task { await callConfigMode(mode: "quiz_config") }
     }
 
     func send() {
@@ -256,8 +298,9 @@ final class CompassViewModel {
         case "quiz_config", "interview_config":
             await callConfigMode(mode: mode)
         case "note":
-            messages.append(.init(role: .compass, text: "Upload a PDF, slide deck, or image — I'll turn it into a summary, audio narration, mind map, flashcards, and a quiz."))
-            noteFlowRequested = true
+            // Notes chip is now intercepted by handleSuggestion → presentedHome.
+            // If we end up here (defensive fallback), route to the home too.
+            presentedHome = .notes
         default:
             await callConversation(message: userMessage)
         }

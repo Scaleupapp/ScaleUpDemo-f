@@ -100,33 +100,52 @@ struct V2LearnView: View {
 
     @ViewBuilder
     private var loadedSections: some View {
-        if !vm.continueWatching.isEmpty {
-            sectionHeader("Continue watching")
-            ForEach(vm.continueWatching, id: \.id) { item in
-                contentRow(item)
-            }
-        }
-
+        // PICKED FOR YOU — the hero. Stacked vertical rich cards with a
+        // personal "why this" tied to the user's diagnostic data.
         if !vm.recommendations.isEmpty {
-            sectionHeader("Recommended for you")
-            contentCarousel(items: vm.recommendations)
+            HStack {
+                Text("PICKED FOR YOU").v2Eyebrow()
+                Spacer()
+            }
+            .padding(.top, 4)
+            .padding(.bottom, 4)
+            VStack(spacing: 12) {
+                ForEach(vm.recommendations, id: \.id) { item in
+                    recommendationCard(item)
+                }
+            }
+            .padding(.bottom, 12)
         }
 
+        // Continue watching — compact strip.
+        if !vm.continueWatching.isEmpty {
+            compactStripHeader("Continue watching")
+            compactStrip(items: vm.continueWatching)
+                .padding(.bottom, 14)
+        }
+
+        // Trending — compact strip.
         if !vm.trending.isEmpty {
-            sectionHeader("Trending in your domain")
-            contentCarousel(items: vm.trending)
+            compactStripHeader("Trending in your domain")
+            compactStrip(items: vm.trending)
+                .padding(.bottom, 18)
         }
 
-        Divider()
-            .background(V2Theme.cardBorder)
-            .padding(.vertical, 6)
-
-        browseLink(icon: "square.grid.2x2", label: "Browse by topic")
-        browseLink(icon: "play.rectangle", label: "Browse by content type")
-        browseLink(icon: "person.2", label: "Browse by creator")
+        // Browse another way — quiet utility section at the bottom.
+        Text("Browse another way".uppercased())
+            .v2Eyebrow()
+            .padding(.top, 4)
+            .padding(.bottom, 4)
+        VStack(spacing: 0) {
+            browseLink(icon: "square.grid.2x2", label: "Browse by topic")
+            browseLink(icon: "play.rectangle", label: "Browse by content type")
+            browseLink(icon: "person.2", label: "Browse by creator")
+        }
     }
 
-    private func contentRow(_ item: Content) -> some View {
+    // MARK: - Recommendation rich card
+
+    private func recommendationCard(_ item: Content) -> some View {
         Button {
             taskRouter.open(
                 taskType: "watch",
@@ -134,30 +153,64 @@ struct V2LearnView: View {
                 title: item.title
             )
         } label: {
-            HStack(spacing: 12) {
-                thumbnail(item, width: 70, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            HStack(alignment: .top, spacing: 12) {
+                thumbnail(item, width: 110, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
-                        .font(V2Theme.bodyMedium)
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(ColorTokens.textPrimary)
                         .lineLimit(2)
-                    Text("\(item.contentType.rawValue) · \(durationString(item))")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.textTertiary)
+                        .multilineTextAlignment(.leading)
+                    HStack(spacing: 6) {
+                        Text(item.contentType.rawValue.capitalized)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text("·")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text(durationString(item))
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Text(vm.reasonFor(item))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ColorTokens.gold)
+                        .padding(.top, 2)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                Spacer(minLength: 0)
             }
-            .padding(14)
-            .v2Card(padding: 0)
+            .padding(12)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: V2Theme.cardRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
 
-    private func contentCarousel(items: [Content]) -> some View {
+    private func compactStripHeader(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(ColorTokens.textPrimary)
+            Spacer()
+            Button { showDiscover = true } label: {
+                Text("See all")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.bottom, 8)
+    }
+
+    private func compactStrip(items: [Content]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
                 ForEach(items, id: \.id) { item in
@@ -169,22 +222,23 @@ struct V2LearnView: View {
                         )
                     } label: {
                         VStack(alignment: .leading, spacing: 0) {
-                            thumbnail(item, width: 140, height: 84)
-                            VStack(alignment: .leading, spacing: 4) {
+                            thumbnail(item, width: 130, height: 78)
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(item.title)
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(ColorTokens.textPrimary)
                                     .lineLimit(2)
+                                    .multilineTextAlignment(.leading)
                                 Text(durationString(item))
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9))
                                     .foregroundStyle(ColorTokens.textTertiary)
                             }
-                            .padding(10)
+                            .padding(8)
                         }
-                        .frame(width: 140)
+                        .frame(width: 130)
                         .background(ColorTokens.surface)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }
@@ -197,22 +251,6 @@ struct V2LearnView: View {
             return "\(mins) min"
         }
         return "—"
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        HStack {
-            Text(title)
-                .font(V2Theme.h3)
-                .foregroundStyle(ColorTokens.textPrimary)
-            Spacer()
-            Button { showDiscover = true } label: {
-                Text("See all")
-                    .font(.system(size: 12))
-                    .foregroundStyle(ColorTokens.gold)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.top, 8)
     }
 
     private func browseLink(icon: String, label: String) -> some View {

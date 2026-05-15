@@ -14,6 +14,7 @@ struct V2CompassView: View {
     /// NotesDetailView, which requires AppState. Sheets don't reliably
     /// inherit @Observable env, so we re-inject explicitly.
     @Environment(AppState.self) private var appState
+    @Environment(V2NavState.self) private var nav
     @FocusState private var inputFocused: Bool
 
     /// Optional — the tab the user was on when Compass was launched via FAB.
@@ -68,11 +69,51 @@ struct V2CompassView: View {
             if let tc = tutorContext { vm.tutorContext = tc }
             vm.startConversation(context: launchContext)
         }
-        .sheet(isPresented: $vm.noteFlowRequested) {
-            V2NoteFlowView(onClose: { vm.noteFlowRequested = false })
+        // Compass quick actions → dedicated home destinations. Plan routes
+        // straight to the Home tab; Notes / Quiz / Interview / Resume each
+        // present a focused screen (where the user can see history + start
+        // new). Explain stays in the chat.
+        .sheet(item: $vm.presentedHome, onDismiss: { vm.presentedHome = nil }) { route in
+            switch route {
+            case .quiz:
+                V2QuizHomeView(
+                    onClose: { vm.presentedHome = nil },
+                    onGenerateNew: { vm.startQuizConfigFromHome() }
+                )
+                .environment(appState)
+                .environment(taskRouter)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            case .interview:
+                V2InterviewHomeView(
+                    onClose: { vm.presentedHome = nil },
+                    onStartNew: {
+                        taskRouter.open(taskType: "interview", payload: nil, title: "Practice interview")
+                    }
+                )
                 .environment(appState)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+            case .notes:
+                V2NoteFlowView(onClose: { vm.presentedHome = nil })
+                    .environment(appState)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            case .resume:
+                V2ResumeHomeView(onClose: { vm.presentedHome = nil })
+                    .environment(appState)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            case .plan:
+                // Plan-my-days = switch to the Home tab, which IS the plan.
+                // Handled outside the sheet via onChange below.
+                Color.clear
+                    .onAppear {
+                        nav.selectedTab = .home
+                        nav.compassSheetOpen = false
+                        vm.presentedHome = nil
+                    }
+            }
         }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -176,7 +217,7 @@ struct V2CompassView: View {
 
     private var inputBar: some View {
         HStack(spacing: 10) {
-            Button { vm.noteFlowRequested = true } label: {
+            Button { vm.presentedHome = .notes } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(ColorTokens.textTertiary)
