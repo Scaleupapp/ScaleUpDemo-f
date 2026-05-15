@@ -131,6 +131,69 @@ struct V2CalibrationInsightsView: View {
         .v2Card(padding: 12)
         .padding(.bottom, 18)
 
+        // Per-section performance — score / accuracy / time / questions
+        if let perf = data.performance, !perf.isEmpty {
+            Text("How you did per section").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
+            VStack(spacing: 0) {
+                // Column headers
+                HStack {
+                    Text("TOPIC").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Spacer()
+                    Text("SCORE").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .frame(width: 50, alignment: .trailing)
+                    Text("ACC").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .frame(width: 50, alignment: .trailing)
+                    Text("AVG").font(.system(size: 10, weight: .semibold)).tracking(0.8)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .frame(width: 50, alignment: .trailing)
+                }
+                .padding(.bottom, 8)
+
+                ForEach(perf) { p in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(p.topic.replacingOccurrences(of: "-", with: " ").capitalized)
+                                .font(V2Theme.small)
+                                .foregroundStyle(ColorTokens.textPrimary)
+                                .lineLimit(1)
+                            Text("\(p.questionsAnswered) q\(p.questionsAnswered == 1 ? "" : "s")\(p.band.map { " · \($0.capitalized)" } ?? "")")
+                                .font(.system(size: 10))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                        Spacer()
+                        Text(p.score.map { "\($0)%" } ?? "—")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(scoreColor(p.score))
+                            .frame(width: 50, alignment: .trailing)
+                        Text("\(p.accuracyPct)%")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .frame(width: 50, alignment: .trailing)
+                        Text(formatTime(p.avgTimeSec))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .frame(width: 50, alignment: .trailing)
+                    }
+                    .padding(.vertical, 8)
+                    .overlay(alignment: .bottom) {
+                        Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+                    }
+                }
+
+                Text("Score = engine's assessed level (0-100). Accuracy = % correct. Avg = avg time per question.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 8)
+            }
+            .padding(12)
+            .v2Card(padding: 12)
+            .padding(.bottom, 18)
+        }
+
         // Patterns
         if !data.patterns.isEmpty {
             Text("Patterns we noticed").font(V2Theme.h3).foregroundStyle(ColorTokens.textPrimary).padding(.bottom, 8)
@@ -245,6 +308,19 @@ struct V2CalibrationInsightsView: View {
         if pct < 40 { return ColorTokens.warning }
         if pct < 65 { return ColorTokens.gold }
         return ColorTokens.success
+    }
+
+    private func scoreColor(_ score: Int?) -> Color {
+        guard let s = score else { return ColorTokens.textTertiary }
+        if s < 50 { return ColorTokens.warning }
+        if s >= 65 { return ColorTokens.success }
+        return ColorTokens.textPrimary
+    }
+
+    private func formatTime(_ seconds: Int) -> String {
+        if seconds <= 0 { return "—" }
+        if seconds >= 60 { return "\(seconds / 60)m\(seconds % 60 > 0 ? " \(seconds % 60)s" : "")" }
+        return "\(seconds)s"
     }
 
     /// One comparable row per topic — merges the self-rating and the

@@ -5,10 +5,25 @@ import Foundation
 struct V2InsightsData: Codable {
     let baseline: BaselineBlock
     let calibration: CalibrationBlock
+    /// Per-competency performance — drives the "How you did per section"
+    /// breakdown (time / accuracy / score), so users see HOW the readiness
+    /// number was built, not just the number.
+    let performance: [PerformanceItem]?
     let patterns: [String]
     let trajectory: TrajectoryBlock?
     let topActions: [TopActionBlock]
     let planHeadline: String
+
+    struct PerformanceItem: Codable, Identifiable {
+        let topic: String
+        let score: Int?
+        let band: String?
+        let accuracyPct: Int
+        let avgTimeSec: Int
+        let questionsAnswered: Int
+        let hardAccuracyPct: Int?
+        var id: String { topic }
+    }
 
     struct BaselineBlock: Codable {
         let readiness: Int
