@@ -10,6 +10,10 @@ import SwiftUI
 struct V2CompassView: View {
     @State private var vm = CompassViewModel()
     @Environment(V2TaskRouter.self) private var taskRouter
+    /// Forwarded into the note-flow sheet — V2NoteFlowView pushes into the v1
+    /// NotesDetailView, which requires AppState. Sheets don't reliably
+    /// inherit @Observable env, so we re-inject explicitly.
+    @Environment(AppState.self) private var appState
     @FocusState private var inputFocused: Bool
 
     /// Optional — the tab the user was on when Compass was launched via FAB.
@@ -66,6 +70,7 @@ struct V2CompassView: View {
         }
         .sheet(isPresented: $vm.noteFlowRequested) {
             V2NoteFlowView(onClose: { vm.noteFlowRequested = false })
+                .environment(appState)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }

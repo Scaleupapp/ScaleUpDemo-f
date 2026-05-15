@@ -10,6 +10,9 @@ struct V2MainTabView: View {
     /// Forwarded into the task sheet so v1 screens that need it (e.g.
     /// CompetitionHubView) have it — sheets don't reliably inherit it.
     @Environment(ObjectiveContext.self) private var objectiveContext
+    /// PlayerView and other v1 detail screens read AppState; without this,
+    /// sheets crash on the same class of bug as the FAB-Compass issue.
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -49,6 +52,7 @@ struct V2MainTabView: View {
             V2CompassSheetView(currentScreen: nav.selectedTab)
                 .environment(nav)
                 .environment(taskRouter)
+                .environment(appState)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
@@ -57,6 +61,7 @@ struct V2MainTabView: View {
                 .environment(nav)
                 .environment(taskRouter)
                 .environment(objectiveContext)
+                .environment(appState)
         }
     }
 }
