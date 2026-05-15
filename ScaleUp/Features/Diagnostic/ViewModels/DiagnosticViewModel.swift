@@ -202,6 +202,11 @@ final class DiagnosticViewModel {
         guard let attemptId else { return }
         do {
             let next = try await service.nextQuestion(attemptId: attemptId)
+            // Trust the server's pool size over the local Σ-questionCap
+            // estimate — otherwise the counter drifts ("Question 23 of 21").
+            if let serverTotal = next.progress?.total, serverTotal > 0 {
+                totalQuestionsTarget = serverTotal
+            }
             if next.done == true || next.question == nil {
                 await finish()
             } else if let question = next.question {
