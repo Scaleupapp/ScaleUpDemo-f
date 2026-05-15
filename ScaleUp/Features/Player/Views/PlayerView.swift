@@ -18,6 +18,9 @@ struct PlayerView: View {
     @State private var aiTutorVM = AITutorViewModel()
     @State private var showAITutorSheet = false
     @State private var showAITooltip = false
+    /// v2 routes the in-player tutor through Compass instead of the v1
+    /// AITutor sheet — same conversation surface, same history.
+    @State private var showCompassTutorSheet = false
 
     enum PlayerTab: String, CaseIterable {
         case about = "About"
@@ -266,6 +269,21 @@ struct PlayerView: View {
                 viewModel: aiTutorVM
             )
             .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+        }
+        // v2: same Compass surface used everywhere else, scoped to this content.
+        // Provide a local V2TaskRouter so PlayerView works regardless of the
+        // surrounding context (v2 sheet — env present — or v1 tab — absent).
+        .sheet(isPresented: $showCompassTutorSheet) {
+            V2CompassSheetView(
+                tutorContext: CompassTutorContext(
+                    contentId: contentId,
+                    title: viewModel.content?.title ?? "Content"
+                )
+            )
+            .environment(appState)
+            .environment(V2TaskRouter())
+            .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
     }
@@ -1246,7 +1264,8 @@ struct PlayerView: View {
     // MARK: - Ask AI Button
 
     private var askAIButton: some View {
-        Button {
+        let isV2 = V2FeatureFlag.shared.isEnabled
+        return Button {
             if aiTutorVM.isLoadingStatus {
                 // Still loading, do nothing
             } else if aiTutorVM.isDisabled {
@@ -1258,7 +1277,11 @@ struct PlayerView: View {
                 }
             } else {
                 Haptics.light()
-                showAITutorSheet = true
+                if isV2 {
+                    showCompassTutorSheet = true
+                } else {
+                    showAITutorSheet = true
+                }
             }
         } label: {
             HStack(spacing: Spacing.xs) {
@@ -1267,11 +1290,12 @@ struct PlayerView: View {
                         .tint(ColorTokens.buttonPrimaryText)
                         .scaleEffect(0.7)
                 } else {
-                    Image(systemName: "sparkles")
+                    Image(systemName: isV2 ? "location.north.fill" : "sparkles")
                         .font(.system(size: 16, weight: .semibold))
+                        .rotationEffect(.degrees(isV2 ? -45 : 0))
                 }
 
-                Text("Ask AI")
+                Text(isV2 ? "Ask Compass" : "Ask AI")
                     .font(Typography.captionBold)
             }
             .foregroundStyle(ColorTokens.buttonPrimaryText)

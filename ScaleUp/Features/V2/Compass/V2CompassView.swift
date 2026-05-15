@@ -308,11 +308,11 @@ private struct ConfigCardView: View {
                     if field.toggle {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(ColorTokens.success)
-                    } else {
-                        Text("change ▾")
-                            .font(.system(size: 11))
-                            .foregroundStyle(ColorTokens.textTertiary)
                     }
+                    // "change ▾" was misleading — the field wasn't tappable.
+                    // To change anything, the user types it in the input bar
+                    // (e.g. "make it 10 questions" or "harder") and Compass
+                    // re-issues the config. A proper picker UI is a follow-up.
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)

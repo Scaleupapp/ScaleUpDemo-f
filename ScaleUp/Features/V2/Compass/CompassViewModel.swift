@@ -199,20 +199,23 @@ final class CompassViewModel {
     /// Caller passes the shared V2TaskRouter so the sheet appears at the root.
     func startConfiguredAction(router: V2TaskRouter) {
         guard let config = activeConfig else { return }
+        // Extract the configured topic so the router can request a quiz for it.
+        let topic = config.fields.first(where: { $0.label.caseInsensitiveCompare("Topic") == .orderedSame })?.value
+            ?? config.fields.first?.value
+        let title = config.fields.first?.value ?? "Starting now"
         let taskType: String
         switch config.mode {
         case "quiz_config":      taskType = "quiz"
         case "interview_config": taskType = "interview"
         default:                 taskType = "manual"
         }
-        // For Compass-launched flows we don't have a quizId / interviewId yet —
-        // the v1 endpoint will mint one. iOS routes via the unavailable→sheet path
-        // until the configurator's start hook returns the id. For interview, the
-        // setup view picks scenario itself.
+        // V2TaskRouter handles quiz-without-quizId by requesting a quiz for
+        // the topic (V2QuizRequestLoaderSheet) — exactly what Compass wants.
         router.open(
             taskType: taskType,
             payload: nil,
-            title: config.fields.first?.value ?? "Starting now"
+            title: title,
+            topic: topic
         )
         messages.append(.init(role: .compass, text: "Opening now…"))
         activeConfig = nil
