@@ -126,6 +126,14 @@ struct V2CalibrationInsightsView: View {
                 .foregroundStyle(ColorTokens.textTertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 8)
+
+            if mergedCalibrationRows(data).contains(where: { $0.notTested }) {
+                Text("Topics marked \"Not tested\" had no questions in the available pool when you took the diagnostic — your readiness only averages measured topics. Re-take the diagnostic later as more questions become available.")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, 6)
+            }
         }
         .padding(12)
         .v2Card(padding: 12)
@@ -330,25 +338,33 @@ struct V2CalibrationInsightsView: View {
         let said: String
         let scored: String
         let scoredColor: Color
+        /// True when the backend had no questions for this topic in the pool.
+        let notTested: Bool
     }
 
     private func mergedCalibrationRows(_ data: V2InsightsData) -> [CalibRow] {
-        var byTopic: [String: (said: String, scored: String?)] = [:]
+        var byTopic: [String: (said: String, scored: String?, notTested: Bool)] = [:]
         for s in data.calibration.selfRated {
-            byTopic[s.topic, default: (said: "—", scored: nil)].said = s.level.capitalized
+            byTopic[s.topic, default: (said: "—", scored: nil, notTested: false)].said = s.level.capitalized
         }
         for a in data.calibration.actual {
-            byTopic[a.topic, default: (said: "—", scored: nil)].scored = "\(a.scorePct)%"
+            if a.notTested == true {
+                byTopic[a.topic, default: (said: "—", scored: nil, notTested: false)].notTested = true
+            } else if let pct = a.scorePct {
+                byTopic[a.topic, default: (said: "—", scored: nil, notTested: false)].scored = "\(pct)%"
+            }
         }
         return byTopic
             .sorted { ($0.value.scored.flatMap { Int($0.dropLast()) } ?? -1) < ($1.value.scored.flatMap { Int($0.dropLast()) } ?? -1) }
             .map { topic, v in
                 let pct = v.scored.flatMap { Int($0.dropLast()) }
-                let color: Color = pct == nil ? ColorTokens.textTertiary
+                let color: Color = v.notTested ? ColorTokens.textTertiary
+                    : pct == nil ? ColorTokens.textTertiary
                     : pct! < 50 ? ColorTokens.warning
                     : pct! >= 65 ? ColorTokens.success
                     : ColorTokens.textPrimary
-                return CalibRow(topic: topic, said: v.said, scored: v.scored ?? "—", scoredColor: color)
+                let label = v.notTested ? "Not tested" : (v.scored ?? "—")
+                return CalibRow(topic: topic, said: v.said, scored: label, scoredColor: color, notTested: v.notTested)
             }
     }
 

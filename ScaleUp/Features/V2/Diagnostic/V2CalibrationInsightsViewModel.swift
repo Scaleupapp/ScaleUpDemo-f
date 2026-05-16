@@ -41,8 +41,14 @@ struct V2InsightsData: Codable {
         }
         struct Actual: Codable {
             let topic: String
-            let scorePct: Int
-            let band: String
+            /// nil when notTested is true (no questions were in the pool).
+            let scorePct: Int?
+            /// nil when notTested is true.
+            let band: String?
+            /// True when the backend had no questions for this topic in the
+            /// diagnostic pool (bank empty + LLM gen failed). Score and band
+            /// are absent; UI should render "Not tested".
+            let notTested: Bool?
         }
         struct GapEntry: Codable {
             let topic: String
