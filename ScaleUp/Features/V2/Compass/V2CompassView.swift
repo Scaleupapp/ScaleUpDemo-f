@@ -105,14 +105,23 @@ struct V2CompassView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             case .plan:
-                // Plan-my-days = switch to the Home tab, which IS the plan.
-                // Handled outside the sheet via onChange below.
-                Color.clear
-                    .onAppear {
+                V2PlanHomeView(
+                    onClose: { vm.presentedHome = nil },
+                    onViewFullHome: {
                         nav.selectedTab = .home
                         nav.compassSheetOpen = false
-                        vm.presentedHome = nil
                     }
+                )
+                .environment(appState)
+                .environment(taskRouter)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            case .compete:
+                V2CompetitionHomeView(onClose: { vm.presentedHome = nil })
+                    .environment(appState)
+                    .environment(taskRouter)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
         }
         .toolbar {
@@ -265,6 +274,7 @@ struct CompassQuickAction {
 
     static let all: [CompassQuickAction] = [
         .init(label: "Quiz me", icon: "bolt.fill", chip: "Quiz me"),
+        .init(label: "Compete today", icon: "trophy.fill", chip: "Compete today"),
         .init(label: "Practice interview", icon: "mic.fill", chip: "Practice interview"),
         .init(label: "Make a note", icon: "doc.text.fill", chip: "Make a note"),
         .init(label: "Build my resume", icon: "person.text.rectangle.fill", chip: "Build my resume"),

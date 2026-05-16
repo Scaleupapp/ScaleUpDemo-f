@@ -12,8 +12,14 @@ struct V2InterviewHomeView: View {
     @State private var sessions: [InterviewSessionSummary] = []
     @State private var isLoading = true
     @State private var error: String?
+    @State private var presentedSessionId: String?
 
     private let service = InterviewService()
+
+    private struct IdentifiedString: Identifiable, Hashable {
+        let value: String
+        var id: String { value }
+    }
 
     private var inProgress: InterviewSessionSummary? {
         sessions.first { $0.status == .in_progress }
@@ -51,6 +57,12 @@ struct V2InterviewHomeView: View {
                 }
             }
             .refreshable { await load() }
+            .navigationDestination(item: Binding(
+                get: { presentedSessionId.map(IdentifiedString.init) },
+                set: { presentedSessionId = $0?.value }
+            )) { wrap in
+                V2InterviewSessionLauncher(sessionId: wrap.value)
+            }
         }
         .task { await load() }
     }
@@ -70,33 +82,38 @@ struct V2InterviewHomeView: View {
                 Spacer()
             }
             .padding(.bottom, 8)
-            HStack(spacing: 12) {
-                Image(systemName: "mic.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ColorTokens.gold)
-                    .frame(width: 32, height: 32)
-                    .background(ColorTokens.gold.opacity(0.15))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(typeLabel(s.interviewType))
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(ColorTokens.textPrimary)
-                    Text(metaLine(s))
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
+            Button {
+                presentedSessionId = s.id
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 32, height: 32)
+                        .background(ColorTokens.gold.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(typeLabel(s.interviewType))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text(metaLine(s))
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Spacer()
+                    Text("Open →")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
                 }
-                Spacer()
-                Text("Resume →")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(ColorTokens.gold)
+                .padding(12)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1)
+                )
             }
-            .padding(12)
-            .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1)
-            )
+            .buttonStyle(.plain)
         }
     }
 
@@ -105,31 +122,40 @@ struct V2InterviewHomeView: View {
             Text("HISTORY").v2Eyebrow()
             VStack(spacing: 0) {
                 ForEach(history.prefix(20)) { s in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(typeLabel(s.interviewType))
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(ColorTokens.textPrimary)
-                                .lineLimit(1)
-                            Text(metaLine(s))
+                    Button {
+                        presentedSessionId = s.id
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(typeLabel(s.interviewType))
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(ColorTokens.textPrimary)
+                                    .lineLimit(1)
+                                Text(metaLine(s))
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                            }
+                            Spacer()
+                            if let score = s.overallScore {
+                                Text("\(score)/100")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(scoreColor(score))
+                            } else {
+                                Text(s.status == .evaluated ? "—" : "Pending")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                            }
+                            Image(systemName: "chevron.right")
                                 .font(.system(size: 10))
                                 .foregroundStyle(ColorTokens.textTertiary)
+                                .padding(.leading, 4)
                         }
-                        Spacer()
-                        if let score = s.overallScore {
-                            Text("\(score)/100")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(scoreColor(score))
-                        } else {
-                            Text(s.status == .evaluated ? "—" : "Pending")
-                                .font(.system(size: 11))
-                                .foregroundStyle(ColorTokens.textTertiary)
+                        .padding(.vertical, 10)
+                        .overlay(alignment: .bottom) {
+                            Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
                         }
                     }
-                    .padding(.vertical, 10)
-                    .overlay(alignment: .bottom) {
-                        Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
-                    }
+                    .buttonStyle(.plain)
                 }
             }
         }

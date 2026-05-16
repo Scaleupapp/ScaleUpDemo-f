@@ -126,6 +126,7 @@ enum CompassHomeRoute: String, Identifiable, CaseIterable {
     case notes
     case resume
     case plan
+    case compete
     var id: String { rawValue }
 
     /// Maps a chip label (e.g. "⚡ Quiz me", "Practice interview") onto the
@@ -137,6 +138,9 @@ enum CompassHomeRoute: String, Identifiable, CaseIterable {
         if s.contains("note")      { return .notes }
         if s.contains("resume")    { return .resume }
         if s.contains("plan")      { return .plan }
+        if s.contains("compete") || s.contains("competition") || s.contains("challenge") {
+            return .compete
+        }
         return nil
     }
 }

@@ -14,6 +14,7 @@ struct V2HomeView: View {
     /// a "next up" row swaps it into this slot.
     @State private var activeTaskIndex: Int = 0
     @Environment(V2TaskRouter.self) private var taskRouter
+    @Environment(V2NavState.self) private var nav
 
     var body: some View {
         NavigationStack {
@@ -98,6 +99,15 @@ struct V2HomeView: View {
                 .padding(.bottom, 22)
         }
 
+        // Backlog banner — surfaced above the day when the user is behind on
+        // the calendar (plan.createdAt vs current visible week). Tells the
+        // user the truth instead of pretending today's set covers everything.
+        if (data.behindByWeeks ?? 0) > 0 || (data.pendingPriorCount ?? 0) > 0 {
+            backlogBanner(behind: data.behindByWeeks ?? 0,
+                          pendingCount: data.pendingPriorCount ?? 0)
+                .padding(.bottom, 14)
+        }
+
         // The structured day — active task + compact "next up" rows
         if !vm.visibleTasks.isEmpty {
             todayHeader(data: data)
@@ -127,6 +137,29 @@ struct V2HomeView: View {
                 .frame(maxWidth: .infinity)
                 .multilineTextAlignment(.center)
                 .padding(.top, 18)
+
+            // Pending-from-previous-days carryover — explicit section so the
+            // user sees the backlog, not just today's slice. Tappable to open
+            // the same way today's tasks do.
+            if let pending = data.pendingPriorTasks, !pending.isEmpty {
+                pendingPriorSection(tasks: pending)
+                    .padding(.top, 26)
+            }
+
+            // Always-on "get ahead" set from next week — gives the user
+            // *something* to do once today's set is finished without needing
+            // a refresh. Renders below today's set + carryover.
+            if let getAhead = data.getAheadTasks, !getAhead.isEmpty {
+                getAheadSection(tasks: getAhead, week: data.getAheadWeek)
+                    .padding(.top, 22)
+            }
+
+            // Always-on "for you" recommendations — surfaces extra content
+            // even when the user has tasks, so Home never feels empty.
+            if !vm.extraContent.isEmpty {
+                forYouSection
+                    .padding(.top, 28)
+            }
 
         } else if data.fallback == "day_done" {
             dayDoneSection(data: data)
@@ -499,21 +532,293 @@ struct V2HomeView: View {
 
     // MARK: - Fallbacks
 
+    @ViewBuilder
     private func dayDoneSection(data: V2HomeData) -> some View {
-        VStack(spacing: 14) {
-            Text("🎉").font(.system(size: 40))
-            Text(data.message ?? "You're done for now.")
+        VStack(spacing: 10) {
+            Text("🎉").font(.system(size: 36))
+            Text(data.message ?? "You're done for the day.")
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
                 .multilineTextAlignment(.center)
+            Text("Want to push further? Here's more, picked from what you've been learning.")
+                .font(V2Theme.small)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
             if (data.skippedCount ?? 0) > 0 {
                 Button("Reshuffle skipped tasks") { Task { await vm.reshuffle() } }
-                    .buttonStyle(.borderedProminent)
-                    .tint(ColorTokens.gold)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(ColorTokens.gold)
+                    .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 40)
+        .padding(.vertical, 24)
+
+        // Get-ahead — most action-oriented thing on a finished day.
+        if let getAhead = data.getAheadTasks, !getAhead.isEmpty {
+            getAheadSection(tasks: getAhead, week: data.getAheadWeek)
+                .padding(.bottom, 18)
+        }
+
+        wantMoreSection
+    }
+
+    /// Banner shown when the user is behind their plan. Honest about the
+    /// backlog — not framed as cheerful "you're on track".
+    private func backlogBanner(behind: Int, pendingCount: Int) -> some View {
+        let parts: [String] = {
+            var p: [String] = []
+            if behind > 0 { p.append(behind == 1 ? "1 week behind" : "\(behind) weeks behind") }
+            if pendingCount > 0 { p.append("\(pendingCount) carryover \(pendingCount == 1 ? "task" : "tasks")") }
+            return p
+        }()
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(ColorTokens.warning)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Catching up")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text(parts.joined(separator: " · "))
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(ColorTokens.warning.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(ColorTokens.warning.opacity(0.35), lineWidth: 1)
+        )
+    }
+
+    /// "Pending from previous days" — carryover tasks the user hasn't done
+    /// yet. Rendered as compact tappable rows below today's set.
+    private func pendingPriorSection(tasks: [V2HomeData.Task]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("PENDING FROM PREVIOUS DAYS").v2Eyebrow()
+                Spacer()
+                Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            VStack(spacing: 8) {
+                ForEach(Array(tasks.enumerated()), id: \.element.taskId) { _, task in
+                    pendingPriorRow(task)
+                }
+            }
+        }
+    }
+
+    private func pendingPriorRow(_ task: V2HomeData.Task) -> some View {
+        Button {
+            taskRouter.open(
+                taskType: task.taskType,
+                payload: task.payload,
+                title: task.title,
+                taskId: task.taskId,
+                topic: task.primaryTopic
+            )
+        } label: {
+            HStack(spacing: 10) {
+                Text(task.icon).font(.system(size: 14))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(task.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .lineLimit(1)
+                    Text("\(task.durationMin) min · \(task.difficulty.capitalized)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                Spacer()
+                Image(systemName: "play.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(ColorTokens.surface.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// "Get ahead" — next week's first 3 tasks, always available so the user
+    /// has an action item even after today's set is done.
+    private func getAheadSection(tasks: [V2HomeData.Task], week: Int?) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Text("GET AHEAD").v2Eyebrow()
+                if let w = week {
+                    Text("· Week \(w)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                Spacer()
+            }
+            VStack(spacing: 8) {
+                ForEach(tasks) { task in
+                    pendingPriorRow(task)
+                }
+            }
+        }
+    }
+
+    /// Always-on "for you" rail — content suggestions surfaced alongside
+    /// today's tasks, so Home has browsable material even on a light day.
+    private var forYouSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("FOR YOU").v2Eyebrow()
+                Spacer()
+                Button {
+                    nav.selectedTab = .learn
+                } label: {
+                    Text("See all →")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .buttonStyle(.plain)
+            }
+            VStack(spacing: 8) {
+                ForEach(vm.extraContent) { item in
+                    extraContentRow(item)
+                }
+            }
+        }
+    }
+
+    /// "Want more?" — recommendations + CTAs to keep going beyond the planned day.
+    private var wantMoreSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("WANT MORE?").v2Eyebrow()
+                Spacer()
+                if vm.isLoadingExtras {
+                    ProgressView().scaleEffect(0.7).tint(ColorTokens.gold)
+                }
+            }
+
+            if !vm.extraContent.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(vm.extraContent) { item in
+                        extraContentRow(item)
+                    }
+                }
+                .padding(.bottom, 4)
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    nav.compassSheetOpen = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles").font(.system(size: 11, weight: .semibold))
+                        Text("Generate a quiz")
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(ColorTokens.gold)
+                    .foregroundStyle(ColorTokens.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    nav.selectedTab = .learn
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "books.vertical.fill").font(.system(size: 11, weight: .semibold))
+                        Text("Browse Learn")
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .background(ColorTokens.surface)
+                    .foregroundStyle(ColorTokens.gold)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 10)
+        .task { await vm.loadExtrasIfNeeded() }
+    }
+
+    private func extraContentRow(_ item: Content) -> some View {
+        Button {
+            taskRouter.open(
+                taskType: "watch",
+                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil),
+                title: item.title,
+                taskId: nil,
+                topic: item.topics?.first
+            )
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: contentIcon(item))
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 32, height: 32)
+                    .background(ColorTokens.gold.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.title)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .lineLimit(1)
+                    Text(contentMeta(item))
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func contentIcon(_ item: Content) -> String {
+        switch item.contentType {
+        case .video:       return "play.fill"
+        case .notes:       return "doc.text.fill"
+        case .article:     return "newspaper.fill"
+        case .infographic: return "chart.bar.doc.horizontal.fill"
+        }
+    }
+
+    private func contentMeta(_ item: Content) -> String {
+        var parts: [String] = []
+        if let d = item.duration, d > 0 { parts.append("\(d / 60) min") }
+        if let topic = item.topics?.first, !topic.isEmpty { parts.append(topic.capitalized) }
+        else if let domain = item.domain, !domain.isEmpty { parts.append(domain.capitalized) }
+        return parts.joined(separator: " · ")
     }
 
     private var planBrewingFallback: some View {
@@ -597,5 +902,6 @@ private struct ObjectivePill: View {
 #Preview {
     V2HomeView()
         .environment(V2TaskRouter())
+        .environment(V2NavState())
         .preferredColorScheme(.dark)
 }

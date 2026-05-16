@@ -18,6 +18,17 @@ struct V2HomeData: Codable {
     let skippedCount: Int?
     let fallback: String?
     let message: String?
+    /// How many weeks behind the user is vs the calendar (plan.createdAt vs
+    /// the current visible week). 0 = on/ahead of schedule.
+    let behindByWeeks: Int?
+    /// Carry-over tasks still in the current week's pool but not in today's
+    /// set. Rendered as "PENDING FROM PREVIOUS DAYS" on Home.
+    let pendingPriorTasks: [Task]?
+    let pendingPriorCount: Int?
+    /// First 3 tasks from the next week — surfaced so the user always has a
+    /// "Get ahead" option once today's set is done.
+    let getAheadTasks: [Task]?
+    let getAheadWeek: Int?
 
     struct Trajectory: Codable {
         let today: Int
@@ -115,6 +126,13 @@ final class V2HomeViewModel {
     var isLoading = false
     var error: String?
 
+    /// Bonus recommendations shown only when the day_done fallback fires —
+    /// "you're done; here's more if you want". Lazily fetched.
+    var extraContent: [Content] = []
+    var isLoadingExtras = false
+
+    private let contentService = ContentService()
+
     /// taskIds the user has tapped Skip on this session — hidden optimistically
     /// while the network call settles.
     private var pendingSkips: Set<String> = []
@@ -143,6 +161,11 @@ final class V2HomeViewModel {
             self.data = nil
         }
         isLoading = false
+
+        // Always-on "for you" content rail — surfaced under the task list so
+        // the user can grab something to watch even when their plan tasks are
+        // all videos/quizzes they don't feel like doing right now.
+        Task { await loadExtrasIfNeeded() }
     }
 
     /// Skip a task — optimistic hide, then persist. The next `load()` reflects
@@ -185,6 +208,16 @@ final class V2HomeViewModel {
         } catch {
             // ignore — user can pull-to-refresh
         }
+    }
+
+    /// Loaded on demand when the user lands on the day_done state, so we can
+     /// surface "want more?" suggestions instead of just a celebration screen.
+    func loadExtrasIfNeeded() async {
+        guard extraContent.isEmpty, !isLoadingExtras else { return }
+        isLoadingExtras = true
+        let recs = (try? await contentService.fetchRecommendations(limit: 6)) ?? []
+        extraContent = Array(recs.prefix(3))
+        isLoadingExtras = false
     }
 
     private struct SkipResponse: Codable {
@@ -251,7 +284,12 @@ final class V2HomeViewModel {
             hasMoreThisWeek: true,
             skippedCount: 0,
             fallback: nil,
-            message: nil
+            message: nil,
+            behindByWeeks: 0,
+            pendingPriorTasks: nil,
+            pendingPriorCount: 0,
+            getAheadTasks: nil,
+            getAheadWeek: nil
         )
     }
 }

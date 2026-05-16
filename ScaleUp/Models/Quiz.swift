@@ -144,10 +144,13 @@ struct QuizAttemptQuizInfo: Codable, Sendable {
     let title: String?
     let type: QuizType?
     let topic: String?
+    /// Present when the quiz was linked to an objective. Used by V2 Quiz Home
+    /// to badge "for fun" attempts vs goal-counted ones.
+    let objectiveId: String?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case title, type, topic
+        case title, type, topic, objectiveId
     }
 
     init(from decoder: Decoder) throws {
@@ -157,6 +160,7 @@ struct QuizAttemptQuizInfo: Codable, Sendable {
             title = try container.decodeIfPresent(String.self, forKey: .title)
             type = try container.decodeIfPresent(QuizType.self, forKey: .type)
             topic = try container.decodeIfPresent(String.self, forKey: .topic)
+            objectiveId = try container.decodeIfPresent(String.self, forKey: .objectiveId)
         } else {
             // Try as string
             let container = try decoder.singleValueContainer()
@@ -164,6 +168,7 @@ struct QuizAttemptQuizInfo: Codable, Sendable {
             title = nil
             type = nil
             topic = nil
+            objectiveId = nil
         }
     }
 }
@@ -289,6 +294,9 @@ struct QuizRequestBody: Encodable, Sendable {
     let assessmentType: String?
     let objectiveId: String?
     let isSkillAssessment: Bool?
+    /// When true, the backend skips objective linking — quiz is "for fun"
+    /// and won't be counted toward the user's active goal.
+    let noObjective: Bool?
 }
 
 // MARK: - Assessment Type
@@ -361,6 +369,7 @@ enum QuizType: String, Codable, Sendable {
     case competencyAssessment = "competency_assessment"
     case appliedScenario = "applied_scenario"
     case examSimulation = "exam_simulation"
+    case dailyTopGap = "daily_top_gap"
 
     var displayName: String {
         switch self {
@@ -373,6 +382,7 @@ enum QuizType: String, Codable, Sendable {
         case .competencyAssessment: return "Competency"
         case .appliedScenario: return "Scenario"
         case .examSimulation: return "Exam Sim"
+        case .dailyTopGap: return "Daily"
         }
     }
 
@@ -387,6 +397,23 @@ enum QuizType: String, Codable, Sendable {
         case .competencyAssessment: return "chart.bar.fill"
         case .appliedScenario: return "theatermasks.fill"
         case .examSimulation: return "doc.text.fill"
+        case .dailyTopGap: return "sun.max.fill"
+        }
+    }
+
+    /// Short label shown as a chip on pending/history rows so the user can
+    /// tell at a glance WHY this quiz exists. Returns nil for types that
+    /// don't need labeling (on-demand = user just made it, no badge needed).
+    var sourceChip: String? {
+        switch self {
+        case .dailyTopGap:        return "Daily"
+        case .weeklyReview:       return "Weekly review"
+        case .topicConsolidation: return "From your watching"
+        case .retentionCheck:     return "Spaced review"
+        case .milestoneAssessment: return "Milestone"
+        case .competencyAssessment: return "Competency"
+        case .playlistMastery, .appliedScenario, .examSimulation, .onDemand:
+            return nil
         }
     }
 }
