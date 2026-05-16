@@ -19,7 +19,7 @@ struct V2TaskSheet: View {
             switch route {
             case .content(let id, let title):
                 NavigationStack {
-                    PlayerView(contentId: id)
+                    V2ContentDispatcher(contentId: id, title: title)
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button("Close", action: onClose)
@@ -117,6 +117,65 @@ private struct SafariView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
+
+/// Resolves a Content by id and renders the right viewer for its type.
+/// Without this, V2's task router would funnel notes/infographics into
+/// PlayerView (video) which is wrong.
+private struct V2ContentDispatcher: View {
+    let contentId: String
+    let title: String
+
+    @State private var content: Content?
+    @State private var loadError: String?
+    private let service = ContentService()
+
+    var body: some View {
+        Group {
+            if let content {
+                switch content.contentType {
+                case .notes:
+                    NotesDetailView(contentId: contentId)
+                case .video:
+                    PlayerView(contentId: contentId)
+                case .infographic, .article:
+                    // TODO: open a proper in-app reader when one exists.
+                    if let urlString = content.contentURL, let url = URL(string: urlString) {
+                        SafariView(url: url, onClose: { })
+                    } else {
+                        PlayerView(contentId: contentId)
+                    }
+                }
+            } else if let loadError {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.system(size: 30))
+                        .foregroundStyle(ColorTokens.warning)
+                    Text("Couldn't load this content")
+                        .font(V2Theme.h3)
+                    Text(loadError)
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.horizontal, 24)
+            } else {
+                ProgressView().tint(ColorTokens.gold)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .background(ColorTokens.background.ignoresSafeArea())
+        .task { await load() }
+    }
+
+    private func load() async {
+        do {
+            content = try await service.fetchContent(id: contentId)
+        } catch {
+            loadError = "This piece of content couldn't be loaded. Try again later."
+        }
+    }
 }
 
 /// Small "we don't have this yet" sheet shown when a task lacks a payload to route on.
