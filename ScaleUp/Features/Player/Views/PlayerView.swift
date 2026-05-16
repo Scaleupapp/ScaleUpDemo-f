@@ -22,6 +22,13 @@ struct PlayerView: View {
     /// AITutor sheet — same conversation surface, same history.
     @State private var showCompassTutorSheet = false
 
+    /// v2 only — surfaces a "Quiz on this?" prompt once content hits ~95%.
+    /// Listens for the same .v2ContentCompleted notification PlayerViewModel
+    /// posts when it auto-marks completion.
+    @State private var showPostCompletionQuiz = false
+    @State private var showQuickQuiz = false
+    @State private var postCompletionTopic: String?
+
     enum PlayerTab: String, CaseIterable {
         case about = "About"
         case comments = "Comments"
@@ -189,6 +196,9 @@ struct PlayerView: View {
         .navigationDestination(for: Creator.self) { creator in
             CreatorProfileView(creatorId: creator.id)
         }
+        .navigationDestination(item: $navigateToNextId) { id in
+            PlayerView(contentId: id)
+        }
         .task {
             await viewModel.loadContent(id: contentId)
             // Load AI Tutor status after content loads
@@ -288,6 +298,94 @@ struct PlayerView: View {
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
         }
+        // Post-completion quiz prompt — v2 only. PlayerViewModel posts
+        // .v2ContentCompleted once playback hits ~95%; we use that as the
+        // signal to offer a quick check on this topic.
+        .onReceive(NotificationCenter.default.publisher(for: .v2ContentCompleted)) { note in
+            guard V2FeatureFlag.shared.isEnabled else { return }
+            guard let info = note.userInfo,
+                  let cid = info["contentId"] as? String, cid == contentId else { return }
+            // Prefer first topic; fall back to domain so the offer is always actionable.
+            postCompletionTopic = viewModel.content?.topics?.first
+                ?? viewModel.content?.domain
+            // Tiny delay so the sheet doesn't fight the auto-complete animation.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                showPostCompletionQuiz = true
+            }
+        }
+        .sheet(isPresented: $showPostCompletionQuiz) {
+            postCompletionQuizSheet
+                .environment(appState)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    /// "Quiz on what you just watched?" — surfaced after completion.
+    private var postCompletionQuizSheet: some View {
+        VStack(spacing: 16) {
+            Text("🎯").font(.system(size: 44))
+            Text("Lock it in?")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(ColorTokens.textPrimary)
+            if let topic = postCompletionTopic, !topic.isEmpty {
+                Text("Quick 5-question check on \(prettyTopic(topic)). Costs ~3 minutes, makes this stick.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+            } else {
+                Text("Quick 5-question check on what you just watched.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+            }
+            Spacer().frame(height: 6)
+            VStack(spacing: 10) {
+                Button {
+                    showPostCompletionQuiz = false
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(300))
+                        showQuickQuiz = true
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "sparkles")
+                        Text("Yes — quiz me")
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(ColorTokens.gold)
+                    .foregroundStyle(ColorTokens.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                Button("Not now") { showPostCompletionQuiz = false }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.horizontal, 24)
+            Spacer().frame(height: 10)
+        }
+        .padding(.top, 30)
+        .frame(maxWidth: .infinity)
+        .background(ColorTokens.background)
+        .sheet(isPresented: $showQuickQuiz) {
+            if let topic = postCompletionTopic, !topic.isEmpty {
+                V2QuizRequestLoaderSheet(topic: topic, onClose: { showQuickQuiz = false })
+                    .environment(appState)
+            }
+        }
+    }
+
+    private func prettyTopic(_ s: String) -> String {
+        s.replacingOccurrences(of: "-", with: " ")
+         .replacingOccurrences(of: "_", with: " ")
+         .split(separator: " ")
+         .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+         .joined(separator: " ")
     }
 
     // MARK: - Tab Selector
@@ -741,11 +839,15 @@ struct PlayerView: View {
             }
         }
         .aspectRatio(16/9, contentMode: .fit)
-        .navigationDestination(item: $navigateToNextId) { id in
-            PlayerView(contentId: id)
+        .onAppear {
+            // Don't compete with the quiz prompt — Up Next is the more relevant
+            // call-to-action once a related video exists.
+            if showPostCompletionQuiz { showPostCompletionQuiz = false }
         }
         .onChange(of: viewModel.upNextCountdown) { _, newValue in
-            if newValue <= 0 {
+            if newValue <= 0,
+               !showPostCompletionQuiz,
+               !showQuickQuiz {
                 viewModel.cancelUpNext()
                 navigateToNextId = nextContent.id
             }
