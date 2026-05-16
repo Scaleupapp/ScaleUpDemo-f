@@ -7,19 +7,33 @@ import SwiftUI
 /// Compass. Replaces the previous transient one-shot config card.
 struct V2QuizHomeView: View {
     let onClose: () -> Void
-    let onGenerateNew: () -> Void
+    /// Kept for back-compat with the Compass-driven flow. The inline
+    /// generate sheet is the primary path now.
+    var onGenerateNew: (() -> Void)? = nil
 
     @State private var pending: [Quiz] = []
     @State private var history: [QuizAttempt] = []
     @State private var isLoading = true
     @State private var error: String?
     @State private var presentedQuizId: String?
+    @State private var presentedResultsAttempt: QuizAttempt?
+    @State private var showGenerateSheet = false
+    /// Topic suggestions for the generate sheet — top gap + recently quizzed topics.
+    @State private var suggestedTopics: [String] = []
+    @State private var defaultTopic: String?
 
     private let service = QuizService()
 
     private struct IdentifiedString: Identifiable {
         let value: String
         var id: String { value }
+    }
+
+    /// Decode shape for /quizzes/ensure-daily — fields are best-effort, we
+    /// don't actually do anything with them on the client (the pending list
+    /// reloads after the call completes).
+    private struct V2EnsureDailyResponse: Codable {
+        let queued: Int?
     }
 
     var body: some View {
@@ -51,6 +65,14 @@ struct V2QuizHomeView: View {
                 }
             }
             .refreshable { await load() }
+            .navigationDestination(item: $presentedResultsAttempt) { attempt in
+                if let quizId = attempt.quizId?.id {
+                    QuizResultsView(quizId: quizId, attempt: attempt)
+                } else {
+                    Text("Results unavailable")
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
         }
         .task { await load() }
         .sheet(item: Binding(
@@ -58,6 +80,16 @@ struct V2QuizHomeView: View {
             set: { presentedQuizId = $0?.value }
         )) { wrap in
             PlanTaskQuizLoaderSheet(quizId: wrap.value, onDismiss: { presentedQuizId = nil })
+        }
+        .sheet(isPresented: $showGenerateSheet) {
+            V2QuizGenerateSheet(
+                onClose: {
+                    showGenerateSheet = false
+                    Task { await load() }
+                },
+                suggestedTopics: suggestedTopics,
+                defaultTopic: defaultTopic
+            )
         }
     }
 
@@ -86,11 +118,16 @@ struct V2QuizHomeView: View {
                                 .frame(width: 32, height: 32)
                                 .background(ColorTokens.gold.opacity(0.15))
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(q.title.isEmpty ? q.topic.capitalized : q.title)
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(ColorTokens.textPrimary)
-                                    .lineLimit(1)
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(spacing: 6) {
+                                    Text(q.title.isEmpty ? q.topic.capitalized : q.title)
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                        .lineLimit(1)
+                                    if let chip = q.type.sourceChip {
+                                        sourceChip(chip)
+                                    }
+                                }
                                 Text("\(q.totalQuestions) questions · \(q.topic.capitalized)")
                                     .font(.system(size: 11))
                                     .foregroundStyle(ColorTokens.textTertiary)
@@ -119,25 +156,42 @@ struct V2QuizHomeView: View {
             Text("HISTORY").v2Eyebrow()
             VStack(spacing: 0) {
                 ForEach(history.prefix(20), id: \.id) { a in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(historyTitle(a))
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(ColorTokens.textPrimary)
-                                .lineLimit(1)
-                            Text(historyMeta(a))
+                    Button {
+                        presentedResultsAttempt = a
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text(historyTitle(a))
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(ColorTokens.textPrimary)
+                                        .lineLimit(1)
+                                    if let chip = a.quizId?.type?.sourceChip {
+                                        sourceChip(chip)
+                                    }
+                                    if a.quizId?.objectiveId == nil {
+                                        sourceChip("For fun", muted: true)
+                                    }
+                                }
+                                Text(historyMeta(a))
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(ColorTokens.textTertiary)
+                            }
+                            Spacer()
+                            Text(scoreString(a))
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(scoreColor(a))
+                            Image(systemName: "chevron.right")
                                 .font(.system(size: 10))
                                 .foregroundStyle(ColorTokens.textTertiary)
+                                .padding(.leading, 4)
                         }
-                        Spacer()
-                        Text(scoreString(a))
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(scoreColor(a))
+                        .padding(.vertical, 10)
+                        .overlay(alignment: .bottom) {
+                            Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+                        }
                     }
-                    .padding(.vertical, 10)
-                    .overlay(alignment: .bottom) {
-                        Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
-                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -145,10 +199,7 @@ struct V2QuizHomeView: View {
 
     private var generateNewButton: some View {
         Button {
-            onClose()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                onGenerateNew()
-            }
+            showGenerateSheet = true
         } label: {
             HStack {
                 Image(systemName: "sparkles")
@@ -171,7 +222,7 @@ struct V2QuizHomeView: View {
             Text("No quizzes yet")
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text("Generate one to start practising — Compass tunes it to your weakest topic.")
+            Text("Generate one to start practising — we'll tune it to your weakest topic.")
                 .font(V2Theme.small)
                 .foregroundStyle(ColorTokens.textTertiary)
                 .multilineTextAlignment(.center)
@@ -182,14 +233,82 @@ struct V2QuizHomeView: View {
 
     // MARK: - Helpers
 
+    /// Tiny tag rendered next to the quiz title so the user can see WHY this
+    /// quiz exists ("Daily", "Weekly review", "From your watching", etc.).
+    private func sourceChip(_ text: String, muted: Bool = false) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(muted ? ColorTokens.textTertiary : ColorTokens.gold)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .overlay(
+                Capsule().strokeBorder(
+                    (muted ? ColorTokens.textTertiary : ColorTokens.gold).opacity(0.5),
+                    lineWidth: 1
+                )
+            )
+    }
+
     private func load() async {
         isLoading = true
+        // Kick the "ensure today's daily quizzes exist" endpoint fire-and-forget
+        // so a user who opened the app long after midnight doesn't see an empty
+        // pending list. Idempotent — backend dedupes against the last 24h.
+        Task.detached {
+            // Fire-and-forget; we don't care about the response shape here,
+            // and the pending list reload below will pick up anything queued.
+            // Uses the v1 raw path because /quizzes/* is namespaced under v1.
+            struct EmptyBody: Codable {}
+            let _: V2EnsureDailyResponse? = try? await V2APIClient.shared.postV1(
+                "/quizzes/ensure-daily", body: EmptyBody()
+            )
+        }
         async let pendingTask = (try? await service.fetchPendingQuizzes()) ?? []
         async let historyTask = (try? await service.fetchQuizHistory()) ?? []
         let (p, h) = await (pendingTask, historyTask)
         pending = p
         history = h
         isLoading = false
+
+        // Derive topic suggestions for the generate sheet — top gap first,
+        // then recently touched topics, then the user's declared interests,
+        // all deduped and capped at 10.
+        if let home = try? await V2APIClient.shared.get("/plan/today") as V2APIResponse<V2HomeData> {
+            var seen = Set<String>()
+            var topics: [String] = []
+            if let gap = home.data.topGap?.topic, !gap.isEmpty {
+                seen.insert(gap.lowercased())
+                topics.append(gap)
+                defaultTopic = gap
+            }
+            for t in (home.data.todaysTasks ?? []).compactMap({ $0.primaryTopic }) {
+                let key = t.lowercased()
+                if seen.insert(key).inserted { topics.append(t) }
+                if topics.count >= 10 { break }
+            }
+            for a in h.prefix(8) {
+                if let t = a.topicBreakdown?.first?.topic, !t.isEmpty {
+                    let key = t.lowercased()
+                    if seen.insert(key).inserted { topics.append(t) }
+                }
+                if topics.count >= 10 { break }
+            }
+
+            // Also surface the user's declared topicsOfInterest — they added
+            // these at onboarding, so seeing them in the chip suggestions is
+            // what they expect. Fetch the active primary objective from /objectives.
+            if let objectives: [UserObjective] = try? await V2APIClient.shared.getV1("/objectives") {
+                let active = objectives.first(where: { $0.isPrimary == true && $0.status == .active })
+                    ?? objectives.first(where: { $0.status == .active })
+                for topic in (active?.topicsOfInterest ?? []) {
+                    let key = topic.lowercased()
+                    if seen.insert(key).inserted { topics.append(topic) }
+                    if topics.count >= 10 { break }
+                }
+            }
+
+            suggestedTopics = topics
+        }
     }
 
     private func historyTitle(_ a: QuizAttempt) -> String {
