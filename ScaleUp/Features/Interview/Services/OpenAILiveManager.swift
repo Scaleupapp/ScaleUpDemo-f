@@ -408,17 +408,20 @@ final class OpenAILiveManager {
                     turn = .waitingToAnswer
                 }
             } else if waitingForNextQuestion {
-                // Response had no audio (function call only) — auto-trigger second round
+                // Response had no audio — this is the model's function-call-only
+                // response (e.g. report_question_meta). The model has already been
+                // asked to continue via the response.create we sent in finishAnswering(),
+                // so do NOT fire another response.create here. Doing so was the
+                // root cause of the auto-advancing bug: the model would produce
+                // (a) a function-call response.done and (b) an audio response.done
+                // in one turn, and the (a) branch was incorrectly triggering a brand
+                // new response, causing the next question to fire without user input.
+                //
+                // The audio response.done (currentResponseHasAudio == true) will
+                // arrive next and set turn = .waitingToAnswer via the branch above.
+                // Nothing to do here.
                 analyzingResponse = false
-                turn = .processing
-                Task {
-                    try? await Task.sleep(for: .milliseconds(300))
-                    try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
-                    try? await Task.sleep(for: .milliseconds(300))
-                    try? await webSocket?.send(.string(
-                        "{\"type\":\"response.create\",\"response\":{\"output_modalities\":[\"audio\"]}}"
-                    ))
-                }
+                waitingForNextQuestion = false
             }
             currentResponseHasAudio = false
 
