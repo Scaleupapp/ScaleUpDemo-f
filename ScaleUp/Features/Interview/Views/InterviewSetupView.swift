@@ -325,6 +325,56 @@ struct InterviewSetupView: View {
             objectives = []
         }
         isLoadingObjectives = false
+        prefillFromActiveObjective()
+    }
+
+    /// Pre-fills setup fields from the user's active primary objective.
+    /// Only fills blank fields — never overwrites text the user has already typed.
+    private func prefillFromActiveObjective() {
+        // Prefer the primary active objective; fall back to first active.
+        let active = objectives.first(where: { $0.isPrimary == true && $0.status == .active })
+            ?? objectives.first(where: { $0.status == .active })
+
+        guard let obj = active else { return }
+
+        // Auto-link to this objective (only if none selected yet)
+        if viewModel.selectedObjectiveId == nil {
+            viewModel.selectedObjectiveId = obj.id
+        }
+
+        // Pre-fill targetRole only when blank
+        if viewModel.targetRole.isEmpty, let role = obj.specifics?.targetRole, !role.isEmpty {
+            viewModel.targetRole = role
+        }
+
+        // Pre-fill targetCompany only when blank
+        if viewModel.targetCompany.isEmpty,
+           let company = obj.specifics?.targetCompany,
+           !company.isEmpty {
+            viewModel.targetCompany = company
+        }
+
+        // Derive a sensible default interview type (only when still at the
+        // factory default — .behavioral — to avoid clobbering a user pick or
+        // a scenarioId-seeded type).
+        if viewModel.selectedType == .behavioral {
+            viewModel.selectedType = derivedInterviewType(for: obj)
+        }
+    }
+
+    /// Heuristic: map objective type + targetRole to a default InterviewType.
+    private func derivedInterviewType(for obj: UserObjective) -> InterviewType {
+        if obj.objectiveType == "mba_admissions" { return .mba_admissions }
+
+        let role = (obj.specifics?.targetRole ?? "").lowercased()
+        let technicalKeywords = ["engineer", "developer", "data scientist",
+                                  "sde", "swe", "backend", "frontend", "fullstack",
+                                  "devops", "ml ", "machine learning", "analyst"]
+        if technicalKeywords.contains(where: { role.contains($0) }) {
+            return .placement_technical
+        }
+
+        return .placement_hr
     }
 
     // MARK: - Start Button
