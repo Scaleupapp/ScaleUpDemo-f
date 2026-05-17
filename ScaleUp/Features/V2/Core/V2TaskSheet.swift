@@ -69,6 +69,9 @@ struct V2TaskSheet: View {
                         }
                 }
 
+            case .challengeAttempt(let challengeId, let topic):
+                ChallengeSessionView(challengeId: challengeId, topic: topic)
+
             case .compassReview(let weekNumber, let taskId):
                 V2CompassSheetView(
                     currentScreen: .home,

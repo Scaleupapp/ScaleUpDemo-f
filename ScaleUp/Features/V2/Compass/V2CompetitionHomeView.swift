@@ -22,6 +22,14 @@ struct V2CompetitionHomeView: View {
     @State private var cohortPlayedToday: Int = 0
     @State private var loadError: String?
     @State private var showCompetitionHub = false
+    /// Set non-nil to launch the actual challenge attempt (full-screen),
+    /// distinct from showCompetitionHub which opens the leaderboard landing.
+    @State private var startedChallenge: StartedChallenge?
+
+    private struct StartedChallenge: Identifiable {
+        let id: String
+        let topic: String
+    }
     @State private var history: [HistoryItem] = []
 
     /// Auto-refresh interval when status is "building" — the cron seeds at
@@ -129,6 +137,9 @@ struct V2CompetitionHomeView: View {
                             }
                         }
                 }
+            }
+            .fullScreenCover(item: $startedChallenge) { ch in
+                ChallengeSessionView(challengeId: ch.id, topic: ch.topic)
             }
         }
         .task { await load() }
@@ -252,7 +263,9 @@ struct V2CompetitionHomeView: View {
 
     private func challengeCard(_ c: TodayChallenge) -> some View {
         Button {
-            showCompetitionHub = true
+            // Launch the actual timed challenge attempt (NOT the leaderboard
+            // landing) — that was the broken behavior testers hit.
+            startedChallenge = StartedChallenge(id: c._id, topic: c.topic ?? "")
         } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {

@@ -149,6 +149,11 @@ struct V2HomeData: Codable {
         let url: String?
         /// Weekly Compass review task — which plan-week the retro is for.
         let weekNumber: Int?
+        /// Daily-challenge id for compete tasks — when present, routes
+        /// straight to ChallengeSessionView instead of the hub landing.
+        let challengeId: String?
+        /// Canonical topic for challenge attempts (used by ChallengeSessionView).
+        let topic: String?
     }
 }
 

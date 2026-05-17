@@ -51,6 +51,11 @@ final class V2TaskRouter {
         case quizByTopic(topic: String)
         case interview(scenarioId: String?)
         case competition
+        /// Direct-start of a specific daily challenge — bypasses the hub
+        /// landing page. Used when the task payload carries a challengeId
+        /// (synthetic bonus-compete tasks always do; plan-generated compete
+        /// tasks may not, in which case we fall back to .competition).
+        case challengeAttempt(challengeId: String, topic: String)
         case external(url: URL)
         /// Weekly Compass review — opens Compass in review_week mode.
         case compassReview(weekNumber: Int, taskId: String?)
@@ -63,6 +68,7 @@ final class V2TaskRouter {
             case .quizByTopic(let t):  return "quiztopic-\(t)"
             case .interview(let id):   return "interview-\(id ?? "default")"
             case .competition:         return "competition"
+            case .challengeAttempt(let id, _): return "challenge-\(id)"
             case .external(let url):   return "external-\(url.absoluteString)"
             case .compassReview(let w, _): return "compass-review-\(w)"
             case .unavailable(let m):  return "unavailable-\(m)"
@@ -113,8 +119,16 @@ final class V2TaskRouter {
             }
 
         case "compete":
-            route = .competition
-            setActiveTask(taskId: taskId, taskType: taskType, resourceId: nil)
+            // Prefer a direct-start path when we have a concrete challengeId.
+            // Falls back to the hub landing only when the task doesn't carry
+            // one (legacy plan-generated compete tasks).
+            if let chId = payload?.challengeId {
+                let chTopic = payload?.topic ?? topic ?? ""
+                route = .challengeAttempt(challengeId: chId, topic: chTopic)
+            } else {
+                route = .competition
+            }
+            setActiveTask(taskId: taskId, taskType: taskType, resourceId: payload?.challengeId)
 
         case "compass_review":
             // Weekly Compass retrospective — open V2CompassView in review_week
