@@ -39,7 +39,11 @@ struct V2HomeData: Codable {
         let atTargetDate: Int
         let targetReadiness: Int
         let timelineWeeks: Int
-        let weeklyDelta: Int
+        /// Was `Int` until 7b50b6a (backend). Now Double — backend rounds to
+        /// one decimal place ('1.8 tasks/wk') so the iOS decoder must accept
+        /// fractional values. Decoding as Int silently fails the whole
+        /// V2HomeData decode → vm.data stays nil → "Couldn't load your day".
+        let weeklyDelta: Double
         let onTrack: Bool
         let headline: String?
         /// Curve points the backend returns for the readiness line chart.

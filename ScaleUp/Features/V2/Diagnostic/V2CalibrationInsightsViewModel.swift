@@ -64,7 +64,7 @@ struct V2InsightsData: Codable {
         let atTargetDate: Int
         let targetReadiness: Int
         let timelineWeeks: Int
-        let weeklyDelta: Int
+        let weeklyDelta: Double
         let onTrack: Bool
         let headline: String?
     }
