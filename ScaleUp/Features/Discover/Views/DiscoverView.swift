@@ -1,8 +1,25 @@
 import SwiftUI
 
 struct DiscoverView: View {
+    /// Optional pre-positioning hint from callers (e.g. v2 Learn's Browse-by
+    /// buttons). Drives initial filter/anchor state. Default is `.none` so
+    /// existing call sites keep working unchanged.
+    enum InitialFilter: Equatable {
+        case none
+        case topic                          // focus topic chips
+        case type(ContentType)              // preselect a content type
+        case creator                        // anchor to the Top Creators section
+    }
+
+    private let initialFilter: InitialFilter
+
+    init(initialFilter: InitialFilter = .none) {
+        self.initialFilter = initialFilter
+    }
+
     @State private var viewModel = DiscoverViewModel()
     @State private var selectedCategory: String?
+    @State private var didApplyInitialFilter = false
 
     var body: some View {
         NavigationStack {
@@ -90,64 +107,97 @@ struct DiscoverView: View {
     // MARK: - Main Feed (single scroll, no tabs)
 
     private var mainFeed: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-            LazyVStack(spacing: Spacing.xl) {
-                // Unified filter bar (sticky feel — sits at top)
-                unifiedFilterBar
-                    .padding(.bottom, Spacing.xs)
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                LazyVStack(spacing: Spacing.xl) {
+                    // Unified filter bar (sticky feel — sits at top)
+                    unifiedFilterBar
+                        .padding(.bottom, Spacing.xs)
+                        .id("filter-bar")
 
-                // Featured hero (full width)
-                if let featured = viewModel.featuredContent {
-                    NavigationLink(value: featured) {
-                        featuredHero(featured)
+                    // Featured hero (full width)
+                    if let featured = viewModel.featuredContent {
+                        NavigationLink(value: featured) {
+                            featuredHero(featured)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
 
-                // Top Creators
-                if !viewModel.creators.isEmpty {
-                    creatorsSection
-                }
+                    // Top Creators
+                    if !viewModel.creators.isEmpty {
+                        creatorsSection
+                            .id("top-creators")
+                    }
 
-                // Picked For You
-                if !viewModel.pickedForYou.isEmpty {
-                    contentSection(
-                        title: "Picked For You",
-                        icon: "sparkles",
-                        items: Array(viewModel.pickedForYou.prefix(8))
-                    )
-                }
+                    // Picked For You
+                    if !viewModel.pickedForYou.isEmpty {
+                        contentSection(
+                            title: "Picked For You",
+                            icon: "sparkles",
+                            items: Array(viewModel.pickedForYou.prefix(8))
+                        )
+                    }
 
-                // Knowledge Gaps — now respects both Type and Topic filters
-                if !viewModel.filteredGapContent.isEmpty {
-                    gapSection
-                }
+                    // Knowledge Gaps — now respects both Type and Topic filters
+                    if !viewModel.filteredGapContent.isEmpty {
+                        gapSection
+                    }
 
-                // Trending
-                if !viewModel.filteredTrending.isEmpty {
-                    contentSection(
-                        title: "Trending",
-                        icon: "flame.fill",
-                        items: viewModel.filteredTrending
-                    )
-                }
+                    // Trending
+                    if !viewModel.filteredTrending.isEmpty {
+                        contentSection(
+                            title: "Trending",
+                            icon: "flame.fill",
+                            items: viewModel.filteredTrending
+                        )
+                    }
 
-                // Learning Paths
-                if !viewModel.learningPaths.isEmpty {
-                    pathsSection
-                }
+                    // Learning Paths
+                    if !viewModel.learningPaths.isEmpty {
+                        pathsSection
+                    }
 
-                // All Content grid
-                if !viewModel.filteredExploreResults.isEmpty {
-                    browseSection
-                }
+                    // All Content grid
+                    if !viewModel.filteredExploreResults.isEmpty {
+                        browseSection
+                    }
 
-                Spacer().frame(height: 80)
+                    Spacer().frame(height: 80)
+                }
+                .padding(.top, Spacing.xs)
             }
-            .padding(.top, Spacing.xs)
+            .refreshable {
+                await viewModel.loadFeed()
+            }
+            .onAppear { applyInitialFilter(using: proxy) }
+            .onChange(of: viewModel.isLoading) { _, newValue in
+                if !newValue { applyInitialFilter(using: proxy) }
+            }
         }
-        .refreshable {
-            await viewModel.loadFeed()
+    }
+
+    /// Runs once after the feed first loads — sets the type chip or scrolls to
+    /// the requested anchor based on the caller-provided `initialFilter`.
+    private func applyInitialFilter(using proxy: ScrollViewProxy) {
+        guard !didApplyInitialFilter else { return }
+        switch initialFilter {
+        case .none:
+            return
+        case .topic:
+            // No specific topic to preselect — just make sure the filter bar
+            // is visible at the top. `mainFeed` already opens there.
+            didApplyInitialFilter = true
+            withAnimation { proxy.scrollTo("filter-bar", anchor: .top) }
+        case .type(let t):
+            // Need data before the chip change is meaningful.
+            guard !viewModel.isLoading else { return }
+            didApplyInitialFilter = true
+            viewModel.selectedContentType = t
+            withAnimation { proxy.scrollTo("filter-bar", anchor: .top) }
+        case .creator:
+            guard !viewModel.creators.isEmpty else { return }
+            didApplyInitialFilter = true
+            withAnimation { proxy.scrollTo("top-creators", anchor: .top) }
         }
     }
 
