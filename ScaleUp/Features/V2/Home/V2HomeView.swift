@@ -21,12 +21,17 @@ struct V2HomeView: View {
     @State private var showTrajectorySheet = false
     /// Controls the info popover for the "what does readiness mean" hint.
     @State private var showReadinessInfo = false
+    /// Tap "Talk to Coach to recalibrate" → opens Compass Coach sheet.
+    @State private var showCoachSheet = false
+    /// YOUR PLAN tap → presents the full multi-week timeline as a sheet.
+    @State private var showPlanSheet = false
     /// Which of the three lower chips (pending / get-ahead / push-harder) is
     /// currently expanded inline. Only one at a time — tapping another
     /// collapses the current and opens the new.
     @State private var expandedChip: HomeChip?
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(V2NavState.self) private var nav
+    @Environment(AppState.self) private var appState
 
     private enum HomeChip: String, Identifiable {
         case pending, getAhead, pushHarder
@@ -67,6 +72,30 @@ struct V2HomeView: View {
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
             }
+        }
+        // YOUR PLAN tap → full multi-week timeline as a sheet.
+        .sheet(isPresented: $showPlanSheet) {
+            if let sched = vm.data?.planSchedule {
+                NavigationStack {
+                    PlanScheduleSheetView(
+                        sched: sched,
+                        weekProgress: vm.data?.weekProgress,
+                        streak: vm.data?.streak
+                    )
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
+        }
+        // "Open Coach to recalibrate" tap on the status warning.
+        .sheet(isPresented: $showCoachSheet) {
+            V2CompassSheetView(
+                currentScreen: .home,
+                coachContext: CompassCoachContext(scope: nil, topic: nil)
+            )
+            .environment(taskRouter)
+            .environment(appState)
+            .environment(nav)
         }
     }
 
@@ -162,37 +191,55 @@ struct V2HomeView: View {
     private func statusBar(traj: V2HomeData.Trajectory, data: V2HomeData) -> some View {
         let eyebrow = "\(data.objectiveName ?? "GOAL") READINESS"
 
-        Button {
-            showTrajectorySheet = true
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    Text(eyebrow)
-                        .v2Eyebrow()
-                    Spacer()
-                    Button {
-                        showReadinessInfo = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 12))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: $showReadinessInfo, arrowEdge: .top) {
-                        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 8) {
+            // Top row: eyebrow + info icon (sibling buttons — info has its
+            // own tap target, not nested inside the readiness button).
+            HStack(alignment: .firstTextBaseline) {
+                Text(eyebrow)
+                    .v2Eyebrow()
+                Spacer()
+                Button {
+                    showReadinessInfo = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .buttonStyle(.plain)
+                .sheet(isPresented: $showReadinessInfo) {
+                        VStack(alignment: .leading, spacing: 12) {
                             Text("What is readiness?")
-                                .font(.system(size: 14, weight: .bold))
+                                .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(ColorTokens.textPrimary)
-                            Text("Readiness = how prepared you are to crush your goal. 80% is the threshold most people need to hit their target.")
-                                .font(.system(size: 13))
+                            Text("Readiness is how prepared you are to crush your goal. It's a score from 0–100% based on your diagnostic results and weekly progress.")
+                                .font(.system(size: 14))
                                 .foregroundStyle(ColorTokens.textSecondary)
+                            Text("80% is the threshold most people need to hit their target. Above that, your odds of success climb sharply.")
+                                .font(.system(size: 14))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                            Spacer()
+                            Button { showReadinessInfo = false } label: {
+                                Text("Got it")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(ColorTokens.background)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(ColorTokens.gold)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .padding(16)
-                        .frame(maxWidth: 280)
-                        .presentationCompactAdaptation(.popover)
+                        .padding(20)
+                        .presentationDetents([.fraction(0.35)])
+                        .presentationDragIndicator(.visible)
                     }
                 }
 
+            // Big-numbers row IS the trajectory tap target — separate from
+            // the sub-line below so the "Open Coach" link gets its own tap.
+            Button {
+                showTrajectorySheet = true
+            } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(traj.today)%")
                         .font(.system(size: 30, weight: .bold))
@@ -208,21 +255,22 @@ struct V2HomeView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(ColorTokens.textTertiary)
                 }
-
-                statusSubLine(traj: traj)
+                .contentShape(Rectangle())
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
-                    .fill(ColorTokens.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
-                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-            )
+            .buttonStyle(.plain)
+
+            statusSubLine(traj: traj)
         }
-        .buttonStyle(.plain)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .fill(ColorTokens.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+        )
     }
 
     /// Conditional sub-line under the status numbers. Only renders when
@@ -242,27 +290,49 @@ struct V2HomeView: View {
                   let late = traj.weeksLateVsDeadline, late > 0 {
             statusSubRow(icon: "exclamationmark.triangle.fill",
                          color: ColorTokens.warning,
-                         text: "Behind: at this pace, \(late) wk\(late == 1 ? "" : "s") past deadline. Talk to Coach to recalibrate.")
+                         text: "Behind: at this pace, \(late) wk\(late == 1 ? "" : "s") past deadline.",
+                         actionLabel: "Open Coach to recalibrate →",
+                         action: { showCoachSheet = true })
         } else if traj.paceCategory == "behind",
                   let weeks = traj.weeksToTarget, weeks > 0 {
             statusSubRow(icon: "clock.fill",
                          color: ColorTokens.warning,
-                         text: "\(weeks) wk\(weeks == 1 ? "" : "s") to hit target at this pace")
+                         text: "\(weeks) wk\(weeks == 1 ? "" : "s") to hit target at this pace.",
+                         actionLabel: "Open Coach to plan a push →",
+                         action: { showCoachSheet = true })
         }
         // On-track with no other signal — render nothing. Less noise.
     }
 
-    private func statusSubRow(icon: String, color: Color, text: String) -> some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(color)
-                .padding(.top, 1)
-            Text(text)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(color)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
+    private func statusSubRow(
+        icon: String,
+        color: Color,
+        text: String,
+        actionLabel: String? = nil,
+        action: (() -> Void)? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 11))
+                    .foregroundStyle(color)
+                    .padding(.top, 1)
+                Text(text)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(color)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            if let label = actionLabel, let action = action {
+                Button(action: action) {
+                    Text(label)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(color)
+                        .underline()
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 17)
+            }
         }
     }
 
@@ -429,62 +499,89 @@ struct V2HomeView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - 4. YOUR PLAN (multi-week timeline)
+    // MARK: - 4. THIS WEEK (compact card; tap → full multi-week sheet)
 
+    /// Collapsed Home card — current week only. Tapping opens the full
+    /// multi-week schedule sheet (`PlanScheduleSheetView`) so the dense
+    /// timeline stays out of the way until the user asks for it.
     private func planTimelineSection(
         sched: [V2HomeData.PlanWeek],
         weekProgress: V2HomeData.WeekProgress?,
         streak: V2HomeData.Streak?
     ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("YOUR PLAN").v2Eyebrow()
-                Spacer()
-                if let wp = weekProgress {
-                    Text("Week \(wp.week) of \(wp.totalWeeks)")
-                        .font(.system(size: 11, weight: .medium))
+        let currentWeek = sched.first(where: { $0.isCurrent == true }) ?? sched.first
+        return Button { showPlanSheet = true } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("THIS WEEK").v2Eyebrow()
+                    Spacer()
+                    if let wp = weekProgress {
+                        Text("Week \(wp.week) of \(wp.totalWeeks)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(ColorTokens.textTertiary)
                 }
-            }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 14) {
-                    ForEach(sched) { wk in
-                        planWeekColumn(wk)
+                if let wk = currentWeek {
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text("\(wk.done) of \(wk.total) done")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        if let skipped = wk.skipped, skipped > 0 {
+                            Text("· \(skipped) skipped")
+                                .font(.system(size: 12))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                        Spacer()
+                    }
+
+                    // One inline row of dots for THIS week's task count
+                    // (capped at 10 dots for layout sanity on big weeks).
+                    let dots = min(wk.total, 10)
+                    let filled = min(wk.done, dots)
+                    HStack(spacing: 5) {
+                        ForEach(0..<dots, id: \.self) { i in
+                            Circle()
+                                .fill(i < filled ? ColorTokens.gold : ColorTokens.surfaceElevated)
+                                .frame(width: 8, height: 8)
+                        }
+                        Spacer(minLength: 0)
                     }
                 }
-                .padding(.vertical, 4)
-            }
 
-            if let wp = weekProgress {
-                Text("↑ Week \(wp.week) · \(wp.done) of \(wp.total) done")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.textSecondary)
-            }
-
-            // Footer row — streak + cohort (cohort number is not yet wired;
-            // skip silently when absent).
-            if let s = streak, s.current > 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.gold)
-                    Text("\(s.current)-day streak")
+                // Footer row — streak + "view all weeks" hint.
+                HStack(spacing: 10) {
+                    if let s = streak, s.current > 0 {
+                        HStack(spacing: 5) {
+                            Image(systemName: "flame.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(ColorTokens.gold)
+                            Text("\(s.current)-day streak")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Text("Tap for all weeks")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(ColorTokens.textSecondary)
+                        .foregroundStyle(ColorTokens.gold)
                 }
             }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                    .fill(ColorTokens.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
-                .fill(ColorTokens.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
-                .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-        )
+        .buttonStyle(.plain)
     }
 
     private func planWeekColumn(_ wk: V2HomeData.PlanWeek) -> some View {
@@ -533,27 +630,31 @@ struct V2HomeView: View {
         let showPush = true
 
         VStack(alignment: .leading, spacing: 10) {
-            // Three chips on one row (wrapping HStack of buttons).
-            HStack(spacing: 8) {
+            // Three chips on one row — each with a captioned subtitle so the
+            // user knows what tapping it does (Pending vs Get Ahead vs Push).
+            HStack(alignment: .top, spacing: 10) {
                 if showPending {
-                    chipButton(
+                    chipWithCaption(
                         label: "PENDING (\(pendingCount))",
+                        caption: "Catch up from earlier",
                         icon: "pin.fill",
                         tint: ColorTokens.warning,
                         chip: .pending
                     )
                 }
                 if showGetAhead {
-                    chipButton(
+                    chipWithCaption(
                         label: "GET AHEAD",
+                        caption: data.getAheadWeek.map { "Start Week \($0) early" } ?? "Start next week early",
                         icon: "arrow.up.right",
                         tint: ColorTokens.gold,
                         chip: .getAhead
                     )
                 }
                 if showPush {
-                    chipButton(
+                    chipWithCaption(
                         label: "PUSH HARDER",
+                        caption: "Bonus picks & challenges",
                         icon: "plus",
                         tint: ColorTokens.success,
                         chip: .pushHarder
@@ -568,6 +669,25 @@ struct V2HomeView: View {
                                  getAheadWeek: data.getAheadWeek)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
+        }
+    }
+
+    /// Chip + caption block — vertical stack of the chip pill and a one-line
+    /// caption directly beneath so the affordance is self-explanatory.
+    private func chipWithCaption(
+        label: String,
+        caption: String,
+        icon: String,
+        tint: Color,
+        chip: HomeChip
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            chipButton(label: label, icon: icon, tint: tint, chip: chip)
+            Text(caption)
+                .font(.system(size: 10))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -843,6 +963,89 @@ struct V2HomeView: View {
 /// Full readiness trajectory chart, presented in a sheet when the user taps the
 /// compact status bar on Home. Keeps Home clean while giving casual users
 /// access to the detail.
+// MARK: - PlanScheduleSheetView (full multi-week timeline drill-down)
+
+/// Sheet host for the dense multi-week schedule. Mirrors the column-strip
+/// pattern the Home card used before it was collapsed to "THIS WEEK only".
+private struct PlanScheduleSheetView: View {
+    let sched: [V2HomeData.PlanWeek]
+    let weekProgress: V2HomeData.WeekProgress?
+    let streak: V2HomeData.Streak?
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                if let wp = weekProgress {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Week \(wp.week) of \(wp.totalWeeks)")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text("\(wp.done) of \(wp.total) tasks done this week")
+                            .font(.system(size: 13))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+
+                Text("ALL WEEKS").v2Eyebrow()
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 18) {
+                        ForEach(sched) { wk in
+                            VStack(spacing: 8) {
+                                Text("W\(wk.week)")
+                                    .font(.system(size: 12, weight: wk.isCurrent == true ? .bold : .medium))
+                                    .foregroundStyle(wk.isCurrent == true ? ColorTokens.gold : ColorTokens.textTertiary)
+                                VStack(spacing: 4) {
+                                    let dots = min(wk.total, 10)
+                                    let filled = min(wk.done, dots)
+                                    ForEach(0..<dots, id: \.self) { i in
+                                        Circle()
+                                            .fill(i < filled ? ColorTokens.gold : ColorTokens.surfaceElevated)
+                                            .frame(width: 8, height: 8)
+                                    }
+                                }
+                                Text("\(wk.done)/\(wk.total)")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(ColorTokens.textSecondary)
+                                if wk.isCurrent == true {
+                                    Rectangle()
+                                        .fill(ColorTokens.gold)
+                                        .frame(width: 22, height: 2)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                if let s = streak, s.current > 0 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.gold)
+                        Text("\(s.current)-day streak · longest \(s.longest)")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+                Spacer(minLength: 20)
+            }
+            .padding(20)
+        }
+        .background(ColorTokens.background.ignoresSafeArea())
+        .navigationTitle("Your plan")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Done") { dismiss() }
+                    .foregroundStyle(ColorTokens.gold)
+            }
+        }
+    }
+}
+
 private struct TrajectorySheetView: View {
     let traj: V2HomeData.Trajectory
 
