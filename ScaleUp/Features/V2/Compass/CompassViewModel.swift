@@ -36,7 +36,9 @@ private struct CompassPayload: Codable {
     var message: String?
     var history: [CompassHistoryEntry]?
     var contentId: String?   // tutor mode — the content this turn is scoped to
-    var weekNumber: Int?     // review_week mode — which plan-week the retro is for
+    var weekNumber: Int?     // legacy review_week mode — kept for any in-flight server state
+    var scope: String?       // coach mode — week | month | all_time | topic
+    var topic: String?       // coach mode (scope=topic) — the chosen topic
 }
 
 private struct CompassHistoryEntry: Codable {
@@ -119,14 +121,56 @@ struct CompassTutorContext: Equatable, Identifiable {
     var id: String { contentId }
 }
 
-/// When Compass is opened from the weekly review plan task, it runs in
-/// REVIEW_WEEK mode — Compass opens with a retrospective summary of the last
-/// 7 days and invites the user to reflect. Subsequent turns are conversational
-/// but still anchored to the week being reviewed.
+/// Scope for a Coach conversation. Picked by the user via scope chips on the
+/// opening turn; pinned on every subsequent message so the server keeps the
+/// retrospective framing aligned to the same window.
+enum CoachScope: String, CaseIterable, Identifiable, Equatable {
+    case week
+    case month
+    case allTime = "all_time"
+    case topic
+
+    var id: String { rawValue }
+
+    /// Wire value for the backend `scope` field.
+    var wireValue: String { rawValue }
+
+    /// Chip label shown on the opener.
+    var chipLabel: String {
+        switch self {
+        case .week:    return "This Week"
+        case .month:   return "This Month"
+        case .allTime: return "Since Start"
+        case .topic:   return "By Topic"
+        }
+    }
+
+    /// Short subtitle shown in the Coach header once a scope is chosen.
+    var headerSubtitle: String {
+        switch self {
+        case .week:    return "scope: This Week"
+        case .month:   return "scope: This Month"
+        case .allTime: return "scope: Since Start"
+        case .topic:   return "scope: By Topic"
+        }
+    }
+}
+
+/// When Compass is opened in Coach mode, it runs a retrospective over the
+/// chosen scope (week / month / all-time / topic). Subsequent turns stay
+/// anchored to the same scope so the server keeps framing consistent.
+struct CompassCoachContext: Equatable, Identifiable {
+    /// nil until the user picks a scope chip on the opening turn.
+    var scope: CoachScope?
+    /// Required only when scope == .topic.
+    var topic: String?
+    var id: String { "coach-\(scope?.rawValue ?? "pending")-\(topic ?? "")" }
+}
+
+/// LEGACY — kept only so `compassReview` task routes still compile until any
+/// in-flight server state drains. New code paths use `CompassCoachContext`.
 struct CompassReviewContext: Equatable, Identifiable {
     let weekNumber: Int
-    /// The plan-task id (`review-week-<N>`) — passed back to the router so the
-    /// task is marked complete once the user has actually engaged.
     let taskId: String?
     var id: String { "review-\(weekNumber)" }
 }
@@ -172,14 +216,21 @@ final class CompassViewModel {
     /// Non-nil when Compass is scoped to a content piece (tutor mode).
     var tutorContext: CompassTutorContext?
 
-    /// Non-nil when Compass was launched from the weekly review task — every
-    /// turn in this conversation is anchored to a weekly retrospective.
+    /// Non-nil when Compass was launched in Coach mode. Every turn in this
+    /// conversation is anchored to the chosen scope (week / month / all-time /
+    /// topic). The scope may be nil initially — the opener prompts the user
+    /// to pick one before the LLM call.
+    var coachContext: CompassCoachContext?
+
+    /// Legacy plumbing — still accepted so the deprecated compassReview route
+    /// continues to function for any in-flight server state. New entry points
+    /// (Home "Talk to Coach") use coachContext directly.
     var reviewContext: CompassReviewContext?
 
-    /// Tracks whether we've already sent the review_week opener for this
+    /// Tracks whether we've already sent the Coach opener for this
     /// conversation. After the opener, follow-up turns flow through
-    /// conversation (with the review framing pinned server-side).
-    private var didSendReviewOpener = false
+    /// conversation (with the coach framing pinned server-side).
+    private var didSendCoachOpener = false
 
     /// Set when the user picks a Compass quick-action chip that maps to a
     /// dedicated destination screen (Quiz/Interview/Notes/Resume Home). The
@@ -191,10 +242,26 @@ final class CompassViewModel {
 
     func startConversation(context: V2Tab = .compass) {
         guard messages.isEmpty else { return }
-        if let review = reviewContext {
-            // Weekly retrospective — fetch the LLM-generated recap as the
-            // opening message, grounded in the last 7 days of activity.
-            Task { await callReviewOpener(weekNumber: review.weekNumber) }
+        if let coach = coachContext {
+            // Coach mode. If a scope is already chosen, fire the opener.
+            // Otherwise, prompt the user to pick a scope; V2CompassView
+            // renders the scope chip strip when coachContext.scope == nil.
+            if let scope = coach.scope {
+                Task { await callCoachOpener(scope: scope, topic: coach.topic) }
+            } else {
+                messages.append(.init(
+                    role: .compass,
+                    text: "I can look back over your week, your month, or your whole journey — or zoom in on a specific topic. What do you want to reflect on?"
+                ))
+                // Scope chips are rendered by V2CompassView itself (not as
+                // generic suggestion chips) because tapping one needs to set
+                // coachContext.scope before kicking off the opener.
+                showSuggestions = false
+            }
+        } else if let review = reviewContext {
+            // Legacy compassReview route — treat as coach with scope=week.
+            coachContext = CompassCoachContext(scope: .week, topic: nil)
+            Task { await callCoachOpener(scope: .week, topic: nil, weekNumber: review.weekNumber) }
         } else if tutorContext != nil {
             // Tutor mode opens with a scoped greeting, not the generic one.
             messages.append(.init(
@@ -206,6 +273,22 @@ final class CompassViewModel {
         } else {
             Task { await callGreeting(context: context) }
         }
+    }
+
+    /// Called by V2CompassView when the user taps a scope chip on the opener.
+    /// Sets the scope on coachContext, then fires the opener.
+    func openCoach(scope: CoachScope, topic: String? = nil) {
+        if coachContext == nil {
+            coachContext = CompassCoachContext(scope: scope, topic: topic)
+        } else {
+            coachContext?.scope = scope
+            coachContext?.topic = topic
+        }
+        // The user picking a scope is the first explicit interaction — show
+        // it as a user-side bubble for conversational coherence.
+        messages.append(.init(role: .user, text: scope.chipLabel + (topic.map { " · \($0)" } ?? "")))
+        showSuggestions = false
+        Task { await callCoachOpener(scope: scope, topic: topic) }
     }
 
     /// Archive the current thread server-side and clear UI so the user starts fresh.
@@ -358,31 +441,43 @@ final class CompassViewModel {
         }
     }
 
-    private func callReviewOpener(weekNumber: Int) async {
+    private func callCoachOpener(scope: CoachScope, topic: String?, weekNumber: Int? = nil) async {
         isWaitingForReply = true
         defer { isWaitingForReply = false }
         let body = CompassRequest(
-            mode: "review_week",
-            payload: CompassPayload(message: nil, history: nil, contentId: nil, weekNumber: weekNumber)
+            mode: "coach",
+            payload: CompassPayload(
+                message: nil,
+                history: nil,
+                contentId: nil,
+                weekNumber: weekNumber,
+                scope: scope.wireValue,
+                topic: topic
+            )
         )
         do {
             let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post("/compass", body: body)
             let reply = resp.data.output.reply
                 ?? resp.data.output.message
-                ?? "Here's your week — how did it feel?"
+                ?? "Here's the recap — how did it feel?"
             messages.append(.init(role: .compass, text: reply))
-            let follow = resp.data.output.followups ?? ["It went well", "I got blocked", "Plan next week with me"]
+            let follow = resp.data.output.followups ?? ["It went well", "I got blocked", "Plan what's next"]
             suggestions = follow
             showSuggestions = !follow.isEmpty
-            didSendReviewOpener = true
+            didSendCoachOpener = true
         } catch {
-            messages.append(.init(
-                role: .compass,
-                text: "Let's run your weekly review. How did this past week actually feel?"
-            ))
-            suggestions = ["It went well", "I got blocked", "Plan next week with me"]
+            let fallback: String = {
+                switch scope {
+                case .week:    return "Let's look at this week. How did it actually feel?"
+                case .month:   return "Let's zoom out to the past month. What stands out?"
+                case .allTime: return "Let's look at the whole journey so far. What feels different now?"
+                case .topic:   return "Let's focus on \(topic ?? "that topic"). Where do you feel solid, and where do you still wobble?"
+                }
+            }()
+            messages.append(.init(role: .compass, text: fallback))
+            suggestions = ["It went well", "I got blocked", "Plan what's next"]
             showSuggestions = true
-            didSendReviewOpener = true
+            didSendCoachOpener = true
         }
     }
 
@@ -393,14 +488,14 @@ final class CompassViewModel {
             CompassHistoryEntry(role: msg.role == .user ? "user" : "assistant", content: msg.text)
         }
         // Mode selection:
-        //   - review_week: review retro turns stay in review_week so the
-        //     server keeps the framing pinned (handled server-side by
-        //     forwarding to conversation with the review system addendum).
+        //   - coach: follow-up turns of a Coach session stay in coach so the
+        //     server keeps the scope framing pinned (handled server-side by
+        //     forwarding to conversation with the coach scope addendum).
         //   - tutor: scoped to a piece of content.
         //   - conversation: everything else.
         let mode: String
-        if reviewContext != nil {
-            mode = "review_week"
+        if coachContext != nil || reviewContext != nil {
+            mode = "coach"
         } else if tutorContext != nil {
             mode = "tutor"
         } else {
@@ -412,7 +507,9 @@ final class CompassViewModel {
                 message: message,
                 history: history,
                 contentId: tutorContext?.contentId,
-                weekNumber: reviewContext?.weekNumber
+                weekNumber: reviewContext?.weekNumber,
+                scope: coachContext?.scope?.wireValue,
+                topic: coachContext?.topic
             )
         )
         do {

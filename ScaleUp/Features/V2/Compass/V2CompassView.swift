@@ -44,9 +44,18 @@ struct V2CompassView: View {
     /// When set, Compass opens in TUTOR mode scoped to this content.
     var tutorContext: CompassTutorContext?
 
-    /// When set, Compass opens in REVIEW_WEEK mode — used by the synthetic
-    /// `compass_review` plan task to run a weekly retrospective.
+    /// When set, Compass opens in COACH mode (the general-purpose retrospective).
+    /// If `scope` is non-nil, the opener fires immediately; if nil, the user
+    /// is prompted to pick a scope via the scope chip strip below.
+    var coachContext: CompassCoachContext?
+
+    /// Legacy review context — kept so old TaskRouter routes still compile.
+    /// Forwarded into the VM which now treats it as coach scope=week.
     var reviewContext: CompassReviewContext?
+
+    // ── Topic picker (Coach scope=topic) ──
+    @State private var topicPickerInput: String = ""
+    @State private var topPickedSuggestion: String?
 
     var body: some View {
         NavigationStack {
@@ -61,6 +70,21 @@ struct V2CompassView: View {
                             ForEach(vm.messages) { msg in
                                 MessageView(message: msg)
                                     .id(msg.id)
+                            }
+
+                            if vm.isWaitingForReply {
+                                TypingIndicatorBubble()
+                                    .id("typing")
+                                    .transition(.opacity)
+                            }
+
+                            // Coach mode scope picker — shown only on the
+                            // opening turn, before a scope is chosen. Once a
+                            // chip is tapped, the opener fires and these chips
+                            // are hidden (coachContext.scope becomes non-nil).
+                            if vm.coachContext != nil && vm.coachContext?.scope == nil {
+                                coachScopePicker
+                                    .padding(.top, 6)
                             }
 
                             if vm.showSuggestions {
@@ -83,6 +107,13 @@ struct V2CompassView: View {
                             scroll.scrollTo(vm.messages.last?.id, anchor: .bottom)
                         }
                     }
+                    .onChange(of: vm.isWaitingForReply) { _, waiting in
+                        if waiting {
+                            withAnimation {
+                                scroll.scrollTo("typing", anchor: .bottom)
+                            }
+                        }
+                    }
                 }
 
                 quickActionsBar
@@ -92,6 +123,7 @@ struct V2CompassView: View {
         }
         .onAppear {
             if let tc = tutorContext { vm.tutorContext = tc }
+            if let cc = coachContext { vm.coachContext = cc }
             if let rc = reviewContext { vm.reviewContext = rc }
             vm.startConversation(context: launchContext)
             Task { await loadCompetitionStatus() }
@@ -245,14 +277,24 @@ struct V2CompassView: View {
     // MARK: - Header
 
     private var headerTitle: String {
-        if vm.reviewContext != nil { return "Compass · Weekly review" }
+        if vm.coachContext != nil  { return "Coach" }
+        if vm.reviewContext != nil { return "Coach" }
         if vm.tutorContext != nil  { return "Compass · Tutor" }
         return "Compass"
     }
 
     private var headerSubtitle: String {
-        if let r = vm.reviewContext { return "reviewing week \(r.weekNumber)" }
-        if let t = vm.tutorContext  { return "on “\(t.title)”" }
+        if let c = vm.coachContext {
+            if let scope = c.scope {
+                if scope == .topic, let topic = c.topic, !topic.isEmpty {
+                    return "scope: \(topic)"
+                }
+                return scope.headerSubtitle
+            }
+            return "pick what to reflect on"
+        }
+        if let r = vm.reviewContext { return "scope: This Week (week \(r.weekNumber))" }
+        if let t = vm.tutorContext  { return "on \u{201C}\(t.title)\u{201D}" }
         return "knows your full context"
     }
 
@@ -304,6 +346,64 @@ struct V2CompassView: View {
         FlexibleChips(items: vm.suggestions) { chip in
             vm.handleSuggestion(chip)
         }
+    }
+
+    // MARK: - Coach scope picker (opener-only)
+
+    /// Renders scope chips on the first Coach turn. Tapping a chip sets the
+    /// scope on coachContext and fires the LLM opener. For .topic we also
+    /// surface a small free-text field so the user can name a topic.
+    private var coachScopePicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            FlexibleChips(items: CoachScope.allCases.map { $0.chipLabel }) { chipLabel in
+                guard let scope = CoachScope.allCases.first(where: { $0.chipLabel == chipLabel }) else { return }
+                if scope == .topic {
+                    // Defer firing until the user types a topic — show the
+                    // input field by setting an empty topic on the context.
+                    vm.coachContext?.topic = ""
+                    vm.coachContext?.scope = nil // keep the picker rendered until topic is submitted
+                    topicPickerInput = ""
+                    topPickedSuggestion = "topic-mode-armed"
+                } else {
+                    vm.openCoach(scope: scope, topic: nil)
+                }
+            }
+
+            if topPickedSuggestion == "topic-mode-armed" {
+                HStack(spacing: 8) {
+                    TextField("Type a topic (e.g. dynamic programming)", text: $topicPickerInput)
+                        .font(V2Theme.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 9)
+                        .background(
+                            Capsule()
+                                .fill(ColorTokens.surface)
+                                .overlay(Capsule().strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+                        )
+                        .submitLabel(.go)
+                        .onSubmit { submitTopic() }
+
+                    Button(action: submitTopic) {
+                        Text("Start")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(ColorTokens.background)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 9)
+                            .background(Capsule().fill(ColorTokens.gold))
+                    }
+                    .disabled(topicPickerInput.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .opacity(topicPickerInput.trimmingCharacters(in: .whitespaces).isEmpty ? 0.45 : 1)
+                }
+            }
+        }
+    }
+
+    private func submitTopic() {
+        let trimmed = topicPickerInput.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        topPickedSuggestion = nil
+        vm.openCoach(scope: .topic, topic: trimmed)
     }
 
     // MARK: - Quick actions (always-visible capability strip)
@@ -407,12 +507,16 @@ struct V2CompassSheetView: View {
     var currentScreen: V2Tab = .home
     /// When set, the sheet opens Compass in tutor mode for this content.
     var tutorContext: CompassTutorContext?
-    /// When set, the sheet opens Compass in weekly-review mode.
+    /// When set, the sheet opens Compass in Coach mode with the given scope
+    /// (or, when scope is nil, prompts the user to pick one).
+    var coachContext: CompassCoachContext?
+    /// Legacy — kept so old taskRouter routes still compile.
     var reviewContext: CompassReviewContext?
     var body: some View {
         V2CompassView(
             launchContext: currentScreen,
             tutorContext: tutorContext,
+            coachContext: coachContext,
             reviewContext: reviewContext
         )
     }
@@ -457,6 +561,49 @@ private struct MessageView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+    }
+}
+
+// MARK: - Typing indicator (three pulsing dots while awaiting reply)
+
+private struct TypingIndicatorBubble: View {
+    @State private var phase = 0
+    private let dotCount = 3
+
+    var body: some View {
+        HStack {
+            HStack(spacing: 5) {
+                ForEach(0..<dotCount, id: \.self) { i in
+                    Circle()
+                        .fill(ColorTokens.textTertiary)
+                        .frame(width: 6, height: 6)
+                        .opacity(phase == i ? 1.0 : 0.35)
+                        .scaleEffect(phase == i ? 1.15 : 1.0)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(ColorTokens.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+                    )
+            )
+            Spacer(minLength: 40)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task {
+            // .task auto-cancels when the view disappears, so the loop dies
+            // cleanly when the assistant reply arrives and we drop the bubble.
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    phase = (phase + 1) % dotCount
+                }
+            }
+        }
     }
 }
 

@@ -22,6 +22,9 @@ struct V2HomeView: View {
     @State private var showTargetInfo = false
     /// Controls the Get Ahead full-list sheet.
     @State private var showGetAheadSheet = false
+    /// Drives the "Talk to Coach" sheet. Non-nil → V2CompassSheetView with
+    /// the held coach context is presented.
+    @State private var coachSheetContext: CompassCoachContext?
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(V2NavState.self) private var nav
 
@@ -48,6 +51,19 @@ struct V2HomeView: View {
         .refreshable { await vm.load() }
         .onReceive(NotificationCenter.default.publisher(for: .v2PlanTaskCompleted)) { _ in
             Task { await vm.load() }
+        }
+        // "Talk to Coach" sheet — presents V2CompassView in Coach mode. We
+        // open with scope=nil so the user is shown the scope chip strip on
+        // the first turn (This Week / This Month / Since Start / By Topic).
+        .sheet(item: $coachSheetContext, onDismiss: { coachSheetContext = nil }) { ctx in
+            V2CompassSheetView(
+                currentScreen: .home,
+                coachContext: ctx
+            )
+            .environment(taskRouter)
+            .environment(V2NavState())
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -107,8 +123,12 @@ struct V2HomeView: View {
         if let traj = data.trajectory {
             readinessCard(traj: traj, weekProgress: data.weekProgress,
                           streak: data.streak, days: data.weekActivity ?? [])
-                .padding(.bottom, 22)
+                .padding(.bottom, 14)
         }
+
+        // ── Talk to Coach entry — anytime retrospective with scope picker ──
+        coachEntryCard
+            .padding(.bottom, 22)
 
         // ── Section 2: Weekly insight ──
         if let insight = data.weeklyInsight, !insight.isEmpty {
@@ -511,6 +531,57 @@ struct V2HomeView: View {
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(ColorTokens.textTertiary)
         }
+    }
+
+    // MARK: - Talk to Coach entry card
+
+    /// Always-available entry point for Coach mode. Tapping opens
+    /// V2CompassView in coach mode with no scope yet — the user picks
+    /// "This Week / This Month / Since Start / By Topic" on the first turn.
+    private var coachEntryCard: some View {
+        Button {
+            // scope=nil → V2CompassView shows the scope chip strip on the
+            // opening turn instead of firing the LLM immediately.
+            coachSheetContext = CompassCoachContext(scope: nil, topic: nil)
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [ColorTokens.goldLight, ColorTokens.goldDark],
+                            startPoint: .topLeading, endPoint: .bottomTrailing
+                        ))
+                        .frame(width: 38, height: 38)
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ColorTokens.background)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Talk to Coach")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text("Reflect on your week, month, or any topic — anytime.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .lineLimit(2)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(ColorTokens.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(ColorTokens.gold.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Section 2: Weekly insight card
@@ -1053,7 +1124,7 @@ struct V2HomeView: View {
         Button {
             taskRouter.open(
                 taskType: "watch",
-                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil),
+                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil, challengeId: nil, topic: nil),
                 title: item.title,
                 taskId: nil,
                 topic: item.topics?.first
