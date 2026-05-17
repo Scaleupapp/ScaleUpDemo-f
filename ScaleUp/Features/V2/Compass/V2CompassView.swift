@@ -17,6 +17,26 @@ struct V2CompassView: View {
     @Environment(V2NavState.self) private var nav
     @FocusState private var inputFocused: Bool
 
+    // MARK: - Competition banner state
+
+    @State private var unplayedChallenge: UnplayedChallenge?
+
+    private struct UnplayedChallenge: Codable, Equatable {
+        let _id: String
+        let topic: String?
+        let questionCount: Int?
+    }
+
+    private struct CompeteRelevantEnvelope: Codable {
+        let success: Bool
+        let data: CompeteRelevantData?
+    }
+    private struct CompeteRelevantData: Codable {
+        let status: String
+        let objectiveTopic: String?
+        let todayChallenge: UnplayedChallenge?
+    }
+
     /// Optional — the tab the user was on when Compass was launched via FAB.
     /// Used for mode-detection ("I can see you're on Home").
     var launchContext: V2Tab = .compass
@@ -29,6 +49,7 @@ struct V2CompassView: View {
             VStack(spacing: 0) {
                 header
                 Divider().background(V2Theme.cardBorder)
+                competitionBanner
 
                 ScrollViewReader { scroll in
                     ScrollView {
@@ -68,6 +89,7 @@ struct V2CompassView: View {
         .onAppear {
             if let tc = tutorContext { vm.tutorContext = tc }
             vm.startConversation(context: launchContext)
+            Task { await loadCompetitionStatus() }
         }
         // Compass quick actions → dedicated home destinations. Plan routes
         // straight to the Home tab; Notes / Quiz / Interview / Resume each
@@ -134,6 +156,85 @@ struct V2CompassView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Competition banner
+
+    private func loadCompetitionStatus() async {
+        do {
+            let env: CompeteRelevantEnvelope = try await V2APIClient.shared.getV1("/competition/relevant")
+            if env.data?.status == "available", let ch = env.data?.todayChallenge {
+                unplayedChallenge = ch
+            } else {
+                unplayedChallenge = nil
+            }
+        } catch {
+            unplayedChallenge = nil
+        }
+    }
+
+    private var competitionBanner: some View {
+        Group {
+            if let ch = unplayedChallenge {
+                Button {
+                    vm.presentedHome = .compete
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(ColorTokens.gold.opacity(0.15))
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(ColorTokens.gold)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("TODAY'S CHALLENGE WAITING")
+                                .font(.system(size: 9, weight: .bold))
+                                .tracking(0.8)
+                                .foregroundStyle(ColorTokens.gold)
+                            Text(prettyTopicName(ch.topic))
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Text("Open")
+                                .font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(ColorTokens.gold)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(ColorTokens.surface)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(ColorTokens.gold.opacity(0.4), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, V2Theme.pad)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+    }
+
+    private func prettyTopicName(_ slug: String?) -> String {
+        guard let s = slug, !s.isEmpty else { return "Daily Challenge" }
+        return s
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+            .joined(separator: " ")
     }
 
     // MARK: - Header
