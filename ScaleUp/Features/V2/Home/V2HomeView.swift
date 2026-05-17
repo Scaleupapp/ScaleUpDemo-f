@@ -1,32 +1,37 @@
 import SwiftUI
 import Charts
 
-/// V2 Home — the STRUCTURED DAY.
+/// V2 Home — the PLAN COCKPIT.
 ///
-/// Six-section flow in order:
-///   1. Readiness card — where am I + on-track badge + trajectory + streak
-///   2. Weekly insight — what to focus on this week and why
-///   3. Focus today — hero task + compact next-up rows
-///   4. Get Ahead — collapsed chip → sheet
-///   5. Pending from previous days — only when non-empty
-///   6. For You — always-on content rail at the bottom
+/// Section flow (top → bottom):
+///   1. Header strip       — inline greeting + objective pill + bell
+///   2. Status bar         — eyebrow + "{current}% → {target}% needed" + conditional sub-line
+///                            (tap → full trajectory chart sheet)
+///   3. TODAY              — hero task card + "ALSO TODAY · n more" compact rows
+///   4. YOUR PLAN          — multi-week dots strip + cursor + streak/cohort footer
+///   5. PENDING / GET AHEAD / PUSH HARDER — 3-chip row, tap to expand inline
+///   6. FOR YOU            — small content rail → routes to Learn
 struct V2HomeView: View {
     @State private var vm = V2HomeViewModel()
     @State private var showNotifications = false
-    /// Which task is the expanded hero in the active+next-up deck. Tapping
-    /// a "next up" row swaps it into this slot.
-    @State private var activeTaskIndex: Int = 0
     /// Local UI set: taskIds for which the completion button has been tapped.
     @State private var completing: Set<String> = []
-    /// Controls the info popover on the trajectory card's target %.
-    @State private var showTargetInfo = false
-    /// Controls the Get Ahead full-list sheet.
-    @State private var showGetAheadSheet = false
-    /// Drives the "Talk to Coach" sheet. Non-nil → V2CompassSheetView with
-    /// the held coach context is presented.
-    @State private var coachSheetContext: CompassCoachContext?
+    /// Controls the trajectory drill-down sheet (presented when the user taps
+    /// the status bar).
+    @State private var showTrajectorySheet = false
+    /// Controls the info popover for the "what does readiness mean" hint.
+    @State private var showReadinessInfo = false
+    /// Which of the three lower chips (pending / get-ahead / push-harder) is
+    /// currently expanded inline. Only one at a time — tapping another
+    /// collapses the current and opens the new.
+    @State private var expandedChip: HomeChip?
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(V2NavState.self) private var nav
+
+    private enum HomeChip: String, Identifiable {
+        case pending, getAhead, pushHarder
+        var id: String { rawValue }
+    }
 
     var body: some View {
         NavigationStack {
@@ -52,37 +57,39 @@ struct V2HomeView: View {
         .onReceive(NotificationCenter.default.publisher(for: .v2PlanTaskCompleted)) { _ in
             Task { await vm.load() }
         }
-        // "Talk to Coach" sheet — presents V2CompassView in Coach mode. We
-        // open with scope=nil so the user is shown the scope chip strip on
-        // the first turn (This Week / This Month / Since Start / By Topic).
-        .sheet(item: $coachSheetContext, onDismiss: { coachSheetContext = nil }) { ctx in
-            V2CompassSheetView(
-                currentScreen: .home,
-                coachContext: ctx
-            )
-            .environment(taskRouter)
-            .environment(V2NavState())
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
+        // Status-bar drill-down: tap the readiness line → see the full
+        // trajectory chart in a sheet. Keeps Home clean.
+        .sheet(isPresented: $showTrajectorySheet) {
+            if let traj = vm.data?.trajectory {
+                NavigationStack {
+                    TrajectorySheetView(traj: traj)
+                }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+            }
         }
     }
 
-    // MARK: - Header
+    // MARK: - Header strip (inline greeting + objective pill + bell)
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
+            Text(inlineGreeting)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(ColorTokens.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: 8)
             ObjectivePill(label: vm.data?.objectiveLabel ?? "Set your objective")
-            Spacer()
             Button {
                 showNotifications = true
             } label: {
                 ZStack {
                     Circle()
                         .fill(ColorTokens.surface)
-                        .frame(width: 36, height: 36)
+                        .frame(width: 32, height: 32)
                         .overlay(Circle().strokeBorder(V2Theme.cardBorder, lineWidth: 1))
                     Image(systemName: "bell.fill")
-                        .font(.system(size: 14))
+                        .font(.system(size: 12))
                         .foregroundStyle(ColorTokens.textPrimary)
                 }
             }
@@ -93,176 +100,90 @@ struct V2HomeView: View {
             }
         }
         .padding(.top, 8)
-        .padding(.bottom, 18)
+        .padding(.bottom, 16)
+    }
+
+    /// Compact, inline greeting — "Hi, Claude." — derived from the backend's
+    /// "Hi, X." string. Falls back gracefully if shape differs.
+    private var inlineGreeting: String {
+        let raw = vm.data?.greeting ?? "Hi."
+        // Backend always returns "Hi, {firstName}." — keep as-is.
+        return raw
     }
 
     // MARK: - Main content
 
     @ViewBuilder
     private func contentSection(data: V2HomeData) -> some View {
-        // Greeting — just the name, no action hint (insight card handles "what to focus on")
-        VStack(alignment: .leading, spacing: 4) {
-            Text(data.greeting)
-                .font(V2Theme.h1)
-                .foregroundStyle(ColorTokens.textPrimary)
-
-            // Status line ONLY when there's no insight card to take its place
-            // (e.g., no_objective / plan_brewing fallback states). When an
-            // insight is present, it's the canonical "why this week matters"
-            // surface — duplicating the status line on top of it confuses the
-            // user about which message to trust.
-            if (data.weeklyInsight ?? "").isEmpty {
-                Text(data.statusLine)
-                    .font(V2Theme.body)
-                    .foregroundStyle(ColorTokens.textSecondary)
-            }
-        }
-        .padding(.bottom, 22)
-
-        // ── Section 1: Consolidated readiness card ──
+        // 2. Status bar (REPLACES the big readiness card)
         if let traj = data.trajectory {
-            readinessCard(traj: traj, weekProgress: data.weekProgress,
-                          streak: data.streak, days: data.weekActivity ?? [])
-                .padding(.bottom, 14)
-        }
-
-        // ── Talk to Coach entry — anytime retrospective with scope picker ──
-        coachEntryCard
-            .padding(.bottom, 22)
-
-        // ── Section 2: Weekly insight ──
-        if let insight = data.weeklyInsight, !insight.isEmpty {
-            insightCard(insight: insight)
+            statusBar(traj: traj, data: data)
                 .padding(.bottom, 22)
         }
 
-        // Backlog banner — behind by weeks or carryover count
-        if (data.behindByWeeks ?? 0) > 0 || (data.pendingPriorCount ?? 0) > 0 {
-            backlogBanner(behind: data.behindByWeeks ?? 0,
-                          pendingCount: data.pendingPriorCount ?? 0)
-                .padding(.bottom, 14)
-        }
-
-        // ── Section 3: Focus today ──
+        // 3. TODAY — hero + compact rows
         if !vm.visibleTasks.isEmpty {
-            todayHeader(data: data)
-            activeTaskDeck(tasks: vm.visibleTasks)
-
-            // Reshuffle affordance
-            if (data.skippedCount ?? 0) > 0 {
-                Button {
-                    Task { await vm.reshuffle() }
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                        Text("Bring back \(data.skippedCount ?? 0) skipped \((data.skippedCount ?? 0) == 1 ? "task" : "tasks")")
-                    }
-                    .font(V2Theme.small.weight(.medium))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .foregroundStyle(ColorTokens.gold)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 4)
-            }
-
-            Text("Pick what fits your energy. Skip anything — your plan stays on track.")
-                .font(.system(size: 11))
-                .foregroundStyle(ColorTokens.textTertiary)
-                .frame(maxWidth: .infinity)
-                .multilineTextAlignment(.center)
-                .padding(.top, 18)
-
-            // ── Section 5: Pending from previous days (only when non-empty) ──
-            if let pending = data.pendingPriorTasks, !pending.isEmpty {
-                pendingPriorSection(tasks: pending)
-                    .padding(.top, 22)
-            }
-
-            // ── Section 4: Get Ahead — collapsed chip by default ──
-            if let getAhead = data.getAheadTasks, !getAhead.isEmpty {
-                getAheadChip(tasks: getAhead, week: data.getAheadWeek)
-                    .padding(.top, 22)
-            }
-
-            // ── Section 6: For You ──
-            if !vm.extraContent.isEmpty {
-                forYouSection
-                    .padding(.top, 28)
-            }
-
+            todaySection(data: data, tasks: vm.visibleTasks)
+                .padding(.bottom, 22)
         } else if data.fallback == "day_done" {
-            dayDoneSection(data: data)
+            dayDoneCompactSection(data: data)
+                .padding(.bottom, 22)
         } else if data.fallback == "plan_brewing" {
             planBrewingFallback
+                .padding(.bottom, 22)
         } else if data.fallback == "no_objective" {
             noObjectiveFallback
+                .padding(.bottom, 22)
         } else {
-            VStack(spacing: 12) {
-                Text("That's the set for now.")
-                    .font(V2Theme.h3)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                Button("Reshuffle") { Task { await vm.reshuffle() } }
-                    .buttonStyle(.borderedProminent)
-                    .tint(ColorTokens.gold)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 40)
+            emptyTodaySection
+                .padding(.bottom, 22)
+        }
+
+        // 4. YOUR PLAN — multi-week timeline (only when we have schedule data)
+        if let sched = data.planSchedule, !sched.isEmpty {
+            planTimelineSection(sched: sched, weekProgress: data.weekProgress, streak: data.streak)
+                .padding(.bottom, 22)
+        }
+
+        // 5. PENDING / GET AHEAD / PUSH HARDER — 3-chip row + inline expansion
+        chipRow(data: data)
+            .padding(.bottom, 22)
+
+        // 6. FOR YOU
+        if !vm.extraContent.isEmpty {
+            forYouSection
+                .padding(.bottom, 8)
         }
     }
 
-    // MARK: - Section 1: Consolidated readiness card
+    // MARK: - 2. Status bar
 
-    private func readinessCard(
-        traj: V2HomeData.Trajectory,
-        weekProgress: V2HomeData.WeekProgress?,
-        streak: V2HomeData.Streak?,
-        days: [V2HomeData.WeekDayActivity]
-    ) -> some View {
-        let points: [(label: String, value: Int)] = {
-            if let pts = traj.points, !pts.isEmpty {
-                return pts.map { ($0.whenLabel, $0.readiness) }
-            }
-            return [
-                ("Today",  traj.today),
-                ("30d",    traj.in30Days),
-                ("Target", traj.atTargetDate),
-            ]
-        }()
+    @ViewBuilder
+    private func statusBar(traj: V2HomeData.Trajectory, data: V2HomeData) -> some View {
+        let eyebrow = "\(data.objectiveName ?? "GOAL") READINESS"
 
-        return VStack(alignment: .leading, spacing: 12) {
-            // ── Row 1: eyebrow + pace badge ──
-            HStack(alignment: .firstTextBaseline) {
-                Text("READINESS")
-                    .v2Eyebrow()
-                Spacer()
-                paceBadge(traj: traj)
-            }
-
-            // ── Row 2: hero number + target ──
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("\(traj.today)%")
-                    .font(.system(size: 38, weight: .bold))
-                    .foregroundStyle(ColorTokens.textPrimary)
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(ColorTokens.textTertiary)
-                HStack(spacing: 4) {
-                    Text("\(traj.targetReadiness)%")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(ColorTokens.gold)
-                    Button { showTargetInfo = true } label: {
+        Button {
+            showTrajectorySheet = true
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(eyebrow)
+                        .v2Eyebrow()
+                    Spacer()
+                    Button {
+                        showReadinessInfo = true
+                    } label: {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 11))
+                            .font(.system(size: 12))
                             .foregroundStyle(ColorTokens.textTertiary)
                     }
                     .buttonStyle(.plain)
-                    .popover(isPresented: $showTargetInfo, arrowEdge: .top) {
+                    .popover(isPresented: $showReadinessInfo, arrowEdge: .top) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Why \(traj.targetReadiness)%?")
+                            Text("What is readiness?")
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundStyle(ColorTokens.textPrimary)
-                            Text("80% is the readiness threshold to crush your goal at a high success rate. Higher is great but not required — most top performers don't max every competency. You can keep grinding past 80% if you want.")
+                            Text("Readiness = how prepared you are to crush your goal. 80% is the threshold most people need to hit their target.")
                                 .font(.system(size: 13))
                                 .foregroundStyle(ColorTokens.textSecondary)
                         }
@@ -271,131 +192,291 @@ struct V2HomeView: View {
                         .presentationCompactAdaptation(.popover)
                     }
                 }
-                Text("target")
-                    .font(.system(size: 11))
-                    .foregroundStyle(ColorTokens.textTertiary)
-            }
 
-            // ── Chart (contextual, not the lead) ──
-            HStack {
-                Text("% ready over time")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("\(traj.today)%")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text("\(traj.targetReadiness)% needed")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+
+                statusSubLine(traj: traj)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                    .fill(ColorTokens.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Conditional sub-line under the status numbers. Only renders when
+    /// actionable — on-track silently shows nothing so the card stays small.
+    @ViewBuilder
+    private func statusSubLine(traj: V2HomeData.Trajectory) -> some View {
+        if traj.targetHit == true {
+            statusSubRow(icon: "checkmark.circle.fill",
+                         color: ColorTokens.success,
+                         text: "You've hit your goal. Push for more?")
+        } else if traj.paceCategory == "ahead",
+                  let early = traj.earlyByWeeks, early > 0 {
+            statusSubRow(icon: "bolt.fill",
+                         color: ColorTokens.success,
+                         text: "Ahead of pace — projected \(early) week\(early == 1 ? "" : "s") early")
+        } else if traj.projectedAfterDeadline == true,
+                  let late = traj.weeksLateVsDeadline, late > 0 {
+            statusSubRow(icon: "exclamationmark.triangle.fill",
+                         color: ColorTokens.warning,
+                         text: "Behind: at this pace, \(late) wk\(late == 1 ? "" : "s") past deadline. Talk to Coach to recalibrate.")
+        } else if traj.paceCategory == "behind",
+                  let weeks = traj.weeksToTarget, weeks > 0 {
+            statusSubRow(icon: "clock.fill",
+                         color: ColorTokens.warning,
+                         text: "\(weeks) wk\(weeks == 1 ? "" : "s") to hit target at this pace")
+        }
+        // On-track with no other signal — render nothing. Less noise.
+    }
+
+    private func statusSubRow(icon: String, color: Color, text: String) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 11))
+                .foregroundStyle(color)
+                .padding(.top, 1)
+            Text(text)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(color)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - 3. TODAY
+
+    @ViewBuilder
+    private func todaySection(data: V2HomeData, tasks: [V2HomeData.Task]) -> some View {
+        let weekday = currentWeekdayShort()
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("TODAY · \(weekday)").v2Eyebrow()
                 Spacer()
-            }
-            .padding(.bottom, 2)
-
-            Chart {
-                ForEach(Array(points.enumerated()), id: \.offset) { idx, point in
-                    AreaMark(
-                        x: .value("When", idx),
-                        y: .value("Readiness", point.value)
-                    )
-                    .foregroundStyle(LinearGradient(
-                        colors: [ColorTokens.gold.opacity(0.28), ColorTokens.gold.opacity(0.02)],
-                        startPoint: .top, endPoint: .bottom
-                    ))
-                    .interpolationMethod(.catmullRom)
-
-                    LineMark(
-                        x: .value("When", idx),
-                        y: .value("Readiness", point.value)
-                    )
-                    .foregroundStyle(ColorTokens.gold)
-                    .interpolationMethod(.catmullRom)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
-
-                    PointMark(
-                        x: .value("When", idx),
-                        y: .value("Readiness", point.value)
-                    )
-                    .foregroundStyle(ColorTokens.gold)
-                    .symbolSize(idx == 0 ? 50 : 25)
+                if let total = data.totalDurationMin {
+                    Text("\(tasks.count) · ~\(total) min")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
             }
-            .chartXAxis {
-                AxisMarks(values: Array(0..<points.count)) { v in
-                    if let i = v.as(Int.self), i < points.count {
-                        AxisValueLabel {
-                            Text(points[i].label)
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(ColorTokens.textTertiary)
-                        }
+
+            heroTaskCard(tasks[0])
+
+            if tasks.count > 1 {
+                let rest = Array(tasks.dropFirst())
+                HStack {
+                    Text("ALSO TODAY · \(rest.count) more").v2Eyebrow(ColorTokens.textTertiary)
+                    Spacer()
+                }
+                .padding(.top, 4)
+
+                VStack(spacing: 8) {
+                    ForEach(rest) { task in
+                        compactTaskRow(task)
                     }
                 }
             }
-            .chartYAxis(.hidden)
-            .chartYScale(domain: 0...100)
-            .frame(height: 80)
+        }
+    }
 
-            Divider()
-                .background(V2Theme.cardBorder)
+    private var emptyTodaySection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("TODAY").v2Eyebrow()
+            Text("All done for today — see Pending or Get Ahead below.")
+                .font(V2Theme.body)
+                .foregroundStyle(ColorTokens.textSecondary)
+        }
+    }
 
-            // ── Projected ETA line — adaptive pace context ──
-            projectedEtaLine(traj: traj)
+    private func heroTaskCard(_ task: V2HomeData.Task) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(typeColorFor(task.taskType).opacity(0.15))
+                        .frame(width: 56, height: 56)
+                    Text(task.icon).font(.system(size: 26))
+                }
 
-            // ── Footer row: week progress + streak + velocity ──
-            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(typeLabelFor(task.taskType))
+                        .font(.system(size: 10, weight: .bold))
+                        .tracking(0.8)
+                        .foregroundStyle(typeColorFor(task.taskType))
+                    Text(task.title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Text("\(task.durationMin) min")
+                        if !task.subtitle.isEmpty { Text("· \(task.subtitle)") }
+                        Text("· \(difficultyLabel(task.difficulty))")
+                            .foregroundStyle(difficultyColor(task.difficulty))
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Text(task.whyText)
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.success)
+                .padding(.top, 10)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 8) {
+                Button {
+                    taskRouter.open(taskType: task.taskType,
+                                    payload: task.payload,
+                                    title: task.title,
+                                    taskId: task.taskId,
+                                    topic: task.primaryTopic)
+                } label: {
+                    HStack {
+                        Image(systemName: "play.fill").font(.system(size: 12))
+                        Text("Start").font(.system(size: 14, weight: .semibold))
+                        Image(systemName: "arrow.right").font(.system(size: 11, weight: .semibold))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(ColorTokens.gold)
+                    .foregroundStyle(ColorTokens.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Task { await vm.skip(task) }
+                } label: {
+                    Text("Skip")
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 13)
+                        .background(ColorTokens.surfaceElevated.opacity(0.5))
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.top, 14)
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .fill(LinearGradient(
+                    colors: [ColorTokens.surface, ColorTokens.surface.opacity(0.6)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
+                .strokeBorder(ColorTokens.gold.opacity(0.30), lineWidth: 1)
+        )
+    }
+
+    /// Compact "also today" row — minimal, tappable, opens via taskRouter.
+    private func compactTaskRow(_ task: V2HomeData.Task) -> some View {
+        Button {
+            taskRouter.open(taskType: task.taskType,
+                            payload: task.payload,
+                            title: task.title,
+                            taskId: task.taskId,
+                            topic: task.primaryTopic)
+        } label: {
+            HStack(spacing: 10) {
+                Text(task.icon).font(.system(size: 16))
+                Text(task.title)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text("\(task.durationMin) min")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 11)
+            .background(ColorTokens.surface.opacity(0.7))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - 4. YOUR PLAN (multi-week timeline)
+
+    private func planTimelineSection(
+        sched: [V2HomeData.PlanWeek],
+        weekProgress: V2HomeData.WeekProgress?,
+        streak: V2HomeData.Streak?
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("YOUR PLAN").v2Eyebrow()
+                Spacer()
                 if let wp = weekProgress {
                     Text("Week \(wp.week) of \(wp.totalWeeks)")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(ColorTokens.textSecondary)
-                    Text(" · ")
                         .foregroundStyle(ColorTokens.textTertiary)
-                        .font(.system(size: 11))
-                    Text("\(wp.done)/\(wp.total) done")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    Text(" · ")
-                        .foregroundStyle(ColorTokens.textTertiary)
-                        .font(.system(size: 11))
                 }
+            }
 
-                // Streak
-                if let s = streak, s.current > 0 {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(sched) { wk in
+                        planWeekColumn(wk)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+
+            if let wp = weekProgress {
+                Text("↑ Week \(wp.week) · \(wp.done) of \(wp.total) done")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
+
+            // Footer row — streak + cohort (cohort number is not yet wired;
+            // skip silently when absent).
+            if let s = streak, s.current > 0 {
+                HStack(spacing: 6) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 10))
                         .foregroundStyle(ColorTokens.gold)
-                    Text(" \(s.current)-day streak")
+                    Text("\(s.current)-day streak")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(ColorTokens.textSecondary)
-                } else {
-                    Text("No streak yet")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.textTertiary)
                 }
-
-                Spacer()
-
-                // Velocity badge — source-labelled
-                velocityBadge(traj: traj)
-            }
-
-            // ── Week dots (Mon–Sun) — compact, inside card ──
-            if !days.isEmpty {
-                HStack(spacing: 8) {
-                    ForEach(Array(days.enumerated()), id: \.offset) { _, day in
-                        VStack(spacing: 3) {
-                            Circle()
-                                .fill(day.hadActivity
-                                      ? ColorTokens.gold
-                                      : (day.isToday ? ColorTokens.gold.opacity(0.25) : ColorTokens.surfaceElevated))
-                                .frame(width: 7, height: 7)
-                                .overlay(
-                                    Circle()
-                                        .strokeBorder(day.isToday ? ColorTokens.gold : Color.clear, lineWidth: 1.5)
-                                        .frame(width: 11, height: 11)
-                                )
-                            Text(day.label)
-                                .font(.system(size: 8, weight: .medium))
-                                .foregroundStyle(day.isToday ? ColorTokens.textPrimary : ColorTokens.textTertiary)
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(16)
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: V2Theme.cardRadius)
                 .fill(ColorTokens.surface)
@@ -406,660 +487,232 @@ struct V2HomeView: View {
         )
     }
 
-    // MARK: - Pace badge (top-right of readiness card)
-
-    @ViewBuilder
-    private func paceBadge(traj: V2HomeData.Trajectory) -> some View {
-        // Fall back to the legacy onTrack bool when the new field is absent.
-        let category = traj.paceCategory ?? (traj.onTrack ? "on_track" : "behind")
-        switch category {
-        case "ahead":
-            HStack(spacing: 4) {
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 10, weight: .bold))
-                Text("Ahead of pace")
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .foregroundStyle(ColorTokens.success)
-        case "behind":
-            HStack(spacing: 4) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 10, weight: .bold))
-                Text("Behind pace")
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .foregroundStyle(ColorTokens.warning)
-        default: // "on_track"
-            HStack(spacing: 4) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 10, weight: .bold))
-                Text("On track")
-                    .font(.system(size: 11, weight: .semibold))
-            }
-            .foregroundStyle(ColorTokens.success)
-        }
-    }
-
-    // MARK: - Projected ETA line (below chart, above footer)
-
-    @ViewBuilder
-    private func projectedEtaLine(traj: V2HomeData.Trajectory) -> some View {
-        if traj.targetHit == true {
-            // Already at or above target — prompt for a stretch goal
-            HStack(spacing: 6) {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("You've hit your \(traj.targetReadiness)% goal. Push for more?")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.gold)
-            }
-            .padding(.top, 6)
-        } else if traj.paceCategory == "ahead",
-                  let early = traj.earlyByWeeks, early > 0,
-                  let etaString = formattedEta(traj.projectedTargetDate) {
-            HStack(spacing: 6) {
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.success)
-                Text("At your pace, hitting \(traj.targetReadiness)% by \(etaString) — \(early) week\(early == 1 ? "" : "s") early")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.success)
-            }
-            .padding(.top, 6)
-        } else if traj.projectedAfterDeadline == true,
-                  let late = traj.weeksLateVsDeadline, late > 0 {
-            // Pace is so far below required that we'd miss the deadline by
-            // `late` weeks — say so directly instead of an unbounded ETA.
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.warning)
-                Text("At this pace you'd hit \(traj.targetReadiness)% ~\(late) week\(late == 1 ? "" : "s") past your deadline. Push harder or extend the timeline.")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.warning)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, 6)
-        } else if traj.paceCategory == "behind",
-                  let weeks = traj.weeksToTarget, weeks > 0 {
-            HStack(spacing: 6) {
-                Image(systemName: "clock.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.warning)
-                Text("At your pace, hitting \(traj.targetReadiness)% in ~\(weeks) week\(weeks == 1 ? "" : "s")")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.warning)
-            }
-            .padding(.top, 6)
-        }
-        // on_track with no special signal: render nothing — the chart speaks for itself
-    }
-
-    /// Parses an ISO 8601 date string into a short "MMM d" display string (e.g., "Aug 17").
-    /// Returns nil on parse failure — callers gate display on non-nil result.
-    private func formattedEta(_ isoString: String?) -> String? {
-        guard let s = isoString else { return nil }
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let date = iso.date(from: s) ?? {
-            // Retry without fractional seconds (backend may omit them)
-            let plain = ISO8601DateFormatter()
-            plain.formatOptions = [.withInternetDateTime]
-            return plain.date(from: s)
-        }()
-        guard let d = date else { return nil }
-        let f = DateFormatter()
-        f.dateFormat = "MMM d"
-        return f.string(from: d)
-    }
-
-    @ViewBuilder
-    private func velocityBadge(traj: V2HomeData.Trajectory) -> some View {
-        // Tasks are binary (done or not), so display whole numbers. Rounding
-        // 1.8 → 2 reads as "about 2 tasks per week" which is what the user
-        // actually understands. Decimal precision was confusing.
-        let isMeasured = traj.velocitySource == "measured"
-        if isMeasured, let real = traj.realTasksPerWeek {
-            let rounded = max(1, Int(real.rounded()))
-            Text("▲ ~\(rounded) task\(rounded == 1 ? "" : "s")/wk")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(ColorTokens.gold)
-        } else {
-            let rounded = max(1, Int(traj.weeklyDelta.rounded()))
-            Text("≈ ~\(rounded) pt\(rounded == 1 ? "" : "s")/wk (est.)")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(ColorTokens.textTertiary)
-        }
-    }
-
-    // MARK: - Talk to Coach entry card
-
-    /// Always-available entry point for Coach mode. Tapping opens
-    /// V2CompassView in coach mode with no scope yet — the user picks
-    /// "This Week / This Month / Since Start / By Topic" on the first turn.
-    private var coachEntryCard: some View {
-        Button {
-            // scope=nil → V2CompassView shows the scope chip strip on the
-            // opening turn instead of firing the LLM immediately.
-            coachSheetContext = CompassCoachContext(scope: nil, topic: nil)
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
+    private func planWeekColumn(_ wk: V2HomeData.PlanWeek) -> some View {
+        // Render `total` dots, first `done` filled. Cap dots displayed at 8 so
+        // very long weeks don't blow up the strip width.
+        let maxDots = min(wk.total, 8)
+        let doneVisible = min(wk.done, maxDots)
+        let isCurrent = wk.isCurrent == true
+        return VStack(spacing: 6) {
+            Text("W\(wk.week)")
+                .font(.system(size: 10, weight: isCurrent ? .bold : .medium))
+                .foregroundStyle(isCurrent ? ColorTokens.gold : ColorTokens.textTertiary)
+            VStack(spacing: 3) {
+                ForEach(0..<maxDots, id: \.self) { i in
                     Circle()
-                        .fill(LinearGradient(
-                            colors: [ColorTokens.goldLight, ColorTokens.goldDark],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
-                        .frame(width: 38, height: 38)
-                    Image(systemName: "bubble.left.and.bubble.right.fill")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(ColorTokens.background)
+                        .fill(i < doneVisible ? ColorTokens.gold : ColorTokens.surfaceElevated)
+                        .frame(width: 6, height: 6)
                 }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Talk to Coach")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(ColorTokens.textPrimary)
-                    Text("Reflect on your week, month, or any topic — anytime.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                        .lineLimit(2)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(ColorTokens.gold)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 14)
-                    .fill(ColorTokens.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(ColorTokens.gold.opacity(0.35), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Section 2: Weekly insight card
-
-    private func insightCard(insight: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "lightbulb.fill")
-                .font(.system(size: 14))
-                .foregroundStyle(ColorTokens.gold)
-                .padding(.top, 2)
-            Text(insight)
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textPrimary)
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(ColorTokens.gold.opacity(0.06))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(ColorTokens.gold.opacity(0.20), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Today header (count + total time)
-
-    private func todayHeader(data: V2HomeData) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("TODAY")
-                .v2Eyebrow()
-            Spacer()
-            if let total = data.totalDurationMin {
-                Text("\(vm.visibleTasks.count) \(vm.visibleTasks.count == 1 ? "task" : "tasks") · ~\(total) min")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.textTertiary)
+            if isCurrent {
+                Rectangle()
+                    .fill(ColorTokens.gold)
+                    .frame(width: 18, height: 2)
+                    .clipShape(Capsule())
+            } else {
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 18, height: 2)
             }
         }
-        .padding(.bottom, 10)
     }
 
-    // MARK: - Active task deck — hero + compact "next up" rows
+    // MARK: - 5. 3-chip row (PENDING / GET AHEAD / PUSH HARDER)
 
     @ViewBuilder
-    private func activeTaskDeck(tasks: [V2HomeData.Task]) -> some View {
-        let clampedActive = min(max(0, activeTaskIndex), max(0, tasks.count - 1))
-        let active = tasks[clampedActive]
-        let others = tasks.enumerated().filter { $0.offset != clampedActive }
+    private func chipRow(data: V2HomeData) -> some View {
+        let pendingCount = data.pendingPriorCount ?? 0
+        let pending = data.pendingPriorTasks ?? []
+        let getAhead = data.getAheadTasks ?? []
+        let bonus = data.bonusTasks ?? []
 
-        VStack(spacing: 0) {
-            heroTaskCard(active)
-                .padding(.bottom, 14)
+        let showPending = pendingCount > 0 && !pending.isEmpty
+        let showGetAhead = !getAhead.isEmpty
+        // Push Harder always renders — even with no bonus tasks it shows a
+        // "no bonus picks right now" empty-state when expanded.
+        let showPush = true
 
-            if !others.isEmpty {
-                HStack {
-                    Text("NEXT UP")
-                        .v2Eyebrow()
-                    Spacer()
-                }
-                .padding(.bottom, 8)
-
-                VStack(spacing: 8) {
-                    ForEach(others, id: \.offset) { idx, task in
-                        nextUpRow(task, atIndex: idx)
-                    }
-                }
-            }
-        }
-    }
-
-    private func heroTaskCard(_ task: V2HomeData.Task) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                Button {
-                    guard !completing.contains(task.taskId) else { return }
-                    completing.insert(task.taskId)
-                    Task { await vm.markComplete(task.taskId) }
-                } label: {
-                    Image(systemName: completing.contains(task.taskId)
-                          ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 22))
-                        .foregroundStyle(completing.contains(task.taskId)
-                                         ? ColorTokens.success : ColorTokens.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .disabled(completing.contains(task.taskId))
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(typeLabelFor(task.taskType))
-                        .font(.system(size: 9, weight: .bold))
-                        .tracking(0.8)
-                        .foregroundStyle(typeColorFor(task.taskType))
-                    HStack(spacing: 6) {
-                        Text(task.icon)
-                        Text(task.title)
-                            .font(V2Theme.bodyMedium)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                    }
-                    HStack(spacing: 8) {
-                        Text("\(task.durationMin) min")
-                        if !task.subtitle.isEmpty { Text("· \(task.subtitle)") }
-                        Text("· \(difficultyLabel(task.difficulty))")
-                            .foregroundStyle(difficultyColor(task.difficulty))
-                    }
-                    .font(.system(size: 11))
-                    .foregroundStyle(ColorTokens.textTertiary)
-
-                    // Impact line — no truncation
-                    Text(task.whyText)
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.success)
-                        .padding(.top, 4)
-                }
-                Spacer()
-            }
-
+        VStack(alignment: .leading, spacing: 10) {
+            // Three chips on one row (wrapping HStack of buttons).
             HStack(spacing: 8) {
-                Button {
-                    taskRouter.open(taskType: task.taskType, payload: task.payload, title: task.title, taskId: task.taskId, topic: task.primaryTopic)
-                } label: {
-                    HStack {
-                        Image(systemName: "play.fill").font(.system(size: 11))
-                        Text("Begin")
-                    }
-                    .font(.system(size: 13, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(ColorTokens.gold)
-                    .foregroundStyle(ColorTokens.background)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                if showPending {
+                    chipButton(
+                        label: "PENDING (\(pendingCount))",
+                        icon: "pin.fill",
+                        tint: ColorTokens.warning,
+                        chip: .pending
+                    )
                 }
-                .buttonStyle(.plain)
-
-                Button {
-                    Task { await vm.skip(task) }
-                } label: {
-                    Text("Skip")
-                        .font(.system(size: 13, weight: .medium))
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 11)
-                        .background(ColorTokens.surfaceElevated.opacity(0.5))
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                if showGetAhead {
+                    chipButton(
+                        label: "GET AHEAD",
+                        icon: "arrow.up.right",
+                        tint: ColorTokens.gold,
+                        chip: .getAhead
+                    )
                 }
-                .buttonStyle(.plain)
+                if showPush {
+                    chipButton(
+                        label: "PUSH HARDER",
+                        icon: "plus",
+                        tint: ColorTokens.success,
+                        chip: .pushHarder
+                    )
+                }
+                Spacer(minLength: 0)
             }
-            .padding(.top, 14)
+
+            // Inline expansion — animated reveal.
+            if let expanded = expandedChip {
+                expandedChipBody(expanded, pending: pending, getAhead: getAhead, bonus: bonus,
+                                 getAheadWeek: data.getAheadWeek)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
-                .fill(LinearGradient(
-                    colors: [ColorTokens.surface, ColorTokens.surface.opacity(0.6)],
-                    startPoint: .topLeading, endPoint: .bottomTrailing
-                ))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: V2Theme.cardRadius)
-                .strokeBorder(ColorTokens.gold.opacity(0.25), lineWidth: 1)
-        )
     }
 
-    // Next-up rows: no chevron, type label + title + duration on tap = promote to hero
-    private func nextUpRow(_ task: V2HomeData.Task, atIndex idx: Int) -> some View {
-        Button {
+    private func chipButton(label: String, icon: String, tint: Color, chip: HomeChip) -> some View {
+        let isOpen = expandedChip == chip
+        return Button {
             withAnimation(.easeInOut(duration: 0.22)) {
-                activeTaskIndex = idx
+                expandedChip = isOpen ? nil : chip
             }
         } label: {
-            HStack(spacing: 12) {
-                Button {
-                    guard !completing.contains(task.taskId) else { return }
-                    completing.insert(task.taskId)
-                    Task { await vm.markComplete(task.taskId) }
-                } label: {
-                    Image(systemName: completing.contains(task.taskId)
-                          ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 18))
-                        .foregroundStyle(completing.contains(task.taskId)
-                                         ? ColorTokens.success : ColorTokens.textTertiary)
-                }
-                .buttonStyle(.plain)
-                .disabled(completing.contains(task.taskId))
-
-                Text(task.icon)
-                    .font(.system(size: 14))
-
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(typeLabelFor(task.taskType))
-                        .font(.system(size: 8, weight: .bold))
-                        .tracking(0.7)
-                        .foregroundStyle(typeColorFor(task.taskType))
-                    Text(task.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(ColorTokens.textPrimary)
-                        .lineLimit(1)
-                    Text("\(task.durationMin) min · \(difficultyLabel(task.difficulty))")
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
-                Spacer()
-                // No chevron — clean, less clutter
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+                Text(label)
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.5)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(ColorTokens.surface.opacity(0.6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Pending from previous days
-
-    private func pendingPriorSection(tasks: [V2HomeData.Task]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("PENDING").v2Eyebrow()
-                Spacer()
-                Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(ColorTokens.textTertiary)
-            }
-            VStack(spacing: 8) {
-                ForEach(Array(tasks.enumerated()), id: \.element.taskId) { _, task in
-                    pendingPriorRow(task)
-                }
-            }
-        }
-    }
-
-    private func pendingPriorRow(_ task: V2HomeData.Task) -> some View {
-        Button {
-            taskRouter.open(
-                taskType: task.taskType,
-                payload: task.payload,
-                title: task.title,
-                taskId: task.taskId,
-                topic: task.primaryTopic
-            )
-        } label: {
-            HStack(spacing: 10) {
-                Text(task.icon).font(.system(size: 14))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(typeLabelFor(task.taskType))
-                        .font(.system(size: 8, weight: .bold))
-                        .tracking(0.8)
-                        .foregroundStyle(typeColorFor(task.taskType))
-                    Text(task.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(ColorTokens.textPrimary)
-                        .lineLimit(1)
-                    Text("\(task.durationMin) min · \(difficultyLabel(task.difficulty))")
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                }
-                Spacer()
-                Image(systemName: "play.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.gold)
-            }
+            .foregroundStyle(isOpen ? ColorTokens.background : tint)
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(ColorTokens.surface.opacity(0.6))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .padding(.vertical, 9)
+            .background(
+                Capsule().fill(isOpen ? tint : tint.opacity(0.10))
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+                Capsule().strokeBorder(tint.opacity(isOpen ? 0 : 0.4), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
     }
-
-    // MARK: - Section 4: Get Ahead — single chip, full list in sheet
 
     @ViewBuilder
-    private func getAheadChip(tasks: [V2HomeData.Task], week: Int?) -> some View {
-        Button {
-            showGetAheadSheet = true
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "arrow.up.right.circle.fill")
-                    .foregroundStyle(ColorTokens.gold)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("GET AHEAD")
-                        .font(.system(size: 10, weight: .bold))
-                        .tracking(0.8)
-                        .foregroundStyle(ColorTokens.gold)
-                    Text("\(tasks.count) \(tasks.count == 1 ? "task" : "tasks")\(week.map { " from Week \($0)" } ?? "") ready when you are")
-                        .font(.system(size: 12))
-                        .foregroundStyle(ColorTokens.textSecondary)
+    private func expandedChipBody(
+        _ chip: HomeChip,
+        pending: [V2HomeData.Task],
+        getAhead: [V2HomeData.Task],
+        bonus: [V2HomeData.Task],
+        getAheadWeek: Int?
+    ) -> some View {
+        switch chip {
+        case .pending:
+            VStack(spacing: 6) {
+                ForEach(pending) { compactTaskRow($0) }
+            }
+        case .getAhead:
+            VStack(alignment: .leading, spacing: 6) {
+                if let w = getAheadWeek {
+                    Text("From Week \(w)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11))
+                ForEach(getAhead) { compactTaskRow($0) }
+            }
+        case .pushHarder:
+            if bonus.isEmpty {
+                Text("No bonus picks right now. Pull to refresh.")
+                    .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.textTertiary)
-            }
-            .padding(12)
-            .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showGetAheadSheet) {
-            getAheadFullSheet(tasks: tasks, week: week)
-        }
-    }
-
-    private func getAheadFullSheet(tasks: [V2HomeData.Task], week: Int?) -> some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(tasks) { task in
-                        pendingPriorRow(task)
-                    }
+                    .padding(.vertical, 4)
+            } else {
+                VStack(spacing: 6) {
+                    ForEach(bonus) { compactTaskRow($0) }
                 }
-                .padding(V2Theme.pad)
             }
-            .background(ColorTokens.background.ignoresSafeArea())
-            .navigationTitle(week.map { "Week \($0) — Get Ahead" } ?? "Get Ahead")
-            .navigationBarTitleDisplayMode(.inline)
         }
-        .presentationDetents([.medium, .large])
     }
 
-    // MARK: - Section 6: For You rail
+    // MARK: - 6. FOR YOU
 
     private var forYouSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("FOR YOU").v2Eyebrow()
+                Text("FOR YOU · Quick picks from Learn").v2Eyebrow()
                 Spacer()
                 Button {
                     nav.selectedTab = .learn
                 } label: {
-                    Text("See all →")
+                    Text("More →")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(ColorTokens.gold)
                 }
                 .buttonStyle(.plain)
             }
-            VStack(spacing: 8) {
-                ForEach(vm.extraContent) { item in
-                    extraContentRow(item)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(vm.extraContent) { item in
+                        extraContentCard(item)
+                    }
                 }
+                .padding(.vertical, 2)
             }
         }
     }
 
-    // MARK: - Fallbacks
+    private func extraContentCard(_ item: Content) -> some View {
+        Button {
+            taskRouter.open(
+                taskType: "watch",
+                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil, challengeId: nil, topic: nil),
+                title: item.title,
+                taskId: nil,
+                topic: item.topics?.first
+            )
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Image(systemName: contentIcon(item))
+                    .font(.system(size: 16))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 36, height: 36)
+                    .background(ColorTokens.gold.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                Text(item.title)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                Text(contentMeta(item))
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .lineLimit(1)
+            }
+            .padding(12)
+            .frame(width: 160, alignment: .leading)
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Fallbacks (day_done / plan_brewing / no_objective)
 
     @ViewBuilder
-    private func dayDoneSection(data: V2HomeData) -> some View {
-        VStack(spacing: 10) {
-            Text("🎉").font(.system(size: 36))
-            Text(data.message ?? "You're done for the day.")
-                .font(V2Theme.h3)
+    private func dayDoneCompactSection(data: V2HomeData) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("TODAY").v2Eyebrow()
+            Text(data.message ?? "You're done for today.")
+                .font(V2Theme.body)
                 .foregroundStyle(ColorTokens.textPrimary)
-                .multilineTextAlignment(.center)
-            Text("Want to push further? Here's more, picked from what you've been learning.")
-                .font(V2Theme.small)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .multilineTextAlignment(.center)
             if (data.skippedCount ?? 0) > 0 {
-                Button("Reshuffle skipped tasks") { Task { await vm.reshuffle() } }
+                Button("Bring back skipped tasks") { Task { await vm.reshuffle() } }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(ColorTokens.gold)
-                    .padding(.top, 4)
+                    .padding(.top, 2)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 24)
-
-        if let getAhead = data.getAheadTasks, !getAhead.isEmpty {
-            getAheadChip(tasks: getAhead, week: data.getAheadWeek)
-                .padding(.bottom, 18)
-        }
-
-        wantMoreSection
-    }
-
-    private func backlogBanner(behind: Int, pendingCount: Int) -> some View {
-        let parts: [String] = {
-            var p: [String] = []
-            if behind > 0 { p.append(behind == 1 ? "1 week behind" : "\(behind) weeks behind") }
-            if pendingCount > 0 { p.append("\(pendingCount) carryover \(pendingCount == 1 ? "task" : "tasks")") }
-            return p
-        }()
-        return HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(ColorTokens.warning)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Catching up")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(ColorTokens.textPrimary)
-                Text(parts.joined(separator: " · "))
-                    .font(.system(size: 11))
-                    .foregroundStyle(ColorTokens.textSecondary)
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(ColorTokens.warning.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(ColorTokens.warning.opacity(0.35), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Want More (day_done fallback)
-
-    private var wantMoreSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("WANT MORE?").v2Eyebrow()
-                Spacer()
-                if vm.isLoadingExtras {
-                    ProgressView().scaleEffect(0.7).tint(ColorTokens.gold)
-                }
-            }
-
-            if !vm.extraContent.isEmpty {
-                VStack(spacing: 8) {
-                    ForEach(vm.extraContent) { item in
-                        extraContentRow(item)
-                    }
-                }
-                .padding(.bottom, 4)
-            }
-
-            HStack(spacing: 8) {
-                Button {
-                    nav.compassSheetOpen = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "sparkles").font(.system(size: 11, weight: .semibold))
-                        Text("Generate a quiz")
-                    }
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(ColorTokens.gold)
-                    .foregroundStyle(ColorTokens.background)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    nav.selectedTab = .learn
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "books.vertical.fill").font(.system(size: 11, weight: .semibold))
-                        Text("Browse Learn")
-                    }
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .background(ColorTokens.surface)
-                    .foregroundStyle(ColorTokens.gold)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1)
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.top, 10)
-        .task { await vm.loadExtrasIfNeeded() }
     }
 
     private var planBrewingFallback: some View {
@@ -1118,53 +771,13 @@ struct V2HomeView: View {
         .padding(.vertical, 40)
     }
 
-    // MARK: - Extra content helpers
-
-    private func extraContentRow(_ item: Content) -> some View {
-        Button {
-            taskRouter.open(
-                taskType: "watch",
-                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil, challengeId: nil, topic: nil),
-                title: item.title,
-                taskId: nil,
-                topic: item.topics?.first
-            )
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: contentIcon(item))
-                    .font(.system(size: 14))
-                    .foregroundStyle(ColorTokens.gold)
-                    .frame(width: 32, height: 32)
-                    .background(ColorTokens.gold.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(ColorTokens.textPrimary)
-                        .lineLimit(1)
-                    Text(contentMeta(item))
-                        .font(.system(size: 10))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10))
-                    .foregroundStyle(ColorTokens.textTertiary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
     // MARK: - Utilities
+
+    private func currentWeekdayShort() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "EEE"
+        return f.string(from: Date())
+    }
 
     private func difficultyColor(_ d: String) -> Color {
         switch d.lowercased() {
@@ -1225,22 +838,165 @@ struct V2HomeView: View {
     }
 }
 
+// MARK: - Trajectory Sheet (drill-down from status bar tap)
+
+/// Full readiness trajectory chart, presented in a sheet when the user taps the
+/// compact status bar on Home. Keeps Home clean while giving casual users
+/// access to the detail.
+private struct TrajectorySheetView: View {
+    let traj: V2HomeData.Trajectory
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("\(traj.today)%")
+                        .font(.system(size: 44, weight: .bold))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Image(systemName: "arrow.right")
+                        .foregroundStyle(ColorTokens.textTertiary)
+                    Text("\(traj.targetReadiness)% target")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+
+                chart
+                    .frame(height: 200)
+
+                metricsBlock
+            }
+            .padding(20)
+        }
+        .background(ColorTokens.background.ignoresSafeArea())
+        .navigationTitle("Readiness trajectory")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var points: [(label: String, value: Int)] {
+        if let pts = traj.points, !pts.isEmpty {
+            return pts.map { ($0.whenLabel, $0.readiness) }
+        }
+        return [
+            ("Today",  traj.today),
+            ("30d",    traj.in30Days),
+            ("Target", traj.atTargetDate),
+        ]
+    }
+
+    private var chart: some View {
+        Chart {
+            ForEach(Array(points.enumerated()), id: \.offset) { idx, point in
+                AreaMark(
+                    x: .value("When", idx),
+                    y: .value("Readiness", point.value)
+                )
+                .foregroundStyle(LinearGradient(
+                    colors: [ColorTokens.gold.opacity(0.32), ColorTokens.gold.opacity(0.02)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+                .interpolationMethod(.catmullRom)
+
+                LineMark(
+                    x: .value("When", idx),
+                    y: .value("Readiness", point.value)
+                )
+                .foregroundStyle(ColorTokens.gold)
+                .interpolationMethod(.catmullRom)
+                .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
+
+                PointMark(
+                    x: .value("When", idx),
+                    y: .value("Readiness", point.value)
+                )
+                .foregroundStyle(ColorTokens.gold)
+                .symbolSize(idx == 0 ? 70 : 35)
+            }
+        }
+        .chartXAxis {
+            AxisMarks(values: Array(0..<points.count)) { v in
+                if let i = v.as(Int.self), i < points.count {
+                    AxisValueLabel {
+                        Text(points[i].label)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+            }
+        }
+        .chartYScale(domain: 0...100)
+    }
+
+    @ViewBuilder
+    private var metricsBlock: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            metricRow(label: "Current readiness", value: "\(traj.today)%")
+            metricRow(label: "Target", value: "\(traj.targetReadiness)%")
+            if let d = traj.projectedTargetDate {
+                metricRow(label: "Projected to hit target", value: formatEta(d) ?? d)
+            }
+            if let weeks = traj.weeksToTarget {
+                metricRow(label: "Weeks at current pace", value: "\(weeks)")
+            }
+            if let real = traj.realTasksPerWeek {
+                metricRow(label: "Tasks/week (measured)", value: String(format: "%.1f", real))
+            } else {
+                metricRow(label: "Tasks/week (est.)", value: String(format: "%.1f", traj.weeklyDelta))
+            }
+            if traj.projectedAfterDeadline == true, let late = traj.weeksLateVsDeadline {
+                Text("At this pace you'd hit target ~\(late) week\(late == 1 ? "" : "s") past your deadline. Push harder or extend the timeline.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.warning)
+                    .padding(.top, 4)
+            } else if traj.targetHit == true {
+                Text("You've hit your target. Stretch for more if you want.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.success)
+                    .padding(.top, 4)
+            }
+        }
+    }
+
+    private func metricRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textSecondary)
+            Spacer()
+            Text(value)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(ColorTokens.textPrimary)
+        }
+    }
+
+    private func formatEta(_ iso: String) -> String? {
+        let isoF = ISO8601DateFormatter()
+        isoF.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = isoF.date(from: iso) ?? {
+            let plain = ISO8601DateFormatter()
+            plain.formatOptions = [.withInternetDateTime]
+            return plain.date(from: iso)
+        }()
+        guard let d = date else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, yyyy"
+        return f.string(from: d)
+    }
+}
+
 // MARK: - Objective Pill
 
 private struct ObjectivePill: View {
     let label: String
     var body: some View {
-        HStack(spacing: 8) {
-            Text("🎯").font(.system(size: 12))
+        HStack(spacing: 6) {
+            Text("🎯").font(.system(size: 11))
             Text(label)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(ColorTokens.textPrimary)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 9, weight: .bold))
-                .foregroundStyle(ColorTokens.textTertiary)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(Capsule().fill(ColorTokens.surface))
         .overlay(Capsule().strokeBorder(V2Theme.cardBorder, lineWidth: 1))
     }

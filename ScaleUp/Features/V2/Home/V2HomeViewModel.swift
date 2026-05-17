@@ -7,8 +7,16 @@ struct V2HomeData: Codable {
     let greeting: String
     let statusLine: String
     let objectiveLabel: String?
+    /// Short uppercase objective name for the status-bar eyebrow on V2 Home
+    /// (e.g. "GMAT", "SDE @ GOOGLE"). Separate from `objectiveLabel` which
+    /// carries the timeline suffix ("GMAT · 1mo").
+    let objectiveName: String?
     let trajectory: Trajectory?
     let weekProgress: WeekProgress?
+    /// Whole-plan timeline summary for V2 Home's "YOUR PLAN" strip — one
+    /// compact entry per plan week. Optional for back-compat with older
+    /// responses that pre-date the field.
+    let planSchedule: [PlanWeek]?
     let streak: Streak?
     let weekActivity: [WeekDayActivity]?
     let topGap: TopGap?
@@ -29,9 +37,23 @@ struct V2HomeData: Codable {
     /// "Get ahead" option once today's set is done.
     let getAheadTasks: [Task]?
     let getAheadWeek: Int?
+    /// "Push Harder" pool — backend-synthesised bonus tasks (today's daily
+    /// challenge + weak-topic quizzes) the user can opt into when today's
+    /// scheduled set isn't enough. Capped at 3.
+    let bonusTasks: [Task]?
     /// Single-paragraph insight from the backend describing what to focus on
     /// this week and why. Surfaced just below the readiness card.
     let weeklyInsight: String?
+
+    /// One row in the multi-week plan strip on V2 Home.
+    struct PlanWeek: Codable, Identifiable {
+        let week: Int
+        let total: Int
+        let done: Int
+        let skipped: Int?
+        let isCurrent: Bool?
+        var id: Int { week }
+    }
 
     struct Trajectory: Codable {
         let today: Int
@@ -294,6 +316,7 @@ final class V2HomeViewModel {
             greeting: "Hi, Nirpeksh.",
             statusLine: "You're on track for August. 74% ready, 11 weeks to go.",
             objectiveLabel: "SDE @ Google · 6mo",
+            objectiveName: "SDE @ GOOGLE",
             trajectory: .init(
                 today: 74, in30Days: 80, atTargetDate: 85,
                 targetReadiness: 80, timelineWeeks: 24, weeklyDelta: 6,
@@ -305,6 +328,9 @@ final class V2HomeViewModel {
                 projectedAfterDeadline: false, weeksLateVsDeadline: nil
             ),
             weekProgress: .init(done: 3, total: 7, week: 11, totalWeeks: 24),
+            planSchedule: (1...24).map { w in
+                .init(week: w, total: 7, done: w < 11 ? 7 : (w == 11 ? 3 : 0), skipped: 0, isCurrent: w == 11)
+            },
             streak: .init(current: 3, longest: 7),
             weekActivity: [
                 .init(label: "M", hadActivity: true, isToday: false),
@@ -346,6 +372,7 @@ final class V2HomeViewModel {
             pendingPriorCount: 0,
             getAheadTasks: nil,
             getAheadWeek: nil,
+            bonusTasks: nil,
             weeklyInsight: "Dynamic Programming is your biggest gap this week — you're at 30% readiness on DP vs. 74% overall. One focused session on memoization patterns can close ~6 points and unblock the tree/graph problems that follow in Week 12."
         )
     }
