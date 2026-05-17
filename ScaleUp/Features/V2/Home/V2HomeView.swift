@@ -90,7 +90,12 @@ struct V2HomeView: View {
                 .font(V2Theme.h1)
                 .foregroundStyle(ColorTokens.textPrimary)
 
-            if vm.visibleTasks.isEmpty {
+            // Status line ONLY when there's no insight card to take its place
+            // (e.g., no_objective / plan_brewing fallback states). When an
+            // insight is present, it's the canonical "why this week matters"
+            // surface — duplicating the status line on top of it confuses the
+            // user about which message to trust.
+            if (data.weeklyInsight ?? "").isEmpty {
                 Text(data.statusLine)
                     .font(V2Theme.body)
                     .foregroundStyle(ColorTokens.textSecondary)
@@ -386,13 +391,18 @@ struct V2HomeView: View {
 
     @ViewBuilder
     private func velocityBadge(traj: V2HomeData.Trajectory) -> some View {
+        // Tasks are binary (done or not), so display whole numbers. Rounding
+        // 1.8 → 2 reads as "about 2 tasks per week" which is what the user
+        // actually understands. Decimal precision was confusing.
         let isMeasured = traj.velocitySource == "measured"
         if isMeasured, let real = traj.realTasksPerWeek {
-            Text("▲ \(String(format: "%.1f", real)) tasks/wk (you)")
+            let rounded = max(1, Int(real.rounded()))
+            Text("▲ ~\(rounded) task\(rounded == 1 ? "" : "s")/wk")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(ColorTokens.gold)
         } else {
-            Text("≈ \(traj.weeklyDelta) pts/wk (est.)")
+            let rounded = max(1, Int(traj.weeklyDelta.rounded()))
+            Text("≈ ~\(rounded) pt\(rounded == 1 ? "" : "s")/wk (est.)")
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(ColorTokens.textTertiary)
         }
