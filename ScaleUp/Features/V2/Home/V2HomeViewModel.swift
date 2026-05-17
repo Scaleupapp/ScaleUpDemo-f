@@ -140,6 +140,8 @@ struct V2HomeData: Codable {
         let quizId: String?
         let interviewId: String?
         let url: String?
+        /// Weekly Compass review task — which plan-week the retro is for.
+        let weekNumber: Int?
     }
 }
 

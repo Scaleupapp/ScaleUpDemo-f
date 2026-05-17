@@ -44,6 +44,10 @@ struct V2CompassView: View {
     /// When set, Compass opens in TUTOR mode scoped to this content.
     var tutorContext: CompassTutorContext?
 
+    /// When set, Compass opens in REVIEW_WEEK mode — used by the synthetic
+    /// `compass_review` plan task to run a weekly retrospective.
+    var reviewContext: CompassReviewContext?
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -88,6 +92,7 @@ struct V2CompassView: View {
         }
         .onAppear {
             if let tc = tutorContext { vm.tutorContext = tc }
+            if let rc = reviewContext { vm.reviewContext = rc }
             vm.startConversation(context: launchContext)
             Task { await loadCompetitionStatus() }
         }
@@ -239,6 +244,18 @@ struct V2CompassView: View {
 
     // MARK: - Header
 
+    private var headerTitle: String {
+        if vm.reviewContext != nil { return "Compass · Weekly review" }
+        if vm.tutorContext != nil  { return "Compass · Tutor" }
+        return "Compass"
+    }
+
+    private var headerSubtitle: String {
+        if let r = vm.reviewContext { return "reviewing week \(r.weekNumber)" }
+        if let t = vm.tutorContext  { return "on “\(t.title)”" }
+        return "knows your full context"
+    }
+
     private var header: some View {
         HStack(spacing: 10) {
             ZStack {
@@ -251,12 +268,12 @@ struct V2CompassView: View {
                     .rotationEffect(.degrees(-45))
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text(vm.tutorContext != nil ? "Compass · Tutor" : "Compass")
+                Text(headerTitle)
                     .font(.system(size: 15, weight: .bold))
                     .foregroundStyle(ColorTokens.textPrimary)
                 HStack(spacing: 4) {
                     Circle().fill(ColorTokens.success).frame(width: 6, height: 6)
-                    Text(vm.tutorContext.map { "on “\($0.title)”" } ?? "knows your full context")
+                    Text(headerSubtitle)
                         .font(.system(size: 10))
                         .foregroundStyle(ColorTokens.textTertiary)
                         .lineLimit(1)
@@ -390,8 +407,14 @@ struct V2CompassSheetView: View {
     var currentScreen: V2Tab = .home
     /// When set, the sheet opens Compass in tutor mode for this content.
     var tutorContext: CompassTutorContext?
+    /// When set, the sheet opens Compass in weekly-review mode.
+    var reviewContext: CompassReviewContext?
     var body: some View {
-        V2CompassView(launchContext: currentScreen, tutorContext: tutorContext)
+        V2CompassView(
+            launchContext: currentScreen,
+            tutorContext: tutorContext,
+            reviewContext: reviewContext
+        )
     }
 }
 

@@ -10,6 +10,9 @@ struct V2TaskSheet: View {
     /// Injected by V2MainTabView — forwarded into the nested tutor sheet so
     /// V2CompassView has its required environment.
     @Environment(V2TaskRouter.self) private var taskRouter
+    /// V2CompassView reads AppState directly; re-inject so the review sheet
+    /// has it even when SwiftUI doesn't propagate @Observable across hops.
+    @Environment(AppState.self) private var appState
 
     /// Tutor-mode Compass sheet, opened from inside a content view via "Ask Compass".
     @State private var tutorSheet: CompassTutorContext?
@@ -64,6 +67,21 @@ struct V2TaskSheet: View {
                                 Button("Close", action: onClose)
                             }
                         }
+                }
+
+            case .compassReview(let weekNumber, let taskId):
+                V2CompassSheetView(
+                    currentScreen: .home,
+                    reviewContext: CompassReviewContext(weekNumber: weekNumber, taskId: taskId)
+                )
+                .environment(taskRouter)
+                .environment(appState)
+                .environment(V2NavState())
+                .onAppear {
+                    // Mark the synthetic review task complete the moment the
+                    // user opens it — the "review" is the act of engaging.
+                    // Server is idempotent ($addToSet on reviewedWeeks).
+                    if let id = taskId { taskRouter.markComplete(taskId: id) }
                 }
 
             case .external(let url):

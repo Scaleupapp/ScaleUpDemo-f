@@ -36,6 +36,7 @@ private struct CompassPayload: Codable {
     var message: String?
     var history: [CompassHistoryEntry]?
     var contentId: String?   // tutor mode — the content this turn is scoped to
+    var weekNumber: Int?     // review_week mode — which plan-week the retro is for
 }
 
 private struct CompassHistoryEntry: Codable {
@@ -118,6 +119,18 @@ struct CompassTutorContext: Equatable, Identifiable {
     var id: String { contentId }
 }
 
+/// When Compass is opened from the weekly review plan task, it runs in
+/// REVIEW_WEEK mode — Compass opens with a retrospective summary of the last
+/// 7 days and invites the user to reflect. Subsequent turns are conversational
+/// but still anchored to the week being reviewed.
+struct CompassReviewContext: Equatable, Identifiable {
+    let weekNumber: Int
+    /// The plan-task id (`review-week-<N>`) — passed back to the router so the
+    /// task is marked complete once the user has actually engaged.
+    let taskId: String?
+    var id: String { "review-\(weekNumber)" }
+}
+
 /// Destination home screens the Compass quick-action chips route into.
 /// Plan and Explain stay inside the conversation (no dedicated home).
 enum CompassHomeRoute: String, Identifiable, CaseIterable {
@@ -159,6 +172,15 @@ final class CompassViewModel {
     /// Non-nil when Compass is scoped to a content piece (tutor mode).
     var tutorContext: CompassTutorContext?
 
+    /// Non-nil when Compass was launched from the weekly review task — every
+    /// turn in this conversation is anchored to a weekly retrospective.
+    var reviewContext: CompassReviewContext?
+
+    /// Tracks whether we've already sent the review_week opener for this
+    /// conversation. After the opener, follow-up turns flow through
+    /// conversation (with the review framing pinned server-side).
+    private var didSendReviewOpener = false
+
     /// Set when the user picks a Compass quick-action chip that maps to a
     /// dedicated destination screen (Quiz/Interview/Notes/Resume Home). The
     /// view presents the right home via .sheet(item:) on this value.
@@ -169,7 +191,11 @@ final class CompassViewModel {
 
     func startConversation(context: V2Tab = .compass) {
         guard messages.isEmpty else { return }
-        if tutorContext != nil {
+        if let review = reviewContext {
+            // Weekly retrospective — fetch the LLM-generated recap as the
+            // opening message, grounded in the last 7 days of activity.
+            Task { await callReviewOpener(weekNumber: review.weekNumber) }
+        } else if tutorContext != nil {
             // Tutor mode opens with a scoped greeting, not the generic one.
             messages.append(.init(
                 role: .compass,
@@ -332,20 +358,61 @@ final class CompassViewModel {
         }
     }
 
+    private func callReviewOpener(weekNumber: Int) async {
+        isWaitingForReply = true
+        defer { isWaitingForReply = false }
+        let body = CompassRequest(
+            mode: "review_week",
+            payload: CompassPayload(message: nil, history: nil, contentId: nil, weekNumber: weekNumber)
+        )
+        do {
+            let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post("/compass", body: body)
+            let reply = resp.data.output.reply
+                ?? resp.data.output.message
+                ?? "Here's your week — how did it feel?"
+            messages.append(.init(role: .compass, text: reply))
+            let follow = resp.data.output.followups ?? ["It went well", "I got blocked", "Plan next week with me"]
+            suggestions = follow
+            showSuggestions = !follow.isEmpty
+            didSendReviewOpener = true
+        } catch {
+            messages.append(.init(
+                role: .compass,
+                text: "Let's run your weekly review. How did this past week actually feel?"
+            ))
+            suggestions = ["It went well", "I got blocked", "Plan next week with me"]
+            showSuggestions = true
+            didSendReviewOpener = true
+        }
+    }
+
     private func callConversation(message: String) async {
         isWaitingForReply = true
         defer { isWaitingForReply = false }
         let history = messages.suffix(10).map { msg in
             CompassHistoryEntry(role: msg.role == .user ? "user" : "assistant", content: msg.text)
         }
-        // Tutor mode when scoped to content — same Compass brain, grounded in the lesson.
-        let mode = tutorContext != nil ? "tutor" : "conversation"
+        // Mode selection:
+        //   - review_week: review retro turns stay in review_week so the
+        //     server keeps the framing pinned (handled server-side by
+        //     forwarding to conversation with the review system addendum).
+        //   - tutor: scoped to a piece of content.
+        //   - conversation: everything else.
+        let mode: String
+        if reviewContext != nil {
+            mode = "review_week"
+        } else if tutorContext != nil {
+            mode = "tutor"
+        } else {
+            mode = "conversation"
+        }
         let body = CompassRequest(
             mode: mode,
             payload: CompassPayload(
                 message: message,
                 history: history,
-                contentId: tutorContext?.contentId
+                contentId: tutorContext?.contentId,
+                weekNumber: reviewContext?.weekNumber
             )
         )
         do {

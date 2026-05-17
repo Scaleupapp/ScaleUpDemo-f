@@ -1039,7 +1039,7 @@ struct V2HomeView: View {
         Button {
             taskRouter.open(
                 taskType: "watch",
-                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil),
+                payload: .init(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil),
                 title: item.title,
                 taskId: nil,
                 topic: item.topics?.first

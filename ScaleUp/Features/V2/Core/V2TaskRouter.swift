@@ -52,6 +52,8 @@ final class V2TaskRouter {
         case interview(scenarioId: String?)
         case competition
         case external(url: URL)
+        /// Weekly Compass review — opens Compass in review_week mode.
+        case compassReview(weekNumber: Int, taskId: String?)
         case unavailable(message: String)
 
         var id: String {
@@ -62,6 +64,7 @@ final class V2TaskRouter {
             case .interview(let id):   return "interview-\(id ?? "default")"
             case .competition:         return "competition"
             case .external(let url):   return "external-\(url.absoluteString)"
+            case .compassReview(let w, _): return "compass-review-\(w)"
             case .unavailable(let m):  return "unavailable-\(m)"
             }
         }
@@ -113,6 +116,17 @@ final class V2TaskRouter {
             route = .competition
             setActiveTask(taskId: taskId, taskType: taskType, resourceId: nil)
 
+        case "compass_review":
+            // Weekly Compass retrospective — open V2CompassView in review_week
+            // mode. Falls back to the current plan-week if the server didn't
+            // pass one (defensive — should always be present).
+            let week = payload?.weekNumber ?? 1
+            route = .compassReview(weekNumber: week, taskId: taskId)
+            // We DO NOT setActiveTask here — completion is auto-marked by the
+            // V2CompassSheetView host the moment the user engages (so closing
+            // the sheet without ever sending a message still counts as done,
+            // matching the "lock in what you learned" framing).
+
         case "mock_exam", "reflection", "notes_create", "conversation":
             // Phase 2: route to dedicated v2 detail screens. For now, show stub.
             route = .unavailable(message: "Coming next: dedicated \(taskType) screen.")
@@ -120,6 +134,13 @@ final class V2TaskRouter {
         default:
             route = .unavailable(message: "Unknown task type.")
         }
+    }
+
+    /// Public mark-complete shim — used by the Compass-review sheet host to
+    /// flip the synthetic `review-week-<N>` task complete when the user opens
+    /// the retrospective. Idempotent server-side ($addToSet).
+    func markComplete(taskId: String) {
+        Task { await completePlanTask(taskId) }
     }
 
     func close() {

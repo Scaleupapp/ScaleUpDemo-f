@@ -149,7 +149,7 @@ struct V2LearnView: View {
         Button {
             taskRouter.open(
                 taskType: "watch",
-                payload: V2HomeData.Payload(contentId: item.id, quizId: nil, interviewId: nil, url: nil),
+                payload: V2HomeData.Payload(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil),
                 title: item.title
             )
         } label: {
@@ -217,7 +217,7 @@ struct V2LearnView: View {
                     Button {
                         taskRouter.open(
                             taskType: "watch",
-                            payload: V2HomeData.Payload(contentId: item.id, quizId: nil, interviewId: nil, url: nil),
+                            payload: V2HomeData.Payload(contentId: item.id, quizId: nil, interviewId: nil, url: nil, weekNumber: nil),
                             title: item.title
                         )
                     } label: {
