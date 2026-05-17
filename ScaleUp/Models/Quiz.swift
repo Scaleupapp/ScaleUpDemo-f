@@ -253,6 +253,16 @@ struct QuizEnrichedResults: Codable, Sendable {
     var recommendedContent: [Content]?
     var journeyImpact: JourneyImpact?
     var nextActions: [QuizNextAction]?
+    var difficultyUpgrades: [DifficultyUpgrade]?
+}
+
+// MARK: - Difficulty Upgrade
+
+struct DifficultyUpgrade: Codable, Sendable, Identifiable {
+    var id: String { topic }
+    let topic: String
+    let from: String
+    let to: String
 }
 
 struct CompetencyData: Codable, Sendable {

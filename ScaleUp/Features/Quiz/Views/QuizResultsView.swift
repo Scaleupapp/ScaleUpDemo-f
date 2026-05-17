@@ -23,6 +23,11 @@ struct QuizResultsView: View {
                         // Score Hero
                         scoreHero
 
+                        // Difficulty upgrade / downgrade banner
+                        if let upgrades = viewModel.results?.difficultyUpgrades, !upgrades.isEmpty {
+                            difficultyUpgradesBanner(upgrades)
+                        }
+
                         // Quick Stats
                         quickStats
 
@@ -742,6 +747,41 @@ struct QuizResultsView: View {
         case "awareness": return .red
         default: return ColorTokens.textTertiary
         }
+    }
+
+    // MARK: - Difficulty Upgrades Banner
+
+    private func difficultyUpgradesBanner(_ upgrades: [DifficultyUpgrade]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(upgrades) { upgrade in
+                HStack(spacing: 8) {
+                    Image(systemName: upgrade.to == "hard"
+                          ? "flame.fill"
+                          : (upgrade.to == "easy" ? "leaf.fill" : "equal.circle.fill"))
+                        .foregroundStyle(upgrade.to == "easy" ? ColorTokens.success : ColorTokens.warning)
+
+                    Text("Difficulty \(upgrade.to == "easy" ? "lowered" : "raised") to \(upgrade.to.capitalized) on \(prettyTopic(upgrade.topic))")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTokens.gold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1)
+        )
+        .opacity(showDetails ? 1 : 0)
+    }
+
+    private func prettyTopic(_ topic: String) -> String {
+        topic
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .capitalized
     }
 
     // MARK: - Helpers
