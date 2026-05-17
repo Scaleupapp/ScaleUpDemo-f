@@ -17,6 +17,12 @@ final class LeaderboardViewModel {
 
     private let service = CompetitionService()
 
+    // MARK: - Init
+
+    init(initialTopic: String? = nil) {
+        self.selectedTopic = initialTopic
+    }
+
     // MARK: - Load All (default: global leaderboard)
 
     func loadAll() async {

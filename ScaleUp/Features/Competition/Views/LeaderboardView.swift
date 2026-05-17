@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct LeaderboardView: View {
-    @State private var viewModel = LeaderboardViewModel()
+    @State private var viewModel: LeaderboardViewModel
     @State private var selectedScope: LeaderboardScope = .thisWeek
+
+    init(initialTopic: String? = nil) {
+        _viewModel = State(initialValue: LeaderboardViewModel(initialTopic: initialTopic))
+    }
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 

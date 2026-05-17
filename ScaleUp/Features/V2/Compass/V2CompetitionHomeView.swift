@@ -94,7 +94,7 @@ struct V2CompetitionHomeView: View {
             .refreshable { await load() }
             .fullScreenCover(isPresented: $showCompetitionHub) {
                 NavigationStack {
-                    CompetitionHubView()
+                    CompetitionHubView(initialTopic: objectiveTopic)
                         .toolbar {
                             ToolbarItem(placement: .topBarLeading) {
                                 Button("Close") { showCompetitionHub = false }
