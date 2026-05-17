@@ -447,6 +447,20 @@ struct V2HomeView: View {
                     .foregroundStyle(ColorTokens.success)
             }
             .padding(.top, 6)
+        } else if traj.projectedAfterDeadline == true,
+                  let late = traj.weeksLateVsDeadline, late > 0 {
+            // Pace is so far below required that we'd miss the deadline by
+            // `late` weeks — say so directly instead of an unbounded ETA.
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.warning)
+                Text("At this pace you'd hit \(traj.targetReadiness)% ~\(late) week\(late == 1 ? "" : "s") past your deadline. Push harder or extend the timeline.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.warning)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(.top, 6)
         } else if traj.paceCategory == "behind",
                   let weeks = traj.weeksToTarget, weeks > 0 {
             HStack(spacing: 6) {

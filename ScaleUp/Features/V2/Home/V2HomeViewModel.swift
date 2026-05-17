@@ -67,6 +67,13 @@ struct V2HomeData: Codable {
         let earlyByWeeks: Int?
         /// True when currentReadiness >= targetReadiness.
         let targetHit: Bool?
+        /// True when projected weeksToTarget exceeds the user's chosen
+        /// timeline — i.e. they won't hit target by their deadline at this
+        /// pace. Drives a more honest ETA line ("X weeks past your deadline").
+        let projectedAfterDeadline: Bool?
+        /// weeksToTarget - timelineWeeks when projectedAfterDeadline is true;
+        /// nil otherwise.
+        let weeksLateVsDeadline: Int?
 
         struct TrajectoryPoint: Codable, Identifiable {
             let whenLabel: String
@@ -289,7 +296,8 @@ final class V2HomeViewModel {
                 velocitySource: "estimated", realTasksPerWeek: nil,
                 paceCategory: "on_track", weeksToTarget: 12,
                 projectedTargetDate: "2026-08-17T00:00:00Z",
-                earlyByWeeks: nil, targetHit: false
+                earlyByWeeks: nil, targetHit: false,
+                projectedAfterDeadline: false, weeksLateVsDeadline: nil
             ),
             weekProgress: .init(done: 3, total: 7, week: 11, totalWeeks: 24),
             streak: .init(current: 3, longest: 7),
