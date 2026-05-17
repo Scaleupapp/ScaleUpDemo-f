@@ -2,13 +2,26 @@ import SwiftUI
 
 struct DiscoverView: View {
     /// Optional pre-positioning hint from callers (e.g. v2 Learn's Browse-by
-    /// buttons). Drives initial filter/anchor state. Default is `.none` so
-    /// existing call sites keep working unchanged.
+    /// buttons or rail See-all links). Drives initial filter/anchor state.
+    /// Default is `.none` so existing call sites keep working unchanged.
     enum InitialFilter: Equatable {
         case none
         case topic                          // focus topic chips
         case type(ContentType)              // preselect a content type
         case creator                        // anchor to the Top Creators section
+        case section(DiscoverSection)       // scroll to a specific section
+    }
+
+    /// Sections in DiscoverView that can be scrolled-to via `InitialFilter.section`.
+    /// Used by v2 Learn rail See-all links to land users in the right place.
+    enum DiscoverSection: String, Equatable {
+        case featured
+        case creators
+        case picked
+        case gaps
+        case trending
+        case paths
+        case browse
     }
 
     private let initialFilter: InitialFilter
@@ -121,12 +134,14 @@ struct DiscoverView: View {
                             featuredHero(featured)
                         }
                         .buttonStyle(.plain)
+                        .id("section-featured")
                     }
 
                     // Top Creators
                     if !viewModel.creators.isEmpty {
                         creatorsSection
                             .id("top-creators")
+                            .id("section-creators")
                     }
 
                     // Picked For You
@@ -136,11 +151,13 @@ struct DiscoverView: View {
                             icon: "sparkles",
                             items: Array(viewModel.pickedForYou.prefix(8))
                         )
+                        .id("section-picked")
                     }
 
                     // Knowledge Gaps — now respects both Type and Topic filters
                     if !viewModel.filteredGapContent.isEmpty {
                         gapSection
+                            .id("section-gaps")
                     }
 
                     // Trending
@@ -150,16 +167,19 @@ struct DiscoverView: View {
                             icon: "flame.fill",
                             items: viewModel.filteredTrending
                         )
+                        .id("section-trending")
                     }
 
                     // Learning Paths
                     if !viewModel.learningPaths.isEmpty {
                         pathsSection
+                            .id("section-paths")
                     }
 
                     // All Content grid
                     if !viewModel.filteredExploreResults.isEmpty {
                         browseSection
+                            .id("section-browse")
                     }
 
                     Spacer().frame(height: 80)
@@ -198,6 +218,16 @@ struct DiscoverView: View {
             guard !viewModel.creators.isEmpty else { return }
             didApplyInitialFilter = true
             withAnimation { proxy.scrollTo("top-creators", anchor: .top) }
+        case .section(let section):
+            // Wait for data, then scroll. Use a small delay so the LazyVStack
+            // realises the section anchor exists before we ask to scroll to it.
+            guard !viewModel.isLoading else { return }
+            didApplyInitialFilter = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation {
+                    proxy.scrollTo("section-\(section.rawValue)", anchor: .top)
+                }
+            }
         }
     }
 

@@ -1,46 +1,18 @@
 import SwiftUI
 
-/// V2 Learn Tab — App Store Today-style content discovery with a stronger
-/// curation layer: scored editorial hero, vertical "Made For You" stack with
-/// distinct per-card reasoning, optional path card, then themed rails.
+/// V2 Learn Tab — App Store / Discover-style layout. Search → Type + Topic
+/// filter chips → editorial hero → Top Creators strip → Picked For You rail
+/// → Closes Your Gaps rail → Path spotlight → contextual rails → Browse-by.
+///
+/// All rails honour the Type + Topic chip filters at the top. "See all →" on
+/// every rail opens DiscoverView pre-positioned at the matching section.
 struct V2LearnView: View {
     @State private var vm = V2LearnViewModel()
     @State private var discoverDestination: DiscoverDestination?
-    @State private var activeFilter: LearnFilter = .all
     @Environment(V2TaskRouter.self) private var taskRouter
 
-    // MARK: - Filter chips
-
-    enum LearnFilter: String, CaseIterable, Identifiable {
-        case all = "All"
-        case watch = "Watch"
-        case read = "Read"
-        case notes = "Notes"
-        case quick = "Quick (≤5 min)"
-        case long = "Long form (≥15 min)"
-
-        var id: String { rawValue }
-
-        func matches(_ c: Content) -> Bool {
-            switch self {
-            case .all:
-                return true
-            case .watch:
-                return c.contentType == .video
-            case .read:
-                return c.contentType == .article || c.contentType == .infographic
-            case .notes:
-                return c.contentType == .notes
-            case .quick:
-                return (c.duration ?? 999) <= 300
-            case .long:
-                return (c.duration ?? 0) >= 900
-            }
-        }
-    }
-
     /// Identifiable sheet target so the Discover destination can vary per
-    /// Browse-by entry (topic / type / creator).
+    /// Browse-by entry (topic / type / creator / section).
     struct DiscoverDestination: Identifiable {
         let filter: DiscoverView.InitialFilter
         var id: String {
@@ -49,6 +21,7 @@ struct V2LearnView: View {
             case .topic: return "topic"
             case .type(let t): return "type-\(t.rawValue)"
             case .creator: return "creator"
+            case .section(let s): return "section-\(s.rawValue)"
             }
         }
     }
@@ -56,42 +29,32 @@ struct V2LearnView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 0) {
 
-                    // Search — opens v1 Discover (full search + browse).
-                    Button { discoverDestination = .init(filter: .none) } label: {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundStyle(ColorTokens.textTertiary)
-                            Text("Search topics, creators, videos…")
-                                .font(V2Theme.body)
-                                .foregroundStyle(ColorTokens.textTertiary)
-                            Spacer()
-                        }
-                        .padding(14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(ColorTokens.surface)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
+                    // 1. Search — opens v1 Discover (full search + browse).
+                    searchBar
+                        .padding(.horizontal, V2Theme.pad)
+                        .padding(.top, 16)
+                        .padding(.bottom, 12)
 
                     if vm.isLoading && vm.recommendations.isEmpty && vm.continueWatching.isEmpty {
                         loadingState
+                            .padding(.horizontal, V2Theme.pad)
                     } else if everythingEmpty {
                         emptyState
+                            .padding(.horizontal, V2Theme.pad)
                     } else {
+                        // 2. Unified filter bar (Type + Topic chips) — Discover-styled.
+                        unifiedFilterBar
+                            .padding(.bottom, 18)
+
+                        // 3+ : remaining sections.
                         loadedSections
+                            .padding(.horizontal, V2Theme.pad)
                     }
 
                     Spacer().frame(height: 100)
                 }
-                .padding(.horizontal, V2Theme.pad)
-                .padding(.top, 16)
             }
             .background(ColorTokens.background.ignoresSafeArea())
             .navigationTitle("Learn")
@@ -123,107 +86,262 @@ struct V2LearnView: View {
         && vm.newThisWeek.isEmpty
         && vm.hiddenGems.isEmpty
         && vm.learningPaths.isEmpty
+        && vm.topCreators.isEmpty
+    }
+
+    // MARK: - Search bar (matches Discover)
+
+    private var searchBar: some View {
+        Button { discoverDestination = .init(filter: .none) } label: {
+            HStack(spacing: Spacing.sm) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Text("Search topics, creators, content...")
+                    .font(.system(size: 15))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(ColorTokens.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Unified filter bar (mirror of DiscoverView.unifiedFilterBar)
+
+    private var unifiedFilterBar: some View {
+        VStack(spacing: 2) {
+            filterRow(label: "Type") {
+                typeChip(nil, label: "All")
+                typeChip(.video, label: "Videos")
+                typeChip(.notes, label: "Notes")
+                typeChip(.article, label: "Articles")
+                typeChip(.infographic, label: "Infographics")
+            }
+
+            if !vm.availableDomains.isEmpty {
+                filterRow(label: "Topic") {
+                    topicChip(nil, label: "All")
+                    ForEach(vm.availableDomains, id: \.self) { domain in
+                        topicChip(domain, label: domain)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, Spacing.sm)
+        .background(ColorTokens.surface.opacity(0.4))
+        .overlay(
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundStyle(ColorTokens.border.opacity(0.5)),
+            alignment: .bottom
+        )
+    }
+
+    private func filterRow<Content: View>(label: String, @ViewBuilder chips: () -> Content) -> some View {
+        HStack(spacing: 0) {
+            Text(label)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .frame(width: 40, alignment: .leading)
+                .padding(.leading, Spacing.lg)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    chips()
+                }
+                .padding(.trailing, Spacing.lg)
+                .padding(.vertical, 6)
+            }
+        }
+    }
+
+    private func typeChip(_ type: ContentType?, label: String) -> some View {
+        let isSelected = vm.selectedContentType == type
+        return Button {
+            Haptics.selection()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                vm.selectedContentType = (vm.selectedContentType == type && type != nil) ? nil : type
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .black : ColorTokens.textSecondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(isSelected ? ColorTokens.gold : Color.clear)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(isSelected ? Color.clear : ColorTokens.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func topicChip(_ domain: String?, label: String) -> some View {
+        let isSelected = (domain == nil && vm.selectedDomain == nil) || vm.selectedDomain == domain
+        return Button {
+            Haptics.selection()
+            withAnimation(.easeInOut(duration: 0.2)) {
+                vm.selectedDomain = (vm.selectedDomain == domain && domain != nil) ? nil : domain
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? .black : ColorTokens.textSecondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(isSelected ? ColorTokens.gold : Color.clear)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(isSelected ? Color.clear : ColorTokens.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Loaded layout
 
     @ViewBuilder
     private var loadedSections: some View {
-        // 1. TODAY'S PICK — scored editorial hero.
-        if let hero = vm.hero {
-            todaysPickHeader
-            EditorialHeroCard(
-                item: hero,
-                reasonTag: heroEyebrow(for: hero),
-                creatorLabel: hero.creatorId?.displayName,
-                action: { openContent(hero) }
-            )
-            .padding(.bottom, 6)
-        }
+        VStack(alignment: .leading, spacing: 0) {
 
-        // 2. MADE FOR YOU — 4 cards, each with a DIFFERENT reason bucket.
-        let cards = vm.madeForYouCards
-        if !cards.isEmpty {
-            railHeader("MADE FOR YOU · \(cards.count) picks", eyebrow: true)
-            VStack(spacing: 10) {
-                ForEach(cards) { card in
-                    Button { openContent(card.content) } label: {
-                        MadeForYouRowCard(card: card)
-                    }
-                    .buttonStyle(.plain)
+            // 3. TODAY'S PICK — scored editorial hero.
+            if let hero = vm.hero {
+                todaysPickHeader
+                EditorialHeroCard(
+                    item: hero,
+                    reasonTag: heroEyebrow(for: hero),
+                    creatorLabel: hero.creatorId?.displayName,
+                    action: { openContent(hero) }
+                )
+                .padding(.bottom, 22)
+            }
+
+            // 4. TOP CREATORS.
+            if !vm.topCreators.isEmpty {
+                railHeader("Top Creators", icon: "person.2.fill") {
+                    discoverDestination = .init(filter: .section(.creators))
+                }
+                topCreatorsStrip
+                    .padding(.bottom, 22)
+            }
+
+            // 5. PICKED FOR YOU — horizontal rail of distinct-reason cards.
+            let pickedCards = filteredMadeForYouCards()
+            if !pickedCards.isEmpty {
+                railHeader("Picked For You", icon: "sparkles") {
+                    discoverDestination = .init(filter: .section(.picked))
+                }
+                pickedForYouRail(cards: pickedCards)
+                    .padding(.bottom, 22)
+            }
+
+            // 6. CLOSES YOUR GAPS — yellow-bordered cards with Start Learning.
+            let gaps = vm.filteredGapFilling
+            if !gaps.isEmpty {
+                railHeader("Closes Your Gaps", icon: "lightbulb.fill") {
+                    discoverDestination = .init(filter: .section(.gaps))
+                }
+                gapRail(items: gaps)
+                    .padding(.bottom, 22)
+            }
+
+            // 7. PATH SPOTLIGHT.
+            if let path = vm.heroPath {
+                PathSpotlightCard(
+                    path: path,
+                    topicLabel: pathTopicLabel(for: path),
+                    action: { openPath(path) }
+                )
+                .padding(.bottom, 22)
+            }
+
+            // 8. CONTINUE WATCHING.
+            let continueFiltered = vm.filteredContinueWatching
+            if !continueFiltered.isEmpty {
+                railHeader("Continue Watching", icon: "play.circle.fill") {
+                    discoverDestination = .init(filter: .type(.video))
+                }
+                mediumRail(items: continueFiltered, showProgress: true)
+                    .padding(.bottom, 22)
+            }
+
+            // 9. TRENDING IN {DOMAIN}.
+            let trendingFiltered = vm.filteredTrending
+            if !trendingFiltered.isEmpty {
+                railHeader(trendingHeader, icon: "flame.fill") {
+                    discoverDestination = .init(filter: .section(.trending))
+                }
+                mediumRail(items: trendingFiltered, large: true)
+                    .padding(.bottom, 22)
+            }
+
+            // 10. NEW THIS WEEK.
+            let newFiltered = vm.filteredNewThisWeek
+            if !newFiltered.isEmpty {
+                railHeader("New This Week", icon: "sparkle") {
+                    discoverDestination = .init(filter: .none)
+                }
+                mediumRail(items: newFiltered)
+                    .padding(.bottom, 22)
+            }
+
+            // 11. HIDDEN GEMS.
+            let gemsFiltered = vm.filteredHiddenGems
+            if !gemsFiltered.isEmpty {
+                railHeader("Hidden Gems", icon: "diamond.fill") {
+                    discoverDestination = .init(filter: .section(.browse))
+                }
+                mediumRail(items: gemsFiltered)
+                    .padding(.bottom, 22)
+            }
+
+            // 12. TRENDING NOTES.
+            let notesFiltered = vm.filteredTrendingNotes
+            if !notesFiltered.isEmpty {
+                railHeader("Trending Notes", icon: "doc.text.fill") {
+                    discoverDestination = .init(filter: .type(.notes))
+                }
+                mediumRail(items: notesFiltered, isNotesRail: true)
+                    .padding(.bottom, 22)
+            }
+
+            // 13. BROWSE BY … — each entry opens Discover pre-positioned.
+            Text("Browse another way".uppercased())
+                .v2Eyebrow()
+                .padding(.top, 6)
+                .padding(.bottom, 4)
+            VStack(spacing: 0) {
+                browseLink(icon: "square.grid.2x2", label: "Browse by topic") {
+                    discoverDestination = .init(filter: .topic)
+                }
+                browseLink(icon: "play.rectangle", label: "Browse videos") {
+                    discoverDestination = .init(filter: .type(.video))
+                }
+                browseLink(icon: "person.2", label: "Browse by creator") {
+                    discoverDestination = .init(filter: .creator)
                 }
             }
-            .padding(.bottom, 14)
         }
+    }
 
-        // 3. PATH CARD — only when a real path was matched.
-        if let path = vm.heroPath {
-            PathSpotlightCard(
-                path: path,
-                topicLabel: pathTopicLabel(for: path),
-                action: { openPath(path) }
-            )
-            .padding(.bottom, 14)
-        }
+    // MARK: - Made For You filtering
 
-        // 4. CATEGORIES — chip strip moved up to just under the path card.
-        chipsRow
-
-        // 5. CONTINUE WATCHING.
-        let continueFiltered = vm.continueWatching.filter(activeFilter.matches)
-        if !continueFiltered.isEmpty {
-            railHeader("Continue watching")
-            mediumRail(items: continueFiltered, showProgress: true)
-                .padding(.bottom, 14)
-        }
-
-        // 6. TRENDING IN {DOMAIN}.
-        let trendingFiltered = vm.trending.filter(activeFilter.matches)
-        if !trendingFiltered.isEmpty {
-            railHeader(trendingHeader)
-            mediumRail(items: trendingFiltered, large: true)
-                .padding(.bottom, 14)
-        }
-
-        // 7. NEW THIS WEEK — derived client-side from createdAt/publishedAt.
-        let newFiltered = vm.newThisWeek.filter(activeFilter.matches)
-        if !newFiltered.isEmpty {
-            railHeader("NEW THIS WEEK", eyebrow: true)
-            mediumRail(items: newFiltered)
-                .padding(.bottom, 14)
-        }
-
-        // 8. HIDDEN GEMS — high rating, low views.
-        let gemsFiltered = vm.hiddenGems.filter(activeFilter.matches)
-        if !gemsFiltered.isEmpty {
-            railHeader("HIDDEN GEMS", eyebrow: true)
-            mediumRail(items: gemsFiltered)
-                .padding(.bottom, 14)
-        }
-
-        // 9. TRENDING NOTES.
-        let notesFiltered = vm.trendingNotes.filter(activeFilter.matches)
-        if !notesFiltered.isEmpty {
-            railHeader("TRENDING NOTES", eyebrow: true)
-            mediumRail(items: notesFiltered, isNotesRail: true)
-                .padding(.bottom, 18)
-        }
-
-        // 10. BROWSE BY … — each entry opens Discover pre-positioned.
-        Text("Browse another way".uppercased())
-            .v2Eyebrow()
-            .padding(.top, 4)
-            .padding(.bottom, 4)
-        VStack(spacing: 0) {
-            browseLink(icon: "square.grid.2x2", label: "Browse by topic") {
-                discoverDestination = .init(filter: .topic)
-            }
-            browseLink(icon: "play.rectangle", label: "Browse videos") {
-                discoverDestination = .init(filter: .type(.video))
-            }
-            browseLink(icon: "person.2", label: "Browse by creator") {
-                discoverDestination = .init(filter: .creator)
-            }
+    /// Apply chip filters to the per-card distinct-reason picks. We filter
+    /// the underlying `content`, preserving each card's reasonTag + detail.
+    private func filteredMadeForYouCards() -> [V2LearnViewModel.MadeForYouCard] {
+        let cards = vm.madeForYouCards
+        let type = vm.selectedContentType
+        let domain = vm.selectedDomain?.lowercased()
+        guard type != nil || domain != nil else { return cards }
+        return cards.filter { card in
+            let typeOK = type.map { card.content.contentType == $0 } ?? true
+            let domainOK = domain.map { (card.content.domain?.lowercased() ?? "") == $0 } ?? true
+            return typeOK && domainOK
         }
     }
 
@@ -239,7 +357,7 @@ struct V2LearnView: View {
             Text("TODAY'S PICK").v2Eyebrow()
             Spacer()
         }
-        .padding(.bottom, 2)
+        .padding(.bottom, 8)
     }
 
     private func heroEyebrow(for item: Content) -> String {
@@ -259,62 +377,154 @@ struct V2LearnView: View {
         return path.domain ?? path.title
     }
 
-    // MARK: - Chips
+    // MARK: - Top Creators strip (mirror of DiscoverView.creatorsSection)
 
-    private var chipsRow: some View {
+    private var topCreatorsStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(LearnFilter.allCases) { filter in
-                    let isActive = activeFilter == filter
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.18)) {
-                            activeFilter = filter
+            LazyHStack(spacing: 16) {
+                ForEach(vm.topCreators) { creator in
+                    Button { openCreator(creator) } label: {
+                        VStack(spacing: 8) {
+                            ZStack {
+                                Circle()
+                                    .fill(ColorTokens.surfaceElevated)
+                                    .frame(width: 56, height: 56)
+
+                                if let pic = creator.profilePicture, let url = URL(string: pic) {
+                                    AsyncImage(url: url) { phase in
+                                        if case .success(let image) = phase {
+                                            image.resizable().aspectRatio(contentMode: .fill)
+                                                .frame(width: 50, height: 50)
+                                                .clipShape(Circle())
+                                        } else {
+                                            Text(creator.initials)
+                                                .font(.system(size: 18, weight: .bold))
+                                                .foregroundStyle(creator.tier?.color ?? ColorTokens.gold)
+                                        }
+                                    }
+                                } else {
+                                    Text(creator.initials)
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundStyle(creator.tier?.color ?? ColorTokens.gold)
+                                }
+
+                                Circle()
+                                    .stroke(creator.tier?.color ?? ColorTokens.textTertiary, lineWidth: 2)
+                                    .frame(width: 56, height: 56)
+                            }
+
+                            Text(creator.firstName)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+
+                            if let tier = creator.tier {
+                                Text(tier.displayName)
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(tier.color)
+                            }
                         }
-                    } label: {
-                        Text(filter.rawValue)
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(isActive ? ColorTokens.background : ColorTokens.textPrimary)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(
-                                Capsule().fill(
-                                    isActive ? ColorTokens.gold : ColorTokens.surface
-                                )
-                            )
-                            .overlay(
-                                Capsule().strokeBorder(
-                                    isActive ? .clear : V2Theme.cardBorder,
-                                    lineWidth: 1
-                                )
-                            )
+                        .frame(width: 70)
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-        .padding(.bottom, 6)
     }
 
-    // MARK: - Rail header
+    // MARK: - Picked For You rail (horizontal cards with reason eyebrow)
 
-    private func railHeader(_ title: String, eyebrow: Bool = false) -> some View {
-        HStack {
-            if eyebrow {
-                Text(title).v2Eyebrow()
-            } else {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(ColorTokens.textPrimary)
+    private func pickedForYouRail(cards: [V2LearnViewModel.MadeForYouCard]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 12) {
+                ForEach(cards) { card in
+                    Button { openContent(card.content) } label: {
+                        PickedForYouCard(card: card)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-            Spacer()
-            Button { discoverDestination = .init(filter: .none) } label: {
-                Text("See all")
-                    .font(.system(size: 11, weight: .medium))
+        }
+    }
+
+    // MARK: - Gap rail (Discover's gapSection treatment)
+
+    private func gapRail(items: [Content]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: 12) {
+                ForEach(items, id: \.id) { item in
+                    Button { openContent(item) } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(ColorTokens.warning)
+                                if let domain = item.domain {
+                                    Text(domain)
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(ColorTokens.warning)
+                                }
+                                Spacer()
+                            }
+
+                            Text(item.title)
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+
+                            Spacer()
+
+                            Text("Start Learning")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 7)
+                                .background(ColorTokens.gold)
+                                .clipShape(RoundedRectangle(cornerRadius: 7))
+                        }
+                        .padding(12)
+                        .frame(width: 200, height: 140)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(ColorTokens.surface)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(ColorTokens.warning.opacity(0.2), lineWidth: 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    // MARK: - Rail header (with See all)
+
+    private func railHeader(_ title: String, icon: String? = nil, seeAll: @escaping () -> Void) -> some View {
+        HStack(spacing: 6) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 13))
                     .foregroundStyle(ColorTokens.gold)
+            }
+            Text(title)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.white)
+            Spacer()
+            Button(action: seeAll) {
+                HStack(spacing: 2) {
+                    Text("See all")
+                        .font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .foregroundStyle(ColorTokens.gold)
             }
             .buttonStyle(.plain)
         }
-        .padding(.bottom, 8)
+        .padding(.bottom, 10)
     }
 
     // MARK: - Medium rail
@@ -326,8 +536,8 @@ struct V2LearnView: View {
         isNotesRail: Bool = false,
         subtitleBuilder: ((Content) -> String?)? = nil
     ) -> some View {
-        let cardWidth: CGFloat = large ? 180 : 150
-        let thumbHeight: CGFloat = large ? 108 : 90
+        let cardWidth: CGFloat = large ? 200 : 170
+        let thumbHeight: CGFloat = large ? 112 : 96
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(items, id: \.id) { item in
@@ -365,10 +575,15 @@ struct V2LearnView: View {
         )
     }
 
-    /// Path tap routes to Discover. There's no path-detail view yet, and
-    /// DiscoverView is where learning paths live today. Matches existing pattern.
+    /// Path tap routes to Discover (paths section).
     private func openPath(_ path: LearningPath) {
-        discoverDestination = .init(filter: .topic)
+        discoverDestination = .init(filter: .section(.paths))
+    }
+
+    /// Creator tap opens Discover scrolled to the creators strip — there's no
+    /// in-line CreatorProfileView push from this sheet-presented context.
+    private func openCreator(_ creator: Creator) {
+        discoverDestination = .init(filter: .creator)
     }
 
     // MARK: - Browse utility links
@@ -563,83 +778,75 @@ private struct EditorialHeroCard: View {
     }
 }
 
-// MARK: - Made For You row card
+// MARK: - Picked For You card
 
-/// Horizontal row used in the vertical Made-For-You stack. Left: 90×60 thumb.
-/// Right: title, creator, reason eyebrow + body line, duration.
-private struct MadeForYouRowCard: View {
+/// Discover-style content card with the per-card reason as a gold eyebrow
+/// above the title. Preserves the distinct-reason buckets from the VM.
+private struct PickedForYouCard: View {
     let card: V2LearnViewModel.MadeForYouCard
 
+    private var content: Content { card.content }
+
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            thumbnail
-                .frame(width: 90, height: 60)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                )
+        VStack(alignment: .leading, spacing: 8) {
+            ZStack(alignment: .bottomLeading) {
+                thumbnail
+                    .frame(width: 200, height: 112)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .overlay(alignment: .topLeading) {
+                contentTypeBadge(content.contentType)
+                    .padding(6)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if !content.overlayBadge.isEmpty {
+                    Text(content.overlayBadge)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.75))
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .padding(6)
+                }
+            }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(card.reasonTag)
-                    .font(.system(size: 9, weight: .bold))
-                    .tracking(1.0)
-                    .foregroundStyle(ColorTokens.gold)
-                    .lineLimit(1)
+            // Reason eyebrow (gold) — this is what differentiates the card.
+            Text(card.reasonTag)
+                .font(.system(size: 9, weight: .bold))
+                .tracking(1.0)
+                .foregroundStyle(ColorTokens.gold)
+                .lineLimit(1)
 
-                Text(card.content.title)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(ColorTokens.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
+            Text(content.title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(width: 200, alignment: .leading)
 
-                HStack(spacing: 6) {
-                    if let creator = card.content.creatorId?.displayName, !creator.isEmpty {
-                        Text(creator)
-                            .font(.system(size: 11))
-                            .foregroundStyle(ColorTokens.textTertiary)
-                            .lineLimit(1)
-                        Text("·")
-                            .foregroundStyle(ColorTokens.textTertiary)
-                    }
-                    Text(metaLine)
+            HStack(spacing: 4) {
+                if let creator = content.creatorId {
+                    Text(creator.displayName)
                         .font(.system(size: 11))
                         .foregroundStyle(ColorTokens.textTertiary)
                         .lineLimit(1)
                 }
-
-                Text(card.reasonDetail)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .padding(.top, 2)
+                Spacer()
+                if let mins = content.duration.map({ Int(ceil(Double($0) / 60)) }), mins > 0 {
+                    Text("\(mins) min")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
             }
-
-            Spacer(minLength: 0)
+            .frame(width: 200)
         }
-        .padding(12)
-        .background(ColorTokens.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-        )
-    }
-
-    private var metaLine: String {
-        if card.content.contentType == .notes, let p = card.content.pageCount, p > 0 {
-            return "\(p) pages"
-        }
-        if let mins = card.content.duration.map({ Int(ceil(Double($0) / 60)) }), mins > 0 {
-            return "\(mins) min"
-        }
-        return card.content.contentType.rawValue.capitalized
     }
 
     @ViewBuilder
     private var thumbnail: some View {
-        if let urlStr = card.content.thumbnailURL, let url = URL(string: urlStr) {
+        if let urlStr = content.thumbnailURL, let url = URL(string: urlStr) {
             AsyncImage(url: url) { phase in
                 switch phase {
                 case .success(let img):
@@ -656,15 +863,28 @@ private struct MadeForYouRowCard: View {
     private var placeholder: some View {
         LinearGradient(
             colors: [ColorTokens.surfaceElevated, ColorTokens.surface],
-            startPoint: .top, endPoint: .bottom
+            startPoint: .topLeading, endPoint: .bottomTrailing
         )
         .overlay(
-            Image(systemName: card.content.contentType == .notes
-                  ? "doc.text.image.fill"
-                  : "play.fill")
-                .font(.system(size: 16))
-                .foregroundStyle(ColorTokens.gold)
+            Image(systemName: content.contentType == .notes ? "doc.text.image.fill" : "play.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(ColorTokens.gold.opacity(0.5))
         )
+    }
+
+    private func contentTypeBadge(_ type: ContentType) -> some View {
+        HStack(spacing: 3) {
+            Image(systemName: type.badgeIcon)
+                .font(.system(size: 9, weight: .bold))
+            Text(type.badgeLabel)
+                .font(.system(size: 10, weight: .black))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(type.badgeColor)
+        .clipShape(Capsule())
+        .shadow(color: .black.opacity(0.5), radius: 3, y: 1)
     }
 }
 
@@ -716,8 +936,7 @@ private struct PathSpotlightCard: View {
                 }
                 .foregroundStyle(ColorTokens.background.opacity(0.9))
 
-                // Progress bar — 0% until per-path progress is plumbed.
-                GeometryReader { geo in
+                GeometryReader { _ in
                     ZStack(alignment: .leading) {
                         Capsule().fill(ColorTokens.background.opacity(0.25))
                         Capsule()

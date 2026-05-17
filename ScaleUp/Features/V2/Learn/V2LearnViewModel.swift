@@ -15,6 +15,8 @@ final class V2LearnViewModel {
     /// Similar-to-recently-watched (one fetch for the most recent saved item).
     /// Used to pick the "Because you watched" Made-For-You card.
     var similarToRecent: [Content] = []
+    /// Top creators — same source DiscoverView uses (contentService.searchCreators).
+    var topCreators: [Creator] = []
     /// Top gap from the user's diagnostic — used to derive "why this" reasons
     /// on recommendations ("Closes your gap on X").
     var topGap: V2HomeData.TopGap?
@@ -22,6 +24,42 @@ final class V2LearnViewModel {
     var objectiveLabel: String?
     var isLoading = false
     var error: String?
+
+    // MARK: - Filter state (Type + Topic chips at top of Learn)
+
+    /// Selected content type chip — nil means All.
+    var selectedContentType: ContentType?
+    /// Selected topic/domain chip — nil means All.
+    var selectedDomain: String?
+
+    /// Unique domain labels derived from recommendations + trending + gaps.
+    /// Used to render the Topic chip row, mirroring DiscoverView.
+    var availableDomains: [String] {
+        let pool = recommendations + trending + gapFilling + trendingNotes
+        let domains = Set(pool.compactMap { $0.domain })
+        return domains.sorted()
+    }
+
+    /// Apply both Type and Topic chip filters to a content list. nil filter
+    /// means "don't filter on this dimension".
+    func applyChipFilters(_ items: [Content]) -> [Content] {
+        let type = selectedContentType
+        let domain = selectedDomain?.lowercased()
+        guard type != nil || domain != nil else { return items }
+        return items.filter { item in
+            let typeOK = type.map { item.contentType == $0 } ?? true
+            let domainOK = domain.map { (item.domain?.lowercased() ?? "") == $0 } ?? true
+            return typeOK && domainOK
+        }
+    }
+
+    var filteredRecommendations: [Content] { applyChipFilters(recommendations) }
+    var filteredTrending: [Content] { applyChipFilters(trending) }
+    var filteredGapFilling: [Content] { applyChipFilters(gapFilling) }
+    var filteredTrendingNotes: [Content] { applyChipFilters(trendingNotes) }
+    var filteredContinueWatching: [Content] { applyChipFilters(continueWatching) }
+    var filteredNewThisWeek: [Content] { applyChipFilters(newThisWeek) }
+    var filteredHiddenGems: [Content] { applyChipFilters(hiddenGems) }
 
     private let contentService = ContentService()
     private let userService = UserService()
@@ -306,9 +344,11 @@ final class V2LearnViewModel {
         async let gapsTask = (try? await contentService.fetchGapContent()) ?? []
         async let notesTask = (try? await contentService.fetchTrendingNotes()) ?? []
         async let pathsTask = (try? await contentService.exploreLearningPaths(limit: 8)) ?? []
+        // Reuse the same source DiscoverView uses for its Top Creators strip.
+        async let creatorsTask = (try? await contentService.searchCreators(limit: 10)) ?? []
 
-        let (recs, trend, cont, gaps, notes, paths) = await (
-            recsTask, trendingTask, continueTask, gapsTask, notesTask, pathsTask
+        let (recs, trend, cont, gaps, notes, paths, creators) = await (
+            recsTask, trendingTask, continueTask, gapsTask, notesTask, pathsTask, creatorsTask
         )
 
         recommendations = Array(recs.prefix(12))
@@ -320,6 +360,7 @@ final class V2LearnViewModel {
         gapFilling = Array(gaps.prefix(10))
         trendingNotes = Array(notes.prefix(10))
         learningPaths = paths
+        topCreators = creators
 
         // V2 home payload is @MainActor-isolated; await separately so the
         // strict concurrency checker is happy (it can't cross-actor an async
