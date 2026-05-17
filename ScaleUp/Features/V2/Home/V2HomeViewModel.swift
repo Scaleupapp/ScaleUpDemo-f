@@ -29,6 +29,9 @@ struct V2HomeData: Codable {
     /// "Get ahead" option once today's set is done.
     let getAheadTasks: [Task]?
     let getAheadWeek: Int?
+    /// Single-paragraph insight from the backend describing what to focus on
+    /// this week and why. Surfaced just below the readiness card.
+    let weeklyInsight: String?
 
     struct Trajectory: Codable {
         let today: Int
@@ -41,6 +44,10 @@ struct V2HomeData: Codable {
         let headline: String?
         /// Curve points the backend returns for the readiness line chart.
         let points: [TrajectoryPoint]?
+        /// "measured" | "estimated" — labels the velocity source on the card.
+        let velocitySource: String?
+        /// Tasks/week calculated from real activity; nil when estimated.
+        let realTasksPerWeek: Double?
 
         struct TrajectoryPoint: Codable, Identifiable {
             let whenLabel: String
@@ -257,7 +264,8 @@ final class V2HomeViewModel {
             trajectory: .init(
                 today: 74, in30Days: 80, atTargetDate: 85,
                 targetReadiness: 80, timelineWeeks: 24, weeklyDelta: 6,
-                onTrack: true, headline: nil, points: nil
+                onTrack: true, headline: nil, points: nil,
+                velocitySource: "estimated", realTasksPerWeek: nil
             ),
             weekProgress: .init(done: 3, total: 7, week: 11, totalWeeks: 24),
             streak: .init(current: 3, longest: 7),
@@ -300,7 +308,8 @@ final class V2HomeViewModel {
             pendingPriorTasks: nil,
             pendingPriorCount: 0,
             getAheadTasks: nil,
-            getAheadWeek: nil
+            getAheadWeek: nil,
+            weeklyInsight: "Dynamic Programming is your biggest gap this week — you're at 30% readiness on DP vs. 74% overall. One focused session on memoization patterns can close ~6 points and unblock the tree/graph problems that follow in Week 12."
         )
     }
 }
