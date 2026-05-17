@@ -11,6 +11,8 @@ extension Notification.Name {
     static let v2QuizCompleted = Notification.Name("v2QuizCompleted")
     /// userInfo: ["sessionId": String]
     static let v2InterviewCompleted = Notification.Name("v2InterviewCompleted")
+    /// userInfo: [] — posted by ChallengeViewModel when a competition session ends.
+    static let v2CompetitionCompleted = Notification.Name("v2CompetitionCompleted")
     /// userInfo: ["taskId": String] — emitted by the router after a plan task is marked complete.
     static let v2PlanTaskCompleted = Notification.Name("v2PlanTaskCompleted")
 }
@@ -109,6 +111,7 @@ final class V2TaskRouter {
 
         case "compete":
             route = .competition
+            setActiveTask(taskId: taskId, taskType: taskType, resourceId: nil)
 
         case "mock_exam", "reflection", "notes_create", "conversation":
             // Phase 2: route to dedicated v2 detail screens. For now, show stub.
@@ -146,6 +149,11 @@ final class V2TaskRouter {
             // can't match on resourceId — but only one interview sheet is open
             // at a time, so an evaluated interview completes the active task.
             Task { @MainActor in self?.handleCompletion(types: ["interview"], resourceId: nil) }
+        }
+        center.addObserver(forName: .v2CompetitionCompleted, object: nil, queue: .main) { [weak self] _ in
+            // Competition sessions have no pre-baked resourceId in the plan task —
+            // match by type only (only one compete sheet is open at a time).
+            Task { @MainActor in self?.handleCompletion(types: ["compete"], resourceId: nil) }
         }
     }
 
