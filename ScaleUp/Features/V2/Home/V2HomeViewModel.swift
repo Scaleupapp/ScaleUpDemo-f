@@ -53,6 +53,21 @@ struct V2HomeData: Codable {
         /// Tasks/week calculated from real activity; nil when estimated.
         let realTasksPerWeek: Double?
 
+        // MARK: Adaptive trajectory fields (all optional — absent in legacy responses)
+
+        /// "ahead" | "on_track" | "behind" — supersedes onTrack in display.
+        let paceCategory: String?
+        /// Weeks at current pace until hitting targetReadiness.
+        let weeksToTarget: Int?
+        /// ISO 8601 date string when projected to hit target. Nil when delta=0.
+        /// Stored as String to avoid needing a custom JSONDecoder date strategy.
+        let projectedTargetDate: String?
+        /// Non-null when paceCategory='ahead' and original timeline exists.
+        /// How many weeks ahead of the original plan.
+        let earlyByWeeks: Int?
+        /// True when currentReadiness >= targetReadiness.
+        let targetHit: Bool?
+
         struct TrajectoryPoint: Codable, Identifiable {
             let whenLabel: String
             let readiness: Int
@@ -269,7 +284,10 @@ final class V2HomeViewModel {
                 today: 74, in30Days: 80, atTargetDate: 85,
                 targetReadiness: 80, timelineWeeks: 24, weeklyDelta: 6,
                 onTrack: true, headline: nil, points: nil,
-                velocitySource: "estimated", realTasksPerWeek: nil
+                velocitySource: "estimated", realTasksPerWeek: nil,
+                paceCategory: "on_track", weeksToTarget: 12,
+                projectedTargetDate: "2026-08-17T00:00:00Z",
+                earlyByWeeks: nil, targetHit: false
             ),
             weekProgress: .init(done: 3, total: 7, week: 11, totalWeeks: 24),
             streak: .init(current: 3, longest: 7),

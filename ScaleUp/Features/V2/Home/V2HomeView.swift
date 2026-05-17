@@ -211,18 +211,12 @@ struct V2HomeView: View {
         }()
 
         return VStack(alignment: .leading, spacing: 12) {
-            // ── Row 1: eyebrow + on-track badge ──
+            // ── Row 1: eyebrow + pace badge ──
             HStack(alignment: .firstTextBaseline) {
                 Text("READINESS")
                     .v2Eyebrow()
                 Spacer()
-                HStack(spacing: 4) {
-                    Image(systemName: traj.onTrack ? "arrow.up.right" : "exclamationmark.triangle")
-                        .font(.system(size: 9, weight: .bold))
-                    Text(traj.onTrack ? "On track" : "Behind pace")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .foregroundStyle(traj.onTrack ? ColorTokens.success : ColorTokens.warning)
+                paceBadge(traj: traj)
             }
 
             // ── Row 2: hero number + target ──
@@ -317,6 +311,9 @@ struct V2HomeView: View {
             Divider()
                 .background(V2Theme.cardBorder)
 
+            // ── Projected ETA line — adaptive pace context ──
+            projectedEtaLine(traj: traj)
+
             // ── Footer row: week progress + streak + velocity ──
             HStack(spacing: 0) {
                 if let wp = weekProgress {
@@ -387,6 +384,100 @@ struct V2HomeView: View {
             RoundedRectangle(cornerRadius: V2Theme.cardRadius)
                 .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
         )
+    }
+
+    // MARK: - Pace badge (top-right of readiness card)
+
+    @ViewBuilder
+    private func paceBadge(traj: V2HomeData.Trajectory) -> some View {
+        // Fall back to the legacy onTrack bool when the new field is absent.
+        let category = traj.paceCategory ?? (traj.onTrack ? "on_track" : "behind")
+        switch category {
+        case "ahead":
+            HStack(spacing: 4) {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 10, weight: .bold))
+                Text("Ahead of pace")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(ColorTokens.success)
+        case "behind":
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 10, weight: .bold))
+                Text("Behind pace")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(ColorTokens.warning)
+        default: // "on_track"
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 10, weight: .bold))
+                Text("On track")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(ColorTokens.success)
+        }
+    }
+
+    // MARK: - Projected ETA line (below chart, above footer)
+
+    @ViewBuilder
+    private func projectedEtaLine(traj: V2HomeData.Trajectory) -> some View {
+        if traj.targetHit == true {
+            // Already at or above target — prompt for a stretch goal
+            HStack(spacing: 6) {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("You've hit your \(traj.targetReadiness)% goal. Push for more?")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .padding(.top, 6)
+        } else if traj.paceCategory == "ahead",
+                  let early = traj.earlyByWeeks, early > 0,
+                  let etaString = formattedEta(traj.projectedTargetDate) {
+            HStack(spacing: 6) {
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.success)
+                Text("At your pace, hitting \(traj.targetReadiness)% by \(etaString) — \(early) week\(early == 1 ? "" : "s") early")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.success)
+            }
+            .padding(.top, 6)
+        } else if traj.paceCategory == "behind",
+                  let weeks = traj.weeksToTarget, weeks > 0 {
+            HStack(spacing: 6) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.warning)
+                Text("At your pace, hitting \(traj.targetReadiness)% in ~\(weeks) week\(weeks == 1 ? "" : "s")")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(ColorTokens.warning)
+            }
+            .padding(.top, 6)
+        }
+        // on_track with no special signal: render nothing — the chart speaks for itself
+    }
+
+    /// Parses an ISO 8601 date string into a short "MMM d" display string (e.g., "Aug 17").
+    /// Returns nil on parse failure — callers gate display on non-nil result.
+    private func formattedEta(_ isoString: String?) -> String? {
+        guard let s = isoString else { return nil }
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let date = iso.date(from: s) ?? {
+            // Retry without fractional seconds (backend may omit them)
+            let plain = ISO8601DateFormatter()
+            plain.formatOptions = [.withInternetDateTime]
+            return plain.date(from: s)
+        }()
+        guard let d = date else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f.string(from: d)
     }
 
     @ViewBuilder
