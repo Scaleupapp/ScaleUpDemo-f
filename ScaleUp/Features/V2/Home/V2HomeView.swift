@@ -84,6 +84,20 @@ struct V2HomeView: View {
             Text(data.statusLine)
                 .font(V2Theme.body)
                 .foregroundStyle(ColorTokens.textSecondary)
+
+            // Action hint — tells the user exactly what to do next and why.
+            if let topTask = vm.visibleTasks.first {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("Start with \(topTask.title.lowercased()) — \(topTask.whyText)")
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .lineLimit(2)
+                }
+                .padding(.top, 4)
+            }
         }
         .padding(.bottom, 20)
 
@@ -206,6 +220,39 @@ struct V2HomeView: View {
         }
     }
 
+    private func difficultyLabel(_ diff: String) -> String {
+        switch diff.lowercased() {
+        case "easy":   return "Easy"
+        case "medium": return "Standard"
+        case "hard":   return "Challenging"
+        default:       return diff.capitalized
+        }
+    }
+
+    private func typeLabelFor(_ taskType: String) -> String {
+        switch taskType.lowercased() {
+        case "quiz":        return "QUIZ"
+        case "compete":     return "COMPETE"
+        case "interview":   return "MOCK INTERVIEW"
+        case "watch":       return "WATCH"
+        case "read":        return "READ"
+        case "external":    return "EXTERNAL LINK"
+        case "reflection":  return "REFLECTION"
+        default:            return taskType.uppercased()
+        }
+    }
+
+    private func typeColorFor(_ taskType: String) -> Color {
+        switch taskType.lowercased() {
+        case "quiz":        return ColorTokens.gold
+        case "compete":     return ColorTokens.warning
+        case "interview":   return ColorTokens.info
+        case "watch":       return ColorTokens.success
+        case "read":        return ColorTokens.textSecondary
+        default:            return ColorTokens.textTertiary
+        }
+    }
+
     // MARK: - Trajectory card — readiness curve + week progress
 
     private func trajectoryCard(traj: V2HomeData.Trajectory, weekProgress: V2HomeData.WeekProgress?) -> some View {
@@ -246,12 +293,23 @@ struct V2HomeView: View {
                 Text("\(traj.targetReadiness)%")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
+                    .contextMenu {
+                        Text("80% is the readiness threshold to crush your goal at a high success rate. Higher is great but not required — most top performers don't max every competency.")
+                    }
                 Text("target")
                     .font(.system(size: 11))
                     .foregroundStyle(ColorTokens.textTertiary)
             }
 
             // Curve
+            HStack {
+                Text("% ready over time")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Spacer()
+            }
+            .padding(.bottom, 2)
+
             Chart {
                 ForEach(Array(points.enumerated()), id: \.offset) { idx, point in
                     AreaMark(
@@ -414,6 +472,10 @@ struct V2HomeView: View {
                 .buttonStyle(.plain)
 
                 VStack(alignment: .leading, spacing: 4) {
+                    Text(typeLabelFor(task.taskType))
+                        .font(.system(size: 9, weight: .bold))
+                        .tracking(0.8)
+                        .foregroundStyle(typeColorFor(task.taskType))
                     HStack(spacing: 6) {
                         Text(task.icon)
                         Text(task.title)
@@ -423,7 +485,7 @@ struct V2HomeView: View {
                     HStack(spacing: 8) {
                         Text("\(task.durationMin) min")
                         if !task.subtitle.isEmpty { Text("· \(task.subtitle)") }
-                        Text("· \(task.difficulty.capitalized)")
+                        Text("· \(difficultyLabel(task.difficulty))")
                             .foregroundStyle(difficultyColor(task.difficulty))
                     }
                     .font(.system(size: 11))
@@ -503,11 +565,15 @@ struct V2HomeView: View {
                     .font(.system(size: 14))
 
                 VStack(alignment: .leading, spacing: 1) {
+                    Text(typeLabelFor(task.taskType))
+                        .font(.system(size: 8, weight: .bold))
+                        .tracking(0.7)
+                        .foregroundStyle(typeColorFor(task.taskType))
                     Text(task.title)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(ColorTokens.textPrimary)
                         .lineLimit(1)
-                    Text("\(task.durationMin) min · \(task.difficulty.capitalized)")
+                    Text("\(task.durationMin) min · \(difficultyLabel(task.difficulty))")
                         .font(.system(size: 10))
                         .foregroundStyle(ColorTokens.textTertiary)
                 }
