@@ -48,7 +48,9 @@ struct V2LearnView: View {
         .task { await vm.load() }
         .sheet(isPresented: $showDiscover) {
             NavigationStack {
-                DiscoverView()
+                DiscoverView(
+                    initialSearchQuery: discoverInitialQuery.isEmpty ? nil : discoverInitialQuery
+                )
                     .navigationTitle("Discover")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
