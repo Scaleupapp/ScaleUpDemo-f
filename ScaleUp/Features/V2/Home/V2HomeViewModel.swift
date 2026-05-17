@@ -137,12 +137,19 @@ final class V2HomeViewModel {
     /// while the network call settles.
     private var pendingSkips: Set<String> = []
 
+    /// taskIds the user has tapped Complete on this session — hidden
+    /// optimistically before the server round-trip resolves.
+    private var pendingCompletes: Set<String> = []
+
     /// Set true only in #Preview / debug.
     var usePreviewSample = false
 
-    /// The tasks to actually render — today's set minus optimistic skips.
+    /// The tasks to actually render — today's set minus optimistic skips and
+    /// optimistic completes.
     var visibleTasks: [V2HomeData.Task] {
-        (data?.todaysTasks ?? []).filter { !pendingSkips.contains($0.taskId) }
+        (data?.todaysTasks ?? []).filter {
+            !pendingSkips.contains($0.taskId) && !pendingCompletes.contains($0.taskId)
+        }
     }
 
     func load() async {
@@ -156,6 +163,7 @@ final class V2HomeViewModel {
             let response: V2APIResponse<V2HomeData> = try await V2APIClient.shared.get("/plan/today")
             data = response.data
             pendingSkips.removeAll()
+            pendingCompletes.removeAll()
         } catch let e {
             self.error = Self.friendlyError(e)
             self.data = nil
@@ -184,16 +192,19 @@ final class V2HomeViewModel {
         }
     }
 
-    /// Tap-completion — flips the plan task to complete (called when the user
-    /// finishes a task in its detail screen, or via the row's Done affordance).
+    /// Tap-completion — optimistically hides the task immediately, then
+    /// persists to the backend. Rolls back the hide on failure.
     func markComplete(_ taskId: String) async {
+        pendingCompletes.insert(taskId)
         struct Empty: Codable {}
         do {
             let _: V2APIResponse<SkipResponse> =
                 try await V2APIClient.shared.post("/plan/task/\(taskId)/complete", body: Empty())
+            // load() clears pendingCompletes after a successful fetch.
             await load()
         } catch {
-            // Non-fatal — a later load() will reconcile.
+            // Roll back the optimistic hide on failure.
+            pendingCompletes.remove(taskId)
         }
     }
 

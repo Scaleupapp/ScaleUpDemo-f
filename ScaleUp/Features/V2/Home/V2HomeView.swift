@@ -13,6 +13,12 @@ struct V2HomeView: View {
     /// Which task is the expanded hero in the active+next-up deck. Tapping
     /// a "next up" row swaps it into this slot.
     @State private var activeTaskIndex: Int = 0
+    /// Local UI set: taskIds for which the completion button has been tapped.
+    /// Disables the button and flips the icon to a green check immediately —
+    /// separate from pendingCompletes on the VM which controls row visibility.
+    @State private var completing: Set<String> = []
+    /// Controls the info popover on the trajectory card's target %.
+    @State private var showTargetInfo = false
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(V2NavState.self) private var nav
 
@@ -81,22 +87,25 @@ struct V2HomeView: View {
             Text(data.greeting)
                 .font(V2Theme.h1)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text(data.statusLine)
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textSecondary)
 
-            // Action hint — tells the user exactly what to do next and why.
+            // What to do next + why. Single source of truth — replaces the
+            // older "biggest lift" status line which used to contradict this.
             if let topTask = vm.visibleTasks.first {
-                HStack(spacing: 6) {
+                HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "arrow.right.circle.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: 14))
                         .foregroundStyle(ColorTokens.gold)
-                    Text("Start with \(topTask.title.lowercased()) — \(topTask.whyText)")
-                        .font(V2Theme.small)
+                        .padding(.top, 2)
+                    Text("Start with \(topTask.title) — \(topTask.whyText)")
+                        .font(V2Theme.body)
                         .foregroundStyle(ColorTokens.textSecondary)
-                        .lineLimit(2)
                 }
                 .padding(.top, 4)
+            } else {
+                // Day done / brewing / no objective — fall back to backend statusLine
+                Text(data.statusLine)
+                    .font(V2Theme.body)
+                    .foregroundStyle(ColorTokens.textSecondary)
             }
         }
         .padding(.bottom, 20)
@@ -290,12 +299,30 @@ struct V2HomeView: View {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(ColorTokens.textTertiary)
-                Text("\(traj.targetReadiness)%")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(ColorTokens.gold)
-                    .contextMenu {
-                        Text("80% is the readiness threshold to crush your goal at a high success rate. Higher is great but not required — most top performers don't max every competency.")
+                HStack(spacing: 4) {
+                    Text("\(traj.targetReadiness)%")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                    Button { showTargetInfo = true } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11))
+                            .foregroundStyle(ColorTokens.textTertiary)
                     }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showTargetInfo, arrowEdge: .top) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Why \(traj.targetReadiness)%?")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                            Text("80% is the readiness threshold to crush your goal at a high success rate. Higher is great but not required — most top performers don't max every competency. You can keep grinding past 80% if you want.")
+                                .font(.system(size: 13))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: 280)
+                        .presentationCompactAdaptation(.popover)
+                    }
+                }
                 Text("target")
                     .font(.system(size: 11))
                     .foregroundStyle(ColorTokens.textTertiary)
@@ -463,13 +490,18 @@ struct V2HomeView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
                 Button {
+                    guard !completing.contains(task.taskId) else { return }
+                    completing.insert(task.taskId)
                     Task { await vm.markComplete(task.taskId) }
                 } label: {
-                    Image(systemName: "circle")
+                    Image(systemName: completing.contains(task.taskId)
+                          ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 22))
-                        .foregroundStyle(ColorTokens.textTertiary)
+                        .foregroundStyle(completing.contains(task.taskId)
+                                         ? ColorTokens.success : ColorTokens.textTertiary)
                 }
                 .buttonStyle(.plain)
+                .disabled(completing.contains(task.taskId))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(typeLabelFor(task.taskType))
@@ -491,6 +523,7 @@ struct V2HomeView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(ColorTokens.textTertiary)
 
+                    // No lineLimit — the why-text is the explanation the user needs.
                     Text(task.whyText)
                         .font(.system(size: 12))
                         .foregroundStyle(ColorTokens.success)
@@ -553,13 +586,18 @@ struct V2HomeView: View {
         } label: {
             HStack(spacing: 12) {
                 Button {
+                    guard !completing.contains(task.taskId) else { return }
+                    completing.insert(task.taskId)
                     Task { await vm.markComplete(task.taskId) }
                 } label: {
-                    Image(systemName: "circle")
+                    Image(systemName: completing.contains(task.taskId)
+                          ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 18))
-                        .foregroundStyle(ColorTokens.textTertiary)
+                        .foregroundStyle(completing.contains(task.taskId)
+                                         ? ColorTokens.success : ColorTokens.textTertiary)
                 }
                 .buttonStyle(.plain)
+                .disabled(completing.contains(task.taskId))
 
                 Text(task.icon)
                     .font(.system(size: 14))
@@ -693,12 +731,18 @@ struct V2HomeView: View {
         } label: {
             HStack(spacing: 10) {
                 Text(task.icon).font(.system(size: 14))
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(task.title)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(ColorTokens.textPrimary)
-                        .lineLimit(1)
-                    Text("\(task.durationMin) min · \(task.difficulty.capitalized)")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(typeLabelFor(task.taskType))
+                        .font(.system(size: 8, weight: .bold))
+                        .tracking(0.8)
+                        .foregroundStyle(typeColorFor(task.taskType))
+                    HStack(spacing: 6) {
+                        Text(task.title)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                            .lineLimit(1)
+                    }
+                    Text("\(task.durationMin) min · \(difficultyLabel(task.difficulty))")
                         .font(.system(size: 10))
                         .foregroundStyle(ColorTokens.textTertiary)
                 }
