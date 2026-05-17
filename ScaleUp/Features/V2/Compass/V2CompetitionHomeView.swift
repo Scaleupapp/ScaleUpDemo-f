@@ -22,6 +22,7 @@ struct V2CompetitionHomeView: View {
     @State private var cohortPlayedToday: Int = 0
     @State private var loadError: String?
     @State private var showCompetitionHub = false
+    @State private var history: [HistoryItem] = []
 
     /// Auto-refresh interval when status is "building" — the cron seeds at
     /// 00:00 IST, so a user who lands here pre-cron should auto-recover
@@ -63,6 +64,30 @@ struct V2CompetitionHomeView: View {
         let nextLiveEvent: LiveEvent?
     }
 
+    // MARK: - History models
+
+    private struct HistoryItem: Codable, Identifiable {
+        let _id: String
+        let challengeId: String?
+        let title: String
+        let topic: String?
+        let challengeDate: Date?
+        let completedAt: Date?
+        let handicappedScore: Double?
+        let rawScore: Double?
+        let timeTakenSeconds: Int?
+        let isPersonalBest: Bool?
+        var id: String { _id }
+    }
+    private struct HistoryEnvelope: Codable {
+        let success: Bool
+        let data: HistoryPayload?
+    }
+    private struct HistoryPayload: Codable {
+        let items: [HistoryItem]
+        let total: Int?
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -77,6 +102,9 @@ struct V2CompetitionHomeView: View {
                     if let evt = nextLiveEvent {
                         liveEventCard(evt)
                             .padding(.top, 8)
+                    }
+                    if !history.isEmpty {
+                        historySection
                     }
                     Spacer().frame(height: 40)
                 }
@@ -354,14 +382,118 @@ struct V2CompetitionHomeView: View {
          .joined(separator: " ")
     }
 
+    // MARK: - History section
+
+    private var historySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("YOUR PAST COMPETITIONS").v2Eyebrow()
+                Spacer()
+                Text("\(history.count)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            VStack(spacing: 8) {
+                ForEach(history.prefix(10)) { item in
+                    historyRow(item)
+                }
+            }
+            if history.count > 10 {
+                Text("Showing 10 of \(history.count)")
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(.top, 18)
+    }
+
+    private func historyRow(_ item: HistoryItem) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: item.isPersonalBest == true ? "trophy.fill" : "checkmark.circle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(scoreColor(item))
+                .frame(width: 28, height: 28)
+                .background(scoreColor(item).opacity(0.15))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .lineLimit(1)
+                Text(historyMeta(item))
+                    .font(.system(size: 10))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 1) {
+                if let s = item.handicappedScore {
+                    Text("\(Int(s.rounded())) pts")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(scoreColor(item))
+                } else if let r = item.rawScore {
+                    Text("\(Int(r.rounded()))%")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(scoreColor(item))
+                } else {
+                    Text("—")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                if item.isPersonalBest == true {
+                    Text("PB")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+    }
+
+    private func historyMeta(_ item: HistoryItem) -> String {
+        var parts: [String] = []
+        if let topic = item.topic, !topic.isEmpty { parts.append(prettyTopic(topic)) }
+        if let date = item.completedAt {
+            let f = DateFormatter()
+            f.dateFormat = "d MMM"
+            parts.append(f.string(from: date))
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func scoreColor(_ item: HistoryItem) -> Color {
+        // Prefer handicappedScore; fall back to rawScore (0–100 scale).
+        let score = item.handicappedScore ?? item.rawScore
+        guard let s = score else { return ColorTokens.textTertiary }
+        // handicappedScore sits on a ~0–35 scale; rawScore on 0–100.
+        // Use rawScore thresholds when handicappedScore absent.
+        let threshold: (Double, Double) = item.handicappedScore != nil ? (20, 10) : (70, 40)
+        if s >= threshold.0 { return ColorTokens.success }
+        if s >= threshold.1 { return ColorTokens.gold }
+        return ColorTokens.warning
+    }
+
     // MARK: - Network
 
     private func load() async {
         if status != .building { status = .loading }
         do {
-            // Competition routes live under /api/v1/competition (singular, v1)
-            // even though they're consumed by v2 surfaces.
-            let env: V1Envelope = try await V2APIClient.shared.getV1("/competition/relevant")
+            // Fetch /competition/relevant and /competition/history concurrently.
+            async let relevantFetch: V1Envelope = V2APIClient.shared.getV1("/competition/relevant")
+            async let historyFetch: HistoryEnvelope = V2APIClient.shared.getV1("/competition/history?limit=20")
+
+            let env = try await relevantFetch
+            // History is non-fatal — swallow errors so relevant still renders.
+            if let histEnv = try? await historyFetch {
+                history = histEnv.data?.items ?? []
+            }
+
             guard let data = env.data else {
                 status = .building
                 return
