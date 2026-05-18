@@ -45,6 +45,10 @@ struct V2YouOverview: Codable {
     struct FlagsBlock: Codable {
         let isCreator: Bool
         let isAdmin: Bool
+        // New role-aware fields (backend commit 01f707c)
+        let role: String?
+        let creatorTier: String?
+        let applicationStatus: String?
     }
 }
 
@@ -159,6 +163,24 @@ final class V2YouViewModel {
     var analyticsLoading = false
     var analyticsError: String?
 
+    /// Creator-only profile (tier, stats, etc.) — loaded after overview when role==creator.
+    var creatorStats: CreatorProfileData?
+
+    /// Convenience derived from the freshly-loaded flags. Defaults gracefully
+    /// when the new fields are missing (e.g. older backend response).
+    var role: String {
+        if let r = data?.flags.role, !r.isEmpty { return r }
+        if data?.flags.isAdmin == true { return "admin" }
+        if data?.flags.isCreator == true { return "creator" }
+        return "consumer"
+    }
+
+    var isCreatorRole: Bool { role == "creator" }
+    var isAdminRole: Bool { role == "admin" }
+    var isConsumerOrContributor: Bool { role == "consumer" || role == "contributor" }
+    var applicationStatus: String? { data?.flags.applicationStatus }
+    var creatorTier: String? { data?.flags.creatorTier }
+
     func load() async {
         isLoading = true
         error = nil
@@ -170,6 +192,16 @@ final class V2YouViewModel {
             self.data = nil
         }
         isLoading = false
+
+        // After overview, load creator stats if we're a creator.
+        if isCreatorRole {
+            await loadCreatorStats()
+        }
+    }
+
+    func loadCreatorStats() async {
+        let service = CreatorService()
+        creatorStats = try? await service.fetchMyProfile()
     }
 
     func loadAnalytics() async {

@@ -1,15 +1,32 @@
 import SwiftUI
 
-/// V2 "You" Tab — replaces v1 Profile + Progress.
+/// V2 "You" Tab — full profile + library + role-aware affordances.
 ///
-/// Above-fold: avatar + readiness ring + 4 facts (week / streak / top gap / time).
-/// Below-fold: collapsed sections (Plan, Progress, Objectives, Compass, Content, Settings).
+/// Top: header (avatar + name + username + bio + follower counts) + readiness ring + week/streak/gap stats.
+/// Middle: My Library chip strip + My Learning NavigationLink rows.
+/// Below: optional UserInference panel, role-gated Creator Hub / Admin Tools, Become-a-Creator card,
+/// Settings row, footer.
 struct V2YouView: View {
     @State private var vm = V2YouViewModel()
-    @State private var path = NavigationPath()
+    @Environment(AppState.self) private var appState
+    @Environment(ObjectiveContext.self) private var objectiveContext
+
+    // Sheet/state
+    @State private var showEditProfile = false
+    @State private var followListMode: ProfileTabView.FollowListMode = .followers
+    @State private var showFollowList = false
+    @State private var librarySheet: V2YouLibraryTab?
+    @State private var showCreatorApp = false
+    @State private var showCreateContent = false
+    @State private var showAppStatus = false
+
+    // Inference panel
+    @State private var inferences: [UserInference] = []
+    @State private var inferencesExpanded = false
+    private let inferenceService = UserInferenceService()
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             ScrollView {
                 if vm.isLoading && vm.data == nil {
                     loadingState
@@ -20,12 +37,47 @@ struct V2YouView: View {
                 }
             }
             .background(ColorTokens.background.ignoresSafeArea())
-            .navigationDestination(for: V2YouRoute.self) { route in
-                V2YouSectionDestination(route: route)
+        }
+        .task {
+            await vm.load()
+            await loadInferences()
+        }
+        .refreshable {
+            await vm.load()
+            await loadInferences()
+        }
+        // Re-inject env on every sheet — v1 views read AppState / ObjectiveContext
+        // directly and SwiftUI doesn't reliably propagate @Observable across sheets.
+        .sheet(isPresented: $showEditProfile) {
+            if let user = appState.currentUser {
+                EditProfileSheet(user: user) { updated in
+                    appState.currentUser = updated
+                }
+                .environment(appState)
             }
         }
-        .task { await vm.load() }
-        .refreshable { await vm.load() }
+        .sheet(isPresented: $showFollowList) {
+            if let user = appState.currentUser {
+                FollowListSheet(userId: user.id, mode: followListMode)
+                    .environment(appState)
+            }
+        }
+        .sheet(item: $librarySheet) { tab in
+            V2YouLibrarySheet(tab: tab)
+                .environment(appState)
+                .environment(objectiveContext)
+        }
+        .sheet(isPresented: $showCreatorApp) {
+            CreatorApplicationView { _ in
+                Task { await vm.load() }
+            }
+            .environment(appState)
+        }
+        .sheet(isPresented: $showCreateContent) {
+            CreateContentView()
+                .environment(appState)
+                .environment(objectiveContext)
+        }
     }
 
     // MARK: - Loaded content
@@ -33,25 +85,57 @@ struct V2YouView: View {
     @ViewBuilder
     private func loadedContent(data: V2YouOverview) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            headerProfile(user: data.user)
+            headerProfile(data: data)
 
             readinessRing(readiness: data.readiness)
                 .padding(.vertical, 20)
 
             statsBlock(data: data)
 
-            Divider().background(V2Theme.cardBorder).padding(.vertical, 18)
+            sectionDivider.padding(.vertical, 18)
 
-            Text("More about you".uppercased())
-                .font(.system(size: 10, weight: .semibold)).tracking(0.8)
-                .foregroundStyle(ColorTokens.textTertiary)
-                .padding(.bottom, 6)
+            // MY LIBRARY
+            sectionLabel("My library")
+            libraryStrip
+                .padding(.bottom, 16)
 
-            sectionsList(weekProgress: data.weekProgress, isCreator: data.flags.isCreator, isAdmin: data.flags.isAdmin)
+            // MY LEARNING
+            sectionLabel("My learning")
+            learningRows(weekProgress: data.weekProgress)
 
-            if !data.flags.isCreator {
-                creatorCTA
+            // Inference panel (collapsible)
+            if !inferences.isEmpty {
+                sectionDivider.padding(.vertical, 18)
+                inferencePanel
             }
+
+            // Role-gated sections
+            if vm.isCreatorRole {
+                sectionDivider.padding(.vertical, 18)
+                creatorHubSection
+            }
+
+            if vm.isAdminRole {
+                sectionDivider.padding(.vertical, 18)
+                adminToolsSection
+            }
+
+            // Become creator / application status
+            if vm.isConsumerOrContributor {
+                if vm.applicationStatus == nil {
+                    becomeCreatorCard
+                        .padding(.top, 18)
+                } else if let status = vm.applicationStatus, status != "approved" {
+                    applicationStatusCard(status: status)
+                        .padding(.top, 18)
+                }
+            }
+
+            // Settings row + footer
+            sectionDivider.padding(.vertical, 18)
+            settingsRow
+            footerView
+                .padding(.top, 14)
 
             Spacer().frame(height: 100)
         }
@@ -59,31 +143,128 @@ struct V2YouView: View {
         .padding(.top, 16)
     }
 
-    private func headerProfile(user: V2YouOverview.UserBlock) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(colors: [ColorTokens.surfaceElevated, ColorTokens.surface], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 56, height: 56)
-                if let urlStr = user.avatarURL, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { img in
-                        img.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Text(user.initial).font(.system(size: 22, weight: .bold)).foregroundStyle(ColorTokens.gold)
+    // MARK: - Header
+
+    @ViewBuilder
+    private func headerProfile(data: V2YouOverview) -> some View {
+        let user = data.user
+        let bio = appState.currentUser?.bio
+        let username = appState.currentUser?.username
+
+        VStack(alignment: .leading, spacing: 10) {
+            // Avatar + name + settings gear
+            Button {
+                Haptics.selection()
+                showEditProfile = true
+            } label: {
+                HStack(spacing: 14) {
+                    avatar(user: user)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(user.name)
+                            .font(.system(size: 17, weight: .bold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        if let username, !username.isEmpty {
+                            Text("@\(username)")
+                                .font(V2Theme.small)
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        } else {
+                            Text("Edit profile")
+                                .font(V2Theme.small)
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
                     }
-                    .frame(width: 56, height: 56)
-                    .clipShape(Circle())
-                } else {
-                    Text(user.initial).font(.system(size: 22, weight: .bold)).foregroundStyle(ColorTokens.gold)
+                    Spacer()
+                    NavigationLink {
+                        SettingsView()
+                            .environment(appState)
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .padding(8)
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(user.name).font(.system(size: 17, weight: .bold)).foregroundStyle(ColorTokens.textPrimary)
-                Text("Edit profile").font(V2Theme.small).foregroundStyle(ColorTokens.textTertiary)
+            .buttonStyle(.plain)
+
+            if let bio, !bio.isEmpty {
+                Text(bio)
+                    .font(V2Theme.small)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .lineLimit(1)
             }
-            Spacer()
+
+            // Followers / following row
+            HStack(spacing: 0) {
+                Button {
+                    Haptics.selection()
+                    followListMode = .followers
+                    showFollowList = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("\(appState.currentUser?.followersCount ?? 0)")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text("followers")
+                            .font(.system(size: 13))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Text(" · ")
+                    .font(.system(size: 13))
+                    .foregroundStyle(ColorTokens.textTertiary)
+
+                Button {
+                    Haptics.selection()
+                    followListMode = .following
+                    showFollowList = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("\(appState.currentUser?.followingCount ?? 0)")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text("following")
+                            .font(.system(size: 13))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+            }
+            .padding(.top, 2)
         }
     }
+
+    @ViewBuilder
+    private func avatar(user: V2YouOverview.UserBlock) -> some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [ColorTokens.surfaceElevated, ColorTokens.surface], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 56, height: 56)
+            if let urlStr = user.avatarURL, let url = URL(string: urlStr) {
+                AsyncImage(url: url) { img in
+                    img.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Text(user.initial)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .frame(width: 56, height: 56)
+                .clipShape(Circle())
+            } else {
+                Text(user.initial)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+        }
+    }
+
+    // MARK: - Readiness ring & stats
 
     private func readinessRing(readiness: V2YouOverview.ReadinessBlock) -> some View {
         VStack(spacing: 10) {
@@ -120,14 +301,14 @@ struct V2YouView: View {
         VStack(spacing: 0) {
             if let wp = data.weekProgress {
                 statRow(label: "This week", value: "\(wp.done) of \(wp.total) done", accent: true)
-                divider
+                rowDivider
             }
             statRow(label: "Streak", value: streakLabel(data.streak.current))
             if let gap = data.topGap {
-                divider
+                rowDivider
                 statRow(label: "Top gap", value: gap.topic, trailing: "→ \(gap.ctaLabel)")
             }
-            divider
+            rowDivider
             statRow(label: "Time invested", value: "\(data.timeInvested.hours) hour\(data.timeInvested.hours == 1 ? "" : "s")")
         }
     }
@@ -140,8 +321,19 @@ struct V2YouView: View {
         }
     }
 
-    private var divider: some View {
+    private var rowDivider: some View {
         Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+    }
+
+    private var sectionDivider: some View {
+        Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+    }
+
+    private func sectionLabel(_ s: String) -> some View {
+        Text(s.uppercased())
+            .font(.system(size: 10, weight: .semibold)).tracking(0.8)
+            .foregroundStyle(ColorTokens.textTertiary)
+            .padding(.bottom, 8)
     }
 
     private func statRow(label: String, value: String, accent: Bool = false, trailing: String? = nil) -> some View {
@@ -160,69 +352,558 @@ struct V2YouView: View {
         .padding(.vertical, 12)
     }
 
-    private func sectionsList(weekProgress: V2YouOverview.WeekProgressBlock?, isCreator: Bool, isAdmin: Bool) -> some View {
-        VStack(spacing: 0) {
-            sectionRow(icon: "📊", label: "My progress & analytics", route: .progress)
-            if let wp = weekProgress {
-                sectionRow(icon: "🎯", label: "My plan", meta: "Week \(wp.week)", route: .plan)
-            } else {
-                sectionRow(icon: "🎯", label: "My plan", route: .plan)
-            }
-            sectionRow(icon: "🎓", label: "My objectives", meta: "1 active", route: .objectives)
-            sectionRow(icon: "🧭", label: "My Compass activity", route: .compassHistory)
-            sectionRow(icon: "📺", label: "My content", route: .content)
-            sectionRow(icon: "⚙️", label: "Settings", route: .settings)
-            if isCreator {
-                sectionRow(icon: "🎬", label: "Creator hub", route: .creator)
-            }
-            if isAdmin {
-                sectionRow(icon: "🛠️", label: "Admin tools", route: .admin)
+    // MARK: - My Library chip strip
+
+    private var libraryStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                libraryChip(.saved)
+                libraryChip(.liked)
+                libraryChip(.playlists)
+                libraryChip(.history)
             }
         }
     }
 
-    private func sectionRow(icon: String, label: String, meta: String? = nil, route: V2YouRoute) -> some View {
+    private func libraryChip(_ tab: V2YouLibraryTab) -> some View {
         Button {
-            path.append(route)
+            Haptics.selection()
+            librarySheet = tab
         } label: {
-            HStack(spacing: 14) {
-                Text(icon).font(.system(size: 14))
-                    .frame(width: 32, height: 32)
-                    .background(ColorTokens.surface)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                Text(label).font(V2Theme.bodyMedium).foregroundStyle(ColorTokens.textPrimary)
-                Spacer()
-                if let meta = meta {
-                    Text(meta).font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
-                }
-                Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+            HStack(spacing: 6) {
+                Image(systemName: tab.icon).font(.system(size: 12))
+                Text(tab.title).font(.system(size: 13, weight: .semibold))
             }
-            .padding(.vertical, 14)
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
-            }
+            .foregroundStyle(ColorTokens.textPrimary)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .background(ColorTokens.surface)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(V2Theme.cardBorder, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
 
-    private var creatorCTA: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("✦ Become a Creator")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(ColorTokens.gold)
-            Text("Apply to share content with other learners.")
-                .font(V2Theme.small)
+    // MARK: - My Learning rows
+
+    @ViewBuilder
+    private func learningRows(weekProgress: V2YouOverview.WeekProgressBlock?) -> some View {
+        VStack(spacing: 0) {
+            NavigationLink {
+                V2YouObjectivesView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "🎓", label: "My objectives")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                V2PlanDetailView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                if let wp = weekProgress {
+                    row(icon: "🎯", label: "My plan", meta: "Week \(wp.week)")
+                } else {
+                    row(icon: "🎯", label: "My plan")
+                }
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                V2YouAnalyticsView()
+                    .environment(appState)
+            } label: {
+                row(icon: "📊", label: "Progress & analytics")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                MyNotesView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "📝", label: "My notes & flashcards")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                InterviewHistoryView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "🎤", label: "Mock interviews & analytics")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                AITutorHistoryView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "✨", label: "AI Tutor history")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                CompetitionHubView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "🏆", label: "Daily challenges & competition")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                V2CompassHistoryView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "🧭", label: "My Compass activity")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                V2ActivitiesDetailView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "📚", label: "All my activities")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func row(icon: String, label: String, meta: String? = nil) -> some View {
+        HStack(spacing: 14) {
+            Text(icon).font(.system(size: 14))
+                .frame(width: 32, height: 32)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            Text(label).font(V2Theme.bodyMedium).foregroundStyle(ColorTokens.textPrimary)
+            Spacer()
+            if let meta {
+                Text(meta).font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12))
                 .foregroundStyle(ColorTokens.textTertiary)
+        }
+        .padding(.vertical, 14)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+        }
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Inference panel
+
+    private var inferencePanel: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                Haptics.selection()
+                withAnimation(.easeInOut(duration: 0.2)) { inferencesExpanded.toggle() }
+            } label: {
+                HStack {
+                    sectionLabel("How we're personalising for you")
+                    Spacer()
+                    Image(systemName: inferencesExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if inferencesExpanded {
+                VStack(spacing: 10) {
+                    ForEach(inferences) { inf in
+                        inferenceRow(inf)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func inferenceRow(_ inference: UserInference) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.gold)
+                Text(inference.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Spacer(minLength: 0)
+            }
+            Text(inference.description)
+                .font(.system(size: 12))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 8) {
+                Button {
+                    resolveInference(inference, status: .confirmed)
+                } label: {
+                    Label("Sounds right", systemImage: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(ColorTokens.success.opacity(0.18))
+                        .foregroundStyle(ColorTokens.success)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                Button {
+                    resolveInference(inference, status: .dismissed)
+                } label: {
+                    Label("Not really", systemImage: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(ColorTokens.surfaceElevated)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                Spacer(minLength: 0)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ColorTokens.gold.opacity(0.05))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(ColorTokens.gold.opacity(0.25), lineWidth: 1, antialiased: true)
+        .background(ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func loadInferences() async {
+        if let list = try? await inferenceService.list() {
+            self.inferences = list
+        }
+    }
+
+    private func resolveInference(_ inference: UserInference, status: UserInference.InferenceStatus) {
+        Haptics.selection()
+        inferences.removeAll { $0.key == inference.key }
+        Task { _ = try? await inferenceService.resolve(key: inference.key, status: status) }
+    }
+
+    // MARK: - Creator Hub
+
+    private var creatorHubSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sectionLabel("Creator hub")
+            VStack(spacing: 0) {
+                creatorTierHeader
+                if let stats = vm.creatorStats?.stats {
+                    creatorStatsStrip(stats)
+                }
+                creatorActions
+            }
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(V2Theme.cardBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private var creatorTierHeader: some View {
+        let tier = vm.creatorStats?.tier
+        let tierColor = tier?.color ?? ColorTokens.gold
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle().fill(tierColor.opacity(0.15)).frame(width: 44, height: 44)
+                Image(systemName: tier?.icon ?? "star.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(tierColor)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(tier?.displayName ?? "Creator") Creator")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+                if let domain = vm.creatorStats?.domain {
+                    Text(domain).font(.system(size: 12, weight: .medium)).foregroundStyle(tierColor)
+                }
+            }
+            Spacer()
+            if vm.creatorStats?.isVerified == true {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(tierColor)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            LinearGradient(colors: [tierColor.opacity(0.12), ColorTokens.surface],
+                           startPoint: .topLeading, endPoint: .bottomTrailing)
         )
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .padding(.top, 18)
+    }
+
+    private func creatorStatsStrip(_ stats: CreatorStats) -> some View {
+        HStack(spacing: 0) {
+            creatorStat(value: formatStat(stats.totalContent ?? 0), label: "Content")
+            sDivider
+            creatorStat(value: formatStat(stats.totalViews ?? 0), label: "Views")
+            sDivider
+            creatorStat(value: formatStat(stats.totalFollowers ?? 0), label: "Followers")
+            sDivider
+            creatorStat(value: String(format: "%.1f", stats.averageRating ?? 0), label: "Rating")
+        }
+        .padding(.vertical, 12)
+        .background(ColorTokens.surface)
+        .overlay(alignment: .top) { rowDivider }
+        .overlay(alignment: .bottom) { rowDivider }
+    }
+
+    private var sDivider: some View {
+        Rectangle().fill(V2Theme.cardBorder).frame(width: 1, height: 28)
+    }
+
+    private func creatorStat(value: String, label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value).font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            Text(label).font(.system(size: 10, weight: .medium))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .textCase(.uppercase).tracking(0.4)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func formatStat(_ n: Int) -> String {
+        if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
+        if n >= 10_000 { return String(format: "%.0fK", Double(n) / 1_000) }
+        if n >= 1_000 { return String(format: "%.1fK", Double(n) / 1_000) }
+        return "\(n)"
+    }
+
+    private var creatorActions: some View {
+        VStack(spacing: 0) {
+            Button {
+                Haptics.light()
+                showCreateContent = true
+            } label: {
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle().fill(ColorTokens.gold).frame(width: 30, height: 30)
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.black)
+                    }
+                    Text("Create Content")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+
+            rowDivider
+
+            NavigationLink {
+                MyContentView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                creatorActionRow(icon: "rectangle.stack.fill", title: "My Content")
+            }
+            .buttonStyle(.plain)
+
+            if let tier = vm.creatorStats?.tier, (tier == .core || tier == .anchor) {
+                rowDivider
+                NavigationLink {
+                    PendingApplicationsView()
+                        .environment(appState)
+                } label: {
+                    creatorActionRow(icon: "person.badge.clock", title: "Review Applications")
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func creatorActionRow(icon: String, title: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.textTertiary)
+                .frame(width: 30, height: 30)
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(ColorTokens.textPrimary)
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(ColorTokens.textTertiary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+    }
+
+    // MARK: - Admin Tools
+
+    private var adminToolsSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sectionLabel("Admin tools")
+            VStack(spacing: 0) {
+                NavigationLink {
+                    AdminDashboardView().environment(appState)
+                } label: {
+                    creatorActionRow(icon: "shield.fill", title: "Dashboard")
+                }
+                .buttonStyle(.plain)
+                rowDivider
+                NavigationLink {
+                    UserManagementView().environment(appState)
+                } label: {
+                    creatorActionRow(icon: "person.2.fill", title: "User Management")
+                }
+                .buttonStyle(.plain)
+                rowDivider
+                NavigationLink {
+                    CreatorPromotionView().environment(appState)
+                } label: {
+                    creatorActionRow(icon: "arrow.up.circle.fill", title: "Creator Promotions")
+                }
+                .buttonStyle(.plain)
+                rowDivider
+                NavigationLink {
+                    ContentModerationView().environment(appState)
+                } label: {
+                    creatorActionRow(icon: "doc.badge.gearshape.fill", title: "Content Moderation")
+                }
+                .buttonStyle(.plain)
+                rowDivider
+                NavigationLink {
+                    PendingApplicationsView(isAdmin: true).environment(appState)
+                } label: {
+                    creatorActionRow(icon: "person.badge.clock", title: "Creator Applications")
+                }
+                .buttonStyle(.plain)
+                rowDivider
+                NavigationLink {
+                    PendingNotesReviewView().environment(appState)
+                } label: {
+                    creatorActionRow(icon: "doc.badge.clock.fill", title: "Review Notes")
+                }
+                .buttonStyle(.plain)
+            }
+            .background(ColorTokens.surface)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(V2Theme.cardBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    // MARK: - Become creator / application status
+
+    private var becomeCreatorCard: some View {
+        Button {
+            Haptics.selection()
+            showCreatorApp = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 22))
+                    .foregroundStyle(ColorTokens.gold)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Become a Creator")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                    Text("Apply to share content with other learners.")
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity)
+            .background(ColorTokens.gold.opacity(0.05))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(ColorTokens.gold.opacity(0.25), lineWidth: 1, antialiased: true)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func applicationStatusCard(status: String) -> some View {
+        let (label, color, icon): (String, Color, String) = {
+            switch status {
+            case "pending":  return ("Application under review", ColorTokens.warning, "hourglass")
+            case "rejected": return ("Application not accepted", ColorTokens.error, "xmark.circle.fill")
+            default:         return ("Application status", ColorTokens.gold, "info.circle.fill")
+            }
+        }()
+        return Button {
+            Haptics.selection()
+            showCreatorApp = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 22))
+                    .foregroundStyle(color)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Creator Application")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text(label)
+                        .font(V2Theme.small)
+                        .foregroundStyle(color)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity)
+            .background(color.opacity(0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(color.opacity(0.25), lineWidth: 1, antialiased: true)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Settings + footer
+
+    private var settingsRow: some View {
+        NavigationLink {
+            SettingsView()
+                .environment(appState)
+        } label: {
+            row(icon: "⚙️", label: "Settings")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var footerView: some View {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+        let memberSince: String = {
+            guard let date = appState.currentUser?.createdAt else { return "" }
+            let f = DateFormatter()
+            f.dateFormat = "MMM yyyy"
+            return f.string(from: date)
+        }()
+        let suffix = memberSince.isEmpty ? "" : " · Member since \(memberSince)"
+        return Text("ScaleUp · v\(version)\(suffix)")
+            .font(.system(size: 11))
+            .foregroundStyle(ColorTokens.textTertiary)
+            .frame(maxWidth: .infinity, alignment: .center)
     }
 
     // MARK: - Loading / Error states
