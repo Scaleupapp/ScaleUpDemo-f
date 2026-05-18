@@ -512,7 +512,15 @@ struct V2PlanDetailView: View {
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     HStack(spacing: 6) {
+                        Text(taskTypeLabel(task.type))
+                            .font(V2Theme.small)
+                            .fontWeight(.semibold)
+                            .tracking(0.4)
+                            .foregroundStyle(ColorTokens.gold)
                         if let m = task.estimatedMinutes {
+                            Text("·")
+                                .font(V2Theme.small)
+                                .foregroundStyle(ColorTokens.textTertiary)
                             Text("\(m) min")
                                 .font(V2Theme.small)
                                 .foregroundStyle(ColorTokens.textTertiary)
@@ -543,10 +551,12 @@ struct V2PlanDetailView: View {
     }
 
     private func difficultyColor(_ d: String) -> Color {
+        // Mirrors `V2HomeView.difficultyColor` so Home and Plan Detail
+        // render task difficulty with identical color semantics.
         switch d.lowercased() {
         case "hard": return ColorTokens.warning
         case "easy": return ColorTokens.success
-        default:     return ColorTokens.textTertiary
+        default:     return ColorTokens.textSecondary
         }
     }
 
@@ -760,6 +770,23 @@ struct V2PlanDetailView: View {
         case "reflection": return "📝"
         case "compass_review": return "🧭"
         default:          return "•"
+        }
+    }
+
+    /// Uppercase short label for a task type. Mirrors the style used in
+    /// `V2HomeView.heroTaskCard` so Plan Detail and Home feel like one system.
+    private func taskTypeLabel(_ type: String?) -> String {
+        switch (type ?? "").lowercased() {
+        case "watch":      return "VIDEO"
+        case "read":       return "READ"
+        case "listen":     return "LISTEN"
+        case "quiz":       return "QUIZ"
+        case "interview":  return "INTERVIEW"
+        case "compete":    return "CHALLENGE"
+        case "reflection": return "REFLECT"
+        case "external":   return "LINK"
+        case "":           return "TASK"
+        default:           return (type ?? "").uppercased()
         }
     }
 

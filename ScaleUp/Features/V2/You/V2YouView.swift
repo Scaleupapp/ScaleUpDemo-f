@@ -438,15 +438,6 @@ struct V2YouView: View {
             .buttonStyle(.plain)
 
             NavigationLink {
-                AITutorHistoryView()
-                    .environment(appState)
-                    .environment(objectiveContext)
-            } label: {
-                row(icon: "✨", label: "AI Tutor history")
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink {
                 CompetitionHubView()
                     .environment(appState)
                     .environment(objectiveContext)

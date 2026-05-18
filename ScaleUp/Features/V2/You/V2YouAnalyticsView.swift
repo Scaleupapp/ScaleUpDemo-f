@@ -8,6 +8,8 @@ import SwiftUI
 /// recent activity, and achievements. Backed by GET /api/v2/you/analytics.
 struct V2YouAnalyticsView: View {
     @State private var vm = V2YouViewModel()
+    @State private var masteryExpanded = false
+    private let masteryCollapsedLimit = 6
 
     var body: some View {
         ScrollView {
@@ -185,46 +187,92 @@ struct V2YouAnalyticsView: View {
     // MARK: - Mastery map
 
     private func masteryMap(_ entries: [V2YouAnalytics.MasteryEntry]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionTitle("Topic mastery")
+        // Sort ascending by score — weakest first so the user sees actionable gaps.
+        let sorted = entries.sorted { $0.score < $1.score }
+        let visible = masteryExpanded ? sorted : Array(sorted.prefix(masteryCollapsedLimit))
+        let canToggle = sorted.count > masteryCollapsedLimit
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                sectionTitle("Topic mastery")
+                Spacer()
+                Text("\(sorted.count) topics")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
             VStack(spacing: 12) {
-                ForEach(entries) { e in
-                    VStack(alignment: .leading, spacing: 5) {
-                        HStack {
-                            Text(e.topic.capitalized)
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(ColorTokens.textPrimary)
-                                .lineLimit(1)
-                            if e.trend != "stable" {
-                                Image(systemName: e.trend == "improving" ? "arrow.up.right" : "arrow.down.right")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(e.trend == "improving" ? ColorTokens.success : ColorTokens.warning)
-                            }
-                            Spacer()
-                            Text("\(e.score)%")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(masteryColor(e.score))
-                        }
-                        GeometryReader { geo in
-                            ZStack(alignment: .leading) {
-                                Capsule().fill(ColorTokens.surfaceElevated)
-                                Capsule()
-                                    .fill(masteryColor(e.score))
-                                    .frame(width: max(4, geo.size.width * CGFloat(e.score) / 100))
-                            }
-                        }
-                        .frame(height: 6)
-                    }
+                ForEach(visible) { e in
+                    masteryRow(e)
                 }
+            }
+            if canToggle {
+                Button {
+                    Haptics.light()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        masteryExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(masteryExpanded ? "Show less" : "Show all \(sorted.count) topics")
+                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: masteryExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .foregroundStyle(ColorTokens.gold)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(ColorTokens.gold.opacity(0.10))
+                    .clipShape(Capsule())
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
             }
         }
         .cardWrap()
     }
 
+    @ViewBuilder
+    private func masteryRow(_ e: V2YouAnalytics.MasteryEntry) -> some View {
+        let isGap = e.score < 70
+        let isMastered = e.score >= 100
+        let titleColor: Color = isMastered ? ColorTokens.textSecondary : ColorTokens.textPrimary
+        let trackOpacity: Double = isMastered ? 0.55 : 1.0
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                if isGap {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(ColorTokens.warning)
+                }
+                Text(e.topic.capitalized)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(titleColor)
+                    .lineLimit(1)
+                if e.trend != "stable" {
+                    Image(systemName: e.trend == "improving" ? "arrow.up.right" : "arrow.down.right")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(e.trend == "improving" ? ColorTokens.success : ColorTokens.warning)
+                }
+                Spacer()
+                Text("\(e.score)%")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(masteryColor(e.score).opacity(trackOpacity))
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(ColorTokens.surfaceElevated)
+                    Capsule()
+                        .fill(masteryColor(e.score).opacity(trackOpacity))
+                        .frame(width: max(4, geo.size.width * CGFloat(e.score) / 100))
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
     private func masteryColor(_ score: Int) -> Color {
-        if score >= 70 { return ColorTokens.success }
-        if score >= 40 { return ColorTokens.gold }
-        return ColorTokens.warning
+        if score < 70 { return ColorTokens.warning }
+        return ColorTokens.success
     }
 
     // MARK: - Strengths & weaknesses

@@ -380,75 +380,113 @@ struct V2YouObjectivesView: View {
         .padding(.horizontal, Spacing.md)
     }
 
+    @State private var pendingDelete: UserObjective?
+
     private func row(_ obj: UserObjective) -> some View {
-        let isActive = obj.isPrimary == true
-        return Button {
-            if !isActive {
-                Haptics.light()
-                Task { await vm.activateObjective(obj.id, context: objectiveContext) }
-            }
-        } label: {
-            HStack(spacing: Spacing.sm) {
-                Image(systemName: obj.typeIcon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(isActive ? ColorTokens.gold : ColorTokens.textSecondary)
-                    .frame(width: 32, height: 32)
-                    .background(isActive ? ColorTokens.gold.opacity(0.15) : ColorTokens.gold.opacity(0.05))
-                    .clipShape(Circle())
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: Spacing.xs) {
-                        Text(obj.specificTitle)
-                            .font(Typography.bodySmall)
-                            .foregroundStyle(isActive ? ColorTokens.textPrimary : ColorTokens.textSecondary)
-                            .lineLimit(1)
-                        if isActive {
-                            Text("ACTIVE")
-                                .font(Typography.micro)
-                                .foregroundStyle(ColorTokens.gold)
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(ColorTokens.gold.opacity(0.15))
-                                .clipShape(Capsule())
-                        }
+        let isPrimary = obj.isPrimary == true
+        let isActive = obj.status == .active
+        return HStack(spacing: Spacing.sm) {
+            Image(systemName: obj.typeIcon)
+                .font(.system(size: 16))
+                .foregroundStyle(isPrimary ? ColorTokens.gold : ColorTokens.textSecondary)
+                .frame(width: 32, height: 32)
+                .background(isPrimary ? ColorTokens.gold.opacity(0.15) : ColorTokens.gold.opacity(0.05))
+                .clipShape(Circle())
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: Spacing.xs) {
+                    Text(obj.specificTitle)
+                        .font(Typography.bodySmall)
+                        .foregroundStyle(isPrimary ? ColorTokens.textPrimary : ColorTokens.textSecondary)
+                        .lineLimit(1)
+                    if isPrimary {
+                        Text("PRIMARY")
+                            .font(Typography.micro)
+                            .foregroundStyle(ColorTokens.gold)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(ColorTokens.gold.opacity(0.15))
+                            .clipShape(Capsule())
+                    } else if obj.status == .paused {
+                        Text("PAUSED")
+                            .font(Typography.micro)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(ColorTokens.surfaceElevated)
+                            .clipShape(Capsule())
                     }
-                    Text("\(obj.typeDisplay) · \(obj.levelDisplay) · \(obj.timelineDisplay)")
-                        .font(Typography.caption)
-                        .foregroundStyle(ColorTokens.textTertiary)
                 }
-                Spacer()
-                if isActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(ColorTokens.gold)
-                } else {
-                    Text("Switch")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(ColorTokens.gold)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(ColorTokens.gold.opacity(0.1))
-                        .clipShape(Capsule())
-                }
+                Text("\(obj.typeDisplay) · \(obj.levelDisplay) · \(obj.timelineDisplay)")
+                    .font(Typography.caption)
+                    .foregroundStyle(ColorTokens.textTertiary)
             }
-            .padding(Spacing.sm)
-            .background(isActive ? ColorTokens.gold.opacity(0.06) : ColorTokens.surface)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
-            .overlay(
-                RoundedRectangle(cornerRadius: CornerRadius.small)
-                    .stroke(isActive ? ColorTokens.gold.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
+            Spacer()
+            Menu {
+                if isActive && !isPrimary {
+                    Button {
+                        Haptics.light()
+                        Task {
+                            await vm.setPrimary(obj.id)
+                            await vm.loadProfile()
+                        }
+                    } label: { Label("Set as Primary", systemImage: "star.circle") }
+                }
+                if obj.status == .active {
+                    Button {
+                        Haptics.light()
+                        Task {
+                            await vm.pauseObjective(obj.id)
+                            await vm.loadProfile()
+                        }
+                    } label: { Label("Pause", systemImage: "pause.circle") }
+                }
+                if obj.status == .paused {
+                    Button {
+                        Haptics.light()
+                        Task {
+                            await vm.resumeObjective(obj.id)
+                            await vm.loadProfile()
+                        }
+                    } label: { Label("Resume", systemImage: "play.circle") }
+                }
+                Divider()
+                Button(role: .destructive) {
+                    Haptics.light()
+                    pendingDelete = obj
+                } label: { Label("Delete", systemImage: "trash") }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
         }
-        .buttonStyle(.plain)
+        .padding(Spacing.sm)
+        .background(isPrimary ? ColorTokens.gold.opacity(0.06) : ColorTokens.surface)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.small))
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.small)
+                .stroke(isPrimary ? ColorTokens.gold.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
         .padding(.horizontal, Spacing.md)
-        .contextMenu {
-            if obj.status == .active && isActive {
-                Button {
-                    Task { await vm.pauseObjective(obj.id) }
-                } label: { Label("Pause", systemImage: "pause.circle") }
+        .confirmationDialog(
+            "Delete this objective?",
+            isPresented: Binding(
+                get: { pendingDelete?.id == obj.id },
+                set: { if !$0 { pendingDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: pendingDelete
+        ) { target in
+            Button("Delete", role: .destructive) {
+                Task {
+                    await vm.deleteObjective(target.id)
+                    await vm.loadProfile()
+                    pendingDelete = nil
+                }
             }
-            if obj.status == .paused {
-                Button {
-                    Task { await vm.resumeObjective(obj.id) }
-                } label: { Label("Resume", systemImage: "play.circle") }
-            }
+            Button("Cancel", role: .cancel) { pendingDelete = nil }
+        } message: { target in
+            Text("\(target.specificTitle) will be removed along with its plan. This cannot be undone.")
         }
     }
 }
