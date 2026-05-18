@@ -83,17 +83,31 @@ struct ScaleUpApp: App {
                 .trackScreen("phone_verification")
 
         case .onboarding(let step):
-            OnboardingContainerView(initialStep: step, appState: appState)
-                .transition(.opacity)
-                .trackScreen("onboarding_step_\(step)")
+            // v2 users get the rebuilt v2 onboarding flow; v1 users keep the
+            // existing onboarding. The v2 flag is server-driven — no toggle.
+            if V2FeatureFlag.shared.isEnabled {
+                V2OnboardingFlowView()
+                    .transition(.opacity)
+                    .trackScreen("v2_onboarding")
+            } else {
+                OnboardingContainerView(initialStep: step, appState: appState)
+                    .transition(.opacity)
+                    .trackScreen("onboarding_step_\(step)")
+            }
 
         case .diagnostic:
+            // When v2 onboarding is on, the diagnostic still uses v1's pool +
+            // adaptive engine — but on completion we hand off to the v2
+            // calibration insights screen (V2CalibrationInsightsView) instead
+            // of v1's results. DiagnosticContainerView reads the flag and
+            // routes accordingly.
             DiagnosticContainerView()
                 .transition(.opacity)
                 .trackScreen("diagnostic")
 
         case .home:
-            MainTabView()
+            // V2 routing: if the v2 flag is on, show v2 tab IA; otherwise show v1 MainTabView untouched.
+            V2RootView()
                 .transition(.opacity)
         }
     }

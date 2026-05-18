@@ -157,13 +157,16 @@ final class OpenAILiveManager {
         try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.defaultToSpeaker, .allowBluetooth])
         try audioSession.setActive(true)
 
-        guard let url = URL(string: "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview") else {
+        // OpenAI Realtime GA endpoint — the Beta `/v1/realtime?model=…` URL
+        // was sunset in May 2026. GA flow: client connects to the same path
+        // with a model query param and an ephemeral `ek_…` secret in the
+        // Authorization header. No more OpenAI-Beta header.
+        guard let url = URL(string: "wss://api.openai.com/v1/realtime?model=gpt-realtime") else {
             throw OpenAIError.connectionFailed("Invalid URL")
         }
 
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.setValue("realtime=v1", forHTTPHeaderField: "OpenAI-Beta")
 
         let session = URLSession(configuration: .default)
         let ws = session.webSocketTask(with: request)
@@ -200,27 +203,11 @@ final class OpenAILiveManager {
         // Wait for WebSocket handshake + session.created
         try await Task.sleep(for: .seconds(1))
 
-        // Configure session with full system instruction, voice, and audio format
-        let sessionConfig: [String: Any] = [
-            "type": "session.update",
-            "session": [
-                "instructions": systemInstruction,
-                "voice": "alloy",
-                "modalities": ["audio", "text"],
-                "input_audio_format": "pcm16",
-                "output_audio_format": "pcm16",
-                "input_audio_transcription": ["model": "whisper-1"]
-            ] as [String: Any]
-        ]
-        let configData = try JSONSerialization.data(withJSONObject: sessionConfig)
-        try await webSocket?.send(.string(String(data: configData, encoding: .utf8)!))
-
-        // Wait for session.update to be processed
-        try await Task.sleep(for: .milliseconds(500))
-
-        // Trigger AI greeting — no instructions override, use system instruction
+        // GA flow: instructions, voice, and audio formats are baked into the
+        // ephemeral client_secret on the server. No client-side session.update
+        // needed — just kick off the AI greeting.
         try await webSocket?.send(.string(
-            "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
+            "{\"type\":\"response.create\",\"response\":{\"output_modalities\":[\"audio\"]}}"
         ))
     }
 
@@ -235,7 +222,7 @@ final class OpenAILiveManager {
                 "{\"type\":\"conversation.item.create\",\"item\":{\"type\":\"message\",\"role\":\"user\",\"content\":[{\"type\":\"input_text\",\"text\":\"I am ready. Please ask the first interview question.\"}]}}"
             ))
             try? await webSocket?.send(.string(
-                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
+                "{\"type\":\"response.create\",\"response\":{\"output_modalities\":[\"audio\"]}}"
             ))
         }
     }
@@ -276,7 +263,7 @@ final class OpenAILiveManager {
             try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
             try? await Task.sleep(for: .milliseconds(500))
             try? await webSocket?.send(.string(
-                "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
+                "{\"type\":\"response.create\",\"response\":{\"output_modalities\":[\"audio\"]}}"
             ))
         }
     }
@@ -326,7 +313,7 @@ final class OpenAILiveManager {
     private func handleEvent(type: String, json: [String: Any]) async {
         switch type {
 
-        case "response.audio.delta":
+        case "response.output_audio.delta":
             currentResponseHasAudio = true
             if turn != .aiSpeaking { turn = .aiSpeaking }
             if let audioB64 = json["delta"] as? String,
@@ -334,7 +321,7 @@ final class OpenAILiveManager {
                 audioIO.playAudio(audioData)
             }
 
-        case "response.audio_transcript.done":
+        case "response.output_audio_transcript.done":
             if let text = json["transcript"] as? String, !text.isEmpty {
                 // Increment question count based on interviewer turns (reliable fallback)
                 let interviewerCount = transcript.filter { $0.role == "interviewer" }.count
@@ -352,6 +339,10 @@ final class OpenAILiveManager {
                 ))
                 currentQuestion = text
             }
+
+        case "response.output_audio_transcript.delta":
+            // Streamed transcript chunks — handled by the final .done event for now.
+            break
 
         case "conversation.item.input_audio_transcription.completed":
             if let text = json["transcript"] as? String, !text.isEmpty {
@@ -417,17 +408,20 @@ final class OpenAILiveManager {
                     turn = .waitingToAnswer
                 }
             } else if waitingForNextQuestion {
-                // Response had no audio (function call only) — auto-trigger second round
+                // Response had no audio — this is the model's function-call-only
+                // response (e.g. report_question_meta). The model has already been
+                // asked to continue via the response.create we sent in finishAnswering(),
+                // so do NOT fire another response.create here. Doing so was the
+                // root cause of the auto-advancing bug: the model would produce
+                // (a) a function-call response.done and (b) an audio response.done
+                // in one turn, and the (a) branch was incorrectly triggering a brand
+                // new response, causing the next question to fire without user input.
+                //
+                // The audio response.done (currentResponseHasAudio == true) will
+                // arrive next and set turn = .waitingToAnswer via the branch above.
+                // Nothing to do here.
                 analyzingResponse = false
-                turn = .processing
-                Task {
-                    try? await Task.sleep(for: .milliseconds(300))
-                    try? await webSocket?.send(.string("{\"type\":\"input_audio_buffer.commit\"}"))
-                    try? await Task.sleep(for: .milliseconds(300))
-                    try? await webSocket?.send(.string(
-                        "{\"type\":\"response.create\",\"response\":{\"modalities\":[\"audio\",\"text\"]}}"
-                    ))
-                }
+                waitingForNextQuestion = false
             }
             currentResponseHasAudio = false
 

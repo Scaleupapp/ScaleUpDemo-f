@@ -6,6 +6,15 @@ struct CompetitionHubView: View {
     @State private var events: [LiveEvent] = []
     @State private var objectiveTopic: String? = nil
     @State private var isLoading = true
+
+    /// When opened from the V2 flow, pass the user's canonical cohort topic so
+    /// the leaderboard defaults to that topic (and ghost-composer fires) instead
+    /// of "All Topics / global".
+    private let initialTopic: String?
+
+    init(initialTopic: String? = nil) {
+        self.initialTopic = initialTopic
+    }
     @State private var searchText = ""
     @State private var joiningEventId: String?
     @State private var selectedChallenge: DailyChallenge?
@@ -25,9 +34,21 @@ struct CompetitionHubView: View {
         }
     }
 
+    /// True if a challenge/event topic is relevant to the user's objective.
+    /// Mirrors the fuzzy match used to pin `myChallenge`. With no objective
+    /// topic we can't filter, so everything passes through.
+    private func matchesObjective(_ challengeTopic: String) -> Bool {
+        guard let topic = objectiveTopic?.lowercased(), !topic.isEmpty else { return true }
+        let t = challengeTopic.lowercased()
+        return t == topic || t.contains(topic) || topic.contains(t)
+    }
+
     private var otherChallenges: [DailyChallenge] {
-        guard let myId = myChallenge?.id else { return challenges }
-        return challenges.filter { $0.id != myId }
+        // Only surface challenges relevant to the user's objective — not the
+        // entire global catalogue.
+        let relevant = challenges.filter { matchesObjective($0.topic) }
+        guard let myId = myChallenge?.id else { return relevant }
+        return relevant.filter { $0.id != myId }
     }
 
     private var filteredOtherChallenges: [DailyChallenge] {
@@ -42,7 +63,7 @@ struct CompetitionHubView: View {
 
     private var otherEvents: [LiveEvent] {
         let myTopic = objectiveTopic?.lowercased()
-        return events.filter { $0.topic.lowercased() != myTopic }
+        return events.filter { matchesObjective($0.topic) && $0.topic.lowercased() != myTopic }
     }
 
     var body: some View {
@@ -73,8 +94,8 @@ struct CompetitionHubView: View {
                             otherChallengesSection
                         }
 
-                        // Live Events
-                        if !events.isEmpty {
+                        // Live Events — objective-relevant only
+                        if !otherEvents.isEmpty {
                             liveEventsSection
                         } else {
                             nextLiveEventInfo
@@ -140,7 +161,7 @@ struct CompetitionHubView: View {
                         .foregroundStyle(.white)
 
                     NavigationLink {
-                        LeaderboardView()
+                        LeaderboardView(initialTopic: objectiveTopic)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "chart.bar.fill")
@@ -235,7 +256,7 @@ struct CompetitionHubView: View {
 
     private var leaderboardLink: some View {
         NavigationLink {
-            LeaderboardView()
+            LeaderboardView(initialTopic: objectiveTopic)
         } label: {
             HStack(spacing: Spacing.md) {
                 Image(systemName: "chart.bar.fill")
@@ -546,12 +567,16 @@ struct CompetitionHubView: View {
 
     private func loadData() async {
         isLoading = true
+        // Seed from caller immediately so leaderboard links use the right topic
+        // even before the network fetch resolves.
+        if objectiveTopic == nil { objectiveTopic = initialTopic }
         async let c: [DailyChallenge] = { (try? await service.fetchTodayChallenges()) ?? [] }()
         async let e: [LiveEvent] = { (try? await service.fetchUpcomingEvents()) ?? [] }()
         async let t: String? = { try? await service.fetchPrimaryObjectiveTopic() }()
         challenges = await c
         events = await e
-        objectiveTopic = await t
+        // Prefer the authoritative server value; fall back to the caller's hint
+        objectiveTopic = (await t) ?? initialTopic
         isLoading = false
     }
 }

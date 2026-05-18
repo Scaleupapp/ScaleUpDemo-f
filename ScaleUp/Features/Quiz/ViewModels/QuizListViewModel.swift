@@ -269,10 +269,11 @@ final class QuizListViewModel {
 
 // Extension for mock data convenience init
 private extension QuizAttemptQuizInfo {
-    init(id: String, title: String?, type: QuizType?, topic: String?) {
+    init(id: String, title: String?, type: QuizType?, topic: String?, objectiveId: String? = nil) {
         self.id = id
         self.title = title
         self.type = type
         self.topic = topic
+        self.objectiveId = objectiveId
     }
 }

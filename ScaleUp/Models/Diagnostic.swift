@@ -64,6 +64,14 @@ struct DiagnosticOption: Decodable, Identifiable, Hashable, Sendable {
 struct DiagnosticNextQuestion: Decodable, Sendable {
     let question: DiagnosticQuestion?
     let done: Bool?
+    /// Authoritative progress from the server — `total` is the real pool
+    /// size, which the client trusts over any locally-estimated total.
+    let progress: DiagnosticProgress?
+}
+
+struct DiagnosticProgress: Decodable, Sendable {
+    let current: Int?
+    let total: Int?
 }
 
 struct DiagnosticResults: Decodable, Sendable {

@@ -124,6 +124,8 @@ final class ChallengeViewModel {
             self.error = error.localizedDescription
             isComplete = true
         }
+        // Notify the v2 task router so it can mark the matching plan task complete.
+        NotificationCenter.default.post(name: .v2CompetitionCompleted, object: nil)
     }
 
     // MARK: - Background Detection

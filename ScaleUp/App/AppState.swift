@@ -38,20 +38,34 @@ final class AppState {
             currentUser = user
             AnalyticsService.shared.identify(userId: user.id)
 
-            if user.onboardingComplete == true {
-                if user.diagnosticComplete == true {
-                    launchState = .home
-                } else {
-                    launchState = .diagnostic
-                }
-            } else {
-                launchState = .onboarding(step: max(1, user.onboardingStep ?? 1))
-            }
+            // v2 per-user status — server decides v1 vs v2 and whether the
+            // user still needs the v2 onboarding flow. Awaited before
+            // launchState so the first render reflects it.
+            await V2FeatureFlag.shared.syncUserStatus()
+            launchState = resolveLaunchState(for: user)
         } catch {
             await KeychainManager.shared.clearTokens()
         }
 
         isCheckingAuth = false
+    }
+
+    /// Decides the launch state for a freshly-fetched user.
+    ///
+    /// A v2 user who still needs the v2 onboarding flow (new user, or an
+    /// existing user who just accepted v2) is routed into onboarding
+    /// regardless of their v1 onboarding flag — `ScaleUpApp` then renders
+    /// `V2OnboardingFlowView` because the v2 flag is on. Everyone else
+    /// follows the normal v1 progression.
+    private func resolveLaunchState(for user: User) -> AppLaunchState {
+        let flag = V2FeatureFlag.shared
+        if flag.isEnabled && flag.needsV2Onboarding {
+            return .onboarding(step: 1)
+        }
+        if user.onboardingComplete == true {
+            return user.diagnosticComplete == true ? .home : .diagnostic
+        }
+        return .onboarding(step: max(1, user.onboardingStep ?? 1))
     }
 
     // MARK: - Login Success
@@ -64,21 +78,27 @@ final class AppState {
         currentUser = authData.user
         AnalyticsService.shared.identify(userId: authData.user.id)
 
-        if authData.user.onboardingComplete == true {
-            if authData.user.diagnosticComplete == true {
-                launchState = .home
-            } else {
-                launchState = .diagnostic
-            }
-        } else {
-            launchState = .onboarding(step: max(1, authData.user.onboardingStep ?? 1))
-        }
+        // v2 per-user status — server decides v1 vs v2 and whether the user
+        // (a fresh registration is forced onto v2) still needs onboarding.
+        await V2FeatureFlag.shared.syncUserStatus()
+        launchState = resolveLaunchState(for: authData.user)
     }
 
     // MARK: - Onboarding
 
     func advanceOnboarding(to step: Int) {
         launchState = .onboarding(step: step)
+    }
+
+    /// Routes a freshly-registered user into onboarding.
+    ///
+    /// Must sync v2 status FIRST: a brand-new account has no data, so
+    /// `/api/v2/me/status` forces them onto v2 and `ScaleUpApp` then renders
+    /// `V2OnboardingFlowView` instead of v1 onboarding. Skipping this sync
+    /// (setting `.onboarding` directly) is what left new users on v1.
+    func routeFreshRegistrationToOnboarding() async {
+        await V2FeatureFlag.shared.syncUserStatus()
+        launchState = .onboarding(step: 1)
     }
 
     func completeOnboarding() {

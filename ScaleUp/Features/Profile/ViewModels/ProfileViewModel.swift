@@ -146,6 +146,32 @@ final class ProfileViewModel {
         }
     }
 
+    func setPrimary(_ id: String) async {
+        do {
+            try await objectiveService.setPrimary(id: id)
+            Haptics.success()
+            objectives = (try? await objectiveService.list()) ?? objectives
+        } catch {
+            print("[Profile] setPrimary FAILED: \(error)")
+            Haptics.error()
+        }
+    }
+
+    func deleteObjective(_ id: String) async {
+        do {
+            try await objectiveService.delete(id: id)
+            Haptics.success()
+            objectives.removeAll { $0.id == id }
+            // Refresh to ensure server state is reflected (in case of cascades).
+            if let refreshed = try? await objectiveService.list() {
+                objectives = refreshed
+            }
+        } catch {
+            print("[Profile] deleteObjective FAILED: \(error)")
+            Haptics.error()
+        }
+    }
+
     // MARK: - Update User (after edit)
 
     func applyUpdatedUser(_ updated: User) {

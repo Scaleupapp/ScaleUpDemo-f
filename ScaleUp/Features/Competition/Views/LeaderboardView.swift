@@ -1,8 +1,12 @@
 import SwiftUI
 
 struct LeaderboardView: View {
-    @State private var viewModel = LeaderboardViewModel()
+    @State private var viewModel: LeaderboardViewModel
     @State private var selectedScope: LeaderboardScope = .thisWeek
+
+    init(initialTopic: String? = nil) {
+        _viewModel = State(initialValue: LeaderboardViewModel(initialTopic: initialTopic))
+    }
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
 
@@ -273,6 +277,9 @@ struct LeaderboardView: View {
 
     private func leaderboardRow(entry: LeaderboardEntry, rank: Int) -> some View {
         let isCurrentUser = entry.userId.id == appState.currentUser?.id
+        let isGhost = entry.ghostKind != nil
+        // Prefer server-supplied displayName (always set for ghosts); fall back to user object.
+        let rowName = isCurrentUser ? "You" : (entry.displayName ?? entry.userId.displayName)
 
         return HStack(spacing: Spacing.sm) {
             rankBadge(rank)
@@ -280,8 +287,9 @@ struct LeaderboardView: View {
             avatarView(user: entry.userId, size: 36)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(isCurrentUser ? "You" : entry.userId.displayName)
+                Text(rowName)
                     .font(Typography.bodySmallBold)
+                    .italic(isGhost)
                     .foregroundStyle(isCurrentUser ? ColorTokens.gold : .white)
                     .lineLimit(1)
 
@@ -302,6 +310,13 @@ struct LeaderboardView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(isCurrentUser ? ColorTokens.gold.opacity(0.06) : Color.clear)
         )
+        .contextMenu {
+            if entry.ghostKind == "persona" {
+                Text("Synthetic competitor — see how you stack against the cohort historically.")
+            } else if entry.ghostKind == "historical" {
+                Text("Historical benchmark from your cohort's last 30 days.")
+            }
+        }
     }
 
     // MARK: - Rank Badge

@@ -47,6 +47,10 @@ actor ObjectiveService {
     func activate(id: String) async throws -> ActivateObjectiveResponse {
         try await api.request(ObjectiveEndpoints.activate(id: id))
     }
+
+    func delete(id: String) async throws {
+        _ = try await api.requestRaw(ObjectiveEndpoints.delete(id: id))
+    }
 }
 
 // MARK: - Response Models
@@ -225,6 +229,7 @@ private enum ObjectiveEndpoints: Endpoint {
     case resume(id: String)
     case setPrimary(id: String)
     case activate(id: String)
+    case delete(id: String)
 
     var path: String {
         switch self {
@@ -236,6 +241,7 @@ private enum ObjectiveEndpoints: Endpoint {
         case .resume(let id): return "/objectives/\(id)/resume"
         case .setPrimary(let id): return "/objectives/\(id)/set-primary"
         case .activate(let id): return "/objectives/\(id)/activate"
+        case .delete(let id): return "/objectives/\(id)"
         }
     }
 
@@ -244,6 +250,7 @@ private enum ObjectiveEndpoints: Endpoint {
         case .analyze, .create: return .post
         case .brief, .list: return .get
         case .update, .pause, .resume, .setPrimary, .activate: return .put
+        case .delete: return .delete
         }
     }
 }

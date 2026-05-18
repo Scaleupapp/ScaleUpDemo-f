@@ -18,6 +18,16 @@ struct PlayerView: View {
     @State private var aiTutorVM = AITutorViewModel()
     @State private var showAITutorSheet = false
     @State private var showAITooltip = false
+    /// v2 routes the in-player tutor through Compass instead of the v1
+    /// AITutor sheet — same conversation surface, same history.
+    @State private var showCompassTutorSheet = false
+
+    /// v2 only — surfaces a "Quiz on this?" prompt once content hits ~95%.
+    /// Listens for the same .v2ContentCompleted notification PlayerViewModel
+    /// posts when it auto-marks completion.
+    @State private var showPostCompletionQuiz = false
+    @State private var showQuickQuiz = false
+    @State private var postCompletionTopic: String?
 
     enum PlayerTab: String, CaseIterable {
         case about = "About"
@@ -186,6 +196,9 @@ struct PlayerView: View {
         .navigationDestination(for: Creator.self) { creator in
             CreatorProfileView(creatorId: creator.id)
         }
+        .navigationDestination(item: $navigateToNextId) { id in
+            PlayerView(contentId: id)
+        }
         .task {
             await viewModel.loadContent(id: contentId)
             // Load AI Tutor status after content loads
@@ -268,6 +281,111 @@ struct PlayerView: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        // v2: same Compass surface used everywhere else, scoped to this content.
+        // Provide local V2TaskRouter + V2NavState so PlayerView works
+        // regardless of context (v2 sheet — env present — or v1 tab —
+        // absent). V2CompassView reads both; without them it would crash.
+        .sheet(isPresented: $showCompassTutorSheet) {
+            V2CompassSheetView(
+                tutorContext: CompassTutorContext(
+                    contentId: contentId,
+                    title: viewModel.content?.title ?? "Content"
+                )
+            )
+            .environment(appState)
+            .environment(V2TaskRouter())
+            .environment(V2NavState())
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        // Post-completion quiz prompt — v2 only. PlayerViewModel posts
+        // .v2ContentCompleted once playback hits ~95%; we use that as the
+        // signal to offer a quick check on this topic.
+        .onReceive(NotificationCenter.default.publisher(for: .v2ContentCompleted)) { note in
+            guard V2FeatureFlag.shared.isEnabled else { return }
+            guard let info = note.userInfo,
+                  let cid = info["contentId"] as? String, cid == contentId else { return }
+            // Prefer first topic; fall back to domain so the offer is always actionable.
+            postCompletionTopic = viewModel.content?.topics?.first
+                ?? viewModel.content?.domain
+            // Tiny delay so the sheet doesn't fight the auto-complete animation.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                showPostCompletionQuiz = true
+            }
+        }
+        .sheet(isPresented: $showPostCompletionQuiz) {
+            postCompletionQuizSheet
+                .environment(appState)
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    /// "Quiz on what you just watched?" — surfaced after completion.
+    private var postCompletionQuizSheet: some View {
+        VStack(spacing: 16) {
+            Text("🎯").font(.system(size: 44))
+            Text("Lock it in?")
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(ColorTokens.textPrimary)
+            if let topic = postCompletionTopic, !topic.isEmpty {
+                Text("Quick 5-question check on \(prettyTopic(topic)). Costs ~3 minutes, makes this stick.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+            } else {
+                Text("Quick 5-question check on what you just watched.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+            }
+            Spacer().frame(height: 6)
+            VStack(spacing: 10) {
+                Button {
+                    showPostCompletionQuiz = false
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(300))
+                        showQuickQuiz = true
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "sparkles")
+                        Text("Yes — quiz me")
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(ColorTokens.gold)
+                    .foregroundStyle(ColorTokens.background)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                Button("Not now") { showPostCompletionQuiz = false }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.horizontal, 24)
+            Spacer().frame(height: 10)
+        }
+        .padding(.top, 30)
+        .frame(maxWidth: .infinity)
+        .background(ColorTokens.background)
+        .sheet(isPresented: $showQuickQuiz) {
+            if let topic = postCompletionTopic, !topic.isEmpty {
+                V2QuizRequestLoaderSheet(topic: topic, onClose: { showQuickQuiz = false })
+                    .environment(appState)
+            }
+        }
+    }
+
+    private func prettyTopic(_ s: String) -> String {
+        s.replacingOccurrences(of: "-", with: " ")
+         .replacingOccurrences(of: "_", with: " ")
+         .split(separator: " ")
+         .map { $0.prefix(1).uppercased() + $0.dropFirst() }
+         .joined(separator: " ")
     }
 
     // MARK: - Tab Selector
@@ -721,11 +839,15 @@ struct PlayerView: View {
             }
         }
         .aspectRatio(16/9, contentMode: .fit)
-        .navigationDestination(item: $navigateToNextId) { id in
-            PlayerView(contentId: id)
+        .onAppear {
+            // Don't compete with the quiz prompt — Up Next is the more relevant
+            // call-to-action once a related video exists.
+            if showPostCompletionQuiz { showPostCompletionQuiz = false }
         }
         .onChange(of: viewModel.upNextCountdown) { _, newValue in
-            if newValue <= 0 {
+            if newValue <= 0,
+               !showPostCompletionQuiz,
+               !showQuickQuiz {
                 viewModel.cancelUpNext()
                 navigateToNextId = nextContent.id
             }
@@ -1246,7 +1368,8 @@ struct PlayerView: View {
     // MARK: - Ask AI Button
 
     private var askAIButton: some View {
-        Button {
+        let isV2 = V2FeatureFlag.shared.isEnabled
+        return Button {
             if aiTutorVM.isLoadingStatus {
                 // Still loading, do nothing
             } else if aiTutorVM.isDisabled {
@@ -1258,7 +1381,11 @@ struct PlayerView: View {
                 }
             } else {
                 Haptics.light()
-                showAITutorSheet = true
+                if isV2 {
+                    showCompassTutorSheet = true
+                } else {
+                    showAITutorSheet = true
+                }
             }
         } label: {
             HStack(spacing: Spacing.xs) {
@@ -1267,11 +1394,12 @@ struct PlayerView: View {
                         .tint(ColorTokens.buttonPrimaryText)
                         .scaleEffect(0.7)
                 } else {
-                    Image(systemName: "sparkles")
+                    Image(systemName: isV2 ? "location.north.fill" : "sparkles")
                         .font(.system(size: 16, weight: .semibold))
+                        .rotationEffect(.degrees(isV2 ? -45 : 0))
                 }
 
-                Text("Ask AI")
+                Text(isV2 ? "Ask Compass" : "Ask AI")
                     .font(Typography.captionBold)
             }
             .foregroundStyle(ColorTokens.buttonPrimaryText)

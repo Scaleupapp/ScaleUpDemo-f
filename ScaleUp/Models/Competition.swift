@@ -94,6 +94,8 @@ struct LeaderboardEntry: Codable, Sendable, Identifiable {
     let bestDayScore: Double
     let rank: Int?
     let percentile: Double?
+    let ghostKind: String?    // "historical" | "persona" | nil (absent on real entries)
+    let displayName: String?  // server-supplied name for ghost rows; nil for real users
 
     var id: String { userId.id }
 }

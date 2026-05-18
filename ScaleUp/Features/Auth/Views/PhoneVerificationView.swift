@@ -141,7 +141,9 @@ struct PhoneVerificationView: View {
                     // (user is already logged in from email registration)
                     let success = await viewModel.verifyPhoneForUser()
                     if success {
-                        appState.launchState = .onboarding(step: 1)
+                        // Sync v2 status before routing — a fresh account is
+                        // forced onto v2, so this picks v2 vs v1 onboarding.
+                        await appState.routeFreshRegistrationToOnboarding()
                     }
                 }
             }
@@ -161,8 +163,9 @@ struct PhoneVerificationView: View {
     // MARK: - Skip
 
     private func skipToOnboarding() {
-        // Always start from step 1 — this is a fresh registration
-        appState.launchState = .onboarding(step: 1)
+        // Always start from step 1 — this is a fresh registration. Sync v2
+        // status first so the user lands in v2 onboarding, not v1.
+        Task { await appState.routeFreshRegistrationToOnboarding() }
     }
 
     // MARK: - Error Banner

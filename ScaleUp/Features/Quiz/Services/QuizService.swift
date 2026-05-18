@@ -58,7 +58,10 @@ actor QuizService {
         questionCount: Int? = nil,
         assessmentType: String? = nil,
         objectiveId: String? = nil,
-        isSkillAssessment: Bool = false
+        isSkillAssessment: Bool = false,
+        noObjective: Bool = false,
+        weekNumber: Int? = nil,
+        source: String? = nil
     ) async throws -> QuizTriggerResponse {
         let body = QuizRequestBody(
             topic: topic,
@@ -66,7 +69,10 @@ actor QuizService {
             questionCount: questionCount,
             assessmentType: assessmentType,
             objectiveId: objectiveId,
-            isSkillAssessment: isSkillAssessment ? true : nil
+            isSkillAssessment: isSkillAssessment ? true : nil,
+            noObjective: noObjective ? true : nil,
+            weekNumber: weekNumber,
+            source: source
         )
         return try await api.request(QuizEndpoints.request, body: body)
     }
