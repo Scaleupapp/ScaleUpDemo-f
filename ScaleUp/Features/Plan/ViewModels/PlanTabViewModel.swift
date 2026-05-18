@@ -19,10 +19,18 @@ enum PlanLoadState {
     case error(PlanErrorKind, String)
 }
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Backed v1 PlanTabView. v2's `V2PlanDetailViewModel` reads
+/// `/api/v2/plan/*` and replaces this.
+/// Scheduled for removal after 2026-06-15.
+
 // MARK: - Plan Tab View Model
 
 @Observable
 @MainActor
+@available(*, deprecated, message: "Legacy V1 — use V2PlanDetailViewModel (see LEGACY_V1.md)")
 final class PlanTabViewModel {
 
     var loadState: PlanLoadState = .idle

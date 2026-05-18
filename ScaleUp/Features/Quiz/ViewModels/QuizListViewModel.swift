@@ -5,8 +5,12 @@ enum QuizListTab: String, CaseIterable {
     case completed = "Completed"
 }
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Backed v1 QuizListView / HomeView quiz tab.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
 @Observable
 @MainActor
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 final class QuizListViewModel {
 
     var selectedTab: QuizListTab = .available

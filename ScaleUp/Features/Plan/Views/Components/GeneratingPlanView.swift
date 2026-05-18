@@ -5,6 +5,10 @@ import SwiftUI
 /// Visual: a pulsing gold sparkle ring + a slowly-rotating dotted halo,
 /// paired with copy that cycles every few seconds so the screen never
 /// feels static during the 30-60s plan-generation wait.
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Plan tab component, unreachable from v2.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 struct GeneratingPlanView: View {
     @State private var pulse = false
     @State private var rotate = false

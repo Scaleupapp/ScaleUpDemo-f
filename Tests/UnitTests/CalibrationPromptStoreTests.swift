@@ -1,7 +1,14 @@
 import XCTest
 @testable import ScaleUp
 
+// MARK: - LEGACY V1 — slated for removal
+//
+// Tests the v1 CalibrationPromptStore which is itself deprecated.
+// Will be removed alongside its subject in the post-2026-06-15 cleanup.
+// See LEGACY_V1.md.
+
 @MainActor
+@available(*, deprecated, message: "Tests legacy V1 surface — remove with subject (see LEGACY_V1.md)")
 final class CalibrationPromptStoreTests: XCTestCase {
     var defaults: UserDefaults!
     var store: CalibrationPromptStore!

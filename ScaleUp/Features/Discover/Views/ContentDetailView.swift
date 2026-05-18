@@ -1,6 +1,12 @@
 import SwiftUI
 
 // Non-video content detail (articles, infographics)
+
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Zero callers anywhere in the app.
+/// Article/infographic rendering on v2 goes through V2ContentDispatcher.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — zero callers, see LEGACY_V1.md")
 struct ContentDetailView: View {
     let content: Content
 

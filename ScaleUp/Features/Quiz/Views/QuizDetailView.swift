@@ -1,5 +1,10 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Only reachable via v1 HomeView / QuizListView.
+/// v2 launches QuizSessionView directly via PlanTaskQuizLoaderSheet.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 struct QuizDetailView: View {
     let quiz: Quiz
     @State private var showSession = false

@@ -7,6 +7,13 @@ import SwiftUI
 // once the user taps ×. The Progress-tab RecalibrationCard is separate
 // and unaffected by this dismissal.
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Used only by v1 PlanTabView. v2 surfaces recalibration via Compass.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — v2 recalibration is Compass-driven (see LEGACY_V1.md)")
 struct RecalibrationNudge: View {
     let eligibility: RecalibrationEligibility
     let onTap: () -> Void

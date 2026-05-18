@@ -1,7 +1,14 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Used only by v1 HomeView. v2 Home polls plan readiness inline.
+/// Scheduled for removal after 2026-06-15.
+
 @MainActor
 @Observable
+@available(*, deprecated, message: "Legacy V1 — v2 Home polls plan inline (see LEGACY_V1.md)")
 final class PlanGenerationBannerViewModel {
     enum BannerState { case hidden, generating, ready }
     var state: BannerState = .hidden

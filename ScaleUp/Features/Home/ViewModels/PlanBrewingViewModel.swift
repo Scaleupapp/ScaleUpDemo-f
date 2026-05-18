@@ -1,5 +1,12 @@
 import Foundation
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Drove the "plan brewing" pill on v1 HomeView. v2's home shows plan
+/// status inline; this VM is unused.
+/// Scheduled for removal after 2026-06-15.
+
 // MARK: - Brewing Visibility
 
 enum PlanBrewingVisibility {
@@ -12,6 +19,7 @@ enum PlanBrewingVisibility {
 
 @Observable
 @MainActor
+@available(*, deprecated, message: "Legacy V1 — v2 Home shows plan status inline (see LEGACY_V1.md)")
 final class PlanBrewingViewModel {
 
     var visibility: PlanBrewingVisibility = .hidden

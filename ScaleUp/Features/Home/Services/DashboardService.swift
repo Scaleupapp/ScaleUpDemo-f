@@ -1,7 +1,13 @@
 import Foundation
 
-// MARK: - Dashboard Service
+// MARK: - LEGACY V1 — slated for removal
 
+/// **DEPRECATED — Legacy V1 surface.**
+/// Backed the v1 HomeView dashboard. v2's `V2HomeViewModel` reads
+/// `/api/v2/home/*` instead and no longer needs this service.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — v2 reads /api/v2/home/* directly (see LEGACY_V1.md)")
 actor DashboardService {
 
     private let api = APIClient.shared

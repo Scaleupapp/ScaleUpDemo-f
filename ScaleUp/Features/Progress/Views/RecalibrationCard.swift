@@ -5,6 +5,10 @@ import SwiftUI
 // Shown on the Progress tab when the user is eligible for recalibration.
 // Gold-bordered elevated surface — "See how much you've grown" pitch.
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Used only by v1 ProgressTabView.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 struct RecalibrationCard: View {
     let eligibility: RecalibrationEligibility
     let onTap: () -> Void

@@ -1,5 +1,12 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Used only by v1 HomeView. v2's recalibration prompt lives in Compass.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — v2 recalibration is Compass-driven (see LEGACY_V1.md)")
 struct CalibrationBannerView: View {
     let onTap: () -> Void
     let onDismiss: () -> Void

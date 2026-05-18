@@ -6,6 +6,11 @@ import Charts
 struct ConsumptionHistoryDestination: Hashable {}
 struct GapsDestination: Hashable {}
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.**
+/// Replaced by `V2YouAnalyticsView` in v2-redesign (merged 2026-05-18).
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — use V2YouAnalyticsView (see LEGACY_V1.md)")
 struct ProgressTabView: View {
     @State private var viewModel = ProgressViewModel()
     @State private var showDetailedAnalytics = false

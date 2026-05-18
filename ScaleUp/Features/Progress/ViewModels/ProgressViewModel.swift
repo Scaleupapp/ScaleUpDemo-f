@@ -1,7 +1,11 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Backed v1 ProgressTabView.
+/// Replaced by `V2YouViewModel` in v2. Scheduled for removal after 2026-06-15.
 @Observable
 @MainActor
+@available(*, deprecated, message: "Legacy V1 — use V2YouViewModel (see LEGACY_V1.md)")
 final class ProgressViewModel {
 
     // MARK: - State

@@ -1,5 +1,10 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Zero callers — v2's You tab handles
+/// objective switching via V2YouObjectivesView.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — use V2YouObjectivesView (see LEGACY_V1.md)")
 struct ObjectiveSwitcherView: View {
     @Environment(ObjectiveContext.self) private var objectiveContext
 

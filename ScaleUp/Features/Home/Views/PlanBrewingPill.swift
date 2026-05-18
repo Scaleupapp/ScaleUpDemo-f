@@ -1,5 +1,12 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Used only by v1 HomeView. Replaced by inline plan status on V2HomeView.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — use V2HomeView's plan status (see LEGACY_V1.md)")
 struct PlanBrewingPill: View {
     let onTap: () -> Void
 

@@ -1,5 +1,9 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Used only by v1 MilestonesView.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 struct AddMilestoneSheet: View {
     @Bindable var viewModel: MyPlanViewModel
     @Environment(\.dismiss) private var dismiss

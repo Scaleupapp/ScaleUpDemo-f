@@ -1,5 +1,12 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Unused — v2's readiness lives in V2HomeView (popover). Zero callers.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — use V2HomeView readiness popover (see LEGACY_V1.md)")
 struct ReadinessScoreCard: View {
     let score: Int
 

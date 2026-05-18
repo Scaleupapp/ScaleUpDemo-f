@@ -3,6 +3,10 @@ import SwiftUI
 /// Sheet shown when the user taps a `.manual` or `.externalLink` plan task.
 /// Captures a 1...5 self-confidence rating and POSTs to
 /// `/plan/tasks/{taskId}/complete` via `PlanService.markTaskComplete`.
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Plan tab component, unreachable from v2.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 struct ManualCompletionSheet: View {
     let task: APIPlanTask
     let onComplete: () -> Void

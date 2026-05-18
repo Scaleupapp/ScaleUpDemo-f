@@ -1,5 +1,14 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Replaced by `V2PlanHomeView` + `V2PlanDetailView` in v2-redesign
+/// (merged 2026-05-18). v2's Compass + You tab surface plan content;
+/// v1's "My Plan" tab is no longer offered to v2 users.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — use V2PlanHomeView / V2PlanDetailView (see LEGACY_V1.md)")
 struct PlanTabView: View {
     @State private var viewModel = PlanTabViewModel()
     @State private var recalVM = RecalibrationViewModel()

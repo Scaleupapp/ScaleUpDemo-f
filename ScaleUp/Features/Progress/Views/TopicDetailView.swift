@@ -1,5 +1,9 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Used only by v1 ProgressTabView.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 struct TopicDetailView: View {
     let topic: String
     @State private var viewModel: TopicDetailViewModel

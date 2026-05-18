@@ -16,8 +16,17 @@ struct PlanStatusDTO: Decodable, Sendable {
     let planId: String?
 }
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// v1's `/api/plan` client. v2 surfaces use `V2APIClient` against `/api/v2/plan/*`.
+/// Note: kept un-deprecated DTO type aliases above so generated/shared types
+/// aren't dragged into the deprecation. Only the service is dead.
+/// Scheduled for removal after 2026-06-15.
+
 // MARK: - Plan Service
 
+@available(*, deprecated, message: "Legacy V1 — v2 uses V2APIClient + /api/v2/plan (see LEGACY_V1.md)")
 actor PlanService {
     static let shared = PlanService()
 

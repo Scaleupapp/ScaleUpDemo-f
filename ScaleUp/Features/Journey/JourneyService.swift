@@ -1,5 +1,10 @@
 import Foundation
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Used only by v1 MyPlanViewModel.
+/// v2's planning surfaces use `V2APIClient` against `/api/v2/plan/*`.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — v2 uses V2APIClient (see LEGACY_V1.md)")
 actor JourneyService {
     private let api = APIClient.shared
 

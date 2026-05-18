@@ -1,5 +1,10 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Used only by v1 HomeView's quiz tab.
+/// v2 routes quizzes through V2TaskRouter + PlanTaskQuizLoaderSheet.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — use V2TaskRouter quiz route (see LEGACY_V1.md)")
 struct QuizListView: View {
     @State private var viewModel = QuizListViewModel()
     @State private var showGenerateSheet = false

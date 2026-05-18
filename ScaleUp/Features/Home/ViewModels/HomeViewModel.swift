@@ -1,7 +1,19 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Replaced by `V2HomeViewModel` in v2-redesign (merged 2026-05-18).
+/// Scheduled for removal after 2026-06-15 — by which point v2 is stable
+/// in production on TestFlight and no users should still be on the
+/// legacy surface.
+///
+/// Do NOT add new references to this file. If you need similar
+/// functionality, use the v2 replacement.
+
 @Observable
 @MainActor
+@available(*, deprecated, message: "Legacy V1 — use V2HomeViewModel (see LEGACY_V1.md)")
 final class HomeViewModel {
 
     var dashboard: Dashboard?

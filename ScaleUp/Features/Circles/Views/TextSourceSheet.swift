@@ -1,5 +1,10 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Zero callers — the Circles feature
+/// it was scaffolded for was never shipped, and the rest of the Circles dir
+/// is empty. Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — zero callers, see LEGACY_V1.md")
 struct TextSourceSheet: View {
     let circleId: String
     let onSubmit: (String, String) -> Void

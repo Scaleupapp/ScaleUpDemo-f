@@ -1,5 +1,14 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 (audit pending)
+//
+// Still wired as the v1 fallback in V2RootView when V2FeatureFlag.isEnabled
+// is false. Will be removed when the v1 fallback path is retired — at that
+// point V2RootView will always show V2MainTabView. We do NOT apply
+// @available(*, deprecated) here because the v1 fallback is intentional
+// while the rollback window is open; doing so would generate warnings on
+// the load-bearing fallback. See LEGACY_V1.md.
+
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
     @Environment(CoachMarkManager.self) private var coachMarkManager

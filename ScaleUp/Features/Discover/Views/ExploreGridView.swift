@@ -1,5 +1,9 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Zero callers — DiscoverView no longer
+/// renders this grid post-redesign. Scheduled for removal after 2026-06-15.
+@available(*, deprecated, message: "Legacy V1 — zero callers, see LEGACY_V1.md")
 struct ExploreGridView: View {
     @Bindable var viewModel: DiscoverViewModel
 

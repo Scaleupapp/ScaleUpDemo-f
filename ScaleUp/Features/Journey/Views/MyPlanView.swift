@@ -20,6 +20,11 @@ struct ObjectiveBriefDestination: Hashable {
     let objectiveId: String
 }
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** v1 standalone "My Plan" — never wired
+/// into the v1 MainTabView (PlanTabView is). Replaced by V2PlanDetailView.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — use V2PlanDetailView (see LEGACY_V1.md)")
 struct MyPlanView: View {
     @State private var viewModel = MyPlanViewModel()
     @Environment(ObjectiveContext.self) private var objectiveContext

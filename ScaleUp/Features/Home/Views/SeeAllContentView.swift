@@ -1,5 +1,12 @@
 import SwiftUI
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Used only by v1 HomeView. v2's Learn tab handles browsing.
+/// Scheduled for removal after 2026-06-15.
+
+@available(*, deprecated, message: "Legacy V1 — use V2LearnView (see LEGACY_V1.md)")
 struct SeeAllContentView: View {
     let title: String
     let items: [Content]

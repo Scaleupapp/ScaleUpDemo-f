@@ -1,5 +1,10 @@
 import Foundation
 
+// MARK: - LEGACY V1 — slated for removal
+/// **DEPRECATED — Legacy V1 surface.** Only consumed by v1 Progress/Journey VMs.
+/// v2 uses `V2LearnViewModel.knowledgeService` paths instead.
+/// Scheduled for removal after 2026-06-15. See LEGACY_V1.md.
+@available(*, deprecated, message: "Legacy V1 — see LEGACY_V1.md")
 actor RecommendationService {
     private let api = APIClient.shared
 

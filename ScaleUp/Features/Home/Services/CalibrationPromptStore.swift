@@ -1,6 +1,14 @@
 import Foundation
 
+// MARK: - LEGACY V1 — slated for removal
+
+/// **DEPRECATED — Legacy V1 surface.**
+/// Backed v1 HomeView's calibration banner cooldown. v2's coach-led
+/// recalibration on V2HomeView/V2YouView uses server-side cooldown only.
+/// Scheduled for removal after 2026-06-15.
+
 @MainActor
+@available(*, deprecated, message: "Legacy V1 — v2 uses server-side cooldown (see LEGACY_V1.md)")
 final class CalibrationPromptStore {
     private let defaults: UserDefaults
     private let now: () -> Date
