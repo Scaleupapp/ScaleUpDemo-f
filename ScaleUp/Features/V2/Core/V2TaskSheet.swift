@@ -51,8 +51,8 @@ struct V2TaskSheet: View {
             case .quiz(let id):
                 PlanTaskQuizLoaderSheet(quizId: id, onDismiss: onClose)
 
-            case .quizByTopic(let topic):
-                V2QuizRequestLoaderSheet(topic: topic, onClose: onClose)
+            case .quizByTopic(let topic, let week):
+                V2QuizRequestLoaderSheet(topic: topic, weekNumber: week, onClose: onClose)
 
             case .interview(let scenarioId):
                 NavigationStack {

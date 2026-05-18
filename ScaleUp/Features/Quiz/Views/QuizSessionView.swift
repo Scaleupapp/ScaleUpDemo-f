@@ -20,6 +20,8 @@ struct QuizSessionView: View {
 
                 if viewModel.isStarting {
                     startingState
+                } else if let message = viewModel.loadError {
+                    errorState(message: message)
                 } else if viewModel.hasCompleted {
                     completedTransition
                 } else {
@@ -541,6 +543,58 @@ struct QuizSessionView: View {
             Text("Preparing your quiz...")
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(ColorTokens.textSecondary)
+        }
+    }
+
+    /// Replaces the old "silent local-only" fallback. When startQuiz or
+    /// completeQuiz fail (quiz expired, network blip, server hiccup) we
+    /// surface a real error here with Back + Retry so the user is never
+    /// stranded in a quiz that can't be submitted.
+    private func errorState(message: String) -> some View {
+        VStack(spacing: Spacing.lg) {
+            Spacer()
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(ColorTokens.gold)
+            Text("This quiz couldn't start")
+                .font(.system(size: 19, weight: .bold))
+                .foregroundStyle(.white)
+            Text(message)
+                .font(.system(size: 14))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, Spacing.xl)
+
+            HStack(spacing: 12) {
+                Button {
+                    viewModel.cleanup()
+                    dismiss()
+                } label: {
+                    Text("Back")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(ColorTokens.surfaceElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
+                Button {
+                    Task { await viewModel.retryStart() }
+                } label: {
+                    Text("Retry")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(ColorTokens.gold)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+            .padding(.horizontal, Spacing.xl)
+            .padding(.top, Spacing.md)
+
+            Spacer()
         }
     }
 

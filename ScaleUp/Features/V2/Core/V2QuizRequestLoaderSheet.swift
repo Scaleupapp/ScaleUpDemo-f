@@ -7,12 +7,19 @@ import SwiftUI
 /// trigger until it's ready, then drops the user straight into QuizSession.
 struct V2QuizRequestLoaderSheet: View {
     let topic: String
+    let weekNumber: Int?
     let onClose: () -> Void
 
     @State private var quiz: Quiz?
     @State private var loadError: String?
 
     private let quizService = QuizService()
+
+    init(topic: String, weekNumber: Int? = nil, onClose: @escaping () -> Void) {
+        self.topic = topic
+        self.weekNumber = weekNumber
+        self.onClose = onClose
+    }
 
     var body: some View {
         NavigationStack {
@@ -61,7 +68,14 @@ struct V2QuizRequestLoaderSheet: View {
 
     private func load() async {
         do {
-            let trigger = try await quizService.requestQuiz(topic: topic, questionCount: 10)
+            // weekNumber + source: 'plan' route this through the plan-context
+            // generation path — variant questions per week, plan-aware expiry.
+            let trigger = try await quizService.requestQuiz(
+                topic: topic,
+                questionCount: 10,
+                weekNumber: weekNumber,
+                source: weekNumber != nil ? "plan" : nil
+            )
             var quizId = trigger.quizId
 
             // Poll the trigger until the quiz is generated (~up to 60s).

@@ -307,6 +307,13 @@ struct QuizRequestBody: Encodable, Sendable {
     /// When true, the backend skips objective linking — quiz is "for fun"
     /// and won't be counted toward the user's active goal.
     let noObjective: Bool?
+    /// Plan-context: the week of the multi-week plan this quiz belongs to.
+    /// Lets the generator seed per-week variants so revisited topics don't
+    /// reuse the same questions across weeks.
+    let weekNumber: Int?
+    /// Plan-context: marks this as a plan-seeded quiz (e.g. "plan") so the
+    /// generator picks a plan-aware `expiresAt` instead of the 7-day default.
+    let source: String?
 }
 
 // MARK: - Assessment Type

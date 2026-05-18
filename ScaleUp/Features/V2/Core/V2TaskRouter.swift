@@ -48,7 +48,9 @@ final class V2TaskRouter {
         case content(contentId: String, title: String)
         case quiz(quizId: String)
         /// Quiz task with no pre-baked quizId — request one for this topic.
-        case quizByTopic(topic: String)
+        /// `weekNumber` (when present) seeds plan-context generation so
+        /// revisited topics across weeks don't reuse the same questions.
+        case quizByTopic(topic: String, weekNumber: Int?)
         case interview(scenarioId: String?)
         case competition
         /// Direct-start of a specific daily challenge — bypasses the hub
@@ -65,7 +67,7 @@ final class V2TaskRouter {
             switch self {
             case .content(let id, _):  return "content-\(id)"
             case .quiz(let id):        return "quiz-\(id)"
-            case .quizByTopic(let t):  return "quiztopic-\(t)"
+            case .quizByTopic(let t, let w):  return "quiztopic-\(t)-\(w ?? 0)"
             case .interview(let id):   return "interview-\(id ?? "default")"
             case .competition:         return "competition"
             case .challengeAttempt(let id, _): return "challenge-\(id)"
@@ -101,7 +103,9 @@ final class V2TaskRouter {
                 setActiveTask(taskId: taskId, taskType: taskType, resourceId: id)
             } else if let topic = topic, !topic.isEmpty {
                 // No pre-baked quiz — generate one for the task's topic.
-                route = .quizByTopic(topic: topic)
+                // Forward weekNumber when the plan task carries it so the
+                // generator can seed variant questions per week.
+                route = .quizByTopic(topic: topic, weekNumber: payload?.weekNumber)
                 setActiveTask(taskId: taskId, taskType: "quiz", resourceId: nil)
             } else {
                 route = .unavailable(message: "Quiz isn't ready yet. Check back soon.")
