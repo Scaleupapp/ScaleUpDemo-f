@@ -453,64 +453,8 @@ struct V2YouObjectivesView: View {
     }
 }
 
-// MARK: - Placeholders (other agents will replace)
+// MARK: - Sibling views
 
-/// Placeholder for the full v2 plan detail screen. Agent C will replace this.
-struct V2PlanDetailView: View {
-    public init() {}
-    var body: some View {
-        VStack(spacing: 16) {
-            ProgressView().tint(ColorTokens.gold)
-            Text("Loading plan detail…")
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ColorTokens.background.ignoresSafeArea())
-        .navigationTitle("My plan")
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            // Agent C: fetch full plan detail here.
-        }
-    }
-}
-
-/// Placeholder for v2 Compass history. Agent D will replace this.
-struct V2CompassHistoryView: View {
-    public init() {}
-    var body: some View {
-        VStack(spacing: 16) {
-            ProgressView().tint(ColorTokens.gold)
-            Text("Loading your Compass activity…")
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ColorTokens.background.ignoresSafeArea())
-        .navigationTitle("My Compass activity")
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            // Agent D: fetch compass history here.
-        }
-    }
-}
-
-/// Placeholder for the deep "All my activities" feed. Agent D will replace this.
-struct V2ActivitiesDetailView: View {
-    public init() {}
-    var body: some View {
-        VStack(spacing: 16) {
-            ProgressView().tint(ColorTokens.gold)
-            Text("Loading all your activities…")
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ColorTokens.background.ignoresSafeArea())
-        .navigationTitle("All activities")
-        .navigationBarTitleDisplayMode(.inline)
-        .task {
-            // Agent D: fetch activities feed here.
-        }
-    }
-}
+// V2PlanDetailView lives in V2PlanDetailView.swift / V2PlanDetailViewModel.swift.
+// V2CompassHistoryView lives in V2CompassHistoryView.swift.
+// V2ActivitiesDetailView lives in V2ActivitiesDetailView.swift.
