@@ -43,9 +43,36 @@ final class V2APIClient {
         try await rawRequest(version: .v1, method: "PUT", path: path, body: body)
     }
 
+    // MARK: - Coding (raw, no envelope — /api/coding/* endpoints)
+
+    func getCoding<T: Codable>(_ path: String) async throws -> T {
+        try await rawRequest(version: .coding, method: "GET", path: path, body: Optional<EmptyBody>.none)
+    }
+
+    func postCoding<T: Codable, B: Codable>(_ path: String, body: B) async throws -> T {
+        try await rawRequest(version: .coding, method: "POST", path: path, body: body)
+    }
+
+    /// Returns both decoded value and HTTP status code.
+    /// Used for 202-returning endpoints (drill submit, calibration submit,
+    /// polling result while not graded) where the caller branches on status.
+    func getCodingWithStatus<T: Codable>(_ path: String) async throws -> (T, Int) {
+        try await rawRequestWithStatus(version: .coding, method: "GET", path: path, body: Optional<EmptyBody>.none)
+    }
+
+    func postCodingWithStatus<T: Codable, B: Codable>(_ path: String, body: B) async throws -> (T, Int) {
+        try await rawRequestWithStatus(version: .coding, method: "POST", path: path, body: body)
+    }
+
+    /// Returns raw Data + HTTP status without decoding. Used by DrillService.pollResult
+    /// to branch on 200 (graded) vs 202 (pending) and decode into different types.
+    func rawCodingData(method: String, path: String) async throws -> (Data, Int) {
+        try await rawDataWithStatus(version: .coding, method: method, path: path, body: Optional<EmptyBody>.none)
+    }
+
     // MARK: - Internals
 
-    private enum APIVersion { case v1, v2 }
+    private enum APIVersion { case v1, v2, coding }
     private struct EmptyBody: Codable {}
 
     private func baseURL(for version: APIVersion) -> String {
@@ -59,6 +86,7 @@ final class V2APIClient {
         switch version {
         case .v1: return v1Base
         case .v2: return v1Base.replacingOccurrences(of: "/api/v1", with: "/api/v2")
+        case .coding: return v1Base.replacingOccurrences(of: "/api/v1", with: "/api/coding")
         }
     }
 
@@ -68,13 +96,25 @@ final class V2APIClient {
         return try JSONDecoder().decode(V2APIResponse<T>.self, from: data)
     }
 
-    /// v1 — decodes T directly (v1 endpoints don't use the envelope)
+    /// v1/coding — decodes T directly (no envelope)
     private func rawRequest<T: Codable, B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> T {
         let data = try await rawData(version: version, method: method, path: path, body: body)
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    /// v1/coding — decodes T and surfaces HTTP status code
+    private func rawRequestWithStatus<T: Codable, B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> (T, Int) {
+        let (data, status) = try await rawDataWithStatus(version: version, method: method, path: path, body: body)
+        let decoded = try JSONDecoder().decode(T.self, from: data)
+        return (decoded, status)
+    }
+
     private func rawData<B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> Data {
+        let (data, _) = try await rawDataWithStatus(version: version, method: method, path: path, body: body)
+        return data
+    }
+
+    private func rawDataWithStatus<B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> (Data, Int) {
         guard let url = URL(string: "\(baseURL(for: version))\(path)") else { throw V2APIError.invalidURL }
 
         var req = URLRequest(url: url)
@@ -89,10 +129,16 @@ final class V2APIClient {
         }
 
         let (data, response) = try await URLSession.shared.data(for: req)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-            throw V2APIError.serverError((response as? HTTPURLResponse)?.statusCode ?? 0)
+        guard let http = response as? HTTPURLResponse else {
+            throw V2APIError.serverError(0)
         }
-        return data
+        let status = http.statusCode
+        // Don't throw on 202 (accepted / still processing) — let caller decide.
+        // Throw on 4xx/5xx.
+        if status >= 400 {
+            throw V2APIError.httpError(status, data)
+        }
+        return (data, status)
     }
 }
 
@@ -100,4 +146,6 @@ enum V2APIError: Error {
     case invalidURL
     case serverError(Int)
     case decodingFailed
+    /// HTTP 4xx/5xx with the raw response body for error detail extraction.
+    case httpError(Int, Data)
 }
