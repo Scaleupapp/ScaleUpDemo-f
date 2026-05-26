@@ -657,32 +657,23 @@ Honest stance: cannot stop a determined cheater on a laptop. Goal is making it n
 
 ## 14. Roadmap
 
-### 14.1 Schedule
+### 14.1 Sequence (time-agnostic)
 
-| Milestone | Scope | Duration | Cumulative |
-|---|---|---|---|
-| **3-day spike** | Prompt Drill MVP, iOS only, SWE only, 9 hand-authored bundles, Compass grades via existing Sonnet, plugged into Plan + Mastery + Readiness (weight 0) | 3 days | Day 3 |
-| **Drill Launch — Phase A** | All 4 drill types, 3 role-tracks, Content Generator pipeline live with 50+ generated bundles, iOS + Android parity, Compass Coder mode | 9 weeks | Week 9 |
-| **Capstone Launch — Phase B** | Web IDE + sandbox + recording + evaluator + replay + voice reflection. 3 role-tracks × 3 difficulties × Tier-1 stacks. Total 120-bundle library. | 12 weeks | Week 21 |
-| **TPO Sales Prep** | Lightweight TPO dashboard (read-only); LOI pipeline | starts week 12; closes design partners by week 26 | parallel |
-| **Phase 4 (post-launch)** | Tier-2 languages, creator-authored capstones, recruiter-share view, self-host sandbox migration | 12+ weeks | Week 33+ |
+Sequential phases. Each phase is gated by completion of the previous. Time is not a constraint — quality of each gate is.
+
+| Phase | Scope |
+|---|---|
+| **Phase A — Drills launch** | All 4 drill types, 3 role-tracks, Content Generator pipeline live with 50+ generated bundles, iOS + Android parity, Compass Coder mode, backfill executed |
+| **Phase B — Capstones launch** | Web IDE + sandbox + recording + evaluator + replay + voice reflection. 3 role-tracks × 3 difficulties × Tier-1 stacks. Total 120-bundle library. |
+| **Phase C — TPO + post-launch expansion** | TPO dashboard (read-only), Tier-2 languages, creator-authored capstones, recruiter-share view, self-host sandbox migration |
 
 ### 14.2 Quality gates (must pass to proceed)
 
 | Gate | Criterion |
 |---|---|
-| **Spike → Phase A** | Founder approves spike on a real device; 5 internal users complete a Prompt Drill end-to-end without bug |
 | **Generator-at-scale** | 30 seed bundles pass blind review by 3 external senior engineers (one per track) AND Generator+Validator pipeline ≥ 90% pass-on-first-try |
-| **Drill Launch (Phase A end)** | 50+ bundles in library; backfill executed on staging; iOS + Android in TestFlight + Internal Track |
-| **Capstone Launch (Phase B end)** | 120-bundle library; 30 internal full capstone walkthroughs without P0/P1; sandbox warm-pool stable under load test; evaluator anchor-drift < 5% |
-
-### 14.3 3-day spike — day-by-day
-
-| Day | Backend | iOS | Content |
-|---|---|---|---|
-| **1** | Mongo schemas (`artifact_bundles`, `drill_attempts`, `meta_skill_mastery` extension). Route `/api/coding/drills`. Extend Compass orchestrator with `gradePromptDrill()`. OpenAPI additions. | Drill modal sheet skeleton. API client stubs from regen. | Write 9 Prompt Drill bundles by hand. |
-| **2** | Grader logic + rubric prompt + structured-output schema. Plan integration (drill candidate). Push notification template. | Drill modal complete: brief, input, submit, result. Mastery delta animation. Wire to API. | Review 9 bundles end-to-end against grader. Tune rubric. |
-| **3** | E2E testing. Rate limit + abuse handling. Anchor tests for grader drift detection. Backfill script + dry-run. | Polish, error states, telemetry events. TestFlight build 158. | Final bundle pass. Internal demo script. |
+| **Phase A complete** | 50+ bundles in library; backfill executed on staging; iOS + Android in TestFlight + Internal Track; drill grader anchor-drift < 5% |
+| **Phase B complete** | 120-bundle library; 30 internal full capstone walkthroughs without P0/P1; sandbox warm-pool stable under load test; evaluator anchor-drift < 5% |
 
 ---
 
@@ -789,14 +780,14 @@ At ₹299/learner/month subscription, infra is < 5% of revenue. Cost is not the 
 
 ---
 
-## 19. Open questions (to resolve before implementation plan)
+## 19. Decisions (resolved 2026-05-26)
 
-1. **Subscription tier strategy** — drills free forever vs daily quota? Capstones premium-only vs N free per month? Pricing TBD before Phase A launch.
-2. **Push notification cadence** — Calibration invitation timing per region (don't push at 3 AM)
-3. **Voice reflection language** — English only at launch, or Hindi + English? Whisper supports both; UX implication.
-4. **TPO data sharing default** — opt-in (learner controls) vs opt-out (TPO sees aggregate by default for their cohort)
-5. **Replay retention** — 90 days S3 hot, then? Cold storage vs delete?
-6. **Generator topic prompt** — does Plan tell Generator "user needs to practice pagination"? Or does Plan pull from existing library only and Generator runs on a fixed cadence? Recommend: Generator runs as a scheduled worker producing a fixed weekly quota; Plan pulls only from existing library.
+1. **Subscription tier strategy** — **Drills free with daily quota (1/day) + Capstones N free/month then premium.** Captures daily-habit users; clean upgrade story without feeling stingy.
+2. **Push notification cadence** — **Tied to user's historical app-open peak hour**, with fallback to local 7 PM if no historical data. Single push only; no nag.
+3. **Voice reflection language** — **English + Hindi + Hinglish auto-detect** via Whisper. Forcing English would lose metacognitive depth for native-Hindi reflectors.
+4. **TPO data sharing default** — **Aggregate opt-out, individual opt-in.** TPO sees cohort-level aggregates by default; individual results (scores, replays, voice reflections) require explicit learner opt-in. Survives DPDPA scrutiny.
+5. **Replay retention** — **90 days S3 hot, then Glacier for 1 year, then delete.** Glacier is ~$0.004/GB/mo — trivial cost. 1 year covers interview-prep revisit window.
+6. **Generator topic prompt** — **Scheduled worker producing a fixed weekly quota; Plan pulls from existing library only at launch.** Move to hybrid (Plan-driven on-demand generation when no existing bundle matches) only after pipeline is stable (post-Phase A, month 3+).
 
 ---
 
@@ -804,10 +795,10 @@ At ₹299/learner/month subscription, infra is < 5% of revenue. Cost is not the 
 
 This spec is considered complete and approved when:
 
-1. ✅ Founder reviews and signs off on this document
-2. Open questions in §19 have decisions captured (or explicitly deferred)
-3. Spec is committed to git on `master`
-4. Implementation plan generated by `writing-plans` skill references this spec
+1. ✅ Founder reviews and signs off on this document — **approved 2026-05-26**
+2. ✅ Open questions in §19 have decisions captured — **all 6 resolved**
+3. ✅ Spec is committed to git on `master`
+4. Implementation plan generated by `writing-plans` skill references this spec — **next step**
 
 ---
 
