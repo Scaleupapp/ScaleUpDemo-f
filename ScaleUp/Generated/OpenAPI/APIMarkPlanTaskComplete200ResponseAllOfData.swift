@@ -11,9 +11,9 @@ public struct APIMarkPlanTaskComplete200ResponseAllOfData: Codable, Hashable, Se
 
     public var taskId: String
     public var planId: String
-    public var weekNumber: Int
+    public var weekNumber: Int?
 
-    public init(taskId: String, planId: String, weekNumber: Int) {
+    public init(taskId: String, planId: String, weekNumber: Int?) {
         self.taskId = taskId
         self.planId = planId
         self.weekNumber = weekNumber

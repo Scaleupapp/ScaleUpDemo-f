@@ -306,6 +306,8 @@ final class V2HomeViewModel {
             case .serverError(let s) where s == 401: return "Please sign in again."
             case .serverError(let s): return "Server issue (\(s)). Try again in a moment."
             case .decodingFailed:     return "We got a response but couldn't read it."
+            case .httpError(let s, _) where s == 401: return "Please sign in again."
+            case .httpError(let s, _): return "Server issue (\(s)). Try again in a moment."
             }
         }
         return "Couldn't load your day. Pull to refresh."
