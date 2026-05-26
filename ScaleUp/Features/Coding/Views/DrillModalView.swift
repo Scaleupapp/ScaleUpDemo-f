@@ -71,12 +71,7 @@ struct DrillModalView: View {
         case .prompt:
             PromptDrillInputView(session: session)
         case .verify:
-            // Real view lands in UI-B4
-            placeholderView(
-                systemImage: "magnifyingglass",
-                title: "Bug Hunt input",
-                subtitle: "Real input view lands in UI-B4."
-            )
+            VerifyDrillInputView(session: session)
         case .decompose:
             // Real view lands in UI-B5
             placeholderView(
