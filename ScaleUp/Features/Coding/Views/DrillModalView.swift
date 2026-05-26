@@ -41,8 +41,7 @@ struct DrillModalView: View {
                 }
             }
         case .input:
-            // Real per-subtype input views land in UI-B3 / B4 / B5
-            inputPlaceholder
+            inputView
         case .submitting:
             placeholderView(systemImage: "hourglass", title: "Grading your answer…", subtitle: "This is a stub for UI-B2; real submit lands in UI-B6.")
         case .result:
@@ -66,25 +65,33 @@ struct DrillModalView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var inputPlaceholder: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "pencil.and.list.clipboard")
-                .font(.largeTitle)
-                .foregroundStyle(.secondary)
-            Text("\(session.todayDrill?.drillSubtype.displayName ?? "Drill") input")
-                .font(.headline)
-            Text("Real input view lands in UI-B3 / B4 / B5.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Stub: simulate submit") {
-                Task { await session.submit(.prompt(text: "stub")) }
-            }
-            .buttonStyle(.borderedProminent)
-            .padding(.top, 12)
+    @ViewBuilder
+    private var inputView: some View {
+        switch session.todayDrill?.drillSubtype {
+        case .prompt:
+            PromptDrillInputView(session: session)
+        case .verify:
+            // Real view lands in UI-B4
+            placeholderView(
+                systemImage: "magnifyingglass",
+                title: "Bug Hunt input",
+                subtitle: "Real input view lands in UI-B4."
+            )
+        case .decompose:
+            // Real view lands in UI-B5
+            placeholderView(
+                systemImage: "list.number",
+                title: "Decompose input",
+                subtitle: "Real input view lands in UI-B5."
+            )
+        case .refactor, .none:
+            // Refactor is filtered server-side in Phase A; .none shouldn't happen
+            placeholderView(
+                systemImage: "questionmark.circle",
+                title: "Unsupported drill type",
+                subtitle: "This shouldn't happen — refactor drills are filtered server-side."
+            )
         }
-        .padding()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private func placeholderView(systemImage: String, title: String, subtitle: String) -> some View {
