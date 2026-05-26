@@ -73,12 +73,7 @@ struct DrillModalView: View {
         case .verify:
             VerifyDrillInputView(session: session)
         case .decompose:
-            // Real view lands in UI-B5
-            placeholderView(
-                systemImage: "list.number",
-                title: "Decompose input",
-                subtitle: "Real input view lands in UI-B5."
-            )
+            DecomposeDrillInputView(session: session)
         case .refactor, .none:
             // Refactor is filtered server-side in Phase A; .none shouldn't happen
             placeholderView(
