@@ -59,6 +59,9 @@ final class DrillSession {
 
         do {
             _ = try await service.submitDrill(bundleId: drill.bundleId, body: body)
+            // Fire submit event before polling so we capture it even if polling fails.
+            let elapsed = Int(Date().timeIntervalSince(startedAt ?? Date()))
+            DrillAnalytics.trackSubmitted(drill: drill, timeTakenSeconds: elapsed)
         } catch {
             lastError = "Failed to submit: \(error.localizedDescription)"
             state = .error(lastError ?? "submit failed")

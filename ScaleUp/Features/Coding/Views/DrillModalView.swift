@@ -25,6 +25,17 @@ struct DrillModalView: View {
                 await session.loadToday()
             }
         }
+        .onChange(of: session.state) { _, newState in
+            guard let drill = session.todayDrill else { return }
+            switch newState {
+            case .input:
+                DrillAnalytics.trackStarted(drill: drill)
+            case .result(let grade):
+                DrillAnalytics.trackResultViewed(drill: drill, score: grade.overallScore)
+            default:
+                break
+            }
+        }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }

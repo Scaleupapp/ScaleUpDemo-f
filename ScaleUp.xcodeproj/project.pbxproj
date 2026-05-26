@@ -251,6 +251,7 @@
 		77FF7C5F665004BD00DB890A /* V2ObjectiveSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99F1726D3309C28CF6D4F8AB /* V2ObjectiveSetupView.swift */; };
 		78F2CF5F40CBC84E4A614CDF /* TopicChipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B2789775D0D8DAD3EC04DED /* TopicChipView.swift */; };
 		795A87FF18FE9B4576197B4F /* APIGetTodayPlan200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 323626E51973063858C16201 /* APIGetTodayPlan200Response.swift */; };
+		795F1B5181A4936969B53F19 /* CodingDrillCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BFF4BC5FB7472BD47C79323 /* CodingDrillCard.swift */; };
 		79CE34BA6D54E690C0D98BC6 /* NotesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D643804E07F1A076796A1DF /* NotesDetailView.swift */; };
 		7A11677A58FA0C9F26FABFEB /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77350A8DC3B00E3BC9A55D64 /* LoginView.swift */; };
 		7A654FE72518B36471A717E8 /* APIGetOnboardingStatus200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4CD9331DBC527F5CE63433C /* APIGetOnboardingStatus200Response.swift */; };
@@ -284,6 +285,7 @@
 		85DF87E8E396DE1C956D46D4 /* ScaleUpUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 899E47FA8A0AAAE132F896E1 /* ScaleUpUITests.swift */; };
 		86833A64633C884770CF9B66 /* CompetitionStatsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5AEE9AA6ACA95F3BFBE005A /* CompetitionStatsSection.swift */; };
 		868ADE594A80FE5A963041D2 /* InterestsStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 213B2C3CB92A4EE770323F7C /* InterestsStepView.swift */; };
+		86C492C9423FF6B72A46569D /* DrillAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FC61D5F10A9FDE1CCDE0868 /* DrillAnalytics.swift */; };
 		870EE473259BD9B08663FD38 /* LiveEventLobbyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812A064F60A4DAA3376584E2 /* LiveEventLobbyView.swift */; };
 		871D62B6046F1D455435BBF6 /* APIGetCodeDrillToday404Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = F66DF7AB5BB7A4E3943AE5EF /* APIGetCodeDrillToday404Response.swift */; };
 		87423E904D73273EB4602E80 /* CalibrationSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6A640C16899EE7D7A84889E /* CalibrationSession.swift */; };
@@ -706,6 +708,7 @@
 		7B9D3E65976611A01D01058A /* AITutorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorService.swift; sourceTree = "<group>"; };
 		7BDF23307E37EFE298593AA0 /* MyPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyPlanView.swift; sourceTree = "<group>"; };
 		7BED62C59C6A36689079698F /* ProgressRing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressRing.swift; sourceTree = "<group>"; };
+		7BFF4BC5FB7472BD47C79323 /* CodingDrillCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodingDrillCard.swift; sourceTree = "<group>"; };
 		7CB3CE644737F6F614379AB9 /* APIGetOnboardingStatus200ResponseAllOfData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetOnboardingStatus200ResponseAllOfData.swift; sourceTree = "<group>"; };
 		7CC9363E7C3BDCE5D76CAE7F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7CE94411C902C1553200970B /* ObjectiveStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveStepView.swift; sourceTree = "<group>"; };
@@ -766,6 +769,7 @@
 		9AD299B61F8218A1E572AC63 /* PlanService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanService.swift; sourceTree = "<group>"; };
 		9DC5D2C38A420F6650BB836F /* MilestonePreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestonePreview.swift; sourceTree = "<group>"; };
 		9FA83529EA44E22C10753409 /* APIPlanTaskCompletion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIPlanTaskCompletion.swift; sourceTree = "<group>"; };
+		9FC61D5F10A9FDE1CCDE0868 /* DrillAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillAnalytics.swift; sourceTree = "<group>"; };
 		9FEB8741140EABB6AED1369B /* CreatorPromotionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorPromotionView.swift; sourceTree = "<group>"; };
 		A03E34B6A50E38145ACED09D /* CreatorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorService.swift; sourceTree = "<group>"; };
 		A0525F2B7B22BDD8F7273E07 /* CreateNoteRequestSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateNoteRequestSheet.swift; sourceTree = "<group>"; };
@@ -988,6 +992,7 @@
 			children = (
 				4A7A332F81FE77BCAD5E8B5B /* CalibrationResultView.swift */,
 				29FB48B5E1F903743C398005 /* CalibrationSequenceView.swift */,
+				7BFF4BC5FB7472BD47C79323 /* CodingDrillCard.swift */,
 				5F192366E61B735685AFCFD8 /* DecomposeDrillInputView.swift */,
 				AAD3E0600E3527335A84F83D /* DrillBriefView.swift */,
 				F5036600EC19164870D941AC /* DrillModalView.swift */,
@@ -1815,6 +1820,7 @@
 		9C346EFACD01FF118CF33A16 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				9FC61D5F10A9FDE1CCDE0868 /* DrillAnalytics.swift */,
 				2062F9D60194386BD4BBAB03 /* DrillService.swift */,
 			);
 			path = Services;
@@ -2568,6 +2574,7 @@
 				BDA3F6A07473E732E80F2BB8 /* ChallengeViewModel.swift in Sources */,
 				FB2704BAAD5D188AA37C05B9 /* CoachMarkManager.swift in Sources */,
 				DAC7AA93D7222B2E71281524 /* CoachMarkOverlay.swift in Sources */,
+				795F1B5181A4936969B53F19 /* CodingDrillCard.swift in Sources */,
 				837C3C0E8D09A83CC4FC2227 /* ColorTokens.swift in Sources */,
 				7C3772FFA78186E3726E7186 /* Comment.swift in Sources */,
 				EF2ECD78B475A8EDACAD6415 /* CompassFAB.swift in Sources */,
@@ -2626,6 +2633,7 @@
 				803C4094193FC611345B82FE /* DiagnosticWelcomeView.swift in Sources */,
 				6530CA81A363CDF02631A8E8 /* DiscoverView.swift in Sources */,
 				EA72478A26CFA7D4FF0FA2CE /* DiscoverViewModel.swift in Sources */,
+				86C492C9423FF6B72A46569D /* DrillAnalytics.swift in Sources */,
 				A51E165DAE66C39F9C0527A3 /* DrillBriefView.swift in Sources */,
 				4FCD6E54AE5C8033871E5385 /* DrillModalView.swift in Sources */,
 				3E71AD3F10D22872F7F7B0AF /* DrillModels.swift in Sources */,

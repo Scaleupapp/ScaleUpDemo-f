@@ -168,6 +168,12 @@ struct V2HomeView: View {
                 .padding(.bottom, 22)
         }
 
+        // 3b. CODING DRILL — best-effort card below the hero. Loads its own
+        //     state and silently hides itself on any failure, so it never
+        //     breaks Home for users without a coding objective.
+        CodingDrillCard()
+            .padding(.bottom, 22)
+
         // 4. YOUR PLAN — multi-week timeline (only when we have schedule data)
         if let sched = data.planSchedule, !sched.isEmpty {
             planTimelineSection(sched: sched, weekProgress: data.weekProgress, streak: data.streak)

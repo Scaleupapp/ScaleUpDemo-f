@@ -146,6 +146,18 @@ enum AnalyticsEvent {
     case recalibrationStarted
     case recalibrationCompleted(topicsRetested: Int, biggestGrowth: Double)
 
+    // MARK: Coding Drill
+
+    case codingDrillCardShown(drillSubtype: String, difficulty: String, roleTrack: String)
+    case codingCalibrationCardShown
+    case codingDrillCardTapped(drillSubtype: String, difficulty: String)
+    case codingCalibrationCardTapped
+    case codingDrillStarted(drillSubtype: String, difficulty: String)
+    case codingDrillSubmitted(drillSubtype: String, difficulty: String, timeTakenSeconds: Int)
+    case codingDrillResultViewed(drillSubtype: String, difficulty: String, score: Int)
+    case codingDrillAbandoned(drillSubtype: String, abandonedAt: String)
+    case codingCalibrationCompleted(recommendedDifficulty: String)
+
     // MARK: Event Name (sent to Mixpanel)
 
     var name: String {
@@ -256,6 +268,16 @@ enum AnalyticsEvent {
         case .recalibrationOffered:               return "recalibration_offered"
         case .recalibrationStarted:               return "recalibration_started"
         case .recalibrationCompleted:             return "recalibration_completed"
+
+        case .codingDrillCardShown:               return "coding_drill_card_shown"
+        case .codingCalibrationCardShown:         return "coding_calibration_card_shown"
+        case .codingDrillCardTapped:              return "coding_drill_card_tapped"
+        case .codingCalibrationCardTapped:        return "coding_calibration_card_tapped"
+        case .codingDrillStarted:                 return "coding_drill_started"
+        case .codingDrillSubmitted:               return "coding_drill_submitted"
+        case .codingDrillResultViewed:            return "coding_drill_result_viewed"
+        case .codingDrillAbandoned:               return "coding_drill_abandoned"
+        case .codingCalibrationCompleted:         return "coding_calibration_completed"
         }
     }
 
@@ -566,6 +588,34 @@ enum AnalyticsEvent {
 
         case .existingUserCalibrationBannerShown(let promptCount):
             return ["prompt_count": promptCount]
+
+        case .codingDrillCardShown(let drillSubtype, let difficulty, let roleTrack):
+            return ["drill_subtype": drillSubtype, "difficulty": difficulty, "role_track": roleTrack]
+
+        case .codingCalibrationCardShown, .codingCalibrationCardTapped:
+            return [:]
+
+        case .codingDrillCardTapped(let drillSubtype, let difficulty):
+            return ["drill_subtype": drillSubtype, "difficulty": difficulty]
+
+        case .codingDrillStarted(let drillSubtype, let difficulty):
+            return ["drill_subtype": drillSubtype, "difficulty": difficulty]
+
+        case .codingDrillSubmitted(let drillSubtype, let difficulty, let timeTakenSeconds):
+            return [
+                "drill_subtype": drillSubtype,
+                "difficulty": difficulty,
+                "time_taken_seconds": timeTakenSeconds
+            ]
+
+        case .codingDrillResultViewed(let drillSubtype, let difficulty, let score):
+            return ["drill_subtype": drillSubtype, "difficulty": difficulty, "score": score]
+
+        case .codingDrillAbandoned(let drillSubtype, let abandonedAt):
+            return ["drill_subtype": drillSubtype, "abandoned_at": abandonedAt]
+
+        case .codingCalibrationCompleted(let recommendedDifficulty):
+            return ["recommended_difficulty": recommendedDifficulty]
         }
     }
 }
