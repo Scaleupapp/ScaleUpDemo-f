@@ -43,9 +43,11 @@ struct DrillModalView: View {
         case .input:
             inputView
         case .submitting:
-            placeholderView(systemImage: "hourglass", title: "Grading your answer…", subtitle: "This is a stub for UI-B2; real submit lands in UI-B6.")
-        case .result:
-            placeholderView(systemImage: "checkmark.seal.fill", title: "Result placeholder", subtitle: "Real result view lands in UI-B6.")
+            DrillSubmittingView()
+        case .result(let grade):
+            DrillResultView(grade: grade) {
+                dismiss()
+            }
         case .error(let msg):
             placeholderView(systemImage: "exclamationmark.triangle", title: "Something went wrong", subtitle: msg)
         case .calibrationRequired:

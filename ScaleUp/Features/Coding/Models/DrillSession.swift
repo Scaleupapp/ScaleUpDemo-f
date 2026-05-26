@@ -47,13 +47,56 @@ final class DrillSession {
         }
     }
 
-    /// Submit the drill. Called from the per-subtype input views in UI-B3/B4/B5.
-    /// Implemented in UI-B6.
+    /// Submit the drill and poll for the graded result.
+    /// POSTs to /submit, then polls /result every 2 sec for up to 30 sec (15 attempts).
     func submit(_ submission: DrillSubmission) async {
-        // Stub for UI-B2 — real impl lands in UI-B6.
-        // Current behavior: just move to .submitting so the developer can see the
-        // state transition. UI-B6 will wire the real submit + poll.
+        guard let drill = todayDrill else { return }
+        guard let subtype = todayDrill?.drillSubtype else { return }
+
         state = .submitting
+
+        let body = DrillSubmitBody(drillSubtype: subtype, submission: submission)
+
+        do {
+            _ = try await service.submitDrill(bundleId: drill.bundleId, body: body)
+        } catch {
+            lastError = "Failed to submit: \(error.localizedDescription)"
+            state = .error(lastError ?? "submit failed")
+            return
+        }
+
+        // Poll for result: every 2 sec, up to 30 sec (15 attempts).
+        // Backend grader target latency is ~8 sec for non-refactor drills, so
+        // we should usually get a graded result within 2-3 polls.
+        let maxAttempts = 15
+        let pollIntervalNs: UInt64 = 2 * 1_000_000_000
+
+        for attempt in 0..<maxAttempts {
+            // Brief delay before first poll too — grading rarely returns within 1 sec
+            try? await Task.sleep(nanoseconds: pollIntervalNs)
+
+            do {
+                let result = try await service.pollResult(bundleId: drill.bundleId)
+                switch result {
+                case .graded(let graded):
+                    state = .result(grade: graded)
+                    return
+                case .pending:
+                    continue
+                }
+            } catch {
+                // Transient failure — log and retry up to maxAttempts
+                // Don't bail on the first network blip
+                if attempt == maxAttempts - 1 {
+                    lastError = "Grading is taking longer than expected. Pull down to refresh in a few seconds."
+                    state = .error(lastError ?? "polling timed out")
+                    return
+                }
+            }
+        }
+
+        lastError = "Grading took longer than 30 seconds. Try again."
+        state = .error(lastError ?? "polling timeout")
     }
 
     var timeRemaining: TimeInterval? {

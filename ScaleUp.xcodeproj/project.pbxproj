@@ -50,6 +50,7 @@
 		14E7FF268C4A9AB0529CE8DB /* CreateNotesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 405E1E23AC8348E9A1A39DFC /* CreateNotesViewModel.swift */; };
 		1572EEE9C19F0BE410C25156 /* CreateContentViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B50058EB5E3042E510A9AFC /* CreateContentViewModel.swift */; };
 		17015978096ADD92B7031650 /* RecommendationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E80E349B32BEBC48AFE29340 /* RecommendationService.swift */; };
+		17AF4CED34D71C1F8C2A2760 /* DrillSubmittingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BE472FEC509E5CDB1BEFCC9 /* DrillSubmittingView.swift */; };
 		1870F99068BDF3762579F3CA /* APIGetOnboardingStatus200ResponseAllOfData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CB3CE644737F6F614379AB9 /* APIGetOnboardingStatus200ResponseAllOfData.swift */; };
 		1928542B25C207EE412AC4F6 /* V2Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADC99DFF2C23C4507F3F18DF /* V2Theme.swift */; };
 		19D486C5E1FAD360802A668C /* UserInferenceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BC92F97F941077BB4D55218 /* UserInferenceService.swift */; };
@@ -156,6 +157,7 @@
 		4911077E23EB61BB3860B090 /* MyContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30D3BDDEA1361685EFDA3F1 /* MyContentView.swift */; };
 		4943A85CB5B9183667B6848F /* V2YouViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A36A5246037091BA9E8E025 /* V2YouViewModel.swift */; };
 		49B580738BFE6EC401726E75 /* SeeAllContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B321EABA6BE1BD2A99354C6 /* SeeAllContentView.swift */; };
+		49B6E5CADD744C8058276134 /* RubricBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F36DB1ED92B31C9EA4163737 /* RubricBar.swift */; };
 		4A048C0FE68BD1CCB36AA693 /* DrillService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2062F9D60194386BD4BBAB03 /* DrillService.swift */; };
 		4A7778CD73147E15F6E0355D /* ScaleUpTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */; };
 		4B1D87910EB1315C4FE995DB /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 3F6A5A1E69F51B5356AA87A7 /* GoogleSignIn */; };
@@ -173,6 +175,7 @@
 		52062178F9FB54DDB902F51C /* ContributorCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684342DE4E8DF24815BB06CA /* ContributorCardView.swift */; };
 		53D64357DCDABC34D4777051 /* AITutorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B9D3E65976611A01D01058A /* AITutorService.swift */; };
 		53F4117ADE166EBEADB4D754 /* APIDiagnosticOption.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BF0002815568AFE2195E16 /* APIDiagnosticOption.swift */; };
+		5409DA00E314FAEF997AE6F8 /* DrillResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5A648AC73909B1C01C0083 /* DrillResultView.swift */; };
 		54695CBBA8731C241B32C61C /* V2QuizGenerateSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B66BF020392CB45539BA484D /* V2QuizGenerateSheet.swift */; };
 		5488D2D7B34719BC12B21771 /* TopicDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 964B81EF0DAEAECECAEBE1E7 /* TopicDetailViewModel.swift */; };
 		5512654CEDC9E0F58D5195A5 /* APIGetCalibrationDrillResult202Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27F94F6A50AC6BC66798B960 /* APIGetCalibrationDrillResult202Response.swift */; };
@@ -253,6 +256,7 @@
 		7B162603E21497C76A2E04A5 /* Playlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5570D7781697218AFFDAED04 /* Playlist.swift */; };
 		7B1E6E750D5F958B2E72DA1F /* APIAuthResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19284A76A18D0235F60010AD /* APIAuthResult.swift */; };
 		7B84FBB3DEA5DB23F7C8F2D7 /* SyllabusUploadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02C72BECA2D7FD3E424F74BC /* SyllabusUploadService.swift */; };
+		7BB3C6F9F872339A70DC4C54 /* MasteryDeltaBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE5EBD0171AF91E8F6CDC360 /* MasteryDeltaBadge.swift */; };
 		7C3772FFA78186E3726E7186 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAB8C8E18FB9EFC98640E620 /* Comment.swift */; };
 		7C97BF7B2640968CF0DE4B58 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FF6D1F7E5C438B86866214B /* Motion.swift */; };
 		7C9B57CBE048C2F91A98FC5F /* BugLocationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 949054D0EF8015DD51B777C7 /* BugLocationRow.swift */; };
@@ -497,6 +501,7 @@
 		0A17585F67A229CBF496D2D2 /* ScaleUpUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = ScaleUpUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0B321EABA6BE1BD2A99354C6 /* SeeAllContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeeAllContentView.swift; sourceTree = "<group>"; };
 		0B50058EB5E3042E510A9AFC /* CreateContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateContentViewModel.swift; sourceTree = "<group>"; };
+		0BE472FEC509E5CDB1BEFCC9 /* DrillSubmittingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSubmittingView.swift; sourceTree = "<group>"; };
 		0C2AE1C1102C84213D76DEBC /* V2YouAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2YouAnalyticsView.swift; sourceTree = "<group>"; };
 		0D05DAB1044B3215C83D630B /* MyContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentViewModel.swift; sourceTree = "<group>"; };
 		0D7F15E103B0223375848573 /* APIDiagnosticNextQuestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDiagnosticNextQuestion.swift; sourceTree = "<group>"; };
@@ -773,6 +778,7 @@
 		AADDEA292010CDEF4D2AE2A6 /* APISubmitCodeDrill202Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISubmitCodeDrill202Response.swift; sourceTree = "<group>"; };
 		AAEFB419EFF55B0323D499EC /* InterviewLiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewLiveView.swift; sourceTree = "<group>"; };
 		AB01DB3A7B272054BF40D180 /* ScaleUpLogo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpLogo.swift; sourceTree = "<group>"; };
+		AB5A648AC73909B1C01C0083 /* DrillResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillResultView.swift; sourceTree = "<group>"; };
 		AB9FF0F92BD07861A2F3ECC3 /* APISubmitDiagnosticAnswerRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISubmitDiagnosticAnswerRequest.swift; sourceTree = "<group>"; };
 		AC989945E1BD3C8CE8479F5D /* V2TopicProficiencyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2TopicProficiencyView.swift; sourceTree = "<group>"; };
 		ADC99DFF2C23C4507F3F18DF /* V2Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2Theme.swift; sourceTree = "<group>"; };
@@ -842,6 +848,7 @@
 		CDCB84D59D198D460B8B735C /* InterviewViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewViewModel.swift; sourceTree = "<group>"; };
 		CDE301E19D2A84BAC29F3F7E /* APIAuthLoginRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIAuthLoginRequest.swift; sourceTree = "<group>"; };
 		CE4EE6D38BF983E72CE2DBFA /* APIPlanMastery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIPlanMastery.swift; sourceTree = "<group>"; };
+		CE5EBD0171AF91E8F6CDC360 /* MasteryDeltaBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MasteryDeltaBadge.swift; sourceTree = "<group>"; };
 		CFF315BDB3AAE03E4E2795E0 /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		D021B8CA080F14C064EF35B2 /* DashboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardService.swift; sourceTree = "<group>"; };
 		D0287C7D11C3928D8C7288BE /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
@@ -903,6 +910,7 @@
 		F29D83283717BDEBC5824884 /* DiagnosticResultsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticResultsViewModel.swift; sourceTree = "<group>"; };
 		F30D3BDDEA1361685EFDA3F1 /* MyContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentView.swift; sourceTree = "<group>"; };
 		F3624635606476B6055F852F /* APIStartCalibrationDrill200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIStartCalibrationDrill200Response.swift; sourceTree = "<group>"; };
+		F36DB1ED92B31C9EA4163737 /* RubricBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RubricBar.swift; sourceTree = "<group>"; };
 		F48DD5F9E8968EFE61B8DC0D /* DiagnosticQuestionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticQuestionView.swift; sourceTree = "<group>"; };
 		F5036600EC19164870D941AC /* DrillModalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillModalView.swift; sourceTree = "<group>"; };
 		F56084DEF793C055C0F6C56F /* QuizListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizListView.swift; sourceTree = "<group>"; };
@@ -948,6 +956,8 @@
 			children = (
 				949054D0EF8015DD51B777C7 /* BugLocationRow.swift */,
 				CA78987754DCA44BB0C49092 /* DecompositionStepRow.swift */,
+				CE5EBD0171AF91E8F6CDC360 /* MasteryDeltaBadge.swift */,
+				F36DB1ED92B31C9EA4163737 /* RubricBar.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -970,6 +980,8 @@
 				5F192366E61B735685AFCFD8 /* DecomposeDrillInputView.swift */,
 				AAD3E0600E3527335A84F83D /* DrillBriefView.swift */,
 				F5036600EC19164870D941AC /* DrillModalView.swift */,
+				AB5A648AC73909B1C01C0083 /* DrillResultView.swift */,
+				0BE472FEC509E5CDB1BEFCC9 /* DrillSubmittingView.swift */,
 				051F47A7A3D99C91E8AC8A85 /* PromptDrillInputView.swift */,
 				8BD507FCD8FEF0C423189AD6 /* VerifyDrillInputView.swift */,
 			);
@@ -2601,8 +2613,10 @@
 				A51E165DAE66C39F9C0527A3 /* DrillBriefView.swift in Sources */,
 				4FCD6E54AE5C8033871E5385 /* DrillModalView.swift in Sources */,
 				3E71AD3F10D22872F7F7B0AF /* DrillModels.swift in Sources */,
+				5409DA00E314FAEF997AE6F8 /* DrillResultView.swift in Sources */,
 				4A048C0FE68BD1CCB36AA693 /* DrillService.swift in Sources */,
 				312D7471B823E9B041D3960E /* DrillSession.swift in Sources */,
+				17AF4CED34D71C1F8C2A2760 /* DrillSubmittingView.swift in Sources */,
 				EA379F0B524FEFEED4F4C48A /* DrillViewState.swift in Sources */,
 				C88D097168D48DA93014E28D /* EditContentView.swift in Sources */,
 				3649F301702F8859BF93B448 /* EditContentViewModel.swift in Sources */,
@@ -2653,6 +2667,7 @@
 				7A11677A58FA0C9F26FABFEB /* LoginView.swift in Sources */,
 				EF480AA2DFC5A981B2E73AE8 /* MainTabView.swift in Sources */,
 				CAD98E162F9AA3B0AF5840D7 /* ManualCompletionSheet.swift in Sources */,
+				7BB3C6F9F872339A70DC4C54 /* MasteryDeltaBadge.swift in Sources */,
 				9CC8953E37027F722C400A94 /* MilestoneCard.swift in Sources */,
 				14E16109E8464AC038C13D02 /* MilestonePreview.swift in Sources */,
 				14566366A8C61A212CED569A /* MilestonesView.swift in Sources */,
@@ -2739,6 +2754,7 @@
 				7FA75321CCD5988E97253EAC /* RecalibrationViewModel.swift in Sources */,
 				17015978096ADD92B7031650 /* RecommendationService.swift in Sources */,
 				ACC27673D4EBD98E8C05EC82 /* RegisterView.swift in Sources */,
+				49B6E5CADD744C8058276134 /* RubricBar.swift in Sources */,
 				FDB4021A57B5BBDB9D62869B /* ScaleUpApp.swift in Sources */,
 				E2A1784B01C1FB57E009C5A2 /* ScaleUpLogo.swift in Sources */,
 				6F96ECC5EE0557B41E3CA8D2 /* ScaleUpTextField.swift in Sources */,
