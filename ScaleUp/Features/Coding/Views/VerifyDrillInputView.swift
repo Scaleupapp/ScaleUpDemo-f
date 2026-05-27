@@ -7,19 +7,9 @@ struct VerifyDrillInputView: View {
     let onSubmit: (DrillSubmission) -> Void
 
     @State private var locations: [BugLocation] = []
-    @State private var showCode: Bool = true
 
     // Min explanation chars matches backend Joi validator (5)
     private let minExplanationChars = 5
-
-    // Parsed code blocks from the brief (computed once)
-    private var codeBlocks: [CodeBlock] {
-        CodeBlock.parse(from: context.brief)
-    }
-
-    private var proseBrief: String {
-        CodeBlock.stripCodeBlocks(from: context.brief)
-    }
 
     var body: some View {
         ScrollView {
@@ -43,49 +33,13 @@ struct VerifyDrillInputView: View {
 
     // MARK: - Code section
 
-    @ViewBuilder
     private var codeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Review this code", systemImage: "doc.text.magnifyingglass")
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
-                Button(showCode ? "Hide" : "Show") {
-                    withAnimation { showCode.toggle() }
-                }
-                .font(.caption)
-            }
-
-            if showCode {
-                if !proseBrief.isEmpty {
-                    Text(proseBrief)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                if codeBlocks.isEmpty {
-                    // Fallback: brief has no code fences — render as raw monospaced block
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        Text(context.brief)
-                            .font(.system(.caption, design: .monospaced))
-                            .lineSpacing(2)
-                            .textSelection(.enabled)
-                            .padding(12)
-                            .frame(minWidth: 0, alignment: .topLeading)
-                    }
-                    .frame(maxHeight: 300)
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
-                } else {
-                    CodeViewer(blocks: codeBlocks)
-                }
-            }
-        }
+        BriefCard(
+            label: "Review this code",
+            systemImage: "doc.text.magnifyingglass",
+            brief: context.brief,
+            style: .collapsible(defaultExpanded: true)
+        )
     }
 
     // MARK: - Bug locations list

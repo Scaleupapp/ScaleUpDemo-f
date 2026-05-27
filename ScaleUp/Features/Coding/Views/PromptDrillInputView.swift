@@ -7,7 +7,6 @@ struct PromptDrillInputView: View {
     let onSubmit: (DrillSubmission) -> Void
 
     @State private var promptText: String = ""
-    @State private var showBriefRecap: Bool = false
     @FocusState private var editorFocused: Bool
 
     // Per the backend Joi validator: prompt_text is min 10 max 8000 chars.
@@ -43,24 +42,13 @@ struct PromptDrillInputView: View {
 
     // MARK: - Brief recap (collapsible, default collapsed)
 
-    @ViewBuilder
     private var briefRecap: some View {
-        let prose = CodeBlock.stripCodeBlocks(from: context.brief)
-        if !prose.isEmpty {
-            DisclosureGroup(isExpanded: $showBriefRecap) {
-                Text(prose)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } label: {
-                Label("View brief", systemImage: "doc.text")
-                    .font(.subheadline.weight(.medium))
-            }
-            .padding(12)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
+        BriefCard(
+            label: "Brief",
+            systemImage: "doc.text",
+            brief: context.brief,
+            style: .collapsible(defaultExpanded: false)
+        )
     }
 
     // MARK: - Editor
