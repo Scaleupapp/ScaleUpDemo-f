@@ -2,6 +2,7 @@ import SwiftUI
 
 struct V2CodingMasteryView: View {
     @State private var state: LoadState = .loading
+    @State private var todayStatus: TodayDrillStatus = .unknown
     @State private var showDrillModal = false
     @State private var showCalibration = false
     @State private var showPracticeAnotherSheet = false
@@ -20,6 +21,16 @@ struct V2CodingMasteryView: View {
         case empty
         case loaded(CodingMasteryResponse)
         case error(String)
+    }
+
+    /// Tracks whether today's daily drill quota is consumed. Drives whether we
+    /// show the gold "Take today's drill" button or the "done for today" card.
+    /// `.unknown` is the initial state — we don't gate the button on it so a
+    /// network blip doesn't hide a perfectly-good CTA.
+    enum TodayDrillStatus: Equatable {
+        case unknown
+        case available
+        case completedToday(nextAt: Date?)
     }
 
     var body: some View {
@@ -140,20 +151,27 @@ struct V2CodingMasteryView: View {
                 recentAttemptsList(data.recentAttempts)
             }
 
-            // CTA
-            Button {
-                showDrillModal = true
-            } label: {
-                HStack {
-                    Image(systemName: "play.fill")
-                    Text("Take today's drill")
+            // CTA — gold button only when today's drill is still available.
+            // After completion, swap for an informational card so the user
+            // doesn't tap into the modal just to see "daily quota used".
+            switch todayStatus {
+            case .completedToday(let nextAt):
+                completedTodayCard(nextAt: nextAt)
+            default:
+                Button {
+                    showDrillModal = true
+                } label: {
+                    HStack {
+                        Image(systemName: "play.fill")
+                        Text("Take today's drill")
+                    }
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
                 }
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
             }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
 
             Button {
                 showPracticeAnotherSheet = true
@@ -172,6 +190,40 @@ struct V2CodingMasteryView: View {
             .buttonStyle(.plain)
             .padding(.top, 4)
         }
+    }
+
+    private func completedTodayCard(nextAt: Date?) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.title2)
+                .foregroundStyle(.green)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Today's drill complete")
+                    .font(.subheadline.weight(.semibold))
+                Text(nextDrillCopy(nextAt))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.green.opacity(0.10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.green.opacity(0.35), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func nextDrillCopy(_ nextAt: Date?) -> String {
+        guard let date = nextAt else {
+            return "Come back tomorrow for the next one — or tap Practice another to keep going."
+        }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        let rel = formatter.localizedString(for: date, relativeTo: Date())
+        return "Next drill unlocks \(rel). Tap Practice another to keep going."
     }
 
     private func performRequest(_ req: PracticeRequest) async {
@@ -198,6 +250,22 @@ struct V2CodingMasteryView: View {
     }
 
     private func humanReadableError(_ error: Error) -> String {
+        if let svc = error as? DrillServiceError {
+            switch svc {
+            case .calibrationRequired:
+                return "Take the 6-minute calibration first so we can pitch drills at your level."
+            case .dailyQuotaUsed(let nextAt):
+                if let date = nextAt {
+                    let f = RelativeDateTimeFormatter(); f.unitsStyle = .full
+                    return "You've already done today's drill — next one unlocks \(f.localizedString(for: date, relativeTo: Date()))."
+                }
+                return "You've already done today's drill — come back tomorrow."
+            case .noDrillAvailable:
+                return "We're out of fresh drills for this combination — try another type or difficulty."
+            case .invalidResponse:
+                return "Got an unexpected response from the server. Try again in a moment."
+            }
+        }
         if case V2APIError.httpError(let status, let data) = error {
             if status == 404, let body = try? JSONDecoder().decode([String: String].self, from: data) {
                 switch body["error"] {
@@ -205,6 +273,10 @@ struct V2CodingMasteryView: View {
                     return "Coding practice isn't available for your current objective."
                 case "no_drill_available":
                     return "We're out of fresh drills for this combination — try another type or difficulty."
+                case "calibration_required":
+                    return "Take the 6-minute calibration first so we can pitch drills at your level."
+                case "daily_quota_used":
+                    return "You've already done today's drill — come back tomorrow."
                 default:
                     break
                 }
@@ -323,6 +395,7 @@ struct V2CodingMasteryView: View {
     private func load() async {
         do {
             let resp: V2APIResponse<CodingMasteryResponse> = try await V2APIClient.shared.get("/you/coding-mastery")
+            todayStatus = await probeTodayDrillStatus()
             if resp.data.tracks.isEmpty {
                 state = .empty
             } else {
@@ -330,6 +403,20 @@ struct V2CodingMasteryView: View {
             }
         } catch {
             state = .error(error.localizedDescription)
+        }
+    }
+
+    /// Probes /drills/today to discover whether the daily quota is used.
+    /// Never throws — degrades to `.unknown` so the CTA defaults to visible
+    /// if the probe fails (better UX than hiding a working button on a glitch).
+    private func probeTodayDrillStatus() async -> TodayDrillStatus {
+        do {
+            _ = try await DrillService.shared.fetchTodayDrill()
+            return .available
+        } catch DrillServiceError.dailyQuotaUsed(let nextAt) {
+            return .completedToday(nextAt: nextAt)
+        } catch {
+            return .unknown
         }
     }
 }

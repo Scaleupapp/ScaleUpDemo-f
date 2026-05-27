@@ -265,8 +265,11 @@ final class CompassViewModel {
     private var allowFallback = true
 
     func startConversation(context: V2Tab = .compass) {
-        guard messages.isEmpty else { return }
+        // Eligibility refresh runs on every open — the conversation guard below
+        // returns early on repeat opens, but the chip list still needs to be
+        // accurate (e.g., user just finished onboarding into a coding track).
         Task { await checkCodingEligibility() }
+        guard messages.isEmpty else { return }
         if let coach = coachContext {
             // Coach mode. If a scope is already chosen, fire the opener.
             // Otherwise, prompt the user to pick a scope; V2CompassView
@@ -617,6 +620,21 @@ final class CompassViewModel {
             }
         } catch {
             isCodingEligible = false  // hide chip on unknown errors
+        }
+
+        // The greeting call runs in parallel and may have already populated
+        // `suggestions` with the backend's chip list (which doesn't include the
+        // coding chip). Inject it now so the user sees it on this open without
+        // needing a re-render trigger.
+        if isCodingEligible, !suggestions.isEmpty,
+           !suggestions.contains(where: { $0.lowercased().contains("coding drill") }) {
+            let codingChip = "💻 Start a coding drill"
+            // Insert after the practice/interview chip if present, else at index 1.
+            if let idx = suggestions.firstIndex(where: { $0.lowercased().contains("interview") }) {
+                suggestions.insert(codingChip, at: min(idx + 1, suggestions.count))
+            } else {
+                suggestions.insert(codingChip, at: min(2, suggestions.count))
+            }
         }
     }
 

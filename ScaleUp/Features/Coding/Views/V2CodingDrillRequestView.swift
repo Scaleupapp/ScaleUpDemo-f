@@ -187,6 +187,22 @@ struct V2CodingDrillRequestView: View {
     }
 
     private func humanError(_ error: Error) -> String {
+        if let svc = error as? DrillServiceError {
+            switch svc {
+            case .calibrationRequired:
+                return "Take the 6-minute calibration first so we can pitch drills at your level."
+            case .dailyQuotaUsed(let nextAt):
+                if let date = nextAt {
+                    let f = RelativeDateTimeFormatter(); f.unitsStyle = .full
+                    return "You've already done today's drill — next one unlocks \(f.localizedString(for: date, relativeTo: Date()))."
+                }
+                return "You've already done today's drill — come back tomorrow."
+            case .noDrillAvailable:
+                return "We're out of fresh drills for this combination — try another type or difficulty."
+            case .invalidResponse:
+                return "Got an unexpected response from the server. Try again in a moment."
+            }
+        }
         if case V2APIError.httpError(let status, let data) = error {
             if status == 404, let body = try? JSONDecoder().decode([String: String].self, from: data) {
                 switch body["error"] {
@@ -194,6 +210,10 @@ struct V2CodingDrillRequestView: View {
                     return "Coding practice isn't available for your current objective."
                 case "no_drill_available":
                     return "We're out of fresh drills for this combination — try another type or difficulty."
+                case "calibration_required":
+                    return "Take the 6-minute calibration first so we can pitch drills at your level."
+                case "daily_quota_used":
+                    return "You've already done today's drill — come back tomorrow."
                 default: break
                 }
             }
