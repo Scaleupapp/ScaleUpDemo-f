@@ -4,10 +4,25 @@ import Foundation
 
 enum CompassRole { case user, compass }
 
+struct CompassSuggestedAction: Codable, Sendable {
+    let type: String              // "request_drill" (only value for now)
+    let drillSubtype: String?
+    let difficulty: String?
+    let topicHint: String?
+
+    enum CodingKeys: String, CodingKey {
+        case type
+        case drillSubtype = "drill_subtype"
+        case difficulty
+        case topicHint = "topic_hint"
+    }
+}
+
 struct CompassMessage: Identifiable {
     let id = UUID()
     let role: CompassRole
     let text: String
+    var suggestedAction: CompassSuggestedAction? = nil
 }
 
 struct CompassConfigField {
@@ -65,6 +80,8 @@ private struct CompassOutput: Codable {
     let startEndpoint: String?
     // insight mode
     let items: [InsightItem]?
+    // on-demand drill action card
+    let suggestedAction: CompassSuggestedAction?
 }
 
 private struct SuggestedAction: Codable {
@@ -515,7 +532,7 @@ final class CompassViewModel {
         do {
             let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post("/compass", body: body)
             let reply = resp.data.output.reply ?? "Tell me more."
-            messages.append(.init(role: .compass, text: reply))
+            messages.append(.init(role: .compass, text: reply, suggestedAction: resp.data.output.suggestedAction))
             if let followups = resp.data.output.followups, !followups.isEmpty {
                 suggestions = followups
                 showSuggestions = true

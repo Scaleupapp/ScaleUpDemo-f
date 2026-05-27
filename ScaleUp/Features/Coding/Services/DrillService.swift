@@ -60,6 +60,15 @@ final class DrillService {
         }
     }
 
+    // MARK: - On-demand drill request
+
+    /// POST /api/coding/drills/request — bypasses daily quota. Returns a fresh DrillAttempt.
+    /// All fields optional: drill_subtype defaults to weakest-axis pick, difficulty defaults
+    /// to user's current DifficultyState, topic_hint is best-effort substring match.
+    func requestDrill(body: DrillRequestBody) async throws -> DrillStartResponse {
+        try await client.postCoding("/drills/request", body: body)
+    }
+
     // MARK: - Calibration
 
     /// POST /api/coding/drills/calibration/start

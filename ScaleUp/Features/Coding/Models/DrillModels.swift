@@ -107,6 +107,40 @@ struct TestSpec: Codable, Sendable {
     let command: String
 }
 
+// MARK: - POST /api/coding/drills/request body
+
+struct DrillRequestBody: Codable, Sendable {
+    let drillSubtype: DrillSubtype?
+    let difficulty: DrillDifficulty?
+    let topicHint: String?
+
+    enum CodingKeys: String, CodingKey {
+        case drillSubtype = "drill_subtype"
+        case difficulty
+        case topicHint = "topic_hint"
+    }
+}
+
+// MARK: - DrillStartResponse → DrillTodayResponse bridge
+
+extension DrillStartResponse {
+    /// Convert a /drills/request response (DrillStartResponse) to the DrillTodayResponse
+    /// shape used by DrillSession. Used by the "Practice another" and Compass action card flows.
+    func toTodayResponse() -> DrillTodayResponse {
+        DrillTodayResponse(
+            bundleId: self.bundleId,
+            brief: self.brief,
+            timeBudgetMinutes: self.timeBudgetMinutes,
+            drillSubtype: self.drillSubtype,
+            difficulty: self.difficulty,
+            roleTrack: self.roleTrack,
+            language: self.language,
+            acceptanceCriteria: self.acceptanceCriteria,
+            starterRepo: self.starterRepo
+        )
+    }
+}
+
 // MARK: - POST /api/coding/drills/:id/submit body + response
 
 struct DrillSubmitBody: Codable, Sendable {

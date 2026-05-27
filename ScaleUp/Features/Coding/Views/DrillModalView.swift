@@ -1,8 +1,16 @@
 import SwiftUI
 
 struct DrillModalView: View {
-    @State private var session = DrillSession()
+    @State private var session: DrillSession
     @Environment(\.dismiss) private var dismiss
+
+    init(preloadedSession: DrillSession? = nil) {
+        if let preloadedSession {
+            _session = State(initialValue: preloadedSession)
+        } else {
+            _session = State(initialValue: DrillSession())
+        }
+    }
 
     var body: some View {
         NavigationStack {

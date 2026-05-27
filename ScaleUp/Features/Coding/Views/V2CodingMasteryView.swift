@@ -4,6 +4,9 @@ struct V2CodingMasteryView: View {
     @State private var state: LoadState = .loading
     @State private var showDrillModal = false
     @State private var showCalibration = false
+    @State private var showPracticeAnotherSheet = false
+    @State private var requestedDrillSession: DrillSession? = nil
+    @State private var showRequestedDrillModal = false
 
     enum LoadState {
         case loading
@@ -25,6 +28,18 @@ struct V2CodingMasteryView: View {
         }
         .sheet(isPresented: $showCalibration) {
             CalibrationSequenceView()
+        }
+        .sheet(isPresented: $showPracticeAnotherSheet) {
+            PracticeAnotherSheet { subtype, difficulty in
+                showPracticeAnotherSheet = false
+                Task { await requestDrill(subtype: subtype, difficulty: difficulty) }
+            }
+            .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showRequestedDrillModal) {
+            if let session = requestedDrillSession {
+                DrillModalView(preloadedSession: session)
+            }
         }
     }
 
@@ -96,6 +111,39 @@ struct V2CodingMasteryView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
+
+            Button {
+                showPracticeAnotherSheet = true
+            } label: {
+                HStack {
+                    Image(systemName: "plus.circle")
+                    Text("Practice another")
+                }
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(.tint)
+                .background(Color.accentColor.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+        }
+    }
+
+    private func requestDrill(subtype: DrillSubtype?, difficulty: DrillDifficulty?) async {
+        do {
+            let body = DrillRequestBody(drillSubtype: subtype, difficulty: difficulty, topicHint: nil)
+            let resp = try await DrillService.shared.requestDrill(body: body)
+            let session = DrillSession(
+                preloadedDrill: resp.toTodayResponse(),
+                preloadedAttemptId: resp.attemptId
+            )
+            requestedDrillSession = session
+            showRequestedDrillModal = true
+            AnalyticsService.shared.track(.codingExtraDrillRequested(source: "mastery_view"))
+        } catch {
+            print("[requestDrill] failed: \(error.localizedDescription)")
         }
     }
 
@@ -283,6 +331,104 @@ struct CodingMasteryStats: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case totalDrillsGraded = "total_drills_graded"
         case averageScore = "average_score"
+    }
+}
+
+// MARK: - PracticeAnotherSheet
+
+struct PracticeAnotherSheet: View {
+    let onConfirm: (DrillSubtype?, DrillDifficulty?) -> Void
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedSubtype: DrillSubtype? = nil
+    @State private var selectedDifficulty: DrillDifficulty? = nil
+
+    var body: some View {
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Custom practice")
+                    .font(.title3.weight(.semibold))
+
+                Text("Pick what you want to practice. Leave fields blank to let us pick based on your weakest area + current difficulty.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                // Subtype picker
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Drill type").font(.subheadline.weight(.semibold))
+                    HStack(spacing: 8) {
+                        subtypeChip(nil, label: "Auto", icon: "sparkles")
+                        subtypeChip(.prompt, label: "Prompt", icon: "text.bubble")
+                        subtypeChip(.verify, label: "Bug Hunt", icon: "magnifyingglass")
+                        subtypeChip(.decompose, label: "Decompose", icon: "list.number")
+                    }
+                }
+
+                // Difficulty picker
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Difficulty").font(.subheadline.weight(.semibold))
+                    HStack(spacing: 8) {
+                        difficultyChip(nil, label: "Auto")
+                        difficultyChip(.easy, label: "Easy")
+                        difficultyChip(.medium, label: "Medium")
+                        difficultyChip(.hard, label: "Hard")
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    onConfirm(selectedSubtype, selectedDifficulty)
+                } label: {
+                    Text("Start drill")
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.accentColor)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(20)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func subtypeChip(_ value: DrillSubtype?, label: String, icon: String) -> some View {
+        let isSelected = selectedSubtype == value
+        return Button {
+            selectedSubtype = value
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon).font(.caption)
+                Text(label).font(.caption.weight(.medium))
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(isSelected ? Color.accentColor : Color.gray.opacity(0.12))
+            .foregroundStyle(isSelected ? Color.white : Color.primary)
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func difficultyChip(_ value: DrillDifficulty?, label: String) -> some View {
+        let isSelected = selectedDifficulty == value
+        return Button {
+            selectedDifficulty = value
+        } label: {
+            Text(label)
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 14).padding(.vertical, 6)
+                .background(isSelected ? Color.accentColor : Color.gray.opacity(0.12))
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
