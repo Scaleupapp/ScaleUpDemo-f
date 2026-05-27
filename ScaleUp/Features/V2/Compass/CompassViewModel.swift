@@ -201,12 +201,15 @@ enum CompassHomeRoute: String, Identifiable, CaseIterable {
     case resume
     case plan
     case compete
+    case codingDrill
     var id: String { rawValue }
 
     /// Maps a chip label (e.g. "⚡ Quiz me", "Practice interview") onto the
     /// route. Returns nil for chips that should stay conversational.
     static func fromChip(_ chip: String) -> CompassHomeRoute? {
         let s = chip.lowercased()
+        // coding drill check BEFORE quiz — "coding drill" must not fall through to .quiz
+        if s.contains("coding drill") || s.contains("coding practice") { return .codingDrill }
         if s.contains("quiz")      { return .quiz }
         if s.contains("interview") { return .interview }
         if s.contains("note")      { return .notes }
@@ -254,11 +257,16 @@ final class CompassViewModel {
     /// view presents the right home via .sheet(item:) on this value.
     var presentedHome: CompassHomeRoute?
 
+    /// True when the user's active objective maps to a coding role track.
+    /// Probed once on Compass open; gates the "💻 Start a coding drill" chip.
+    var isCodingEligible: Bool = false
+
     /// Used for fallback if backend is unreachable. Keeps UX coherent during outages.
     private var allowFallback = true
 
     func startConversation(context: V2Tab = .compass) {
         guard messages.isEmpty else { return }
+        Task { await checkCodingEligibility() }
         if let coach = coachContext {
             // Coach mode. If a scope is already chosen, fire the opener.
             // Otherwise, prompt the user to pick a scope; V2CompassView
@@ -588,10 +596,34 @@ final class CompassViewModel {
         )
     }
 
+    // MARK: - Coding eligibility probe
+
+    /// Probes /drills/today to determine whether the user's objective maps to a coding
+    /// role track. Anything except a 404 no_coding_track_for_objective response means
+    /// the user is eligible (calibration_required, daily_quota_used, no_drill_available
+    /// all indicate a track exists). Result gates the "💻 Start a coding drill" chip.
+    func checkCodingEligibility() async {
+        do {
+            let _: DrillTodayResponse = try await V2APIClient.shared.getCoding("/drills/today")
+            isCodingEligible = true
+        } catch V2APIError.httpError(let status, let data) where status == 404 {
+            if let body = try? JSONDecoder().decode([String: String].self, from: data),
+               let err = body["error"],
+               err == "no_coding_track_for_objective" {
+                isCodingEligible = false
+            } else {
+                // calibration_required / daily_quota_used / no_drill_available → track exists
+                isCodingEligible = true
+            }
+        } catch {
+            isCodingEligible = false  // hide chip on unknown errors
+        }
+    }
+
     // MARK: - Fallbacks
 
     private var defaultSuggestions: [String] {
-        [
+        var chips = [
             "⚡ Quiz me",
             "🎙️ Practice interview",
             "📝 Make a note",
@@ -599,6 +631,11 @@ final class CompassViewModel {
             "↗ Plan my next 2 days",
             "🤔 Explain something",
         ]
+        if isCodingEligible {
+            // Insert after "Practice interview" (index 2) so it's near the practice chips
+            chips.insert("💻 Start a coding drill", at: 2)
+        }
+        return chips
     }
 
     private var fallbackQuizConfig: CompassConfig {

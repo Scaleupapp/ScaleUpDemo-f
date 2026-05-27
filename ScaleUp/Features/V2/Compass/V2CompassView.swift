@@ -21,7 +21,8 @@ struct V2CompassView: View {
 
     @State private var unplayedChallenge: UnplayedChallenge?
     @State private var requestedDrillSession: DrillSession? = nil
-    @State private var showRequestedDrillModal = false
+    @State private var isRequestingDrill = false
+    @State private var drillRequestError: String? = nil
 
     private struct UnplayedChallenge: Codable, Equatable {
         let _id: String
@@ -185,11 +186,44 @@ struct V2CompassView: View {
                     .environment(taskRouter)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+            case .codingDrill:
+                V2CodingDrillRequestView(onClose: { vm.presentedHome = nil })
+                    .environment(appState)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
         }
-        .sheet(isPresented: $showRequestedDrillModal) {
-            if let session = requestedDrillSession {
-                DrillModalView(preloadedSession: session)
+        // Compass action-card drill flow — uses sheet(item:) to avoid the
+        // sheet-from-sheet race (no second sheet while presentedHome is still dismissing)
+        .sheet(item: $requestedDrillSession) { session in
+            DrillModalView(preloadedSession: session)
+        }
+        .alert("Couldn't start drill", isPresented: Binding(
+            get: { drillRequestError != nil },
+            set: { if !$0 { drillRequestError = nil } }
+        )) {
+            Button("OK", role: .cancel) { drillRequestError = nil }
+        } message: {
+            Text(drillRequestError ?? "")
+        }
+        .overlay {
+            if isRequestingDrill {
+                ZStack {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.4)
+                            .tint(.white)
+                        Text("Finding a drill for you…")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(28)
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .transition(.opacity)
             }
         }
         .toolbar {
@@ -207,6 +241,8 @@ struct V2CompassView: View {
     // MARK: - Compass suggested-action handler
 
     private func handleSuggestedAction(_ action: CompassSuggestedAction) async {
+        isRequestingDrill = true
+        defer { isRequestingDrill = false }
         let body = DrillRequestBody(
             drillSubtype: action.drillSubtype.flatMap { DrillSubtype(rawValue: $0) },
             difficulty: action.difficulty.flatMap { DrillDifficulty(rawValue: $0) },
@@ -219,11 +255,27 @@ struct V2CompassView: View {
                 preloadedAttemptId: resp.attemptId
             )
             requestedDrillSession = session
-            showRequestedDrillModal = true
             AnalyticsService.shared.track(.codingExtraDrillRequested(source: "compass"))
         } catch {
-            print("[Compass requestDrill] failed: \(error.localizedDescription)")
+            drillRequestError = compassDrillError(error)
+            print("[Compass requestDrill] failed: \(error)")
         }
+    }
+
+    private func compassDrillError(_ error: Error) -> String {
+        if case V2APIError.httpError(let status, let data) = error {
+            if status == 404, let body = try? JSONDecoder().decode([String: String].self, from: data) {
+                switch body["error"] {
+                case "no_coding_track_for_objective":
+                    return "Coding practice isn't available for your current objective."
+                case "no_drill_available":
+                    return "We're out of fresh drills for this combination — try another type or difficulty."
+                default: break
+                }
+            }
+            return "Server returned \(status). Try again in a moment."
+        }
+        return error.localizedDescription
     }
 
     // MARK: - Competition banner
