@@ -19,16 +19,16 @@ public struct APIStartCalibrationDrill200ResponseDrillsInner: Codable, Hashable,
         case easy = "easy"
     }
     public var drillSubtype: DrillSubtype
-    public var attemptId: String
-    public var bundleId: String
-    public var brief: String
+    public var attemptId: String?
+    public var bundleId: String?
+    public var brief: String?
     public var timeBudgetMinutes: Int
     public var difficulty: Difficulty?
     public var roleTrack: String?
     public var language: String?
     public var acceptanceCriteria: [String]?
 
-    public init(drillSubtype: DrillSubtype, attemptId: String, bundleId: String, brief: String, timeBudgetMinutes: Int, difficulty: Difficulty? = nil, roleTrack: String? = nil, language: String? = nil, acceptanceCriteria: [String]? = nil) {
+    public init(drillSubtype: DrillSubtype, attemptId: String?, bundleId: String?, brief: String?, timeBudgetMinutes: Int, difficulty: Difficulty? = nil, roleTrack: String? = nil, language: String? = nil, acceptanceCriteria: [String]? = nil) {
         self.drillSubtype = drillSubtype
         self.attemptId = attemptId
         self.bundleId = bundleId

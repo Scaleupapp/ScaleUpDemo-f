@@ -8,11 +8,11 @@
 import Foundation
 
 public struct APISubmitDiagnosticAnswerRequest: Codable, Hashable, Sendable {
-    public var questionId: String
-    public var selectedAnswer: String
+    public var questionId: String?
+    public var selectedAnswer: String?
     public var timeTaken: Double?
 
-    public init(questionId: String, selectedAnswer: String, timeTaken: Double? = nil) {
+    public init(questionId: String?, selectedAnswer: String?, timeTaken: Double? = nil) {
         self.questionId = questionId
         self.selectedAnswer = selectedAnswer
         self.timeTaken = timeTaken

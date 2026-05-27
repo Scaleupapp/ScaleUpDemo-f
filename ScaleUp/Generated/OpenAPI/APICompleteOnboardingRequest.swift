@@ -9,17 +9,17 @@ import Foundation
 
 public struct APICompleteOnboardingRequest: Codable, Hashable, Sendable {
 
-    public var objectiveType: String
+    public var objectiveType: String?
     public var specifics: APISpecifics?
-    public var timeline: String
-    public var currentLevel: String
+    public var timeline: String?
+    public var currentLevel: String?
     public var weeklyCommitHours: Double
     public var preferredLearningStyle: String?
     public var targetDate: String?
     public var topicsOfInterest: [[String: AnyCodable]]
     public var topicSelfRatings: [String: APISelfRating]
 
-    public init(objectiveType: String, specifics: APISpecifics? = nil, timeline: String, currentLevel: String, weeklyCommitHours: Double, preferredLearningStyle: String? = nil, targetDate: String? = nil, topicsOfInterest: [[String: AnyCodable]], topicSelfRatings: [String: APISelfRating]) {
+    public init(objectiveType: String?, specifics: APISpecifics? = nil, timeline: String?, currentLevel: String?, weeklyCommitHours: Double, preferredLearningStyle: String? = nil, targetDate: String? = nil, topicsOfInterest: [[String: AnyCodable]], topicSelfRatings: [String: APISelfRating]) {
         self.objectiveType = objectiveType
         self.specifics = specifics
         self.timeline = timeline

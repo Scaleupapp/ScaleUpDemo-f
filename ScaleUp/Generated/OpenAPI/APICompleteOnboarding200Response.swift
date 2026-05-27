@@ -9,9 +9,9 @@ import Foundation
 
 public struct APICompleteOnboarding200Response: Codable, Hashable, Sendable {
 
-    public var userObjectiveId: String
+    public var userObjectiveId: String?
 
-    public init(userObjectiveId: String) {
+    public init(userObjectiveId: String?) {
         self.userObjectiveId = userObjectiveId
     }
 

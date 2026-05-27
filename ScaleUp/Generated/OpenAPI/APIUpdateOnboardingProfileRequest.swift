@@ -9,10 +9,10 @@ import Foundation
 
 public struct APIUpdateOnboardingProfileRequest: Codable, Hashable, Sendable {
 
-    public var firstName: String
+    public var firstName: String?
     public var lastName: String?
 
-    public init(firstName: String, lastName: String? = nil) {
+    public init(firstName: String?, lastName: String? = nil) {
         self.firstName = firstName
         self.lastName = lastName
     }

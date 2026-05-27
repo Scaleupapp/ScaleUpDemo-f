@@ -219,6 +219,16 @@ struct DrillResultPendingResponse: Codable, Sendable {
     }
 }
 
+/// A single item in the `what_you_missed` array of a graded result.
+struct WhatYouMissedItem: Codable, Sendable, Identifiable, Hashable {
+    let title: String
+    let detail: String
+    let reference: String?
+
+    // Synthesize id for ForEach — title is expected to be unique within a result.
+    var id: String { title + (reference ?? "") }
+}
+
 /// 200 response (graded)
 struct DrillResultGradedResponse: Codable, Sendable {
     let attemptId: String
@@ -226,6 +236,7 @@ struct DrillResultGradedResponse: Codable, Sendable {
     let overallScore: Int
     let rubricBreakdown: [RubricItem]
     let whatToTryNext: String?
+    let whatYouMissed: [WhatYouMissedItem]?  // NEW — nil/absent treated as empty on render
     let integrityConfidence: String?
     let gradedAt: String?
     let drillSubtype: DrillSubtype
@@ -238,6 +249,7 @@ struct DrillResultGradedResponse: Codable, Sendable {
         case overallScore = "overall_score"
         case rubricBreakdown = "rubric_breakdown"
         case whatToTryNext = "what_to_try_next"
+        case whatYouMissed = "what_you_missed"
         case integrityConfidence = "integrity_confidence"
         case gradedAt = "graded_at"
         case drillSubtype = "drill_subtype"
@@ -333,12 +345,14 @@ struct CalibrationDrillResult: Codable, Sendable {
     let status: String
     let overallScore: Int?
     let rubricBreakdown: [RubricItem]?
+    let whatYouMissed: [WhatYouMissedItem]?  // NEW — matches the regular drill result shape
 
     enum CodingKeys: String, CodingKey {
         case drillSubtype = "drill_subtype"
         case status
         case overallScore = "overall_score"
         case rubricBreakdown = "rubric_breakdown"
+        case whatYouMissed = "what_you_missed"
     }
 }
 

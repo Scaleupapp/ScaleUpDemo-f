@@ -17,13 +17,13 @@ public struct APIGetCalibrationDrillResult200Response: Codable, Hashable, Sendab
         case medium = "medium"
         case hard = "hard"
     }
-    public var calibrationId: String
+    public var calibrationId: String?
     public var status: Status
     public var drills: [APIGetCalibrationDrillResult200ResponseDrillsInner]
     public var baselineAxes: APIGetCalibrationDrillResult200ResponseBaselineAxes
     public var recommendedDifficulty: RecommendedDifficulty
 
-    public init(calibrationId: String, status: Status, drills: [APIGetCalibrationDrillResult200ResponseDrillsInner], baselineAxes: APIGetCalibrationDrillResult200ResponseBaselineAxes, recommendedDifficulty: RecommendedDifficulty) {
+    public init(calibrationId: String?, status: Status, drills: [APIGetCalibrationDrillResult200ResponseDrillsInner], baselineAxes: APIGetCalibrationDrillResult200ResponseBaselineAxes, recommendedDifficulty: RecommendedDifficulty) {
         self.calibrationId = calibrationId
         self.status = status
         self.drills = drills

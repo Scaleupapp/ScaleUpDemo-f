@@ -33,23 +33,25 @@ public struct APIGetCodeDrillResult200Response: Codable, Hashable, Sendable {
         case ds = "ds"
         case aiEng = "ai_eng"
     }
-    public var attemptId: String
+    public var attemptId: String?
     public var status: Status
     public var overallScore: Int
     public var rubricBreakdown: [APIGetCodeDrillResult200ResponseRubricBreakdownInner]
-    public var whatToTryNext: String
+    public var whatToTryNext: String?
+    public var whatYouMissed: [APIGetCodeDrillResult200ResponseWhatYouMissedInner]?
     public var integrityConfidence: IntegrityConfidence
     public var gradedAt: Date
     public var drillSubtype: DrillSubtype
     public var difficulty: Difficulty
     public var roleTrack: RoleTrack
 
-    public init(attemptId: String, status: Status, overallScore: Int, rubricBreakdown: [APIGetCodeDrillResult200ResponseRubricBreakdownInner], whatToTryNext: String, integrityConfidence: IntegrityConfidence, gradedAt: Date, drillSubtype: DrillSubtype, difficulty: Difficulty, roleTrack: RoleTrack) {
+    public init(attemptId: String?, status: Status, overallScore: Int, rubricBreakdown: [APIGetCodeDrillResult200ResponseRubricBreakdownInner], whatToTryNext: String?, whatYouMissed: [APIGetCodeDrillResult200ResponseWhatYouMissedInner]? = nil, integrityConfidence: IntegrityConfidence, gradedAt: Date, drillSubtype: DrillSubtype, difficulty: Difficulty, roleTrack: RoleTrack) {
         self.attemptId = attemptId
         self.status = status
         self.overallScore = overallScore
         self.rubricBreakdown = rubricBreakdown
         self.whatToTryNext = whatToTryNext
+        self.whatYouMissed = whatYouMissed
         self.integrityConfidence = integrityConfidence
         self.gradedAt = gradedAt
         self.drillSubtype = drillSubtype
@@ -63,6 +65,7 @@ public struct APIGetCodeDrillResult200Response: Codable, Hashable, Sendable {
         case overallScore = "overall_score"
         case rubricBreakdown = "rubric_breakdown"
         case whatToTryNext = "what_to_try_next"
+        case whatYouMissed = "what_you_missed"
         case integrityConfidence = "integrity_confidence"
         case gradedAt = "graded_at"
         case drillSubtype = "drill_subtype"
@@ -79,6 +82,7 @@ public struct APIGetCodeDrillResult200Response: Codable, Hashable, Sendable {
         try container.encode(overallScore, forKey: .overallScore)
         try container.encode(rubricBreakdown, forKey: .rubricBreakdown)
         try container.encode(whatToTryNext, forKey: .whatToTryNext)
+        try container.encodeIfPresent(whatYouMissed, forKey: .whatYouMissed)
         try container.encode(integrityConfidence, forKey: .integrityConfidence)
         try container.encode(gradedAt, forKey: .gradedAt)
         try container.encode(drillSubtype, forKey: .drillSubtype)

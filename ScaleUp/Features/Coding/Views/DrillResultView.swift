@@ -130,28 +130,68 @@ struct DrillResultView: View {
         }
     }
 
-    // MARK: - What you missed (placeholder)
+    // MARK: - What you missed
 
+    @ViewBuilder
     private var whatYouMissedSection: some View {
-        DisclosureGroup(isExpanded: $showWhatYouMissed) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("This section will reveal seeded bugs you missed (for verify drills) or reference-answer elements you didn't include (for prompt/decompose).")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text("Backend follow-up: graded response needs a `what_you_missed` array.")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 4)
+        let items = grade.whatYouMissed ?? []
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                DisclosureGroup(isExpanded: $showWhatYouMissed) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ForEach(items) { item in
+                            whatYouMissedCard(item)
+                        }
+                    }
+                    .padding(.top, 12)
+                } label: {
+                    HStack {
+                        Label("What you missed (\(items.count))", systemImage: "eye.fill")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                    }
+                }
             }
-            .padding(.top, 8)
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } label: {
-            Label("What you missed", systemImage: "eye.fill")
-                .font(.subheadline.weight(.semibold))
+            .padding(14)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding(14)
-        .background(Color.gray.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        // Empty array → render nothing; the result was complete enough that there's nothing to flag.
+    }
+
+    private func whatYouMissedCard(_ item: WhatYouMissedItem) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 5))
+                    .foregroundStyle(.orange)
+                    .padding(.top, 8)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(item.title)
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(item.detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if let ref = item.reference, !ref.isEmpty {
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "arrow.turn.down.right")
+                                .font(.caption2)
+                                .foregroundStyle(.tint)
+                            Text(ref)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.top, 2)
+                    }
+                }
+            }
+            .padding(12)
+            .background(Color(.tertiarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
     }
 
     // MARK: - Done button
@@ -201,8 +241,12 @@ struct DrillResultView: View {
                 RubricItem(dimension: "output_quality", score: 6.0, feedback: "Could validate edge cases.")
             ],
             whatToTryNext: "Try constraining the prompt further — specify the output format explicitly to reduce AI hallucinations.",
+            whatYouMissed: [
+                WhatYouMissedItem(title: "Missing null-check on userInput", detail: "The prompt didn't guard against null — the grader expected you to explicitly handle that case.", reference: "if (userInput == null) return DEFAULT_RESPONSE;"),
+                WhatYouMissedItem(title: "No token-budget constraint", detail: "Reference answer included a max_tokens cap. Omitting it can cause runaway completions in production.", reference: nil)
+            ],
             integrityConfidence: "high",
-            gradedAt: "2026-05-26T10:00:00Z",
+            gradedAt: "2026-05-27T10:00:00Z",
             drillSubtype: .prompt,
             difficulty: .medium,
             roleTrack: .ai_eng

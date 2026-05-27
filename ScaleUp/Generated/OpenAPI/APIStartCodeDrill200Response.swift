@@ -25,21 +25,21 @@ public struct APIStartCodeDrill200Response: Codable, Hashable, Sendable {
         case ds = "ds"
         case aiEng = "ai_eng"
     }
-    public var attemptId: String
-    public var bundleId: String
-    public var brief: String
+    public var attemptId: String?
+    public var bundleId: String?
+    public var brief: String?
     public var timeBudgetMinutes: Int?
     public var drillSubtype: DrillSubtype
     public var difficulty: Difficulty
     public var roleTrack: RoleTrack
-    public var language: String
+    public var language: String?
     public var acceptanceCriteria: [String]?
     /** Present only for refactor drills */
     public var starterRepo: AnyCodable?
     /** Present only for refactor drills; expected_output_contains omitted */
     public var visibleTests: [APIStartCodeDrill200ResponseVisibleTestsInner]?
 
-    public init(attemptId: String, bundleId: String, brief: String, timeBudgetMinutes: Int?, drillSubtype: DrillSubtype, difficulty: Difficulty, roleTrack: RoleTrack, language: String, acceptanceCriteria: [String]? = nil, starterRepo: AnyCodable? = nil, visibleTests: [APIStartCodeDrill200ResponseVisibleTestsInner]? = nil) {
+    public init(attemptId: String?, bundleId: String?, brief: String?, timeBudgetMinutes: Int?, drillSubtype: DrillSubtype, difficulty: Difficulty, roleTrack: RoleTrack, language: String?, acceptanceCriteria: [String]? = nil, starterRepo: AnyCodable? = nil, visibleTests: [APIStartCodeDrill200ResponseVisibleTestsInner]? = nil) {
         self.attemptId = attemptId
         self.bundleId = bundleId
         self.brief = brief
