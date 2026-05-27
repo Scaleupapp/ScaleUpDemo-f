@@ -16,6 +16,17 @@ final class DrillSession {
         self.service = service
     }
 
+    /// Initialize with a pre-fetched drill (used by Practice Another + Compass action card flows).
+    /// Skips the loadToday network call — moves straight to .input state since the
+    /// /drills/request endpoint already creates the attempt server-side.
+    init(service: DrillService = .shared, preloadedDrill: DrillTodayResponse, preloadedAttemptId: String) {
+        self.service = service
+        self.todayDrill = preloadedDrill
+        self.attemptId = preloadedAttemptId
+        self.startedAt = Date()
+        self.state = .input
+    }
+
     func loadToday() async {
         state = .loading
         do {

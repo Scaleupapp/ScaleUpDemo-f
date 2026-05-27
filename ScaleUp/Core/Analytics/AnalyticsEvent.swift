@@ -157,6 +157,9 @@ enum AnalyticsEvent {
     case codingDrillResultViewed(drillSubtype: String, difficulty: String, score: Int)
     case codingDrillAbandoned(drillSubtype: String, abandonedAt: String)
     case codingCalibrationCompleted(recommendedDifficulty: String)
+    case codingExtraDrillRequested(source: String)   // "compass" | "mastery_view"
+    case codingExtraDrillStarted(source: String)
+    case codingExtraDrillCompleted(source: String, score: Int)
 
     // MARK: Event Name (sent to Mixpanel)
 
@@ -278,6 +281,9 @@ enum AnalyticsEvent {
         case .codingDrillResultViewed:            return "coding_drill_result_viewed"
         case .codingDrillAbandoned:               return "coding_drill_abandoned"
         case .codingCalibrationCompleted:         return "coding_calibration_completed"
+        case .codingExtraDrillRequested:          return "coding_extra_drill_requested"
+        case .codingExtraDrillStarted:            return "coding_extra_drill_started"
+        case .codingExtraDrillCompleted:          return "coding_extra_drill_completed"
         }
     }
 
@@ -616,6 +622,15 @@ enum AnalyticsEvent {
 
         case .codingCalibrationCompleted(let recommendedDifficulty):
             return ["recommended_difficulty": recommendedDifficulty]
+
+        case .codingExtraDrillRequested(let source):
+            return ["source": source]
+
+        case .codingExtraDrillStarted(let source):
+            return ["source": source]
+
+        case .codingExtraDrillCompleted(let source, let score):
+            return ["source": source, "score": score]
         }
     }
 }

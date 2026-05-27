@@ -20,6 +20,8 @@ struct V2CompassView: View {
     // MARK: - Competition banner state
 
     @State private var unplayedChallenge: UnplayedChallenge?
+    @State private var requestedDrillSession: DrillSession? = nil
+    @State private var showRequestedDrillModal = false
 
     private struct UnplayedChallenge: Codable, Equatable {
         let _id: String
@@ -68,8 +70,10 @@ struct V2CompassView: View {
                     ScrollView {
                         VStack(spacing: 14) {
                             ForEach(vm.messages) { msg in
-                                MessageView(message: msg)
-                                    .id(msg.id)
+                                MessageView(message: msg) { action in
+                                    Task { await handleSuggestedAction(action) }
+                                }
+                                .id(msg.id)
                             }
 
                             if vm.isWaitingForReply {
@@ -183,6 +187,11 @@ struct V2CompassView: View {
                     .presentationDragIndicator(.visible)
             }
         }
+        .sheet(isPresented: $showRequestedDrillModal) {
+            if let session = requestedDrillSession {
+                DrillModalView(preloadedSession: session)
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -192,6 +201,28 @@ struct V2CompassView: View {
                         .foregroundStyle(ColorTokens.gold)
                 }
             }
+        }
+    }
+
+    // MARK: - Compass suggested-action handler
+
+    private func handleSuggestedAction(_ action: CompassSuggestedAction) async {
+        let body = DrillRequestBody(
+            drillSubtype: action.drillSubtype.flatMap { DrillSubtype(rawValue: $0) },
+            difficulty: action.difficulty.flatMap { DrillDifficulty(rawValue: $0) },
+            topicHint: action.topicHint
+        )
+        do {
+            let resp = try await DrillService.shared.requestDrill(body: body)
+            let session = DrillSession(
+                preloadedDrill: resp.toTodayResponse(),
+                preloadedAttemptId: resp.attemptId
+            )
+            requestedDrillSession = session
+            showRequestedDrillModal = true
+            AnalyticsService.shared.track(.codingExtraDrillRequested(source: "compass"))
+        } catch {
+            print("[Compass requestDrill] failed: \(error.localizedDescription)")
         }
     }
 
@@ -526,6 +557,13 @@ struct V2CompassSheetView: View {
 
 private struct MessageView: View {
     let message: CompassMessage
+    let onSuggestedAction: (CompassSuggestedAction) -> Void
+
+    init(message: CompassMessage, onSuggestedAction: @escaping (CompassSuggestedAction) -> Void = { _ in }) {
+        self.message = message
+        self.onSuggestedAction = onSuggestedAction
+    }
+
     var body: some View {
         HStack {
             if message.role == .user {
@@ -544,23 +582,91 @@ private struct MessageView: View {
                             )
                     )
             } else {
-                Text(message.text)
-                    .font(V2Theme.body)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(ColorTokens.surface)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
-                            )
-                    )
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(message.text)
+                        .font(V2Theme.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(ColorTokens.surface)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .strokeBorder(V2Theme.cardBorder, lineWidth: 1)
+                                )
+                        )
+
+                    if let action = message.suggestedAction, action.type == "request_drill" {
+                        suggestedActionCard(action)
+                    }
+                }
                 Spacer(minLength: 40)
             }
         }
         .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+    }
+
+    private func suggestedActionCard(_ action: CompassSuggestedAction) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.left.forwardslash.chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Take a coding drill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+
+            Text(actionDescription(action))
+                .font(.subheadline)
+                .foregroundStyle(ColorTokens.textPrimary)
+
+            Button {
+                onSuggestedAction(action)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "play.fill").font(.caption)
+                    Text("Start drill").fontWeight(.semibold)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(ColorTokens.gold)
+                .foregroundStyle(ColorTokens.background)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(ColorTokens.gold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private func actionDescription(_ action: CompassSuggestedAction) -> String {
+        var parts: [String] = []
+        if let subtype = action.drillSubtype {
+            let label: String
+            switch subtype {
+            case "prompt":    label = "Prompt"
+            case "verify":    label = "Bug Hunt"
+            case "decompose": label = "Decompose"
+            default:          label = subtype.capitalized
+            }
+            parts.append(label)
+        }
+        if let diff = action.difficulty {
+            parts.append(diff.capitalized)
+        }
+        if let hint = action.topicHint, !hint.isEmpty {
+            parts.append(hint)
+        }
+        if parts.isEmpty {
+            return "Based on your weakest area"
+        }
+        return parts.joined(separator: " · ")
     }
 }
 
