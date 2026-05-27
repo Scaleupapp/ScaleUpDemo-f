@@ -1,6 +1,10 @@
 import Foundation
 import Observation
 
+extension DrillSession: Identifiable {
+    nonisolated var id: ObjectIdentifier { ObjectIdentifier(self) }
+}
+
 @Observable
 @MainActor
 final class DrillSession {

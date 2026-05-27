@@ -5,8 +5,15 @@ struct V2CodingMasteryView: View {
     @State private var showDrillModal = false
     @State private var showCalibration = false
     @State private var showPracticeAnotherSheet = false
-    @State private var requestedDrillSession: DrillSession? = nil
-    @State private var showRequestedDrillModal = false
+    @State private var pendingRequest: PracticeRequest? = nil        // queued across sheet transitions
+    @State private var requestedDrillSession: DrillSession? = nil    // sheet(item:) driver
+    @State private var isRequestingDrill = false                     // overlay while in-flight
+    @State private var requestErrorMessage: String? = nil            // shown on failure
+
+    struct PracticeRequest: Equatable {
+        let subtype: DrillSubtype?
+        let difficulty: DrillDifficulty?
+    }
 
     enum LoadState {
         case loading
@@ -29,16 +36,52 @@ struct V2CodingMasteryView: View {
         .sheet(isPresented: $showCalibration) {
             CalibrationSequenceView()
         }
-        .sheet(isPresented: $showPracticeAnotherSheet) {
+        // Picker sheet — onDismiss fires AFTER the sheet is fully gone, avoiding
+        // the sheet-from-sheet race where SwiftUI would eat the second presentation.
+        .sheet(isPresented: $showPracticeAnotherSheet, onDismiss: {
+            if let pending = pendingRequest {
+                pendingRequest = nil
+                Task { await performRequest(pending) }
+            }
+        }) {
             PracticeAnotherSheet { subtype, difficulty in
-                showPracticeAnotherSheet = false
-                Task { await requestDrill(subtype: subtype, difficulty: difficulty) }
+                pendingRequest = PracticeRequest(subtype: subtype, difficulty: difficulty)
+                showPracticeAnotherSheet = false  // triggers onDismiss above
             }
             .presentationDetents([.medium])
         }
-        .sheet(isPresented: $showRequestedDrillModal) {
-            if let session = requestedDrillSession {
-                DrillModalView(preloadedSession: session)
+        // sheet(item:) — SwiftUI handles the optional correctly, no race condition
+        .sheet(item: $requestedDrillSession) { session in
+            DrillModalView(preloadedSession: session)
+        }
+        // Error alert
+        .alert("Couldn't start drill", isPresented: Binding(
+            get: { requestErrorMessage != nil },
+            set: { if !$0 { requestErrorMessage = nil } }
+        )) {
+            Button("OK", role: .cancel) { requestErrorMessage = nil }
+        } message: {
+            Text(requestErrorMessage ?? "")
+        }
+        // Loading overlay while the API call is in flight
+        .overlay {
+            if isRequestingDrill {
+                ZStack {
+                    Color.black.opacity(0.35)
+                        .ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                            .scaleEffect(1.4)
+                            .tint(.white)
+                        Text("Finding a drill for you…")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(28)
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .transition(.opacity)
             }
         }
     }
@@ -131,20 +174,44 @@ struct V2CodingMasteryView: View {
         }
     }
 
-    private func requestDrill(subtype: DrillSubtype?, difficulty: DrillDifficulty?) async {
+    private func performRequest(_ req: PracticeRequest) async {
+        isRequestingDrill = true
+        defer { isRequestingDrill = false }
+
         do {
-            let body = DrillRequestBody(drillSubtype: subtype, difficulty: difficulty, topicHint: nil)
+            let body = DrillRequestBody(
+                drillSubtype: req.subtype,
+                difficulty: req.difficulty,
+                topicHint: nil
+            )
             let resp = try await DrillService.shared.requestDrill(body: body)
             let session = DrillSession(
                 preloadedDrill: resp.toTodayResponse(),
                 preloadedAttemptId: resp.attemptId
             )
             requestedDrillSession = session
-            showRequestedDrillModal = true
             AnalyticsService.shared.track(.codingExtraDrillRequested(source: "mastery_view"))
         } catch {
-            print("[requestDrill] failed: \(error.localizedDescription)")
+            requestErrorMessage = humanReadableError(error)
+            print("[performRequest] failed: \(error)")
         }
+    }
+
+    private func humanReadableError(_ error: Error) -> String {
+        if case V2APIError.httpError(let status, let data) = error {
+            if status == 404, let body = try? JSONDecoder().decode([String: String].self, from: data) {
+                switch body["error"] {
+                case "no_coding_track_for_objective":
+                    return "Coding practice isn't available for your current objective."
+                case "no_drill_available":
+                    return "We're out of fresh drills for this combination — try another type or difficulty."
+                default:
+                    break
+                }
+            }
+            return "Server returned \(status). Try again in a moment."
+        }
+        return error.localizedDescription
     }
 
     private func statsCard(_ stats: CodingMasteryStats) -> some View {
