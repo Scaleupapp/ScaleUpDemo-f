@@ -348,3 +348,32 @@ struct BaselineAxes: Codable, Sendable {
     let decomposition: Double
     let refactoring: Double  // 0 in Phase A
 }
+
+// MARK: - DrillContext
+
+/// Minimal drill data that all per-subtype input views need.
+/// Lets both `DrillSession` (regular) and `CalibrationSession`
+/// feed the same 3 input views without those views touching the session.
+struct DrillContext: Sendable {
+    let brief: String
+    let drillSubtype: DrillSubtype
+    let language: String?
+    let timeBudgetMinutes: Int
+    let acceptanceCriteria: [String]?
+
+    init(from drill: DrillTodayResponse) {
+        self.brief = drill.brief
+        self.drillSubtype = drill.drillSubtype
+        self.language = drill.language
+        self.timeBudgetMinutes = drill.timeBudgetMinutes
+        self.acceptanceCriteria = drill.acceptanceCriteria
+    }
+
+    init(from cal: CalibrationDrill) {
+        self.brief = cal.brief
+        self.drillSubtype = cal.drillSubtype
+        self.language = nil
+        self.timeBudgetMinutes = cal.timeBudgetMinutes
+        self.acceptanceCriteria = nil
+    }
+}

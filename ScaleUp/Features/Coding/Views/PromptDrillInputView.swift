@@ -1,14 +1,17 @@
 import SwiftUI
 
 struct PromptDrillInputView: View {
-    @Bindable var session: DrillSession
+    let context: DrillContext
+    let startedAt: Date?        // nil = don't show timer
+    let submitLabel: String
+    let onSubmit: (DrillSubmission) -> Void
+
     @State private var promptText: String = ""
     @State private var showBriefRecap: Bool = false
     @FocusState private var editorFocused: Bool
 
     // Per the backend Joi validator: prompt_text is min 10 max 8000 chars.
-    // We're using min 30 client-side to nudge learners toward specificity
-    // (a 10-char prompt is almost certainly a poor answer).
+    // Using min 30 client-side to nudge learners toward specificity.
     private let minChars = 30
     private let maxChars = 8000
 
@@ -19,10 +22,10 @@ struct PromptDrillInputView: View {
 
                 editorSection
 
-                Color.clear.frame(height: 80) // bottom inset for sticky submit bar
+                Color.clear.frame(height: 24) // bottom inset for sticky submit bar
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 12)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
@@ -32,21 +35,20 @@ struct PromptDrillInputView: View {
                 .background(.regularMaterial)
         }
         .onAppear {
-            // Auto-focus the editor once the view is on screen — this is a
-            // typing-heavy view, no reason to require a tap.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 editorFocused = true
             }
         }
     }
 
-    // MARK: - Brief recap (collapsible)
+    // MARK: - Brief recap (collapsible, default collapsed)
 
     @ViewBuilder
     private var briefRecap: some View {
-        if let brief = session.todayDrill?.brief, !brief.isEmpty {
+        let prose = CodeBlock.stripCodeBlocks(from: context.brief)
+        if !prose.isEmpty {
             DisclosureGroup(isExpanded: $showBriefRecap) {
-                Text(brief)
+                Text(prose)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.top, 8)
@@ -101,7 +103,7 @@ struct PromptDrillInputView: View {
         HStack {
             Text("\(promptText.count) / \(maxChars)")
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(promptText.count < minChars ? .secondary : .secondary)
+                .foregroundStyle(.secondary)
 
             Spacer()
 
@@ -123,15 +125,14 @@ struct PromptDrillInputView: View {
 
     private var submitBar: some View {
         Button {
-            // Defensive: trim trailing whitespace before submit
             let trimmed = promptText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard canSubmit else { return }
             editorFocused = false
-            Task { await session.submit(.prompt(text: trimmed)) }
+            onSubmit(.prompt(text: trimmed))
         } label: {
             HStack {
                 if canSubmit {
-                    Text("Submit for grading")
+                    Text(submitLabel)
                         .fontWeight(.semibold)
                     Image(systemName: "arrow.right")
                 } else {
@@ -158,6 +159,6 @@ struct PromptDrillInputView: View {
         if trimmed.isEmpty { return "Start writing your prompt" }
         if trimmed.count < minChars { return "Write at least \(minChars) characters" }
         if trimmed.count > maxChars { return "Too long — trim to \(maxChars)" }
-        return "Submit for grading"
+        return submitLabel
     }
 }

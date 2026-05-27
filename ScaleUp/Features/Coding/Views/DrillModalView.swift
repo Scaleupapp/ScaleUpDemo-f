@@ -7,7 +7,6 @@ struct DrillModalView: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(navTitle)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -16,6 +15,20 @@ struct DrillModalView: View {
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                    ToolbarItem(placement: .principal) {
+                        // Show live timer when in input state; otherwise show text title
+                        if case .input = session.state,
+                           let drill = session.todayDrill,
+                           let startedAt = session.startedAt {
+                            DrillTimerBadge(
+                                startedAt: startedAt,
+                                totalSeconds: drill.timeBudgetMinutes * 60
+                            )
+                        } else {
+                            Text(navTitle)
+                                .font(.headline)
                         }
                     }
                 }
@@ -80,15 +93,39 @@ struct DrillModalView: View {
 
     @ViewBuilder
     private var inputView: some View {
-        switch session.todayDrill?.drillSubtype {
-        case .prompt:
-            PromptDrillInputView(session: session)
-        case .verify:
-            VerifyDrillInputView(session: session)
-        case .decompose:
-            DecomposeDrillInputView(session: session)
-        case .refactor, .none:
-            // Refactor is filtered server-side in Phase A; .none shouldn't happen
+        if let drill = session.todayDrill, let startedAt = session.startedAt {
+            let ctx = DrillContext(from: drill)
+            switch drill.drillSubtype {
+            case .prompt:
+                PromptDrillInputView(
+                    context: ctx,
+                    startedAt: startedAt,
+                    submitLabel: "Submit for grading",
+                    onSubmit: { sub in Task { await session.submit(sub) } }
+                )
+            case .verify:
+                VerifyDrillInputView(
+                    context: ctx,
+                    startedAt: startedAt,
+                    submitLabel: "Submit for grading",
+                    onSubmit: { sub in Task { await session.submit(sub) } }
+                )
+            case .decompose:
+                DecomposeDrillInputView(
+                    context: ctx,
+                    startedAt: startedAt,
+                    submitLabel: "Submit for grading",
+                    onSubmit: { sub in Task { await session.submit(sub) } }
+                )
+            case .refactor:
+                placeholderView(
+                    systemImage: "questionmark.circle",
+                    title: "Unsupported drill type",
+                    subtitle: "Refactor drills are filtered server-side in Phase A."
+                )
+            }
+        } else {
+            // Defensive: state is .input but session data isn't ready yet
             placeholderView(
                 systemImage: "questionmark.circle",
                 title: "Unsupported drill type",

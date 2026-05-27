@@ -1,24 +1,36 @@
 import SwiftUI
 
 struct VerifyDrillInputView: View {
-    @Bindable var session: DrillSession
+    let context: DrillContext
+    let startedAt: Date?        // nil = don't show timer
+    let submitLabel: String
+    let onSubmit: (DrillSubmission) -> Void
 
     @State private var locations: [BugLocation] = []
-    @State private var showBriefAsCode: Bool = true
+    @State private var showCode: Bool = true
 
     // Min explanation chars matches backend Joi validator (5)
     private let minExplanationChars = 5
 
+    // Parsed code blocks from the brief (computed once)
+    private var codeBlocks: [CodeBlock] {
+        CodeBlock.parse(from: context.brief)
+    }
+
+    private var proseBrief: String {
+        CodeBlock.stripCodeBlocks(from: context.brief)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                codeViewerSection
+                codeSection
                 locationsList
 
-                Color.clear.frame(height: 80) // bottom inset for sticky submit bar
+                Color.clear.frame(height: 24) // bottom inset for sticky submit bar
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 12)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
@@ -29,41 +41,54 @@ struct VerifyDrillInputView: View {
         }
     }
 
-    // MARK: - Code viewer
+    // MARK: - Code section
 
-    private var codeViewerSection: some View {
+    @ViewBuilder
+    private var codeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Label("Review this code", systemImage: "doc.text.magnifyingglass")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Button(showBriefAsCode ? "Hide" : "Show") {
-                    withAnimation { showBriefAsCode.toggle() }
+                Button(showCode ? "Hide" : "Show") {
+                    withAnimation { showCode.toggle() }
                 }
                 .font(.caption)
             }
 
-            if showBriefAsCode, let brief = session.todayDrill?.brief {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    Text(brief)
-                        .font(.system(.caption, design: .monospaced))
-                        .lineSpacing(2)
-                        .textSelection(.enabled)
-                        .padding(12)
-                        .frame(minWidth: 0, alignment: .topLeading)
+            if showCode {
+                if !proseBrief.isEmpty {
+                    Text(proseBrief)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .frame(maxHeight: 300)
-                .background(Color(.systemGray6))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                )
+
+                if codeBlocks.isEmpty {
+                    // Fallback: brief has no code fences — render as raw monospaced block
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        Text(context.brief)
+                            .font(.system(.caption, design: .monospaced))
+                            .lineSpacing(2)
+                            .textSelection(.enabled)
+                            .padding(12)
+                            .frame(minWidth: 0, alignment: .topLeading)
+                    }
+                    .frame(maxHeight: 300)
+                    .background(Color(.systemGray6))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
+                } else {
+                    CodeViewer(blocks: codeBlocks)
+                }
             }
         }
     }
 
-    // MARK: - Locations list
+    // MARK: - Bug locations list
 
     private var locationsList: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -126,18 +151,17 @@ struct VerifyDrillInputView: View {
     private var submitBar: some View {
         Button {
             guard canSubmit else { return }
-            // Normalize: trim whitespace before submit
             let normalized = locations.map { loc -> BugLocation in
                 var copy = loc
                 copy.file = loc.file.trimmingCharacters(in: .whitespaces)
                 copy.explanation = loc.explanation.trimmingCharacters(in: .whitespacesAndNewlines)
                 return copy
             }
-            Task { await session.submit(.verify(bugLocations: normalized)) }
+            onSubmit(.verify(bugLocations: normalized))
         } label: {
             HStack {
                 if canSubmit {
-                    Text("Submit \(locations.count) \(locations.count == 1 ? "bug" : "bugs")")
+                    Text("\(submitLabel) (\(locations.count) \(locations.count == 1 ? "bug" : "bugs"))")
                         .fontWeight(.semibold)
                     Image(systemName: "arrow.right")
                 } else {
@@ -170,6 +194,6 @@ struct VerifyDrillInputView: View {
         if incomplete > 0 {
             return "Fill in \(incomplete) row\(incomplete > 1 ? "s" : "")"
         }
-        return "Submit for grading"
+        return submitLabel
     }
 }
