@@ -9,9 +9,9 @@ import Foundation
 
 public struct APIAuthRefreshTokenRequest: Codable, Hashable, Sendable {
 
-    public var refreshToken: String
+    public var refreshToken: String?
 
-    public init(refreshToken: String) {
+    public init(refreshToken: String?) {
         self.refreshToken = refreshToken
     }
 

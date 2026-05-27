@@ -11,18 +11,23 @@ public struct APIGetCodeDrillToday404Response: Codable, Hashable, Sendable {
 
     public enum ModelError: String, Codable, CaseIterable, Sendable {
         case noCodingTrackForObjective = "no_coding_track_for_objective"
+        case calibrationRequired = "calibration_required"
         case noDrillAvailable = "no_drill_available"
+        case dailyQuotaUsed = "daily_quota_used"
     }
     public var error: ModelError?
     public var roleTrack: String?
     public var difficulty: String?
     public var drillSubtype: String?
+    /** Present only when error is daily_quota_used */
+    public var nextDrillAt: Date?
 
-    public init(error: ModelError? = nil, roleTrack: String? = nil, difficulty: String? = nil, drillSubtype: String? = nil) {
+    public init(error: ModelError? = nil, roleTrack: String? = nil, difficulty: String? = nil, drillSubtype: String? = nil, nextDrillAt: Date? = nil) {
         self.error = error
         self.roleTrack = roleTrack
         self.difficulty = difficulty
         self.drillSubtype = drillSubtype
+        self.nextDrillAt = nextDrillAt
     }
 
     public enum CodingKeys: String, CodingKey, CaseIterable {
@@ -30,6 +35,7 @@ public struct APIGetCodeDrillToday404Response: Codable, Hashable, Sendable {
         case roleTrack = "role_track"
         case difficulty
         case drillSubtype = "drill_subtype"
+        case nextDrillAt = "next_drill_at"
     }
 
     // Encodable protocol methods
@@ -40,6 +46,7 @@ public struct APIGetCodeDrillToday404Response: Codable, Hashable, Sendable {
         try container.encodeIfPresent(roleTrack, forKey: .roleTrack)
         try container.encodeIfPresent(difficulty, forKey: .difficulty)
         try container.encodeIfPresent(drillSubtype, forKey: .drillSubtype)
+        try container.encodeIfPresent(nextDrillAt, forKey: .nextDrillAt)
     }
 }
 

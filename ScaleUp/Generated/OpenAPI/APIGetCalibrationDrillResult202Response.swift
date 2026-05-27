@@ -13,11 +13,11 @@ public struct APIGetCalibrationDrillResult202Response: Codable, Hashable, Sendab
         case pending = "pending"
         case partial = "partial"
     }
-    public var calibrationId: String
+    public var calibrationId: String?
     public var status: Status
     public var drills: [APIGetCalibrationDrillResult202ResponseDrillsInner]
 
-    public init(calibrationId: String, status: Status, drills: [APIGetCalibrationDrillResult202ResponseDrillsInner]) {
+    public init(calibrationId: String?, status: Status, drills: [APIGetCalibrationDrillResult202ResponseDrillsInner]) {
         self.calibrationId = calibrationId
         self.status = status
         self.drills = drills

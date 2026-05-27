@@ -12,11 +12,11 @@ public struct APISubmitCodeDrill202Response: Codable, Hashable, Sendable {
     public enum Status: String, Codable, CaseIterable, Sendable {
         case submitted = "submitted"
     }
-    public var attemptId: String
+    public var attemptId: String?
     public var status: Status
-    public var pollUrl: String
+    public var pollUrl: String?
 
-    public init(attemptId: String, status: Status, pollUrl: String) {
+    public init(attemptId: String?, status: Status, pollUrl: String?) {
         self.attemptId = attemptId
         self.status = status
         self.pollUrl = pollUrl

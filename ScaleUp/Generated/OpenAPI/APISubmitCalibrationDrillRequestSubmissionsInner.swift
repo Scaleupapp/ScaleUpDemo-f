@@ -16,11 +16,11 @@ public struct APISubmitCalibrationDrillRequestSubmissionsInner: Codable, Hashabl
         case refactor = "refactor"
     }
     public var drillSubtype: DrillSubtype
-    public var attemptId: String
+    public var attemptId: String?
     /** Present only for refactor drills */
     public var submission: AnyCodable?
 
-    public init(drillSubtype: DrillSubtype, attemptId: String, submission: AnyCodable?) {
+    public init(drillSubtype: DrillSubtype, attemptId: String?, submission: AnyCodable?) {
         self.drillSubtype = drillSubtype
         self.attemptId = attemptId
         self.submission = submission

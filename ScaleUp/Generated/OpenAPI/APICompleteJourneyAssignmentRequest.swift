@@ -9,9 +9,9 @@ import Foundation
 
 public struct APICompleteJourneyAssignmentRequest: Codable, Hashable, Sendable {
 
-    public var assignmentId: String
+    public var assignmentId: String?
 
-    public init(assignmentId: String) {
+    public init(assignmentId: String?) {
         self.assignmentId = assignmentId
     }
 

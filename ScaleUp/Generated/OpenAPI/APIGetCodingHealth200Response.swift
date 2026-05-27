@@ -9,10 +9,10 @@ import Foundation
 
 public struct APIGetCodingHealth200Response: Codable, Hashable, Sendable {
 
-    public var module: String
-    public var status: String
+    public var module: String?
+    public var status: String?
 
-    public init(module: String, status: String) {
+    public init(module: String?, status: String?) {
         self.module = module
         self.status = status
     }

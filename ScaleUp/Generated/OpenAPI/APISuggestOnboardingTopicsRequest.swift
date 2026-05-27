@@ -9,10 +9,10 @@ import Foundation
 
 public struct APISuggestOnboardingTopicsRequest: Codable, Hashable, Sendable {
 
-    public var objectiveType: String
+    public var objectiveType: String?
     public var specifics: APISpecifics?
 
-    public init(objectiveType: String, specifics: APISpecifics? = nil) {
+    public init(objectiveType: String?, specifics: APISpecifics? = nil) {
         self.objectiveType = objectiveType
         self.specifics = specifics
     }

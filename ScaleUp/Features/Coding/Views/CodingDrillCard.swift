@@ -24,6 +24,7 @@ struct CodingDrillCard: View {
         case loading
         case drillAvailable(DrillTodayResponse)
         case calibrationRequired
+        case quotaUsedToday(nextDrillAt: Date?)
         case hidden  // network failure, no coding objective, or no bundle
     }
 
@@ -36,6 +37,8 @@ struct CodingDrillCard: View {
                 drillCard(drill)
             case .calibrationRequired:
                 calibrationCard
+            case .quotaUsedToday(let nextDrillAt):
+                completedTodayCard(nextDrillAt: nextDrillAt)
             case .hidden:
                 EmptyView()
             }
@@ -160,6 +163,52 @@ struct CodingDrillCard: View {
         }
     }
 
+    // MARK: - Completed today card
+
+    private func completedTodayCard(nextDrillAt: Date?) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.green)
+                Text("Today's coding drill is done")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.green)
+                Spacer()
+            }
+
+            Text("Nice work. Come back tomorrow for the next one.")
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+
+            if let nextDrillAt = nextDrillAt {
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text("Next drill \(relativeDayDescription(nextDrillAt))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.green.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.green.opacity(0.2), lineWidth: 1)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func relativeDayDescription(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        formatter.dateTimeStyle = .named  // produces "tomorrow", "today", "in 2 hours" etc.
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+
     // MARK: - Loading placeholder (skeleton — same shape as the drill card)
 
     private var loadingPlaceholder: some View {
@@ -189,6 +238,8 @@ struct CodingDrillCard: View {
             loadState = .drillAvailable(drill)
         } catch DrillServiceError.calibrationRequired {
             loadState = .calibrationRequired
+        } catch DrillServiceError.dailyQuotaUsed(let next) {
+            loadState = .quotaUsedToday(nextDrillAt: next)
         } catch DrillServiceError.noDrillAvailable {
             loadState = .hidden
         } catch {

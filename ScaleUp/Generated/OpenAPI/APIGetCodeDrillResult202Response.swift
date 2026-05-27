@@ -14,9 +14,9 @@ public struct APIGetCodeDrillResult202Response: Codable, Hashable, Sendable {
         case submitted = "submitted"
     }
     public var status: Status
-    public var attemptId: String
+    public var attemptId: String?
 
-    public init(status: Status, attemptId: String) {
+    public init(status: Status, attemptId: String?) {
         self.status = status
         self.attemptId = attemptId
     }

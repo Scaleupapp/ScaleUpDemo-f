@@ -8,10 +8,10 @@
 import Foundation
 
 public struct APIAuthVerifyPhoneOTPRequest: Codable, Hashable, Sendable {
-    public var phone: String
+    public var phone: String?
     public var otp: String
 
-    public init(phone: String, otp: String) {
+    public init(phone: String?, otp: String) {
         self.phone = phone
         self.otp = otp
     }

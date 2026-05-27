@@ -11,14 +11,22 @@ final class DrillService {
 
     /// GET /api/coding/drills/today
     /// Throws `.calibrationRequired` if the backend returns 404 with that error code.
+    /// Throws `.dailyQuotaUsed` if the user has already graded a drill today.
     /// Throws `.noDrillAvailable` for any other 404.
     func fetchTodayDrill() async throws -> DrillTodayResponse {
         do {
             return try await client.getCoding("/drills/today")
         } catch V2APIError.httpError(let status, let data) where status == 404 {
-            if let errorBody = try? JSONDecoder().decode(CodingErrorBody.self, from: data),
-               errorBody.error == "calibration_required" {
-                throw DrillServiceError.calibrationRequired
+            if let errorBody = try? JSONDecoder().decode(CodingErrorBody.self, from: data) {
+                switch errorBody.error {
+                case "calibration_required":
+                    throw DrillServiceError.calibrationRequired
+                case "daily_quota_used":
+                    let date = errorBody.nextDrillAt.flatMap { ISO8601DateFormatter().date(from: $0) }
+                    throw DrillServiceError.dailyQuotaUsed(nextDrillAt: date)
+                default:
+                    throw DrillServiceError.noDrillAvailable
+                }
             }
             throw DrillServiceError.noDrillAvailable
         }
@@ -80,6 +88,7 @@ enum DrillResultPoll: Sendable {
 enum DrillServiceError: Error, Sendable {
     case calibrationRequired
     case noDrillAvailable
+    case dailyQuotaUsed(nextDrillAt: Date?)
     case invalidResponse
 }
 
@@ -87,4 +96,10 @@ private struct EmptyPostBody: Codable {}
 
 private struct CodingErrorBody: Codable {
     let error: String
+    let nextDrillAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case error
+        case nextDrillAt = "next_drill_at"
+    }
 }
