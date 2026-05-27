@@ -24,10 +24,10 @@ public struct APICodingMasteryTrack: Codable, Hashable, Sendable {
     public var axes: [String: AnyCodable]?
     public var confidence: Double?
     public var attemptCount: Int?
-    public var currentDifficulty: CurrentDifficulty
+    public var currentDifficulty: CurrentDifficulty?
     public var recommendationHistory: [[String: AnyCodable]]?
 
-    public init(roleTrack: RoleTrack, axes: [String: AnyCodable]? = nil, confidence: Double? = nil, attemptCount: Int? = nil, currentDifficulty: CurrentDifficulty, recommendationHistory: [[String: AnyCodable]]? = nil) {
+    public init(roleTrack: RoleTrack, axes: [String: AnyCodable]? = nil, confidence: Double? = nil, attemptCount: Int? = nil, currentDifficulty: CurrentDifficulty?, recommendationHistory: [[String: AnyCodable]]? = nil) {
         self.roleTrack = roleTrack
         self.axes = axes
         self.confidence = confidence

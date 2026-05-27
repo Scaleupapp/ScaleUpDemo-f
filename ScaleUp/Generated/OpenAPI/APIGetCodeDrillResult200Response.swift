@@ -42,10 +42,10 @@ public struct APIGetCodeDrillResult200Response: Codable, Hashable, Sendable {
     public var integrityConfidence: IntegrityConfidence
     public var gradedAt: Date
     public var drillSubtype: DrillSubtype
-    public var difficulty: Difficulty
+    public var difficulty: Difficulty?
     public var roleTrack: RoleTrack
 
-    public init(attemptId: String?, status: Status, overallScore: Int, rubricBreakdown: [APIGetCodeDrillResult200ResponseRubricBreakdownInner], whatToTryNext: String?, whatYouMissed: [APIGetCodeDrillResult200ResponseWhatYouMissedInner]? = nil, integrityConfidence: IntegrityConfidence, gradedAt: Date, drillSubtype: DrillSubtype, difficulty: Difficulty, roleTrack: RoleTrack) {
+    public init(attemptId: String?, status: Status, overallScore: Int, rubricBreakdown: [APIGetCodeDrillResult200ResponseRubricBreakdownInner], whatToTryNext: String?, whatYouMissed: [APIGetCodeDrillResult200ResponseWhatYouMissedInner]? = nil, integrityConfidence: IntegrityConfidence, gradedAt: Date, drillSubtype: DrillSubtype, difficulty: Difficulty?, roleTrack: RoleTrack) {
         self.attemptId = attemptId
         self.status = status
         self.overallScore = overallScore

@@ -29,14 +29,14 @@ public struct APIGetCodeDrillToday200Response: Codable, Hashable, Sendable {
     public var brief: String?
     public var timeBudgetMinutes: Int?
     public var drillSubtype: DrillSubtype
-    public var difficulty: Difficulty
+    public var difficulty: Difficulty?
     public var roleTrack: RoleTrack
     public var language: String?
     public var acceptanceCriteria: [String]?
     /** Present only for refactor drills; null otherwise */
     public var starterRepo: AnyCodable?
 
-    public init(bundleId: String?, brief: String?, timeBudgetMinutes: Int?, drillSubtype: DrillSubtype, difficulty: Difficulty, roleTrack: RoleTrack, language: String?, acceptanceCriteria: [String]? = nil, starterRepo: AnyCodable? = nil) {
+    public init(bundleId: String?, brief: String?, timeBudgetMinutes: Int?, drillSubtype: DrillSubtype, difficulty: Difficulty?, roleTrack: RoleTrack, language: String?, acceptanceCriteria: [String]? = nil, starterRepo: AnyCodable? = nil) {
         self.bundleId = bundleId
         self.brief = brief
         self.timeBudgetMinutes = timeBudgetMinutes
