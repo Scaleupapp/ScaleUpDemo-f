@@ -267,6 +267,7 @@
 		7D97937876083A7C9A9C1F1C /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C80A263135918BC60DE368 /* HomeViewModel.swift */; };
 		7DEA347F82842941BDD1B260 /* CreateNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97A868AA933F0FCE34F84316 /* CreateNotesView.swift */; };
 		7DFF7AC2347C997B29249BC9 /* InterviewResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C4DFBB57E9693AA996997C /* InterviewResultsView.swift */; };
+		7E8219810E6E0C11A2EE2D2D /* DrillTimerBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE299454F0A4AB9A019BACA8 /* DrillTimerBadge.swift */; };
 		7F755554DDCC6A3D35B6BDA2 /* V2HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DDB828F8C0A46067D9E6472 /* V2HomeViewModel.swift */; };
 		7FA75321CCD5988E97253EAC /* RecalibrationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DD4CE03BE5D8F8D1840992D /* RecalibrationViewModel.swift */; };
 		7FE4B9D3FC43720A02B6B573 /* V2TaskSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C06F41D7C17AC46CDDFE6F /* V2TaskSheet.swift */; };
@@ -404,6 +405,7 @@
 		D0F2DBDB9B1435F03B35E7C9 /* V2YouSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = E452EF3484AC92A1DBF87924 /* V2YouSections.swift */; };
 		D2188E4B005871187013748F /* APIStartCodeDrill200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA55A3869AE21C5856FC15DC /* APIStartCodeDrill200Response.swift */; };
 		D2EEE08B61917E00443D4FDA /* AdminService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56F897C3D8F750F25666C0F4 /* AdminService.swift */; };
+		D5C1224DD381C4A882BF36EB /* CodeViewer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9956E6C86DFD28374D7F8178 /* CodeViewer.swift */; };
 		D5F8B1BF306718132E5E10CC /* ProfileStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91A395DB118F51FC07A29A6 /* ProfileStepView.swift */; };
 		D67C4C2CA197F041F1D9C115 /* Journey.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA107548E1AC3D003991C6E5 /* Journey.swift */; };
 		D7AC0343A9C1954F5FDE5607 /* InterviewProctor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAFBBBEFC7F40D2E03DD2852 /* InterviewProctor.swift */; };
@@ -761,6 +763,7 @@
 		984FA33160CD76B88F706C37 /* MyFlashcardsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyFlashcardsView.swift; sourceTree = "<group>"; };
 		98C0952DA371E65B5BAEF48E /* OnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingService.swift; sourceTree = "<group>"; };
 		99350018B2C0E0FBB8335E7F /* V2CompassHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2CompassHistoryView.swift; sourceTree = "<group>"; };
+		9956E6C86DFD28374D7F8178 /* CodeViewer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodeViewer.swift; sourceTree = "<group>"; };
 		995F525A254B17872ED0E1BD /* CompassViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompassViewModel.swift; sourceTree = "<group>"; };
 		99F1726D3309C28CF6D4F8AB /* V2ObjectiveSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ObjectiveSetupView.swift; sourceTree = "<group>"; };
 		9A142F8AF709CC63312F1242 /* V2TaskRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2TaskRouter.swift; sourceTree = "<group>"; };
@@ -943,6 +946,7 @@
 		FAFBBBEFC7F40D2E03DD2852 /* InterviewProctor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewProctor.swift; sourceTree = "<group>"; };
 		FB44BE734922A87625CC4F86 /* APIGetObjectives200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetObjectives200Response.swift; sourceTree = "<group>"; };
 		FD784009FBD8BB16DC62FE7B /* ObjectiveSwitcherView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectiveSwitcherView.swift; sourceTree = "<group>"; };
+		FE299454F0A4AB9A019BACA8 /* DrillTimerBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillTimerBadge.swift; sourceTree = "<group>"; };
 		FE6CB3B71AF88B2E9760846B /* CalibrationPromptStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationPromptStore.swift; sourceTree = "<group>"; };
 		FEAE11008C3F3C3D90F42CD5 /* APISubmitCalibrationDrillRequestSubmissionsInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISubmitCalibrationDrillRequestSubmissionsInner.swift; sourceTree = "<group>"; };
 		FFC164F8530CAD2A4ECFB88C /* RecalibrationNudge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecalibrationNudge.swift; sourceTree = "<group>"; };
@@ -968,7 +972,9 @@
 			children = (
 				949054D0EF8015DD51B777C7 /* BugLocationRow.swift */,
 				17DF31A52EED73D361A97EFB /* CalibrationProgressBar.swift */,
+				9956E6C86DFD28374D7F8178 /* CodeViewer.swift */,
 				CA78987754DCA44BB0C49092 /* DecompositionStepRow.swift */,
+				FE299454F0A4AB9A019BACA8 /* DrillTimerBadge.swift */,
 				CE5EBD0171AF91E8F6CDC360 /* MasteryDeltaBadge.swift */,
 				F36DB1ED92B31C9EA4163737 /* RubricBar.swift */,
 			);
@@ -2574,6 +2580,7 @@
 				BDA3F6A07473E732E80F2BB8 /* ChallengeViewModel.swift in Sources */,
 				FB2704BAAD5D188AA37C05B9 /* CoachMarkManager.swift in Sources */,
 				DAC7AA93D7222B2E71281524 /* CoachMarkOverlay.swift in Sources */,
+				D5C1224DD381C4A882BF36EB /* CodeViewer.swift in Sources */,
 				795F1B5181A4936969B53F19 /* CodingDrillCard.swift in Sources */,
 				837C3C0E8D09A83CC4FC2227 /* ColorTokens.swift in Sources */,
 				7C3772FFA78186E3726E7186 /* Comment.swift in Sources */,
@@ -2641,6 +2648,7 @@
 				4A048C0FE68BD1CCB36AA693 /* DrillService.swift in Sources */,
 				312D7471B823E9B041D3960E /* DrillSession.swift in Sources */,
 				17AF4CED34D71C1F8C2A2760 /* DrillSubmittingView.swift in Sources */,
+				7E8219810E6E0C11A2EE2D2D /* DrillTimerBadge.swift in Sources */,
 				EA379F0B524FEFEED4F4C48A /* DrillViewState.swift in Sources */,
 				C88D097168D48DA93014E28D /* EditContentView.swift in Sources */,
 				3649F301702F8859BF93B448 /* EditContentViewModel.swift in Sources */,

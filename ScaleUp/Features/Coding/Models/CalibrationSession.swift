@@ -35,6 +35,9 @@ final class CalibrationSession {
     /// learner completes that step. When all 3 are non-nil we submit.
     var submissions: [DrillSubmission?] = [nil, nil, nil]
 
+    /// When each step started. Parallel to `drills`. Used to drive per-step timers.
+    var stepStartedAt: [Date?] = []
+
     private let service: DrillService
 
     init(service: DrillService = .shared) {
@@ -53,6 +56,9 @@ final class CalibrationSession {
                 return
             }
             submissions = Array(repeating: nil, count: drills.count)
+            // Initialize step start times — step 0 starts now
+            stepStartedAt = Array(repeating: nil, count: drills.count)
+            stepStartedAt[0] = Date()
             state = .inProgress(stepIndex: 0)
         } catch DrillServiceError.calibrationRequired,
                 DrillServiceError.noDrillAvailable {
@@ -72,10 +78,20 @@ final class CalibrationSession {
         submissions[stepIndex] = submission
 
         if stepIndex + 1 < drills.count {
+            // Record start time for the next step
+            if stepIndex + 1 < stepStartedAt.count {
+                stepStartedAt[stepIndex + 1] = Date()
+            }
             state = .inProgress(stepIndex: stepIndex + 1)
         } else {
             await submitAllAndPoll()
         }
+    }
+
+    /// Returns when step `index` started, or nil if not yet started / unknown.
+    func startedAt(stepIndex index: Int) -> Date? {
+        guard index < stepStartedAt.count else { return nil }
+        return stepStartedAt[index]
     }
 
     private func submitAllAndPoll() async {

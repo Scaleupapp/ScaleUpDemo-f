@@ -1,13 +1,24 @@
 import SwiftUI
 
 struct DecomposeDrillInputView: View {
-    @Bindable var session: DrillSession
+    let context: DrillContext
+    let startedAt: Date?        // nil = don't show timer
+    let submitLabel: String
+    let onSubmit: (DrillSubmission) -> Void
 
     @State private var steps: [DecompositionStep] = []
 
-    // Min 3 (UX nudge — 2 isn't a real decomposition); Max 10 (backend Joi max)
+    // Min 3 (UX nudge); Max 10 (backend Joi max)
     private let minSteps = 3
     private let maxSteps = 10
+
+    private var codeBlocks: [CodeBlock] {
+        CodeBlock.parse(from: context.brief)
+    }
+
+    private var proseBrief: String {
+        CodeBlock.stripCodeBlocks(from: context.brief)
+    }
 
     var body: some View {
         ScrollView {
@@ -15,10 +26,10 @@ struct DecomposeDrillInputView: View {
                 briefCard
                 stepsList
 
-                Color.clear.frame(height: 80) // bottom inset for sticky submit bar
+                Color.clear.frame(height: 24) // bottom inset for sticky submit bar
             }
             .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.top, 12)
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom) {
@@ -28,8 +39,6 @@ struct DecomposeDrillInputView: View {
                 .background(.regularMaterial)
         }
         .onAppear {
-            // Pre-seed with one blank step so the learner immediately sees the
-            // structure they're filling in (rather than just an "Add step" button).
             if steps.isEmpty {
                 steps = [DecompositionStep(step: "", rationale: "")]
             }
@@ -40,22 +49,32 @@ struct DecomposeDrillInputView: View {
 
     @ViewBuilder
     private var briefCard: some View {
-        if let brief = session.todayDrill?.brief, !brief.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Label("The ticket", systemImage: "ticket")
-                    .font(.subheadline.weight(.semibold))
-                Text(brief)
+        VStack(alignment: .leading, spacing: 8) {
+            Label("The ticket", systemImage: "ticket")
+                .font(.subheadline.weight(.semibold))
+
+            if !proseBrief.isEmpty {
+                Text(proseBrief)
                     .font(.subheadline)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(14)
-            .background(Color(.systemGray6))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
+
+            if !codeBlocks.isEmpty {
+                CodeViewer(blocks: codeBlocks)
+            } else if proseBrief.isEmpty {
+                // Brief has no code blocks and no prose — show raw text
+                Text(context.brief)
+                    .font(.subheadline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
+        .padding(14)
+        .background(Color(.systemGray6))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
     }
 
     // MARK: - Steps list
@@ -112,18 +131,17 @@ struct DecomposeDrillInputView: View {
     private var submitBar: some View {
         Button {
             guard canSubmit else { return }
-            // Normalize: trim whitespace per step
             let normalized = steps.map { step -> DecompositionStep in
                 var copy = step
                 copy.step = step.step.trimmingCharacters(in: .whitespacesAndNewlines)
                 copy.rationale = step.rationale.trimmingCharacters(in: .whitespacesAndNewlines)
                 return copy
             }
-            Task { await session.submit(.decompose(steps: normalized)) }
+            onSubmit(.decompose(steps: normalized))
         } label: {
             HStack {
                 if canSubmit {
-                    Text("Submit \(steps.count) steps")
+                    Text("\(submitLabel) (\(steps.count) steps)")
                         .fontWeight(.semibold)
                     Image(systemName: "arrow.right")
                 } else {
@@ -161,6 +179,6 @@ struct DecomposeDrillInputView: View {
         if incomplete > 0 {
             return "Fill in \(incomplete) row\(incomplete > 1 ? "s" : "")"
         }
-        return "Submit for grading"
+        return submitLabel
     }
 }
