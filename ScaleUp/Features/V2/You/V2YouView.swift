@@ -288,10 +288,16 @@ struct V2YouView: View {
                 }
             }
             Text(readiness.onTrackText)
-                .font(.system(size: 12, weight: .semibold)).foregroundStyle(ColorTokens.gold)
-            if let weeks = readiness.weeksRemaining {
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(readiness.weeksOverdue != nil ? ColorTokens.warning : ColorTokens.gold)
+
+            if let weeks = readiness.weeksRemaining, weeks > 0 {
                 Text("\(weeks) week\(weeks == 1 ? "" : "s") remaining")
                     .font(.system(size: 11)).foregroundStyle(ColorTokens.textTertiary)
+            } else if let overdue = readiness.weeksOverdue, overdue > 0 {
+                Text("\(overdue) week\(overdue == 1 ? "" : "s") past deadline")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.warning)
             }
         }
         .frame(maxWidth: .infinity)
@@ -394,7 +400,7 @@ struct V2YouView: View {
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "🎓", label: "My objectives")
+                row(icon: "target", label: "My objectives")
             }
             .buttonStyle(.plain)
 
@@ -404,9 +410,9 @@ struct V2YouView: View {
                     .environment(objectiveContext)
             } label: {
                 if let wp = weekProgress {
-                    row(icon: "🎯", label: "My plan", meta: "Week \(wp.week)")
+                    row(icon: "calendar", label: "My plan", meta: "Week \(wp.week)")
                 } else {
-                    row(icon: "🎯", label: "My plan")
+                    row(icon: "calendar", label: "My plan")
                 }
             }
             .buttonStyle(.plain)
@@ -415,7 +421,7 @@ struct V2YouView: View {
                 V2YouAnalyticsView()
                     .environment(appState)
             } label: {
-                row(icon: "📊", label: "Progress & analytics")
+                row(icon: "chart.line.uptrend.xyaxis", label: "Progress & analytics")
             }
             .buttonStyle(.plain)
 
@@ -424,7 +430,7 @@ struct V2YouView: View {
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "📝", label: "My notes & flashcards")
+                row(icon: "note.text", label: "My notes & flashcards")
             }
             .buttonStyle(.plain)
 
@@ -433,7 +439,16 @@ struct V2YouView: View {
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "🎤", label: "Mock interviews & analytics")
+                row(icon: "waveform.badge.mic", label: "Mock interviews & analytics")
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink {
+                V2CodingMasteryView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "chevron.left.forwardslash.chevron.right", label: "Coding drills & mastery")
             }
             .buttonStyle(.plain)
 
@@ -442,7 +457,7 @@ struct V2YouView: View {
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "🏆", label: "Daily challenges & competition")
+                row(icon: "trophy.fill", label: "Daily challenges & competition")
             }
             .buttonStyle(.plain)
 
@@ -451,7 +466,7 @@ struct V2YouView: View {
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "🧭", label: "My Compass activity")
+                row(icon: "safari", label: "My Compass activity")
             }
             .buttonStyle(.plain)
 
@@ -460,7 +475,7 @@ struct V2YouView: View {
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "📚", label: "All my activities")
+                row(icon: "square.grid.2x2.fill", label: "All my activities")
             }
             .buttonStyle(.plain)
         }
@@ -468,10 +483,12 @@ struct V2YouView: View {
 
     private func row(icon: String, label: String, meta: String? = nil) -> some View {
         HStack(spacing: 14) {
-            Text(icon).font(.system(size: 14))
+            Image(systemName: icon)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(ColorTokens.gold)
                 .frame(width: 32, height: 32)
-                .background(ColorTokens.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .background(ColorTokens.gold.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
             Text(label).font(V2Theme.bodyMedium).foregroundStyle(ColorTokens.textPrimary)
             Spacer()
             if let meta {
@@ -877,7 +894,7 @@ struct V2YouView: View {
             SettingsView()
                 .environment(appState)
         } label: {
-            row(icon: "⚙️", label: "Settings")
+            row(icon: "gearshape", label: "Settings")
         }
         .buttonStyle(.plain)
     }

@@ -24,6 +24,7 @@ struct V2YouOverview: Codable {
         let onTrackText: String
         let targetDate: String?
         let weeksRemaining: Int?
+        let weeksOverdue: Int?
     }
     struct WeekProgressBlock: Codable {
         let done: Int
