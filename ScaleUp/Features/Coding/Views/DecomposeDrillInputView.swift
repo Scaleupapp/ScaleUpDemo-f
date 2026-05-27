@@ -12,14 +12,6 @@ struct DecomposeDrillInputView: View {
     private let minSteps = 3
     private let maxSteps = 10
 
-    private var codeBlocks: [CodeBlock] {
-        CodeBlock.parse(from: context.brief)
-    }
-
-    private var proseBrief: String {
-        CodeBlock.stripCodeBlocks(from: context.brief)
-    }
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -47,33 +39,12 @@ struct DecomposeDrillInputView: View {
 
     // MARK: - Brief card
 
-    @ViewBuilder
     private var briefCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("The ticket", systemImage: "ticket")
-                .font(.subheadline.weight(.semibold))
-
-            if !proseBrief.isEmpty {
-                Text(proseBrief)
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            if !codeBlocks.isEmpty {
-                CodeViewer(blocks: codeBlocks)
-            } else if proseBrief.isEmpty {
-                // Brief has no code blocks and no prose — show raw text
-                Text(context.brief)
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .padding(14)
-        .background(Color(.systemGray6))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        BriefCard(
+            label: "The ticket",
+            systemImage: "ticket",
+            brief: context.brief,
+            style: .alwaysVisible
         )
     }
 

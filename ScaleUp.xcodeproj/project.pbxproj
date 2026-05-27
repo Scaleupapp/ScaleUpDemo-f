@@ -183,6 +183,7 @@
 		55F7A907F340B4E1AA14DBCD /* APISubmitCodeDrill202Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = AADDEA292010CDEF4D2AE2A6 /* APISubmitCodeDrill202Response.swift */; };
 		55FC9DD2868F895CC57E0B5E /* V2CompassHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99350018B2C0E0FBB8335E7F /* V2CompassHistoryView.swift */; };
 		5651469BBA3D330D3A46AF69 /* QuizSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BC6890D3E1C4FD4F8B85E95 /* QuizSessionView.swift */; };
+		56527900592428110A7A9E71 /* BriefCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0FF99476E690746FB73C8A1 /* BriefCard.swift */; };
 		56C8F73CDA335B165A3ED096 /* UserService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF315BDB3AAE03E4E2795E0 /* UserService.swift */; };
 		572955D9D05DA1E3D36DD7FC /* V2HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 098DB85D0841478030C0F896 /* V2HomeView.swift */; };
 		59899170E90FEB4C695CAE6F /* PlanBrewingPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B44CBDD1DC6EEAA4870946E /* PlanBrewingPill.swift */; };
@@ -890,6 +891,7 @@
 		DC6E3662AC38534B0774D502 /* ScoreBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreBar.swift; sourceTree = "<group>"; };
 		DF5B95CDF700809D5652C004 /* MixpanelDiagnosticEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixpanelDiagnosticEvents.swift; sourceTree = "<group>"; };
 		DF6B932A440AE583D491E2AF /* PhoneVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneVerificationView.swift; sourceTree = "<group>"; };
+		E0FF99476E690746FB73C8A1 /* BriefCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefCard.swift; sourceTree = "<group>"; };
 		E12E645CC5045EF597C4A5EF /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
 		E1BF0002815568AFE2195E16 /* APIDiagnosticOption.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDiagnosticOption.swift; sourceTree = "<group>"; };
 		E1F2C3B9DB023B92AFFD0744 /* Dashboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Dashboard.swift; sourceTree = "<group>"; };
@@ -970,6 +972,7 @@
 		002173E5466626097FFB1782 /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				E0FF99476E690746FB73C8A1 /* BriefCard.swift */,
 				949054D0EF8015DD51B777C7 /* BugLocationRow.swift */,
 				17DF31A52EED73D361A97EFB /* CalibrationProgressBar.swift */,
 				9956E6C86DFD28374D7F8178 /* CodeViewer.swift */,
@@ -2567,6 +2570,7 @@
 				32F111DA22179654BD6F79D6 /* AuthService.swift in Sources */,
 				B6ED59A0CFC09D084D274578 /* AuthViewModel.swift in Sources */,
 				6A508A4E6329B8FAD1D90D3D /* BackgroundStepView.swift in Sources */,
+				56527900592428110A7A9E71 /* BriefCard.swift in Sources */,
 				7C9B57CBE048C2F91A98FC5F /* BugLocationRow.swift in Sources */,
 				1A1052644E79A5328662CA30 /* CalibrationBannerView.swift in Sources */,
 				658114A3DA32F99602651F54 /* CalibrationProgressBar.swift in Sources */,
@@ -2968,7 +2972,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 159;
+				CURRENT_PROJECT_VERSION = 160;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3044,7 +3048,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 159;
+				CURRENT_PROJECT_VERSION = 160;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
