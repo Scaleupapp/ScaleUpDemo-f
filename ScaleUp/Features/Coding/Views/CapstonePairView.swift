@@ -1,9 +1,17 @@
 import SwiftUI
 import CoreImage.CIFilterBuiltins
+import UIKit
 
-/// Pairing screen — shows the 6-digit code + QR + email-link CTA, polls
-/// /status until backend reports `ready`, then auto-advances to the Live
-/// screen.
+/// Pairing screen — shows the 6-digit code + QR + copy-link CTA, polls
+/// /status until backend reports `in_progress` (the laptop has redeemed
+/// the pairing code and the learner has started), then auto-advances to
+/// the Live screen.
+///
+/// Important: we do NOT auto-advance on `ready`. Ready means the sandbox
+/// is provisioned and waiting for the laptop to redeem the code — that's
+/// the whole point of this screen. Advancing on `ready` would make the
+/// session "auto-activate" before the learner has even opened their
+/// laptop.
 struct CapstonePairView: View {
     let bundle: CapstoneLibraryEntry
     let startResponse: CapstoneStartResponse
@@ -12,6 +20,20 @@ struct CapstonePairView: View {
     @State private var currentStatus: CapstoneSessionStatus
     @State private var pollTask: Task<Void, Never>?
     @State private var showLive = false
+    @State private var copiedFlash: CopiedKind?
+
+    enum CopiedKind { case url, code }
+
+    /// Where the laptop should go. Points at the deployed web IDE.
+    /// Override at runtime via the `CAPSTONE_WEB_URL` Info.plist key if you
+    /// move to a custom domain.
+    private var laptopURL: String {
+        if let v = Bundle.main.object(forInfoDictionaryKey: "CAPSTONE_WEB_URL") as? String,
+           !v.isEmpty {
+            return v
+        }
+        return "scaleup-web-seven.vercel.app/capstone"
+    }
 
     init(bundle: CapstoneLibraryEntry, startResponse: CapstoneStartResponse, onClose: @escaping () -> Void) {
         self.bundle = bundle
@@ -23,24 +45,20 @@ struct CapstonePairView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    headerCopy
+                VStack(spacing: 28) {
+                    statusHeader
 
                     codeDisplay
 
                     qrCode
 
-                    statusBadge
+                    urlPanel
 
-                    Text("Open `app.scaleup.app/capstone` on your laptop. The code expires \(relativeExpiry).")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
+                    expiryLine
 
                     Spacer(minLength: 24)
                 }
-                .padding(.top, 24)
+                .padding(.top, 28)
             }
             .navigationTitle("Pair laptop")
             .navigationBarTitleDisplayMode(.inline)
@@ -65,76 +83,207 @@ struct CapstonePairView: View {
         }
     }
 
-    private var headerCopy: some View {
-        VStack(spacing: 6) {
-            Text("Open your laptop")
+    // MARK: - Status header
+
+    private var statusHeader: some View {
+        VStack(spacing: 10) {
+            statusBadge
+            Text(statusTitle)
                 .font(.title2.weight(.semibold))
-            Text("Go to **app.scaleup.app/capstone** and enter the code.")
+                .multilineTextAlignment(.center)
+            Text(statusSubtitle)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
         }
-        .padding(.horizontal, 24)
     }
 
-    private var codeDisplay: some View {
-        Text(formattedCode)
-            .font(.system(size: 44, weight: .heavy, design: .rounded).monospacedDigit())
-            .tracking(8)
-            .padding(.vertical, 14)
-            .padding(.horizontal, 28)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .accessibilityLabel("Pairing code \(startResponse.pairingCode)")
+    private var statusTitle: String {
+        switch currentStatus {
+        case .scheduled, .provisioning: return "Setting up your sandbox…"
+        case .ready:                    return "Open your laptop"
+        case .in_progress, .paused:     return "Session live"
+        case .aborted, .expired:        return currentStatus.displayLabel
+        default:                        return "Pair your laptop"
+        }
     }
 
-    private var qrCode: some View {
-        Group {
-            if let img = generateQR(for: startResponse.pairingCode) {
-                Image(uiImage: img)
-                    .interpolation(.none)
-                    .resizable()
-                    .frame(width: 220, height: 220)
-                    .padding(12)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-            } else {
-                ProgressView().frame(width: 220, height: 220)
-            }
+    private var statusSubtitle: String {
+        switch currentStatus {
+        case .scheduled, .provisioning:
+            return "We're provisioning a fresh Linux container. This usually takes a few seconds."
+        case .ready:
+            return "Open the URL on your laptop and enter the 6-digit code to begin. Your code expires \(relativeExpiry)."
+        case .in_progress, .paused:
+            return "Opening your work surface…"
+        case .aborted:
+            return "Session was aborted. Tap Cancel and start over."
+        case .expired:
+            return "Code expired. Tap Cancel and try again."
+        default:
+            return ""
         }
     }
 
     private var statusBadge: some View {
         HStack(spacing: 8) {
             switch currentStatus {
-            case .provisioning, .scheduled:
-                ProgressView().scaleEffect(0.8)
-                Text(currentStatus.displayLabel).font(.subheadline)
+            case .scheduled, .provisioning:
+                ProgressView().scaleEffect(0.85)
+                Text("Provisioning").font(.footnote.weight(.medium))
             case .ready:
+                Image(systemName: "laptopcomputer.and.iphone")
+                Text("Waiting for laptop").font(.footnote.weight(.medium))
+            case .in_progress, .paused:
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
-                Text("Paired — opening session…").font(.subheadline)
+                Text("Paired").font(.footnote.weight(.medium))
             case .aborted, .expired:
                 Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
-                Text(currentStatus.displayLabel).font(.subheadline)
+                Text(currentStatus.displayLabel).font(.footnote.weight(.medium))
             default:
-                Text(currentStatus.displayLabel).font(.subheadline)
+                Text(currentStatus.displayLabel).font(.footnote.weight(.medium))
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 6)
-        .background(Capsule().fill(Color.gray.opacity(0.15)))
+        .padding(.horizontal, 12).padding(.vertical, 6)
+        .background(Capsule().fill(Color(.tertiarySystemBackground)))
+    }
+
+    // MARK: - Code + copy
+
+    private var codeDisplay: some View {
+        VStack(spacing: 10) {
+            Text(formattedCode)
+                .font(.system(size: 56, weight: .heavy, design: .rounded).monospacedDigit())
+                .tracking(8)
+                .padding(.vertical, 18)
+                .padding(.horizontal, 32)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .accessibilityLabel("Pairing code \(startResponse.pairingCode)")
+
+            Button {
+                UIPasteboard.general.string = startResponse.pairingCode
+                flash(.code)
+            } label: {
+                Label(copiedFlash == .code ? "Code copied" : "Copy code",
+                      systemImage: copiedFlash == .code ? "checkmark" : "doc.on.doc")
+                    .font(.footnote.weight(.semibold))
+                    .padding(.horizontal, 14).padding(.vertical, 7)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.18)))
+                    .foregroundStyle(.tint)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - URL panel — primary CTA for the laptop
+
+    private var urlPanel: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "link")
+                    .foregroundStyle(.tint)
+                Text(laptopURL)
+                    .font(.callout.monospaced())
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    UIPasteboard.general.string = "https://\(laptopURL)"
+                    flash(.url)
+                } label: {
+                    Image(systemName: copiedFlash == .url ? "checkmark" : "doc.on.doc")
+                        .font(.body.weight(.semibold))
+                        .padding(8)
+                        .background(Color.accentColor.opacity(0.18))
+                        .clipShape(Circle())
+                        .foregroundStyle(.tint)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Copy URL")
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            HStack(spacing: 10) {
+                ShareLink(item: "Open \(laptopURL) and enter \(startResponse.pairingCode)") {
+                    Label("Email / message link", systemImage: "paperplane.fill")
+                        .font(.footnote.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color(.tertiarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if copiedFlash == .url {
+                Text("URL copied — paste it in your laptop's browser")
+                    .font(.caption2)
+                    .foregroundStyle(.tint)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 24)
     }
 
     // MARK: - QR
 
-    private func generateQR(for code: String) -> UIImage? {
+    private var qrCode: some View {
+        VStack(spacing: 8) {
+            Group {
+                if let img = generateQR(for: "https://\(laptopURL)?code=\(startResponse.pairingCode)") {
+                    Image(uiImage: img)
+                        .interpolation(.none)
+                        .resizable()
+                        .frame(width: 200, height: 200)
+                        .padding(12)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                } else {
+                    ProgressView().frame(width: 200, height: 200)
+                }
+            }
+            Text("Or scan the QR with your laptop camera")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private var expiryLine: some View {
+        Text("Code expires \(relativeExpiry)")
+            .font(.footnote)
+            .foregroundStyle(.tertiary)
+    }
+
+    // MARK: - QR generator
+
+    private func generateQR(for payload: String) -> UIImage? {
         let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(code.utf8)
+        filter.message = Data(payload.utf8)
         filter.correctionLevel = "M"
         guard let output = filter.outputImage else { return nil }
         let scaled = output.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
         let context = CIContext()
         guard let cg = context.createCGImage(scaled, from: scaled.extent) else { return nil }
         return UIImage(cgImage: cg)
+    }
+
+    // MARK: - Copy flash
+
+    private func flash(_ kind: CopiedKind) {
+        withAnimation(.spring(response: 0.25)) { copiedFlash = kind }
+        Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if copiedFlash == kind { copiedFlash = nil }
+                }
+            }
+        }
     }
 
     // MARK: - Polling
@@ -147,7 +296,12 @@ struct CapstonePairView: View {
                 do {
                     let s = try await CapstoneService.shared.getStatus(sessionId: startResponse.sessionId)
                     await MainActor.run { currentStatus = s.status }
-                    if s.status == .ready || s.status == .in_progress || s.status == .paused {
+                    // Only advance when the laptop has actually paired AND the
+                    // learner has started the timer (`in_progress` / `paused`).
+                    // `ready` just means the sandbox is provisioned and waiting
+                    // for the laptop to redeem the code — we MUST stay on this
+                    // screen until that happens.
+                    if s.status == .in_progress || s.status == .paused {
                         await MainActor.run { showLive = true }
                         return
                     }
@@ -163,7 +317,6 @@ struct CapstonePairView: View {
     // MARK: - Formatting helpers
 
     private var formattedCode: String {
-        // "123456" → "123 456"
         let s = startResponse.pairingCode
         guard s.count == 6 else { return s }
         return "\(s.prefix(3)) \(s.suffix(3))"

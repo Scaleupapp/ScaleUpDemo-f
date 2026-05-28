@@ -1,7 +1,9 @@
 import SwiftUI
 
 /// Pre-flight checklist before the learner pairs to a laptop (spec §7.2 step 2).
-/// Tap "Start on laptop" → POST /capstones/start → show pairing code on next screen.
+/// Visually distinct from a regular task screen: the capstone is a 60-90 min
+/// commitment, and the brief is the contract. Heavy emphasis on the brief, a
+/// readable "what you're agreeing to" checklist, and an honor-code banner.
 struct CapstonePreflightView: View {
     let bundle: CapstoneLibraryEntry
     let onClose: () -> Void
@@ -19,23 +21,50 @@ struct CapstonePreflightView: View {
         var allOk: Bool { laptopReady && quietBlock && networkOk }
     }
 
+    /// Pull the title out of the brief's first line (we don't have a separate
+    /// `title` field on bundles — the first line is always the human title).
+    private var briefTitle: String {
+        let first = bundle.brief
+            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true)
+            .first
+            .map(String.init) ?? bundle.brief
+        return first.trimmingCharacters(in: .whitespaces)
+    }
+
+    private var briefBody: String {
+        let parts = bundle.brief
+            .split(separator: "\n", maxSplits: 1, omittingEmptySubsequences: true)
+        guard parts.count > 1 else { return "" }
+        return String(parts[1]).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    header
-
-                    checklist
-
+                    heroCard
+                    briefCard
+                    if let parallel = bundle.interviewParallel, !parallel.isEmpty {
+                        interviewParallelCard(parallel)
+                    }
+                    checklistCard
                     integrityBanner
-
-                    Spacer(minLength: 16)
+                    Spacer(minLength: 24)
                 }
                 .padding(20)
             }
+            .background(
+                LinearGradient(
+                    colors: [Color(.systemBackground), Color.accentColor.opacity(0.03)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
+            )
             .safeAreaInset(edge: .bottom) {
                 startButton
-                    .padding(20)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
                     .background(.regularMaterial)
             }
             .navigationTitle("Pre-flight")
@@ -59,87 +88,226 @@ struct CapstonePreflightView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // No line limit — the brief is the spec. Learners need to read
-            // it fully before they commit 60–90 min on a laptop. The outer
-            // ScrollView handles overflow.
-            Text(bundle.brief)
-                .font(.body)
+    // MARK: - Hero (title + meta tags)
+
+    private var heroCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "trophy.fill").font(.caption.weight(.bold))
+                Text("Capstone")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.2)
+                    .textCase(.uppercase)
+            }
+            .foregroundStyle(.tint)
+
+            Text(briefTitle)
+                .font(.title2.weight(.bold))
                 .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: 8) {
-                badge(bundle.difficulty.rawValue.capitalized)
-                badge("\(bundle.timeBudgetMinutes) min")
-                badge(bundle.language)
+                .multilineTextAlignment(.leading)
+
+            FlowChips {
+                Chip(icon: difficultyIcon, text: bundle.difficulty.rawValue.capitalized, tone: difficultyTone)
+                Chip(icon: "clock", text: "\(bundle.timeBudgetMinutes) min")
+                Chip(icon: "chevron.left.forwardslash.chevron.right", text: bundle.language.capitalized)
+                if let stack = bundle.stackVariant { Chip(icon: "shippingbox", text: stack) }
+                Chip(icon: "person.fill", text: bundle.roleTrack.rawValue.uppercased())
             }
-            if let parallel = bundle.interviewParallel {
-                Label(parallel, systemImage: "briefcase.fill")
-                    .font(.caption)
-                    .foregroundStyle(.tint)
-                    .padding(.top, 4)
-            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.accentColor.opacity(0.25), lineWidth: 1)
+        )
+    }
+
+    private var difficultyIcon: String {
+        switch bundle.difficulty.rawValue {
+        case "easy":   return "circle.fill"
+        case "medium": return "circle.lefthalf.filled"
+        case "hard":   return "circle.dotted"
+        default:       return "circle"
         }
     }
 
-    private var checklist: some View {
+    enum ChipTone { case neutral, ok, warn, info }
+    private var difficultyTone: ChipTone {
+        switch bundle.difficulty.rawValue {
+        case "easy":   return .ok
+        case "medium": return .info
+        case "hard":   return .warn
+        default:       return .neutral
+        }
+    }
+
+    // MARK: - Brief (the spec) — full, no truncation
+
+    private var briefCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Before you start")
-                .font(.headline)
-            row("Your laptop is open and connected to power", isOn: $checks.laptopReady)
-            row("You have \(bundle.timeBudgetMinutes) minutes uninterrupted", isOn: $checks.quietBlock)
-            row("Stable Wi-Fi (capstones need network for Compass + tests)", isOn: $checks.networkOk)
+            Label("What you'll build", systemImage: "doc.text.below.ecg")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.tint)
+
+            if briefBody.isEmpty {
+                Text(bundle.brief)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(briefBody)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    // MARK: - Interview parallel
+
+    private func interviewParallelCard(_ parallel: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "briefcase.fill")
+                .font(.title3)
+                .foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("INTERVIEW PARALLEL")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.2)
+                    .foregroundStyle(.tint)
+                Text(parallel)
+                    .font(.subheadline)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.accentColor.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.accentColor.opacity(0.2), lineWidth: 1)
+        )
     }
 
-    /// Anti-cheat banner — spec §13.3. Honest framing beats arms race.
+    // MARK: - Checklist
+
+    private var checklistCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Before you start")
+                .font(.headline)
+            checkRow(
+                icon: "laptopcomputer",
+                title: "Your laptop is open and plugged in",
+                subtitle: "You'll work on the laptop; the phone is your timer.",
+                isOn: $checks.laptopReady
+            )
+            Divider().padding(.leading, 36)
+            checkRow(
+                icon: "clock.badge.checkmark",
+                title: "You have \(bundle.timeBudgetMinutes) minutes uninterrupted",
+                subtitle: "Sessions can't pause indefinitely — short breaks only.",
+                isOn: $checks.quietBlock
+            )
+            Divider().padding(.leading, 36)
+            checkRow(
+                icon: "wifi",
+                title: "Stable Wi-Fi for Compass + test runs",
+                subtitle: "Disconnections during grading may abort the session.",
+                isOn: $checks.networkOk
+            )
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+
+    private func checkRow(icon: String, title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(isOn.wrappedValue ? Color.accentColor.opacity(0.18) : Color(.tertiarySystemBackground))
+                    .frame(width: 28, height: 28)
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isOn.wrappedValue ? Color.accentColor : Color.secondary)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.semibold))
+                Text(subtitle).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+                .tint(.accentColor)
+        }
+    }
+
+    // MARK: - Integrity banner
+
     private var integrityBanner: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "info.circle.fill")
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "shield.lefthalf.filled")
+                .font(.title3)
                 .foregroundStyle(.tint)
-            Text("This session is recorded. You can use Compass freely; outside AI tools defeat the purpose and will lower your integrity score.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Closed-book session")
+                    .font(.subheadline.weight(.semibold))
+                Text("This session is recorded. Use Compass (built-in AI pair) freely — outside AI tools defeat the purpose and will lower your integrity score.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(12)
-        .background(Color.accentColor.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.tertiarySystemBackground))
+        )
     }
 
-    private func row(_ text: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn) {
-            Text(text).font(.subheadline)
-        }
-        .tint(.accentColor)
-    }
+    // MARK: - Start button
 
     private var startButton: some View {
         Button {
             Task { await start() }
         } label: {
-            HStack(spacing: 8) {
-                if starting { ProgressView().tint(.white) }
-                Text("Start on laptop")
+            HStack(spacing: 10) {
+                if starting {
+                    ProgressView().tint(.white).scaleEffect(0.9)
+                } else {
+                    Image(systemName: "laptopcomputer.and.iphone")
+                }
+                Text(starting ? "Starting…" : "Start on laptop")
                     .fontWeight(.semibold)
-                Image(systemName: "arrow.right")
+                if !starting {
+                    Image(systemName: "arrow.right")
+                }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.vertical, 16)
             .background(checks.allOk && !starting ? Color.accentColor : Color.gray.opacity(0.3))
             .foregroundStyle(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: checks.allOk ? Color.accentColor.opacity(0.3) : .clear, radius: 12, y: 4)
         }
         .disabled(!checks.allOk || starting)
     }
 
-    private func badge(_ text: String) -> some View {
-        Text(text)
-            .font(.caption.weight(.medium))
-            .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(Capsule().fill(Color.gray.opacity(0.15)))
-    }
+    // MARK: - Start
 
     private func start() async {
         starting = true
@@ -151,9 +319,6 @@ struct CapstonePreflightView: View {
         } catch CapstoneServiceError.notACapstone {
             error = "This bundle isn't a capstone — only daily drills are available."
         } catch V2APIError.httpError(let status, let data) {
-            // Surface backend error.message / error so we never show a
-            // useless "Couldn't start" again. Falls back to status-code
-            // hints when the body is opaque.
             let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             let detail = (body?["message"] as? String) ?? (body?["error"] as? String)
             if status == 429 {
@@ -167,6 +332,82 @@ struct CapstonePreflightView: View {
             }
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Inline chip + flow layout
+
+private struct Chip: View {
+    let icon: String
+    let text: String
+    var tone: CapstonePreflightView.ChipTone = .neutral
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).font(.caption.weight(.semibold))
+            Text(text).font(.caption.weight(.medium))
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(Capsule().fill(background))
+        .foregroundStyle(foreground)
+    }
+
+    private var background: Color {
+        switch tone {
+        case .ok:      return Color.green.opacity(0.18)
+        case .warn:    return Color.orange.opacity(0.18)
+        case .info:    return Color.accentColor.opacity(0.18)
+        case .neutral: return Color(.tertiarySystemBackground)
+        }
+    }
+    private var foreground: Color {
+        switch tone {
+        case .ok:      return Color.green
+        case .warn:    return Color.orange
+        case .info:    return Color.accentColor
+        case .neutral: return Color.primary
+        }
+    }
+}
+
+/// Minimal flow layout — wraps chips onto multiple lines without horizontal
+/// scroll. Adapts to whatever width the parent provides.
+private struct FlowChips<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        CapstoneChipFlow(spacing: 6) { content }
+    }
+}
+
+private struct CapstoneChipFlow: Layout {
+    let spacing: CGFloat
+    init(spacing: CGFloat) { self.spacing = spacing }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
+        for v in subviews {
+            let sz = v.sizeThatFits(.unspecified)
+            if x + sz.width > maxWidth && x > 0 { x = 0; y += rowH + spacing; rowH = 0 }
+            x += sz.width + spacing
+            rowH = max(rowH, sz.height)
+        }
+        return CGSize(width: maxWidth, height: y + rowH)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x: CGFloat = bounds.minX, y: CGFloat = bounds.minY, rowH: CGFloat = 0
+        for v in subviews {
+            let sz = v.sizeThatFits(.unspecified)
+            if x + sz.width > bounds.maxX && x > bounds.minX {
+                x = bounds.minX
+                y += rowH + spacing
+                rowH = 0
+            }
+            v.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(sz))
+            x += sz.width + spacing
+            rowH = max(rowH, sz.height)
         }
     }
 }

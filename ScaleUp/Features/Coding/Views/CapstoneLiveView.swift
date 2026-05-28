@@ -124,7 +124,7 @@ struct CapstoneLiveView: View {
     }
 
     private var readyHint: some View {
-        Text("Open `app.scaleup.app/capstone` and enter the code from the previous screen to start coding.")
+        Text("Open `scaleup-web-seven.vercel.app/capstone` on your laptop and enter the code from the previous screen to start coding.")
             .font(.footnote)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
