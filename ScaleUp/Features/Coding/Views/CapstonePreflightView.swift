@@ -27,6 +27,8 @@ struct CapstonePreflightView: View {
 
                     checklist
 
+                    integrityBanner
+
                     Spacer(minLength: 16)
                 }
                 .padding(20)
@@ -87,6 +89,20 @@ struct CapstonePreflightView: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Anti-cheat banner — spec §13.3. Honest framing beats arms race.
+    private var integrityBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .foregroundStyle(.tint)
+            Text("This session is recorded. You can use Compass freely; outside AI tools defeat the purpose and will lower your integrity score.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(12)
+        .background(Color.accentColor.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func row(_ text: String, isOn: Binding<Bool>) -> some View {
