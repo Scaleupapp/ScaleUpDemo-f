@@ -191,6 +191,11 @@ struct V2CompassView: View {
                     .environment(appState)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
+            case .codingCapstone:
+                V2CodingHomeView(onClose: { vm.presentedHome = nil })
+                    .environment(appState)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
         }
         // Compass action-card drill flow — uses sheet(item:) to avoid the
@@ -577,6 +582,7 @@ struct CompassQuickAction {
         .init(label: "Quiz me", icon: "bolt.fill", chip: "Quiz me"),
         .init(label: "Compete today", icon: "trophy.fill", chip: "Compete today"),
         .init(label: "Practice interview", icon: "mic.fill", chip: "Practice interview"),
+        .init(label: "Coding capstone", icon: "chevron.left.forwardslash.chevron.right", chip: "Show me my coding capstone"),
         .init(label: "Make a note", icon: "doc.text.fill", chip: "Make a note"),
         .init(label: "Build my resume", icon: "person.text.rectangle.fill", chip: "Build my resume"),
         .init(label: "Plan my days", icon: "calendar", chip: "Plan my next 2 days"),

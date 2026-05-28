@@ -11,6 +11,8 @@ struct CapstoneResultView: View {
     @State private var pollTask: Task<Void, Never>?
     @State private var showReplay = false
     @State private var showVoiceReflection = false
+    @State private var retryInFlight = false
+    @State private var retryError: String?
 
     enum ViewState {
         case loading
@@ -206,8 +208,56 @@ struct CapstoneResultView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+
+            if let bundleId = result.bundleId {
+                Button {
+                    Task { await retry(bundleId: bundleId) }
+                } label: {
+                    HStack {
+                        if retryInFlight {
+                            ProgressView().tint(.white)
+                            Text("Starting…")
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                            Text("Try this capstone again")
+                        }
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    .background(Color.accentColor.opacity(0.15))
+                    .foregroundStyle(.tint)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .disabled(retryInFlight)
+
+                if let retryError {
+                    Text(retryError)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+            }
         }
         .padding(.top, 4)
+    }
+
+    private func retry(bundleId: String) async {
+        retryInFlight = true
+        retryError = nil
+        defer { retryInFlight = false }
+        do {
+            _ = try await CapstoneService.shared.retry(bundleId: bundleId)
+            // Close the result sheet — the new session's pairing flow will start
+            // from CapstoneLibrary / Compass coding home. The user already saw
+            // their result; this dismissal is the same UX as the existing flow.
+            onClose()
+        } catch CapstoneServiceError.invalidTransition {
+            retryError = "You have a session in progress. Finish or abort it first."
+        } catch {
+            retryError = "Couldn't start a retry. Try again."
+        }
     }
 
     private func startPolling() {

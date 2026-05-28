@@ -174,6 +174,12 @@ struct V2HomeView: View {
         CodingDrillCard()
             .padding(.bottom, 22)
 
+        // 3c. CAPSTONE MILESTONE — weekly cadence; same best-effort silence
+        //     rules. Surfaces as: "available", "in progress", "you leveled
+        //     up", or hidden.
+        CapstoneMilestoneCard()
+            .padding(.bottom, 22)
+
         // 4. YOUR PLAN — multi-week timeline (only when we have schedule data)
         if let sched = data.planSchedule, !sched.isEmpty {
             planTimelineSection(sched: sched, weekProgress: data.weekProgress, streak: data.streak)

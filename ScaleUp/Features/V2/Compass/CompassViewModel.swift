@@ -202,12 +202,17 @@ enum CompassHomeRoute: String, Identifiable, CaseIterable {
     case plan
     case compete
     case codingDrill
+    case codingCapstone
     var id: String { rawValue }
 
     /// Maps a chip label (e.g. "⚡ Quiz me", "Practice interview") onto the
     /// route. Returns nil for chips that should stay conversational.
     static func fromChip(_ chip: String) -> CompassHomeRoute? {
         let s = chip.lowercased()
+        // capstone check BEFORE any other "coding" routing
+        if s.contains("capstone") || s.contains("coding project") || s.contains("how am i doing on coding") {
+            return .codingCapstone
+        }
         // coding drill check BEFORE quiz — "coding drill" must not fall through to .quiz
         if s.contains("coding drill") || s.contains("coding practice") { return .codingDrill }
         if s.contains("quiz")      { return .quiz }

@@ -32,6 +32,49 @@ final class CapstoneService {
         }
     }
 
+    /// POST /capstones/retry — start a new session against a previously graded bundle.
+    /// Mirrors `start()` shape; the response carries `is_retry: true`.
+    func retry(bundleId: String) async throws -> CapstoneStartResponse {
+        struct Body: Codable { let bundle_id: String }
+        do {
+            return try await client.postCoding("/capstones/retry", body: Body(bundle_id: bundleId))
+        } catch V2APIError.httpError(let status, _) where status == 409 {
+            throw CapstoneServiceError.invalidTransition(currentStatus: "in_progress")
+        } catch V2APIError.httpError(let status, let data) where status == 400 || status == 404 {
+            throw mapStartError(data)
+        }
+    }
+
+    /// GET /capstones/summary — Compass-tab snapshot.
+    func summary() async throws -> APICapstoneSummary {
+        try await client.getCoding("/capstones/summary")
+    }
+
+    /// POST /capstones/request — "Surprise me" picker. Returns the next-best bundle
+    /// preview as a CapstoneLibraryEntry-shaped struct so it slots straight into
+    /// the existing PreflightView pipeline.
+    func requestNext() async throws -> CapstoneLibraryEntry {
+        struct Wrapper: Codable {
+            let bundle: APICapstoneBundleView
+            let cadence: String
+            let reason: String
+        }
+        let w: Wrapper = try await client.postCoding("/capstones/request", body: EmptyBody())
+        return CapstoneLibraryEntry(
+            bundleId: w.bundle.bundleId,
+            brief: w.bundle.brief,
+            difficulty: DrillDifficulty(rawValue: w.bundle.difficulty.rawValue) ?? .medium,
+            roleTrack: RoleTrack(rawValue: w.bundle.roleTrack.rawValue) ?? .swe,
+            timeBudgetMinutes: w.bundle.timeBudgetMinutes.rawValue,
+            language: w.bundle.language,
+            stackVariant: w.bundle.stackVariant,
+            interviewParallel: w.bundle.interviewParallel,
+            alreadyCompleted: false
+        )
+    }
+
+    private struct EmptyBody: Codable {}
+
     // MARK: - Status / control
 
     func getStatus(sessionId: String) async throws -> CapstoneSessionView {
