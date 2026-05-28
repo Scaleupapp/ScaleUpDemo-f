@@ -70,6 +70,13 @@ final class V2APIClient {
         try await rawDataWithStatus(version: .coding, method: method, path: path, body: Optional<EmptyBody>.none)
     }
 
+    /// Same as `rawCodingData(method:path:)` but accepts a body for POSTs that
+    /// need a body but want to decode with a custom JSONDecoder (e.g.
+    /// JSONDecoder.capstoneDecoder which understands ISO8601 strings).
+    func rawCodingData<B: Codable>(method: String, path: String, body: B) async throws -> (Data, Int) {
+        try await rawDataWithStatus(version: .coding, method: method, path: path, body: body)
+    }
+
     // MARK: - Internals
 
     private enum APIVersion { case v1, v2, coding }
@@ -99,14 +106,37 @@ final class V2APIClient {
     /// v1/coding — decodes T directly (no envelope)
     private func rawRequest<T: Codable, B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> T {
         let data = try await rawData(version: version, method: method, path: path, body: body)
-        return try JSONDecoder().decode(T.self, from: data)
+        return try decoder(for: version).decode(T.self, from: data)
     }
 
     /// v1/coding — decodes T and surfaces HTTP status code
     private func rawRequestWithStatus<T: Codable, B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> (T, Int) {
         let (data, status) = try await rawDataWithStatus(version: version, method: method, path: path, body: body)
-        let decoded = try JSONDecoder().decode(T.self, from: data)
+        let decoded = try decoder(for: version).decode(T.self, from: data)
         return (decoded, status)
+    }
+
+    /// Returns a JSONDecoder configured for the given API namespace. The
+    /// `.coding` namespace returns ISO8601 strings for every Date field, so
+    /// we install a custom strategy that handles `2026-05-28T12:48:56.123Z`
+    /// with and without fractional seconds. Other namespaces keep Apple's
+    /// default (Date = TimeInterval since 2001), which is what their
+    /// hand-rolled controllers expect.
+    private func decoder(for version: APIVersion) -> JSONDecoder {
+        let d = JSONDecoder()
+        if version == .coding {
+            let withFrac = ISO8601DateFormatter()
+            withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let plain = ISO8601DateFormatter()
+            d.dateDecodingStrategy = .custom { decoder in
+                let c = try decoder.singleValueContainer()
+                let s = try c.decode(String.self)
+                if let dt = withFrac.date(from: s) { return dt }
+                if let dt = plain.date(from: s) { return dt }
+                throw DecodingError.dataCorruptedError(in: c, debugDescription: "Invalid ISO8601 date: \(s)")
+            }
+        }
+        return d
     }
 
     private func rawData<B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> Data {

@@ -61,9 +61,12 @@ struct CapstonePreflightView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // No line limit — the brief is the spec. Learners need to read
+            // it fully before they commit 60–90 min on a laptop. The outer
+            // ScrollView handles overflow.
             Text(bundle.brief)
                 .font(.body)
-                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 8) {
                 badge(bundle.difficulty.rawValue.capitalized)
                 badge("\(bundle.timeBudgetMinutes) min")
@@ -147,8 +150,23 @@ struct CapstonePreflightView: View {
             error = "Coding capstones aren't available for your current objective."
         } catch CapstoneServiceError.notACapstone {
             error = "This bundle isn't a capstone — only daily drills are available."
+        } catch V2APIError.httpError(let status, let data) {
+            // Surface backend error.message / error so we never show a
+            // useless "Couldn't start" again. Falls back to status-code
+            // hints when the body is opaque.
+            let body = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            let detail = (body?["message"] as? String) ?? (body?["error"] as? String)
+            if status == 429 {
+                error = "You're tapping too fast — wait a few seconds and try again."
+            } else if status >= 500 {
+                error = "Server hiccup (\(status)). Try again in a moment."
+            } else if let detail {
+                error = detail
+            } else {
+                error = "Couldn't start (HTTP \(status))."
+            }
         } catch {
-            self.error = (error as? LocalizedError)?.errorDescription ?? "Couldn't start. Try again."
+            self.error = error.localizedDescription
         }
     }
 }

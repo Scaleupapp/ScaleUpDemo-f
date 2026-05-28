@@ -25,24 +25,35 @@ final class CapstoneService {
 
     func start(bundleId: String) async throws -> CapstoneStartResponse {
         struct Body: Codable { let bundle_id: String }
-        do {
-            return try await client.postCoding("/capstones/start", body: Body(bundle_id: bundleId))
-        } catch V2APIError.httpError(let status, let data) where status == 404 {
+        // Decoded manually with capstoneDecoder because the default decoder
+        // cannot parse `expires_at` (ISO8601 string) into Date and we end up
+        // showing a useless "Couldn't start" alert to the user instead of
+        // moving them onto the pairing screen.
+        let (data, status) = try await client.rawCodingData(method: "POST", path: "/capstones/start", body: Body(bundle_id: bundleId))
+        if status == 201 || status == 200 {
+            return try JSONDecoder.capstoneDecoder.decode(CapstoneStartResponse.self, from: data)
+        }
+        if status == 404 {
             throw mapStartError(data)
         }
+        throw V2APIError.httpError(status, data)
     }
 
     /// POST /capstones/retry — start a new session against a previously graded bundle.
     /// Mirrors `start()` shape; the response carries `is_retry: true`.
     func retry(bundleId: String) async throws -> CapstoneStartResponse {
         struct Body: Codable { let bundle_id: String }
-        do {
-            return try await client.postCoding("/capstones/retry", body: Body(bundle_id: bundleId))
-        } catch V2APIError.httpError(let status, _) where status == 409 {
+        let (data, status) = try await client.rawCodingData(method: "POST", path: "/capstones/retry", body: Body(bundle_id: bundleId))
+        if status == 201 || status == 200 {
+            return try JSONDecoder.capstoneDecoder.decode(CapstoneStartResponse.self, from: data)
+        }
+        if status == 409 {
             throw CapstoneServiceError.invalidTransition(currentStatus: "in_progress")
-        } catch V2APIError.httpError(let status, let data) where status == 400 || status == 404 {
+        }
+        if status == 400 || status == 404 {
             throw mapStartError(data)
         }
+        throw V2APIError.httpError(status, data)
     }
 
     /// GET /capstones/summary — Compass-tab snapshot.
