@@ -76,6 +76,9 @@ struct CapstoneResultView: View {
             VStack(alignment: .leading, spacing: 20) {
                 scoreCard(result)
                 rubricSection(result.dimensionScores)
+                if let notes = result.evidenceNotes, !notes.isEmpty {
+                    evidenceNotesSection(notes)
+                }
                 strengthsGapsSection(result)
                 integritySection(result)
                 if let parallel = result.interviewParallel, !parallel.isEmpty {
@@ -85,6 +88,31 @@ struct CapstoneResultView: View {
                 Spacer(minLength: 60)
             }
         }
+    }
+
+    /// Detailed analysis — the LLM scorer's narrative explanation of why
+    /// these scores. Cites specific files, test names, Compass turns.
+    private func evidenceNotesSection(_ notes: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "text.magnifyingglass")
+                    .font(.caption.weight(.semibold))
+                Text("DETAILED ANALYSIS")
+                    .font(.caption.weight(.bold))
+                    .tracking(1.2)
+            }
+            .foregroundStyle(.tint)
+            Text(notes)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground))
+        )
     }
 
     private func scoreCard(_ result: CapstoneResult) -> some View {

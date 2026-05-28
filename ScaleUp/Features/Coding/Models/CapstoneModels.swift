@@ -149,6 +149,7 @@ struct CapstoneResult: Codable, Sendable {
     let gradedAt: Date?
     let bundleId: String?
     let isRetry: Bool?
+    let evidenceNotes: String?
 
     enum CodingKeys: String, CodingKey {
         case overallScore = "overall_score"
@@ -161,6 +162,7 @@ struct CapstoneResult: Codable, Sendable {
         case gradedAt = "graded_at"
         case bundleId = "bundle_id"
         case isRetry = "is_retry"
+        case evidenceNotes = "evidence_notes"
     }
 }
 
