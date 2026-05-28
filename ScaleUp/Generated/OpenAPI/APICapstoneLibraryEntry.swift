@@ -19,7 +19,7 @@ public struct APICapstoneLibraryEntry: Codable, Hashable, Sendable {
         case ds = "ds"
         case aiEng = "ai_eng"
     }
-    public enum TimeBudgetMinutes: Int, Codable, CaseIterable {
+    public enum TimeBudgetMinutes: Int, Codable, CaseIterable, Sendable {
         case _60 = 60
         case _75 = 75
         case _90 = 90

@@ -10,7 +10,7 @@ import Foundation
 /** Learner-visible projection of an ArtifactBundle of type&#x3D;capstone */
 public struct APICapstoneBundleView: Codable, Hashable, Sendable {
 
-    public enum TimeBudgetMinutes: Int, Codable, CaseIterable {
+    public enum TimeBudgetMinutes: Int, Codable, CaseIterable, Sendable {
         case _60 = 60
         case _75 = 75
         case _90 = 90

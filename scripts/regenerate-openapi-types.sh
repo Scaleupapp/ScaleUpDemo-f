@@ -83,9 +83,13 @@ for fname in sorted(os.listdir(out_dir)):
         r'\1Codable, Sendable', src)
 
     # Ensure all enums (top-level + nested) conform to Sendable so the
-    # parent structs (which are Sendable) can hold them.
+    # parent structs (which are Sendable) can hold them. Cover both
+    # String- and Int-backed enums (capstone time_budget_minutes is Int).
     src = re.sub(
-        r'(public enum \w+: String, Codable, CaseIterable)(?!,\s*Sendable)',
+        r'(public enum \w+: (?:String|Int|Double): Codable, CaseIterable)(?!,\s*Sendable)',
+        r'\1, Sendable', src)
+    src = re.sub(
+        r'(public enum \w+: (?:String|Int|Double), Codable, CaseIterable)(?!,\s*Sendable)',
         r'\1, Sendable', src)
 
     # The Swift5 generator emits broken additional-properties handling

@@ -10,6 +10,7 @@ struct V2CodingMasteryView: View {
     @State private var requestedDrillSession: DrillSession? = nil    // sheet(item:) driver
     @State private var isRequestingDrill = false                     // overlay while in-flight
     @State private var requestErrorMessage: String? = nil            // shown on failure
+    @State private var showCapstoneLibrary = false                   // capstone entry point (WS6)
 
     struct PracticeRequest: Equatable {
         let subtype: DrillSubtype?
@@ -46,6 +47,9 @@ struct V2CodingMasteryView: View {
         }
         .sheet(isPresented: $showCalibration) {
             CalibrationSequenceView()
+        }
+        .sheet(isPresented: $showCapstoneLibrary) {
+            CapstoneLibraryView()
         }
         // Picker sheet — onDismiss fires AFTER the sheet is fully gone, avoiding
         // the sheet-from-sheet race where SwiftUI would eat the second presentation.
@@ -189,6 +193,25 @@ struct V2CodingMasteryView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
+
+            // Capstones — longer-form (60/75/90 min) sessions on the laptop.
+            // Spec §3.2: every capstone has a brief + starter repo + acceptance
+            // criteria + Compass-as-Coder + recording + evaluation.
+            Button {
+                showCapstoneLibrary = true
+            } label: {
+                HStack {
+                    Image(systemName: "laptopcomputer.and.iphone")
+                    Text("Browse capstones")
+                }
+                .fontWeight(.semibold)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(.primary)
+                .background(Color(.tertiarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
         }
     }
 
