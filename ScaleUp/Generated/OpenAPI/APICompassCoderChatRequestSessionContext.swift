@@ -12,9 +12,9 @@ public struct APICompassCoderChatRequestSessionContext: Codable, Hashable, Senda
     public var brief: String?
     public var language: String?
     public var drillSubtype: String?
-    public var currentFiles: [APICompassCoderChatRequestSessionContextCurrentFilesInner]?
+    public var currentFiles: [APIPersistCapstoneFilesRequestFilesInner]?
 
-    public init(brief: String? = nil, language: String? = nil, drillSubtype: String? = nil, currentFiles: [APICompassCoderChatRequestSessionContextCurrentFilesInner]? = nil) {
+    public init(brief: String? = nil, language: String? = nil, drillSubtype: String? = nil, currentFiles: [APIPersistCapstoneFilesRequestFilesInner]? = nil) {
         self.brief = brief
         self.language = language
         self.drillSubtype = drillSubtype
