@@ -61,6 +61,11 @@ final class CapstoneService {
         try await client.getCoding("/capstones/summary")
     }
 
+    /// GET /capstones/history — paginated full history + headline stats.
+    func history(limit: Int = 30, offset: Int = 0) async throws -> CapstoneHistoryResponse {
+        try await client.getCoding("/capstones/history?limit=\(limit)&offset=\(offset)")
+    }
+
     /// POST /capstones/request — "Surprise me" picker. Returns the next-best bundle
     /// preview as a CapstoneLibraryEntry-shaped struct so it slots straight into
     /// the existing PreflightView pipeline.

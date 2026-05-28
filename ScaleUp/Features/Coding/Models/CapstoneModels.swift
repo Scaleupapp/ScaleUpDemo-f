@@ -222,3 +222,84 @@ enum CapstoneServiceError: Error, Sendable {
     case sessionNotGraded(currentStatus: String?)
     case stillEvaluating
 }
+
+// MARK: - History
+
+struct CapstoneHistoryResponse: Codable, Sendable {
+    let items: [CapstoneHistoryItem]
+    let pagination: CapstonePagination
+    let stats: CapstoneHistoryStats
+    let weeklySeries: [CapstoneWeeklyPoint]
+
+    enum CodingKeys: String, CodingKey {
+        case items, pagination, stats
+        case weeklySeries = "weekly_series"
+    }
+}
+
+struct CapstoneHistoryItem: Codable, Sendable, Identifiable {
+    let sessionId: String
+    let bundleId: String?
+    let bundleBriefPreview: String
+    let difficulty: String?
+    let roleTrack: String?
+    let timeBudgetMinutes: Int?
+    let overallScore: Int?
+    let dimensionScores: CapstoneDimensionScores?
+    let integrityConfidence: String?
+    let gradedAt: Date?
+    let isRetry: Bool
+
+    var id: String { sessionId }
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case bundleId = "bundle_id"
+        case bundleBriefPreview = "bundle_brief_preview"
+        case difficulty
+        case roleTrack = "role_track"
+        case timeBudgetMinutes = "time_budget_minutes"
+        case overallScore = "overall_score"
+        case dimensionScores = "dimension_scores"
+        case integrityConfidence = "integrity_confidence"
+        case gradedAt = "graded_at"
+        case isRetry = "is_retry"
+    }
+}
+
+struct CapstonePagination: Codable, Sendable {
+    let total: Int
+    let limit: Int
+    let offset: Int
+    let returned: Int
+}
+
+struct CapstoneHistoryStats: Codable, Sendable {
+    let totalAttempts: Int
+    let bestScore: Int?
+    let meanScore: Int?
+    let currentDifficulty: String?
+    let roleTrack: String?
+
+    enum CodingKeys: String, CodingKey {
+        case totalAttempts = "total_attempts"
+        case bestScore = "best_score"
+        case meanScore = "mean_score"
+        case currentDifficulty = "current_difficulty"
+        case roleTrack = "role_track"
+    }
+}
+
+struct CapstoneWeeklyPoint: Codable, Sendable, Identifiable {
+    let weekIndexFromEnd: Int
+    let count: Int
+    let meanScore: Int?
+
+    var id: Int { weekIndexFromEnd }
+
+    enum CodingKeys: String, CodingKey {
+        case weekIndexFromEnd = "week_index_from_end"
+        case count
+        case meanScore = "mean_score"
+    }
+}

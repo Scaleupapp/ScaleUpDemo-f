@@ -348,6 +348,7 @@
 		9068688861614CE4EFD5593B /* ChallengeResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DC257BE3138B8CC144A06A8 /* ChallengeResultsView.swift */; };
 		90AD15E3F578A5E9DC74F670 /* CapstoneSessionSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76373624F631793C7DDC5FF9 /* CapstoneSessionSocket.swift */; };
 		91915DB799D197946D60E024 /* APIPlanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A0BC1150B739D49FDE9557 /* APIPlanStatus.swift */; };
+		925E7D1828384EE3D3B36C6F /* CapstoneStatsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7533566F009997B05D41E2EE /* CapstoneStatsCard.swift */; };
 		92FA9740B4568B67B6C820A8 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A018DBD209C4B935F106CB8 /* LeaderboardView.swift */; };
 		948DDE9C1792CDDA7FFBF2C2 /* APICapstoneControlRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33417A6120E0FB3F6D9CA0B /* APICapstoneControlRequest.swift */; };
 		94A15399E88B9F6B792E76DB /* LiveEventSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F1D89751B6F59A00541B652 /* LiveEventSessionView.swift */; };
@@ -375,6 +376,7 @@
 		9F97E4053F00B85E5F5502B9 /* APIUploadAvatar200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67245DF1EE2CADA9B57F5BF8 /* APIUploadAvatar200Response.swift */; };
 		9FD6B9294A9306B99C992D4A /* APICompassCoderResolveRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B47B2C8D7263550EA28FFB68 /* APICompassCoderResolveRequest.swift */; };
 		9FD85FD410B6640C1B17DAF4 /* ShareScoreCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6732B74BC0532E5BFC51E493 /* ShareScoreCardView.swift */; };
+		A02B86224AA9222C497092DE /* CapstoneHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0341D4ED2579F943758511CA /* CapstoneHistoryView.swift */; };
 		A150DAF648A01157AF3942C6 /* UserObjective.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E9D49F86A25007138C2AA75 /* UserObjective.swift */; };
 		A1532170999AFAD45C31A86D /* APICapstoneSessionStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A423D2A4E42C3C1EA41EA7 /* APICapstoneSessionStatus.swift */; };
 		A1667B10D6E208ED19B397FE /* APIAuthLoginRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDE301E19D2A84BAC29F3F7E /* APIAuthLoginRequest.swift */; };
@@ -581,6 +583,7 @@
 		0134DC2EF16B56E3328E3192 /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
 		014A1EE7D8D898D7A96DD88C /* DrillViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillViewState.swift; sourceTree = "<group>"; };
 		02C72BECA2D7FD3E424F74BC /* SyllabusUploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyllabusUploadService.swift; sourceTree = "<group>"; };
+		0341D4ED2579F943758511CA /* CapstoneHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneHistoryView.swift; sourceTree = "<group>"; };
 		03580D13A522CAF4EC2AC7DE /* APIPersistCapstoneFiles200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIPersistCapstoneFiles200Response.swift; sourceTree = "<group>"; };
 		036AF93E58D40E9F02F13344 /* APISubmitCalibrationDrillRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISubmitCalibrationDrillRequest.swift; sourceTree = "<group>"; };
 		0395B3F7AF77BD77BB8DB536 /* APIGetYouV2Overview200ResponseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetYouV2Overview200ResponseData.swift; sourceTree = "<group>"; };
@@ -821,6 +824,7 @@
 		745763EE8FF0F674F82AFFD7 /* AdminStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminStats.swift; sourceTree = "<group>"; };
 		74C25A2CC4E3F115C44DE618 /* DrillSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSession.swift; sourceTree = "<group>"; };
 		7514BEB988C13693790E69B2 /* QuizSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizSessionViewModel.swift; sourceTree = "<group>"; };
+		7533566F009997B05D41E2EE /* CapstoneStatsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneStatsCard.swift; sourceTree = "<group>"; };
 		75EE4241D25F857EE22A013A /* APIGetCapstoneResult202Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCapstoneResult202Response.swift; sourceTree = "<group>"; };
 		75F310F99C815DEC5F7A74C5 /* LeaderboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardViewModel.swift; sourceTree = "<group>"; };
 		76373624F631793C7DDC5FF9 /* CapstoneSessionSocket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneSessionSocket.swift; sourceTree = "<group>"; };
@@ -1175,6 +1179,7 @@
 			children = (
 				4A7A332F81FE77BCAD5E8B5B /* CalibrationResultView.swift */,
 				29FB48B5E1F903743C398005 /* CalibrationSequenceView.swift */,
+				0341D4ED2579F943758511CA /* CapstoneHistoryView.swift */,
 				07CDBEC56B0162BC3729A281 /* CapstoneLibraryView.swift */,
 				8232345B6320092F5A094F25 /* CapstoneLiveView.swift */,
 				544D782934327ED7886947FE /* CapstoneMilestoneCard.swift */,
@@ -1182,6 +1187,7 @@
 				FE450517481A01A6F9E1568A /* CapstonePreflightView.swift */,
 				54103B499386B37D07E5A6E4 /* CapstoneReplayView.swift */,
 				A14BC562CD68FB346065C4FC /* CapstoneResultView.swift */,
+				7533566F009997B05D41E2EE /* CapstoneStatsCard.swift */,
 				56FB9E00928BE506699C7CB5 /* CapstoneVoiceReflectionView.swift */,
 				7BFF4BC5FB7472BD47C79323 /* CodingDrillCard.swift */,
 				5F192366E61B735685AFCFD8 /* DecomposeDrillInputView.swift */,
@@ -2912,6 +2918,7 @@
 				198BE7357C581AA70F4D7305 /* CalibrationResultView.swift in Sources */,
 				FA2CE9E33300855B5B417C3B /* CalibrationSequenceView.swift in Sources */,
 				87423E904D73273EB4602E80 /* CalibrationSession.swift in Sources */,
+				A02B86224AA9222C497092DE /* CapstoneHistoryView.swift in Sources */,
 				F42A46834E0AE081C1E1959B /* CapstoneLibraryView.swift in Sources */,
 				222451277F8BE5B5C0D2679B /* CapstoneLiveView.swift in Sources */,
 				BCF1B101CA417029F030AA4D /* CapstoneMilestoneCard.swift in Sources */,
@@ -2922,6 +2929,7 @@
 				D526A0B40AA608342909860F /* CapstoneResultView.swift in Sources */,
 				D8B26A9A79EAA34414B3D7ED /* CapstoneService.swift in Sources */,
 				90AD15E3F578A5E9DC74F670 /* CapstoneSessionSocket.swift in Sources */,
+				925E7D1828384EE3D3B36C6F /* CapstoneStatsCard.swift in Sources */,
 				86AE054C9BFC52541DD5DA3C /* CapstoneVoiceReflectionView.swift in Sources */,
 				9068688861614CE4EFD5593B /* ChallengeResultsView.swift in Sources */,
 				A3FFC38CBFF9891564E7436C /* ChallengeReviewView.swift in Sources */,
@@ -3320,7 +3328,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 170;
+				CURRENT_PROJECT_VERSION = 171;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3396,7 +3404,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 170;
+				CURRENT_PROJECT_VERSION = 171;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

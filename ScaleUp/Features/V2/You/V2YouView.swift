@@ -443,12 +443,18 @@ struct V2YouView: View {
             }
             .buttonStyle(.plain)
 
+            // CAPSTONE STATS CARD — self-loading; replaces the bare nav row
+            // for users who actually have a coding objective. Tap → full
+            // history view (every graded attempt + 8-week trend).
+            CapstoneStatsCard()
+                .padding(.vertical, 4)
+
             NavigationLink {
                 V2CodingMasteryView()
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "chevron.left.forwardslash.chevron.right", label: "Coding drills & mastery")
+                row(icon: "chevron.left.forwardslash.chevron.right", label: "Coding drills & practice")
             }
             .buttonStyle(.plain)
 
