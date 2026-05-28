@@ -9,9 +9,9 @@ import Foundation
 
 public struct APICapstoneBundleViewStarterRepo: Codable, Hashable, Sendable {
 
-    public var files: [APICapstoneBundleViewStarterRepoFilesInner]?
+    public var files: [APICompassCoderChatRequestSessionContextCurrentFilesInner]?
 
-    public init(files: [APICapstoneBundleViewStarterRepoFilesInner]? = nil) {
+    public init(files: [APICompassCoderChatRequestSessionContextCurrentFilesInner]? = nil) {
         self.files = files
     }
 
