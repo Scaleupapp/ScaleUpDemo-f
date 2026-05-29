@@ -443,11 +443,15 @@ struct V2YouView: View {
             }
             .buttonStyle(.plain)
 
-            // CAPSTONE STATS CARD — self-loading; replaces the bare nav row
-            // for users who actually have a coding objective. Tap → full
-            // history view (every graded attempt + 8-week trend).
-            CapstoneStatsCard()
-                .padding(.vertical, 4)
+            // Standard nav row — matches the rest of the You-tab list.
+            NavigationLink {
+                CapstoneHistoryView()
+                    .environment(appState)
+                    .environment(objectiveContext)
+            } label: {
+                row(icon: "trophy.fill", label: "Coding capstones & history")
+            }
+            .buttonStyle(.plain)
 
             NavigationLink {
                 V2CodingMasteryView()
