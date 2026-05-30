@@ -12,6 +12,7 @@ struct V2CodingHomeView: View {
     let onClose: () -> Void
 
     @State private var summary: APICapstoneSummary?
+    @State private var track: CapstoneTrackResponse?
     @State private var isLoading = true
     @State private var error: String?
     @State private var pickingNew = false
@@ -39,6 +40,9 @@ struct V2CodingHomeView: View {
                         intro(summary: summary)
                         if let inProgress = summary.inProgress {
                             inProgressCard(inProgress, line: summary.summaryLine)
+                        }
+                        if let t = track, t.enrolled == true, let steps = t.steps, !steps.isEmpty {
+                            trackSection(t, steps: steps)
                         }
                         if let mastery = summary.mastery {
                             masterySection(mastery)
@@ -273,7 +277,76 @@ struct V2CodingHomeView: View {
         } catch {
             self.error = error.localizedDescription
         }
+        // Track is best-effort; never blocks the summary.
+        if let t = try? await service.track() { self.track = t }
         isLoading = false
+    }
+
+    // MARK: - Track section
+
+    @ViewBuilder
+    private func trackSection(_ t: CapstoneTrackResponse, steps: [CapstoneTrackStep]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Label(t.title ?? "Your track", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                    .font(V2Theme.bodyMedium)
+                    .foregroundStyle(ColorTokens.gold)
+                Spacer()
+                Text("\(steps.filter { $0.status == "completed" }.count)/\(steps.count)")
+                    .font(V2Theme.small.monospacedDigit())
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
+            ForEach(steps) { step in
+                trackStepRow(step)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(V2Theme.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func trackStepRow(_ step: CapstoneTrackStep) -> some View {
+        let isActive = step.status == "active"
+        let isDone = step.status == "completed"
+        HStack(spacing: 10) {
+            Image(systemName: isDone ? "checkmark.circle.fill" : isActive ? "play.circle.fill" : "lock.circle")
+                .foregroundStyle(isDone ? Color.green : isActive ? ColorTokens.gold : ColorTokens.textTertiary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(step.briefPreview.isEmpty ? "Step \(step.index + 1)" : step.briefPreview)
+                    .font(V2Theme.small)
+                    .foregroundStyle(isActive || isDone ? ColorTokens.textPrimary : ColorTokens.textTertiary)
+                    .lineLimit(1)
+                if let d = step.difficulty {
+                    Text(d.capitalized + (step.overallScore != nil ? " · \(step.overallScore!)/100" : ""))
+                        .font(V2Theme.tiny)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+            Spacer()
+            if isActive {
+                Button("Start") { Task { await startStep(step) } }
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.gold)
+            }
+        }
+    }
+
+    private func startStep(_ step: CapstoneTrackStep) async {
+        // Reuse requestNext's preview shape isn't right here; build a minimal
+        // library entry from the step and hand to Preflight via pickingNew.
+        do {
+            let library = try await service.listLibrary()
+            if let match = library.first(where: { $0.bundleId == step.bundleId }) {
+                self.pendingBundle = match
+                self.pickingNew = true
+            } else {
+                self.error = "This step isn't available right now."
+            }
+        } catch {
+            self.error = "Couldn't open this step."
+        }
     }
 
     private func pickNext() async {

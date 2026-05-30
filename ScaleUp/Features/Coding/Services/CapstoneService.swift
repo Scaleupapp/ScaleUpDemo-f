@@ -114,6 +114,12 @@ final class CapstoneService {
         try await client.getCoding("/capstones/generations/\(requestId)")
     }
 
+    /// GET /capstones/track — the learner's auto-assembled track (auto-enrolls on
+    /// first call when eligible).
+    func track() async throws -> CapstoneTrackResponse {
+        try await client.getCoding("/capstones/track")
+    }
+
     private struct EmptyBody: Codable {}
 
     // MARK: - Status / control

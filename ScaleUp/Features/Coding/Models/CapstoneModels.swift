@@ -330,6 +330,47 @@ struct CapstoneGenerationStatus: Codable, Sendable {
     }
 }
 
+// MARK: - Tracks (Phase 4, auto-assembled)
+
+struct CapstoneTrackResponse: Codable, Sendable {
+    let enrolled: Bool
+    let reason: String?
+    let title: String?
+    let roleTrack: String?
+    let currentStep: Int?
+    let totalSteps: Int?
+    let completed: Bool?
+    let steps: [CapstoneTrackStep]?
+
+    enum CodingKeys: String, CodingKey {
+        case enrolled, reason, title
+        case roleTrack = "role_track"
+        case currentStep = "current_step"
+        case totalSteps = "total_steps"
+        case completed, steps
+    }
+}
+
+struct CapstoneTrackStep: Codable, Sendable, Identifiable {
+    let index: Int
+    let bundleId: String
+    let difficulty: String?
+    let briefPreview: String
+    let status: String // locked | active | completed
+    let overallScore: Int?
+
+    var id: Int { index }
+
+    enum CodingKeys: String, CodingKey {
+        case index
+        case bundleId = "bundle_id"
+        case difficulty
+        case briefPreview = "brief_preview"
+        case status
+        case overallScore = "overall_score"
+    }
+}
+
 /// The preview-safe projection returned when a generation is ready. Mirrors the
 /// backend projectBundle(); enough to launch Preflight.
 struct GeneratedBundleView: Codable, Sendable {
