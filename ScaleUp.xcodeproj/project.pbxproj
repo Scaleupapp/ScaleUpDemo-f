@@ -461,6 +461,7 @@
 		CCD65DC516E760E119C96DA6 /* RecalibrationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F387C72BEACD066343A33F /* RecalibrationCard.swift */; };
 		CD28C24C814498DC8FD54D9B /* DecompositionStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA78987754DCA44BB0C49092 /* DecompositionStepRow.swift */; };
 		CE3318DEC10C0FF2B6FD4C57 /* APICapstoneSummaryInProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456B22941B839409661F5AE3 /* APICapstoneSummaryInProgress.swift */; };
+		CE49E970E066830E5490E11B /* CapstoneGeneratorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CC61A93B292FE4FF01B2DA8 /* CapstoneGeneratorSheet.swift */; };
 		CE8A77280D9693CA1E7BE84B /* APICapstoneSummaryRecentEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7F43E179320622A5D0EA35 /* APICapstoneSummaryRecentEntry.swift */; };
 		CF77497F14430A5ED0AC7179 /* APISuggestOnboardingTopicsRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EAC75F031B2A8232B109577 /* APISuggestOnboardingTopicsRequest.swift */; };
 		CF8AB9E06F5B2DE8B6075645 /* V2Tab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DEC54A9F1CA0E1D229CBE73 /* V2Tab.swift */; };
@@ -608,6 +609,7 @@
 		0B50058EB5E3042E510A9AFC /* CreateContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateContentViewModel.swift; sourceTree = "<group>"; };
 		0BE472FEC509E5CDB1BEFCC9 /* DrillSubmittingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSubmittingView.swift; sourceTree = "<group>"; };
 		0C2AE1C1102C84213D76DEBC /* V2YouAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2YouAnalyticsView.swift; sourceTree = "<group>"; };
+		0CC61A93B292FE4FF01B2DA8 /* CapstoneGeneratorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneGeneratorSheet.swift; sourceTree = "<group>"; };
 		0D05DAB1044B3215C83D630B /* MyContentViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyContentViewModel.swift; sourceTree = "<group>"; };
 		0D7F15E103B0223375848573 /* APIDiagnosticNextQuestion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDiagnosticNextQuestion.swift; sourceTree = "<group>"; };
 		0E6049CF02B3DFDDFBEBBF50 /* TierBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TierBadge.swift; sourceTree = "<group>"; };
@@ -1179,6 +1181,7 @@
 			children = (
 				4A7A332F81FE77BCAD5E8B5B /* CalibrationResultView.swift */,
 				29FB48B5E1F903743C398005 /* CalibrationSequenceView.swift */,
+				0CC61A93B292FE4FF01B2DA8 /* CapstoneGeneratorSheet.swift */,
 				0341D4ED2579F943758511CA /* CapstoneHistoryView.swift */,
 				07CDBEC56B0162BC3729A281 /* CapstoneLibraryView.swift */,
 				8232345B6320092F5A094F25 /* CapstoneLiveView.swift */,
@@ -2918,6 +2921,7 @@
 				198BE7357C581AA70F4D7305 /* CalibrationResultView.swift in Sources */,
 				FA2CE9E33300855B5B417C3B /* CalibrationSequenceView.swift in Sources */,
 				87423E904D73273EB4602E80 /* CalibrationSession.swift in Sources */,
+				CE49E970E066830E5490E11B /* CapstoneGeneratorSheet.swift in Sources */,
 				A02B86224AA9222C497092DE /* CapstoneHistoryView.swift in Sources */,
 				F42A46834E0AE081C1E1959B /* CapstoneLibraryView.swift in Sources */,
 				222451277F8BE5B5C0D2679B /* CapstoneLiveView.swift in Sources */,

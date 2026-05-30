@@ -303,3 +303,68 @@ struct CapstoneWeeklyPoint: Codable, Sendable, Identifiable {
         case meanScore = "mean_score"
     }
 }
+
+// MARK: - Generator (Phase 3)
+
+/// Poll envelope for an async capstone-generation request.
+/// status: queued | generating | validating | cross_checking | ready | failed
+struct CapstoneGenerationStatus: Codable, Sendable {
+    let requestId: String
+    let status: String
+    let roleTrack: String?
+    let difficulty: String?
+    let attempts: Int?
+    let error: String?
+    let bundle: GeneratedBundleView?
+
+    var isTerminal: Bool { status == "ready" || status == "failed" }
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case status
+        case roleTrack = "role_track"
+        case difficulty
+        case attempts
+        case error
+        case bundle
+    }
+}
+
+/// The preview-safe projection returned when a generation is ready. Mirrors the
+/// backend projectBundle(); enough to launch Preflight.
+struct GeneratedBundleView: Codable, Sendable {
+    let bundleId: String
+    let brief: String
+    let timeBudgetMinutes: Int
+    let difficulty: String
+    let roleTrack: String
+    let language: String
+    let stackVariant: String?
+    let interviewParallel: String?
+
+    enum CodingKeys: String, CodingKey {
+        case bundleId = "bundle_id"
+        case brief
+        case timeBudgetMinutes = "time_budget_minutes"
+        case difficulty
+        case roleTrack = "role_track"
+        case language
+        case stackVariant = "stack_variant"
+        case interviewParallel = "interview_parallel"
+    }
+
+    /// Convert to a library entry so it can flow into CapstonePreflightView.
+    func toLibraryEntry() -> CapstoneLibraryEntry {
+        CapstoneLibraryEntry(
+            bundleId: bundleId,
+            brief: brief,
+            difficulty: DrillDifficulty(rawValue: difficulty) ?? .medium,
+            roleTrack: RoleTrack(rawValue: roleTrack) ?? .swe,
+            timeBudgetMinutes: timeBudgetMinutes,
+            language: language,
+            stackVariant: stackVariant,
+            interviewParallel: interviewParallel,
+            alreadyCompleted: false
+        )
+    }
+}

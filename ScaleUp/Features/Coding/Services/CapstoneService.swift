@@ -89,6 +89,31 @@ final class CapstoneService {
         )
     }
 
+    // MARK: - Generator (Phase 3)
+
+    /// POST /capstones/generate — kick off custom generation. Returns request_id
+    /// to poll. 202 on success.
+    func generateCapstone(jobDescription: String, topicHint: String?, difficulty: DrillDifficulty?) async throws -> CapstoneGenerationStatus {
+        struct Body: Codable {
+            let job_description: String
+            let topic_hint: String?
+            let difficulty: String?
+        }
+        let body = Body(
+            job_description: jobDescription,
+            topic_hint: (topicHint?.isEmpty == false) ? topicHint : nil,
+            difficulty: difficulty?.rawValue
+        )
+        // The endpoint returns 202 with the request envelope; decode it as a status.
+        let (data, _) = try await client.rawCodingData(method: "POST", path: "/capstones/generate", body: body)
+        return try JSONDecoder.capstoneDecoder.decode(CapstoneGenerationStatus.self, from: data)
+    }
+
+    /// GET /capstones/generations/:id — poll. When status=="ready", `bundle` is set.
+    func generationStatus(requestId: String) async throws -> CapstoneGenerationStatus {
+        try await client.getCoding("/capstones/generations/\(requestId)")
+    }
+
     private struct EmptyBody: Codable {}
 
     // MARK: - Status / control

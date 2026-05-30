@@ -10,6 +10,7 @@ struct CapstoneLibraryView: View {
     @State private var selected: CapstoneLibraryEntry?
     @State private var filterDifficulty: DrillDifficulty?
     @State private var filterRoleTrack: RoleTrack?
+    @State private var showGenerator = false
 
     var body: some View {
         NavigationStack {
@@ -17,6 +18,13 @@ struct CapstoneLibraryView: View {
                 .navigationTitle("Capstones")
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showGenerator = true
+                        } label: {
+                            Label("Generate", systemImage: "sparkles")
+                        }
+                    }
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             Picker("Difficulty", selection: $filterDifficulty) {
@@ -39,6 +47,16 @@ struct CapstoneLibraryView: View {
                 .task(id: filterKey) { await load() }
                 .sheet(item: $selected) { entry in
                     CapstonePreflightView(bundle: entry, onClose: { selected = nil })
+                }
+                .sheet(isPresented: $showGenerator) {
+                    CapstoneGeneratorSheet(
+                        onClose: { showGenerator = false },
+                        onReady: { entry in
+                            showGenerator = false
+                            // Hand straight off to Preflight for the freshly-built capstone.
+                            selected = entry
+                        }
+                    )
                 }
         }
     }
