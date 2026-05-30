@@ -120,6 +120,15 @@ final class CapstoneService {
         try await client.getCoding("/capstones/track")
     }
 
+    /// POST /capstones/share — mint an opt-in public profile link (scores +
+    /// competency, no code). Returns the shareable URL.
+    func createShareLink(label: String? = nil) async throws -> String {
+        struct Body: Codable { let label: String? }
+        struct Resp: Codable { let public_url: String }
+        let r: Resp = try await client.postCoding("/capstones/share", body: Body(label: label))
+        return r.public_url
+    }
+
     private struct EmptyBody: Codable {}
 
     // MARK: - Status / control

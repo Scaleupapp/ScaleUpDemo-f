@@ -11,6 +11,8 @@ struct CapstoneHistoryView: View {
     @State private var isLoading = true
     @State private var error: String?
     @State private var retryBusy: String?
+    @State private var shareURL: String?
+    @State private var sharing = false
 
     private let service = CapstoneService.shared
 
@@ -33,14 +35,39 @@ struct CapstoneHistoryView: View {
         .navigationTitle("All capstones")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    Task { await makeShareLink() }
+                } label: {
+                    if sharing { ProgressView() } else { Image(systemName: "square.and.arrow.up") }
+                }
+                .disabled(sharing || (response?.items.isEmpty ?? true))
+            }
             if let onClose {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button("Done", action: onClose)
                 }
             }
         }
+        .sheet(isPresented: Binding(get: { shareURL != nil }, set: { if !$0 { shareURL = nil } })) {
+            if let url = shareURL {
+                ShareSheet(activityItems: [
+                    "Here's my ScaleUp coding profile — graded capstone results: \(url)"
+                ])
+            }
+        }
         .task { await load() }
         .refreshable { await load() }
+    }
+
+    private func makeShareLink() async {
+        sharing = true
+        defer { sharing = false }
+        do {
+            shareURL = try await service.createShareLink()
+        } catch {
+            self.error = "Couldn't create a share link. Try again."
+        }
     }
 
     private func content(_ data: CapstoneHistoryResponse) -> some View {
