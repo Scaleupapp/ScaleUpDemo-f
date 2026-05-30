@@ -23,12 +23,16 @@ public struct APICapstoneSummaryRecentEntry: Codable, Hashable, Sendable {
     public var bundleId: String?
     public var bundleBriefPreview: String?
     public var difficulty: Difficulty?
-    public var overallScore: Float
-    public var gradedAt: Date
+    // Optional: the backend sends `overall_score`/`graded_at` as `?? null` —
+    // a graded session can legitimately lack a numeric score or timestamp
+    // (e.g. integrity-failed or migrated rows). Keeping these required made one
+    // bad row brick the entire summary decode.
+    public var overallScore: Float?
+    public var gradedAt: Date?
     public var integrityConfidence: IntegrityConfidence?
     public var dimensionScores: [String: Double]?
 
-    public init(sessionId: String, bundleId: String? = nil, bundleBriefPreview: String? = nil, difficulty: Difficulty? = nil, overallScore: Float, gradedAt: Date, integrityConfidence: IntegrityConfidence? = nil, dimensionScores: [String: Double]? = nil) {
+    public init(sessionId: String, bundleId: String? = nil, bundleBriefPreview: String? = nil, difficulty: Difficulty? = nil, overallScore: Float? = nil, gradedAt: Date? = nil, integrityConfidence: IntegrityConfidence? = nil, dimensionScores: [String: Double]? = nil) {
         self.sessionId = sessionId
         self.bundleId = bundleId
         self.bundleBriefPreview = bundleBriefPreview
@@ -58,8 +62,8 @@ public struct APICapstoneSummaryRecentEntry: Codable, Hashable, Sendable {
         try container.encodeIfPresent(bundleId, forKey: .bundleId)
         try container.encodeIfPresent(bundleBriefPreview, forKey: .bundleBriefPreview)
         try container.encodeIfPresent(difficulty, forKey: .difficulty)
-        try container.encode(overallScore, forKey: .overallScore)
-        try container.encode(gradedAt, forKey: .gradedAt)
+        try container.encodeIfPresent(overallScore, forKey: .overallScore)
+        try container.encodeIfPresent(gradedAt, forKey: .gradedAt)
         try container.encodeIfPresent(integrityConfidence, forKey: .integrityConfidence)
         try container.encodeIfPresent(dimensionScores, forKey: .dimensionScores)
     }

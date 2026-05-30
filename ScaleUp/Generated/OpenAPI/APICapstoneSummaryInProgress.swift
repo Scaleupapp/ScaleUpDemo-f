@@ -12,9 +12,14 @@ public struct APICapstoneSummaryInProgress: Codable, Hashable, Sendable {
     public var sessionId: String
     public var bundleId: String
     public var status: String
-    public var expiresAt: Date
+    // Optional: a session that hasn't started yet (scheduled/provisioning/ready)
+    // has no wall-clock deadline. The backend omits/null-sends `expires_at`
+    // until the session actually starts, so this MUST be optional or the whole
+    // summary fails to decode and the Coding-capstones screen shows
+    // "Couldn't load capstone status".
+    public var expiresAt: Date?
 
-    public init(sessionId: String, bundleId: String, status: String, expiresAt: Date) {
+    public init(sessionId: String, bundleId: String, status: String, expiresAt: Date? = nil) {
         self.sessionId = sessionId
         self.bundleId = bundleId
         self.status = status
@@ -35,7 +40,7 @@ public struct APICapstoneSummaryInProgress: Codable, Hashable, Sendable {
         try container.encode(sessionId, forKey: .sessionId)
         try container.encode(bundleId, forKey: .bundleId)
         try container.encode(status, forKey: .status)
-        try container.encode(expiresAt, forKey: .expiresAt)
+        try container.encodeIfPresent(expiresAt, forKey: .expiresAt)
     }
 }
 

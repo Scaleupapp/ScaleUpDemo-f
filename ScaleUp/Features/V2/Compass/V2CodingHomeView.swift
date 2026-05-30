@@ -18,6 +18,7 @@ struct V2CodingHomeView: View {
     @State private var pickingNew = false
     @State private var pendingBundle: CapstoneLibraryEntry?
     @State private var presentedSessionId: String?
+    @State private var showGenerator = false
 
     private let service = CapstoneService.shared
 
@@ -51,6 +52,7 @@ struct V2CodingHomeView: View {
                             historySection(summary.recentCapstones)
                         }
                         startNewButton(summary: summary)
+                        generateButton()
                         Spacer().frame(height: 40)
                     } else if let error {
                         errorState(message: error)
@@ -74,6 +76,18 @@ struct V2CodingHomeView: View {
                 } else {
                     ProgressView().tint(ColorTokens.gold).padding(40)
                 }
+            }
+            .sheet(isPresented: $showGenerator) {
+                CapstoneGeneratorSheet(
+                    onClose: { showGenerator = false },
+                    onReady: { entry in
+                        // Dismiss the generator and hand the freshly-built,
+                        // already-proven capstone straight to Preflight.
+                        showGenerator = false
+                        pendingBundle = entry
+                        pickingNew = true
+                    }
+                )
             }
         }
         .task { await load() }
@@ -102,7 +116,8 @@ struct V2CodingHomeView: View {
             Text(line)
                 .font(V2Theme.body)
                 .foregroundStyle(ColorTokens.textPrimary)
-            Text("Status: \(inProgress.status). Expires \(inProgress.expiresAt.shortRelative()).")
+            Text(inProgress.expiresAt.map { "Status: \(inProgress.status). Expires \($0.shortRelative())." }
+                 ?? "Status: \(inProgress.status). Open your laptop to begin.")
                 .font(V2Theme.small)
                 .foregroundStyle(ColorTokens.textSecondary)
         }
@@ -168,7 +183,7 @@ struct V2CodingHomeView: View {
     private func historyRow(_ row: APICapstoneSummaryRecentEntry) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(String(format: "%.1f / 10", row.overallScore))
+                Text(row.overallScore.map { String(format: "%.1f / 10", $0) } ?? "— / 10")
                     .font(V2Theme.bodyMedium.monospacedDigit())
                     .foregroundStyle(ColorTokens.gold)
                 if let d = row.difficulty {
@@ -180,7 +195,7 @@ struct V2CodingHomeView: View {
                         .foregroundStyle(ColorTokens.textSecondary)
                 }
                 Spacer()
-                Text(row.gradedAt.shortRelative())
+                Text(row.gradedAt.map { $0.shortRelative() } ?? "")
                     .font(V2Theme.tiny)
                     .foregroundStyle(ColorTokens.textTertiary)
             }
@@ -228,6 +243,33 @@ struct V2CodingHomeView: View {
         }
         .buttonStyle(.plain)
         .disabled(!availableNow || summary.inProgress != nil)
+    }
+
+    private func generateButton() -> some View {
+        VStack(spacing: 6) {
+            Button {
+                showGenerator = true
+            } label: {
+                HStack {
+                    Spacer()
+                    Image(systemName: "sparkles")
+                    Text("Generate a custom capstone").font(V2Theme.bodyMedium)
+                    Spacer()
+                }
+                .padding(.vertical, 12)
+                .foregroundStyle(ColorTokens.gold)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(ColorTokens.gold.opacity(0.55), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            Text("Paste a job description — we'll build and prove a capstone aimed at exactly that.")
+                .font(V2Theme.tiny)
+                .foregroundStyle(ColorTokens.textTertiary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+        }
     }
 
     private func ineligibleState(summary: APICapstoneSummary) -> some View {
