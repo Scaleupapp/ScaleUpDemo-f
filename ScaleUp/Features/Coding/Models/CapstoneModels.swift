@@ -100,6 +100,9 @@ struct CapstoneSessionView: Codable, Sendable {
     let timeBudgetSeconds: Int
     let pausedTotalSeconds: Int
     let counters: CapstoneSessionCounters?
+    /// The learner-visible bundle projection — present on GET /:id/status so a
+    /// resumed session can rebuild the live screen without a separate fetch.
+    let bundle: GeneratedBundleView?
 
     enum CodingKeys: String, CodingKey {
         case sessionId = "session_id"
@@ -109,6 +112,7 @@ struct CapstoneSessionView: Codable, Sendable {
         case timeBudgetSeconds = "time_budget_seconds"
         case pausedTotalSeconds = "paused_total_seconds"
         case counters
+        case bundle
     }
 }
 
@@ -138,9 +142,81 @@ struct CapstoneDimensionScores: Codable, Sendable, Hashable {
     }
 }
 
+/// Per-dimension narrative (grading-transparency). Forward-only — older graded
+/// sessions won't have these, so every field is optional.
+struct CapstoneDimensionFeedbackEntry: Codable, Sendable, Hashable {
+    let why: String?
+    let toImprove: String?
+
+    enum CodingKeys: String, CodingKey {
+        case why
+        case toImprove = "to_improve"
+    }
+}
+
+struct CapstoneDimensionFeedback: Codable, Sendable, Hashable {
+    let correctness: CapstoneDimensionFeedbackEntry?
+    let codeQuality: CapstoneDimensionFeedbackEntry?
+    let aiPairEffectiveness: CapstoneDimensionFeedbackEntry?
+    let verificationDiscipline: CapstoneDimensionFeedbackEntry?
+    let decomposition: CapstoneDimensionFeedbackEntry?
+    let reflectionQuality: CapstoneDimensionFeedbackEntry?
+
+    enum CodingKeys: String, CodingKey {
+        case correctness
+        case codeQuality = "code_quality"
+        case aiPairEffectiveness = "ai_pair_effectiveness"
+        case verificationDiscipline = "verification_discipline"
+        case decomposition
+        case reflectionQuality = "reflection_quality"
+    }
+}
+
+/// Weight (0..1) each dimension contributes to overall_score — snapshotted on
+/// the result so the UI can show "Correctness · 25%".
+struct CapstoneRubricWeights: Codable, Sendable, Hashable {
+    let correctness: Double?
+    let codeQuality: Double?
+    let aiPairEffectiveness: Double?
+    let verificationDiscipline: Double?
+    let decomposition: Double?
+    let reflectionQuality: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case correctness
+        case codeQuality = "code_quality"
+        case aiPairEffectiveness = "ai_pair_effectiveness"
+        case verificationDiscipline = "verification_discipline"
+        case decomposition
+        case reflectionQuality = "reflection_quality"
+    }
+}
+
+/// Deterministic visible/hidden test split behind the correctness score —
+/// explains "I did well but scored low" (hidden edge-case tests failing).
+struct CapstoneTestSummary: Codable, Sendable, Hashable {
+    let visiblePassed: Int?
+    let visibleTotal: Int?
+    let hiddenPassed: Int?
+    let hiddenTotal: Int?
+    let lintPassed: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case visiblePassed = "visible_passed"
+        case visibleTotal = "visible_total"
+        case hiddenPassed = "hidden_passed"
+        case hiddenTotal = "hidden_total"
+        case lintPassed = "lint_passed"
+    }
+}
+
 struct CapstoneResult: Codable, Sendable {
     let overallScore: Int
     let dimensionScores: CapstoneDimensionScores
+    let dimensionFeedback: CapstoneDimensionFeedback?
+    let overallRationale: String?
+    let testSummary: CapstoneTestSummary?
+    let rubricWeights: CapstoneRubricWeights?
     let strengths: [String]
     let gaps: [String]
     let interviewParallel: String?
@@ -154,6 +230,10 @@ struct CapstoneResult: Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case overallScore = "overall_score"
         case dimensionScores = "dimension_scores"
+        case dimensionFeedback = "dimension_feedback"
+        case overallRationale = "overall_rationale"
+        case testSummary = "test_summary"
+        case rubricWeights = "rubric_weights"
         case strengths
         case gaps
         case interviewParallel = "interview_parallel"
@@ -163,6 +243,46 @@ struct CapstoneResult: Codable, Sendable {
         case bundleId = "bundle_id"
         case isRetry = "is_retry"
         case evidenceNotes = "evidence_notes"
+    }
+
+    /// One presentational row per dimension, in rubric order, joining score +
+    /// weight + feedback so the result view can iterate cleanly.
+    struct DimensionRow: Identifiable {
+        let id: String          // snake_case key (RubricBar formats it)
+        let score: Double       // 0..10
+        let weightPct: Int?     // e.g. 25
+        let why: String?
+        let toImprove: String?
+    }
+
+    var dimensionRows: [DimensionRow] {
+        func pct(_ w: Double?) -> Int? { w.map { Int(($0 * 100).rounded()) } }
+        return [
+            DimensionRow(id: "correctness", score: dimensionScores.correctness,
+                         weightPct: pct(rubricWeights?.correctness),
+                         why: dimensionFeedback?.correctness?.why,
+                         toImprove: dimensionFeedback?.correctness?.toImprove),
+            DimensionRow(id: "code_quality", score: dimensionScores.codeQuality,
+                         weightPct: pct(rubricWeights?.codeQuality),
+                         why: dimensionFeedback?.codeQuality?.why,
+                         toImprove: dimensionFeedback?.codeQuality?.toImprove),
+            DimensionRow(id: "ai_pair_effectiveness", score: dimensionScores.aiPairEffectiveness,
+                         weightPct: pct(rubricWeights?.aiPairEffectiveness),
+                         why: dimensionFeedback?.aiPairEffectiveness?.why,
+                         toImprove: dimensionFeedback?.aiPairEffectiveness?.toImprove),
+            DimensionRow(id: "verification_discipline", score: dimensionScores.verificationDiscipline,
+                         weightPct: pct(rubricWeights?.verificationDiscipline),
+                         why: dimensionFeedback?.verificationDiscipline?.why,
+                         toImprove: dimensionFeedback?.verificationDiscipline?.toImprove),
+            DimensionRow(id: "decomposition", score: dimensionScores.decomposition,
+                         weightPct: pct(rubricWeights?.decomposition),
+                         why: dimensionFeedback?.decomposition?.why,
+                         toImprove: dimensionFeedback?.decomposition?.toImprove),
+            DimensionRow(id: "reflection_quality", score: dimensionScores.reflectionQuality,
+                         weightPct: pct(rubricWeights?.reflectionQuality),
+                         why: dimensionFeedback?.reflectionQuality?.why,
+                         toImprove: dimensionFeedback?.reflectionQuality?.toImprove),
+        ]
     }
 }
 

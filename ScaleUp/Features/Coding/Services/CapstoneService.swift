@@ -10,13 +10,17 @@ final class CapstoneService {
 
     // MARK: - Library + start
 
-    func listLibrary(difficulty: DrillDifficulty? = nil, roleTrack: RoleTrack? = nil)
+    func listLibrary(difficulty: DrillDifficulty? = nil, roleTrack: RoleTrack? = nil, search: String? = nil)
         async throws -> [CapstoneLibraryEntry]
     {
         var path = "/capstones/library"
         var q: [String] = []
         if let d = difficulty { q.append("difficulty=\(d.rawValue)") }
         if let r = roleTrack  { q.append("role_track=\(r.rawValue)") }
+        if let s = search?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty,
+           let enc = s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) {
+            q.append("q=\(enc)")
+        }
         if !q.isEmpty { path += "?\(q.joined(separator: "&"))" }
         struct Wrapper: Codable { let capstones: [CapstoneLibraryEntry] }
         let w: Wrapper = try await client.getCoding(path)

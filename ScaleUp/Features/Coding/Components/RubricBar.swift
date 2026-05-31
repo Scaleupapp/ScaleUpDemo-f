@@ -3,15 +3,29 @@ import SwiftUI
 struct RubricBar: View {
     let dimension: String
     let score: Double   // 0..10
-    let feedback: String?
+    /// Weight this dimension contributes to the overall score, as a percentage
+    /// (e.g. 25). Shown next to the name so the learner sees how it's weighted.
+    var weightPct: Int? = nil
+    /// Why this dimension earned its score (grading-transparency).
+    var why: String? = nil
+    /// One concrete thing to do better next time.
+    var toImprove: String? = nil
+    /// Legacy single-line caption (used by drill results). Rendered only when
+    /// the richer why/toImprove pair isn't supplied.
+    var feedback: String? = nil
 
     @State private var animatedWidth: CGFloat = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .firstTextBaseline) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(displayName)
                     .font(.subheadline.weight(.medium))
+                if let weightPct {
+                    Text("· \(weightPct)%")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Text("\(Int(score.rounded()))/10")
                     .font(.subheadline.monospacedDigit())
@@ -34,7 +48,21 @@ struct RubricBar: View {
             }
             .frame(height: 8)
 
-            if let feedback = feedback, !feedback.isEmpty {
+            if let why = why, !why.isEmpty {
+                Text(why)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+            if let toImprove = toImprove, !toImprove.isEmpty {
+                Label(toImprove, systemImage: "arrow.up.forward.circle")
+                    .font(.caption)
+                    .foregroundStyle(.tint)
+                    .labelStyle(.titleAndIcon)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if why == nil, toImprove == nil, let feedback = feedback, !feedback.isEmpty {
                 Text(feedback)
                     .font(.caption)
                     .foregroundStyle(.secondary)

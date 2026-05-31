@@ -22,7 +22,8 @@ struct V2CodingHomeView: View {
     @State private var error: String?
     @State private var pickingNew = false
     @State private var pendingBundle: CapstoneLibraryEntry?
-    @State private var presentedSessionId: String?
+    @State private var presentedSessionId: IdentifiedString?   // present result (submitted/evaluating/graded)
+    @State private var resumeContext: ResumeContext?           // re-open the live screen for an active session
     @State private var showGenerator = false
     @State private var generations: [CapstoneGenerationSummary] = []
     @State private var isStarting = false        // overlay while opening a capstone
@@ -33,6 +34,15 @@ struct V2CodingHomeView: View {
     private struct IdentifiedString: Identifiable, Hashable {
         let value: String
         var id: String { value }
+    }
+
+    /// Everything needed to re-open the live coding screen for a session the
+    /// learner is resuming (after navigating away / relaunching the app).
+    private struct ResumeContext: Identifiable {
+        let bundle: CapstoneLibraryEntry
+        let sessionId: String
+        let timeBudgetSeconds: Int
+        var id: String { sessionId }
     }
 
     var body: some View {
@@ -110,6 +120,7 @@ struct V2CodingHomeView: View {
                     if !summary.recentCapstones.isEmpty {
                         historySection(summary.recentCapstones)
                     }
+                    browseCatalogLink
                     allCapstonesLink
                     Spacer().frame(height: 32)
                 } else if let error {
@@ -148,6 +159,22 @@ struct V2CodingHomeView: View {
                 }
             )
         }
+        // Resume a genuinely-active session: re-open the live (command) screen.
+        .fullScreenCover(item: $resumeContext) { ctx in
+            CapstoneLiveView(
+                bundle: ctx.bundle,
+                sessionId: ctx.sessionId,
+                timeBudgetSeconds: ctx.timeBudgetSeconds,
+                onClose: {
+                    resumeContext = nil
+                    Task { await load() }
+                }
+            )
+        }
+        // View the result for a session that's already submitted/grading/graded.
+        .sheet(item: $presentedSessionId) { ident in
+            CapstoneResultView(sessionId: ident.value, onClose: { presentedSessionId = nil })
+        }
     }
 
     // MARK: - Sections
@@ -166,22 +193,46 @@ struct V2CodingHomeView: View {
     }
 
     private func inProgressCard(_ inProgress: APICapstoneSummaryInProgress, line: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("In progress", systemImage: "laptopcomputer.and.iphone")
-                .font(V2Theme.bodyMedium)
-                .foregroundStyle(ColorTokens.gold)
-            Text(line)
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textPrimary)
-            Text(inProgress.expiresAt.map { "Status: \(inProgress.status). Expires \($0.shortRelative())." }
-                 ?? "Status: \(inProgress.status). Open your laptop to begin.")
-                .font(V2Theme.small)
-                .foregroundStyle(ColorTokens.textSecondary)
+        let resumable = (inProgress.status == "in_progress" || inProgress.status == "paused")
+        let grading = (inProgress.status == "submitted" || inProgress.status == "evaluating")
+        return Button {
+            if resumable {
+                Task { await resume(inProgress) }
+            } else if grading {
+                presentedSessionId = IdentifiedString(value: inProgress.sessionId)
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                Label(grading ? "Being graded" : "In progress",
+                      systemImage: grading ? "hourglass" : "laptopcomputer.and.iphone")
+                    .font(V2Theme.bodyMedium)
+                    .foregroundStyle(ColorTokens.gold)
+                Text(line)
+                    .font(V2Theme.body)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                HStack(spacing: 6) {
+                    Text(inProgress.expiresAt.map { "Status: \(inProgress.status). Expires \($0.shortRelative())." }
+                         ?? "Status: \(inProgress.status).")
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                    Spacer()
+                    if resumable || grading {
+                        HStack(spacing: 4) {
+                            Text(resumable ? "Resume session" : "View")
+                            Image(systemName: "chevron.right").font(.caption2)
+                        }
+                        .font(V2Theme.small.weight(.semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(V2Theme.cardBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(V2Theme.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .buttonStyle(.plain)
+        .disabled(!resumable && !grading)
     }
 
     private func masterySection(_ mastery: APICapstoneSummaryMastery) -> some View {
@@ -281,7 +332,7 @@ struct V2CodingHomeView: View {
 
     private func startNewButton(summary: APICapstoneSummary) -> some View {
         let availableNow = (summary.nextAvailableAt ?? Date()) <= Date()
-        let label = summary.inProgress != nil ? "Resume on your laptop"
+        let label = summary.inProgress != nil ? "Capstone in progress"
                    : availableNow ? "Start a capstone"
                    : "Next available soon"
         return Button {
@@ -382,13 +433,36 @@ struct V2CodingHomeView: View {
             .foregroundStyle(ColorTokens.gold)
     }
 
+    /// Browse the FULL seeded catalog (every domain/difficulty), not just the
+    /// learner's graded history — the catalog was previously unreachable from
+    /// You → Coding → Capstones.
+    private var browseCatalogLink: some View {
+        NavigationLink {
+            CapstoneLibraryView()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "square.grid.2x2")
+                Text("Browse all capstones")
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption2)
+            }
+            .font(V2Theme.small)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(V2Theme.cardBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+    }
+
     private var allCapstonesLink: some View {
         NavigationLink {
             CapstoneHistoryView()
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: "clock.arrow.circlepath")
-                Text("All capstones")
+                Text("Your capstone history")
                 Spacer()
                 Image(systemName: "chevron.right").font(.caption2)
             }
@@ -546,6 +620,38 @@ struct V2CodingHomeView: View {
             }
         } catch {
             self.actionError = "Couldn't open this step. Check your connection and try again."
+        }
+    }
+
+    /// Re-enter a genuinely-active session. The summary only needs to carry the
+    /// session id — GET /:id/status returns the full live state (incl. the
+    /// bundle projection) so we can rebuild the live screen out-of-band.
+    private func resume(_ inProgress: APICapstoneSummaryInProgress) async {
+        isStarting = true
+        defer { isStarting = false }
+        do {
+            let s = try await service.getStatus(sessionId: inProgress.sessionId)
+            switch s.status {
+            case .in_progress, .paused:
+                if let b = s.bundle {
+                    resumeContext = ResumeContext(
+                        bundle: b.toLibraryEntry(),
+                        sessionId: s.sessionId,
+                        timeBudgetSeconds: s.timeBudgetSeconds
+                    )
+                } else {
+                    // No bundle on the status payload — fall back to the result/
+                    // refresh path rather than opening a broken live screen.
+                    self.actionError = "Couldn't reopen this session. Pull to refresh and try again."
+                }
+            case .submitted, .evaluating, .graded:
+                presentedSessionId = IdentifiedString(value: s.sessionId)
+            default:
+                // aborted / expired / etc — the card is stale; refresh it away.
+                await load()
+            }
+        } catch {
+            self.actionError = "Couldn't reopen your session. Check your connection and try again."
         }
     }
 

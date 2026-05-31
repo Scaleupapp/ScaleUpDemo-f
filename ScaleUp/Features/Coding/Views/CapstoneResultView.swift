@@ -75,7 +75,13 @@ struct CapstoneResultView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 scoreCard(result)
-                rubricSection(result.dimensionScores)
+                if let rationale = result.overallRationale, !rationale.isEmpty {
+                    overallRationaleSection(rationale)
+                }
+                if let ts = result.testSummary, hasTestSummary(ts) {
+                    testSummarySection(ts)
+                }
+                rubricSection(result)
                 if let notes = result.evidenceNotes, !notes.isEmpty {
                     evidenceNotesSection(notes)
                 }
@@ -88,6 +94,72 @@ struct CapstoneResultView: View {
                 Spacer(minLength: 60)
             }
         }
+    }
+
+    /// Why this OVERALL score — names the weighting + what drove it, so a
+    /// learner who felt they "did well" understands what cost them points.
+    private func overallRationaleSection(_ rationale: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle").font(.caption.weight(.semibold))
+                Text("WHY THIS SCORE").font(.caption.weight(.bold)).tracking(1.2)
+            }
+            .foregroundStyle(.tint)
+            Text(rationale)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color.accentColor.opacity(0.08)))
+    }
+
+    private func hasTestSummary(_ ts: CapstoneTestSummary) -> Bool {
+        (ts.visibleTotal ?? 0) > 0 || (ts.hiddenTotal ?? 0) > 0
+    }
+
+    /// Visible vs hidden test split — the deterministic driver behind the
+    /// correctness score (and the usual reason "I passed everything I saw but
+    /// still scored low": hidden edge-case tests failed).
+    private func testSummarySection(_ ts: CapstoneTestSummary) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Tests").font(.headline)
+            HStack(spacing: 10) {
+                testPill(label: "Visible", passed: ts.visiblePassed, total: ts.visibleTotal)
+                testPill(label: "Hidden", passed: ts.hiddenPassed, total: ts.hiddenTotal)
+                if let lint = ts.lintPassed {
+                    HStack(spacing: 5) {
+                        Image(systemName: lint ? "checkmark.seal.fill" : "xmark.seal.fill")
+                            .foregroundStyle(lint ? .green : .orange)
+                        Text("Lint").font(.caption.weight(.medium))
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background(Capsule().fill(Color(.tertiarySystemBackground)))
+                }
+            }
+            if (ts.hiddenTotal ?? 0) > 0, (ts.hiddenPassed ?? 0) < (ts.hiddenTotal ?? 0) {
+                Text("Hidden tests check edge cases you couldn't see while coding. Missing them is the usual reason a confident attempt still scores below expectation.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground)).clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func testPill(label: String, passed: Int?, total: Int?) -> some View {
+        let p = passed ?? 0
+        let t = total ?? 0
+        let allPass = t > 0 && p == t
+        HStack(spacing: 5) {
+            Image(systemName: allPass ? "checkmark.circle.fill" : "circle.lefthalf.filled")
+                .foregroundStyle(allPass ? .green : (t > 0 ? .orange : .secondary))
+            Text("\(label) \(p)/\(t)").font(.caption.weight(.medium)).monospacedDigit()
+        }
+        .padding(.horizontal, 10).padding(.vertical, 6)
+        .background(Capsule().fill(Color(.tertiarySystemBackground)))
     }
 
     /// Detailed analysis — the LLM scorer's narrative explanation of why
@@ -143,16 +215,19 @@ struct CapstoneResultView: View {
         Text(text).font(.subheadline.weight(.medium)).foregroundStyle(color)
     }
 
-    private func rubricSection(_ dims: CapstoneDimensionScores) -> some View {
+    private func rubricSection(_ result: CapstoneResult) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("How you did").font(.headline)
-            VStack(spacing: 14) {
-                RubricBar(dimension: "correctness", score: dims.correctness, feedback: nil)
-                RubricBar(dimension: "code quality", score: dims.codeQuality, feedback: nil)
-                RubricBar(dimension: "ai pair effectiveness", score: dims.aiPairEffectiveness, feedback: nil)
-                RubricBar(dimension: "verification discipline", score: dims.verificationDiscipline, feedback: nil)
-                RubricBar(dimension: "decomposition", score: dims.decomposition, feedback: nil)
-                RubricBar(dimension: "reflection quality", score: dims.reflectionQuality, feedback: nil)
+            VStack(spacing: 16) {
+                ForEach(result.dimensionRows) { row in
+                    RubricBar(
+                        dimension: row.id,
+                        score: row.score,
+                        weightPct: row.weightPct,
+                        why: row.why,
+                        toImprove: row.toImprove
+                    )
+                }
             }
         }
         .padding(16).background(Color(.secondarySystemBackground)).clipShape(RoundedRectangle(cornerRadius: 12))
@@ -199,7 +274,7 @@ struct CapstoneResultView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label).font(.subheadline.weight(.medium))
                 if result.anchorDriftDetected == true {
-                    Text("Flagged for human review — your score may update.").font(.caption).foregroundStyle(.secondary)
+                    Text("This score was aligned to a deterministic baseline and is queued for a quick human review — it may be adjusted slightly.").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
             }
         }

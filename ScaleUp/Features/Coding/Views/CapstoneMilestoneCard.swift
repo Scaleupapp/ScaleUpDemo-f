@@ -14,11 +14,26 @@ import SwiftUI
 struct CapstoneMilestoneCard: View {
 
     @State private var loadState: LoadState = .loading
+    @State private var resumeContext: ResumeContext?
+    @State private var resultSessionId: IdentifiedString?
+    @State private var resuming = false
 
     private let service: CapstoneService
 
     init(service: CapstoneService = .shared) {
         self.service = service
+    }
+
+    private struct IdentifiedString: Identifiable, Hashable {
+        let value: String
+        var id: String { value }
+    }
+
+    private struct ResumeContext: Identifiable {
+        let bundle: CapstoneLibraryEntry
+        let sessionId: String
+        let timeBudgetSeconds: Int
+        var id: String { sessionId }
     }
 
     enum LoadState {
@@ -36,8 +51,8 @@ struct CapstoneMilestoneCard: View {
                 loadingPlaceholder
             case .available(let role, let difficulty, let summaryLine):
                 availableCard(role: role, difficulty: difficulty, summaryLine: summaryLine)
-            case .inProgress(_, let summaryLine):
-                inProgressCard(summaryLine: summaryLine)
+            case .inProgress(let sessionId, let summaryLine):
+                inProgressCard(sessionId: sessionId, summaryLine: summaryLine)
             case .levelUp(let newDifficulty):
                 levelUpCard(newDifficulty: newDifficulty)
             case .hidden:
@@ -45,6 +60,17 @@ struct CapstoneMilestoneCard: View {
             }
         }
         .task { await load() }
+        .fullScreenCover(item: $resumeContext) { ctx in
+            CapstoneLiveView(
+                bundle: ctx.bundle,
+                sessionId: ctx.sessionId,
+                timeBudgetSeconds: ctx.timeBudgetSeconds,
+                onClose: { resumeContext = nil; Task { await load() } }
+            )
+        }
+        .sheet(item: $resultSessionId) { ident in
+            CapstoneResultView(sessionId: ident.value, onClose: { resultSessionId = nil })
+        }
     }
 
     // MARK: - Available state
@@ -91,14 +117,18 @@ struct CapstoneMilestoneCard: View {
 
     // MARK: - In-progress state
 
-    private func inProgressCard(summaryLine: String) -> some View {
-        NavigationLink {
-            CapstoneLibraryView()
+    private func inProgressCard(sessionId: String, summaryLine: String) -> some View {
+        Button {
+            Task { await resume(sessionId: sessionId) }
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "laptopcomputer.and.iphone")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.tint)
+                if resuming {
+                    ProgressView().frame(width: 28, height: 28)
+                } else {
+                    Image(systemName: "laptopcomputer.and.iphone")
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(.tint)
+                }
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Capstone in progress")
                         .font(.subheadline.weight(.semibold))
@@ -108,9 +138,12 @@ struct CapstoneMilestoneCard: View {
                         .lineLimit(2)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Text("Resume").font(.caption.weight(.semibold)).foregroundStyle(.tint)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,6 +151,34 @@ struct CapstoneMilestoneCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)
+        .disabled(resuming)
+    }
+
+    /// Re-enter the active session from Home: GET /:id/status returns the live
+    /// state + bundle projection, so we can rebuild the live screen (resumable)
+    /// or jump to the result (grading/graded) without leaving Home.
+    private func resume(sessionId: String) async {
+        resuming = true
+        defer { resuming = false }
+        do {
+            let s = try await service.getStatus(sessionId: sessionId)
+            switch s.status {
+            case .in_progress, .paused:
+                if let b = s.bundle {
+                    resumeContext = ResumeContext(
+                        bundle: b.toLibraryEntry(),
+                        sessionId: s.sessionId,
+                        timeBudgetSeconds: s.timeBudgetSeconds
+                    )
+                }
+            case .submitted, .evaluating, .graded:
+                resultSessionId = IdentifiedString(value: s.sessionId)
+            default:
+                await load() // stale card — refresh it away
+            }
+        } catch {
+            // Non-fatal on Home — leave the card; the user can retry the tap.
+        }
     }
 
     // MARK: - Level-up celebration

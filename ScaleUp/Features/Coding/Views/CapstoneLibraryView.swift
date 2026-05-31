@@ -10,6 +10,7 @@ struct CapstoneLibraryView: View {
     @State private var selected: CapstoneLibraryEntry?
     @State private var filterDifficulty: DrillDifficulty?
     @State private var filterRoleTrack: RoleTrack?
+    @State private var searchText = ""
     @State private var showGenerator = false
 
     var body: some View {
@@ -17,6 +18,7 @@ struct CapstoneLibraryView: View {
             content
                 .navigationTitle("Capstones")
                 .navigationBarTitleDisplayMode(.large)
+                .searchable(text: $searchText, prompt: "Search all capstones")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button {
@@ -132,16 +134,22 @@ struct CapstoneLibraryView: View {
     }
 
     private var filterKey: String {
-        "\(filterDifficulty?.rawValue ?? "any")-\(filterRoleTrack?.rawValue ?? "any")"
+        let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return "\(filterDifficulty?.rawValue ?? "any")-\(filterRoleTrack?.rawValue ?? "any")-\(q)"
     }
 
     private func load() async {
+        // Debounce: .task(id: filterKey) cancels the previous run on each
+        // keystroke, so a short sleep here coalesces typing into one request.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        if Task.isCancelled { return }
         loading = true
         error = nil
         do {
             let list = try await CapstoneService.shared.listLibrary(
-                difficulty: filterDifficulty, roleTrack: filterRoleTrack
+                difficulty: filterDifficulty, roleTrack: filterRoleTrack, search: searchText
             )
+            if Task.isCancelled { return }
             entries = list
         } catch {
             self.error = "Pull to refresh."

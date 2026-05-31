@@ -18,6 +18,12 @@ struct V2CodingMasteryView: View {
     @State private var isRequestingDrill = false                     // overlay while in-flight
     @State private var requestErrorMessage: String? = nil            // shown on failure
     @State private var showCapstoneLibrary = false                   // capstone entry point (WS6)
+    @State private var capstoneResultId: IdentifiedString? = nil     // present a graded capstone's result
+
+    struct IdentifiedString: Identifiable, Hashable {
+        let value: String
+        var id: String { value }
+    }
 
     struct PracticeRequest: Equatable {
         let subtype: DrillSubtype?
@@ -67,6 +73,9 @@ struct V2CodingMasteryView: View {
         }
         .sheet(isPresented: $showCapstoneLibrary) {
             CapstoneLibraryView()
+        }
+        .sheet(item: $capstoneResultId) { ident in
+            CapstoneResultView(sessionId: ident.value, onClose: { capstoneResultId = nil })
         }
         // Picker sheet — onDismiss fires AFTER the sheet is fully gone, avoiding
         // the sheet-from-sheet race where SwiftUI would eat the second presentation.
@@ -166,6 +175,12 @@ struct V2CodingMasteryView: View {
 
                 ForEach(data.tracks, id: \.roleTrack) { track in
                     trackCard(track)
+                }
+
+                // Capstone results now live in Progress alongside drills.
+                let capstones = data.recentCapstones ?? []
+                if !capstones.isEmpty {
+                    recentCapstonesList(capstones)
                 }
             }
 
@@ -333,10 +348,64 @@ struct V2CodingMasteryView: View {
     }
 
     private func statsCard(_ stats: CodingMasteryStats) -> some View {
-        HStack(spacing: 16) {
-            statTile(label: "Drills graded", value: "\(stats.totalDrillsGraded)")
-            statTile(label: "Avg score", value: stats.averageScore.map { "\($0)" } ?? "—")
+        VStack(spacing: 12) {
+            HStack(spacing: 16) {
+                statTile(label: "Drills graded", value: "\(stats.totalDrillsGraded)")
+                statTile(label: "Avg drill", value: stats.averageScore.map { "\($0)" } ?? "—")
+            }
+            if (stats.totalCapstonesGraded ?? 0) > 0 {
+                HStack(spacing: 16) {
+                    statTile(label: "Capstones graded", value: "\(stats.totalCapstonesGraded ?? 0)")
+                    statTile(label: "Avg capstone", value: stats.averageCapstoneScore.map { "\($0)" } ?? "—")
+                }
+            }
         }
+    }
+
+    private func recentCapstonesList(_ capstones: [CodingMasteryCapstone]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Recent capstones")
+                .font(.headline)
+            VStack(spacing: 0) {
+                ForEach(capstones) { c in
+                    Button {
+                        capstoneResultId = IdentifiedString(value: c.id)
+                    } label: {
+                        capstoneRow(c)
+                    }
+                    .buttonStyle(.plain)
+                    if c.id != capstones.last?.id { Divider() }
+                }
+            }
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func capstoneRow(_ c: CodingMasteryCapstone) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "laptopcomputer.and.iphone")
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.tint)
+            VStack(alignment: .leading, spacing: 2) {
+                Text((c.title?.isEmpty == false) ? c.title! : "Capstone")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Text("\(c.difficulty?.capitalized ?? "—") · \(relativeTime(c.gradedAt))")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if let score = c.overallScore {
+                Text("\(score)").font(.title3.weight(.bold).monospacedDigit())
+                    .foregroundStyle(score >= 80 ? .green : score >= 60 ? .orange : .red)
+                Text("/100").font(.caption2).foregroundStyle(.secondary)
+            } else {
+                Text("—").font(.subheadline).foregroundStyle(.secondary)
+            }
+            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 10)
+        .contentShape(Rectangle())
     }
 
     private func statTile(label: String, value: String) -> some View {
@@ -442,7 +511,7 @@ struct V2CodingMasteryView: View {
         do {
             let resp: V2APIResponse<CodingMasteryResponse> = try await V2APIClient.shared.get("/you/coding-mastery")
             todayStatus = await probeTodayDrillStatus()
-            if resp.data.tracks.isEmpty {
+            if resp.data.tracks.isEmpty && (resp.data.recentCapstones ?? []).isEmpty {
                 state = .empty
             } else {
                 state = .loaded(resp.data)
@@ -472,12 +541,40 @@ struct V2CodingMasteryView: View {
 struct CodingMasteryResponse: Codable, Sendable {
     let tracks: [CodingMasteryTrack]
     let recentAttempts: [CodingMasteryAttempt]
+    let recentCapstones: [CodingMasteryCapstone]?   // capstone results now surface here too
     let stats: CodingMasteryStats
 
     enum CodingKeys: String, CodingKey {
         case tracks
         case recentAttempts = "recent_attempts"
+        case recentCapstones = "recent_capstones"
         case stats
+    }
+}
+
+/// A graded capstone shown in the Progress tab alongside drills. `overallScore`
+/// is 0..100 (drills are too).
+struct CodingMasteryCapstone: Codable, Sendable, Identifiable {
+    let id: String
+    let bundleId: String?
+    let title: String?
+    let difficulty: String?
+    let roleTrack: String?
+    let overallScore: Int?
+    let integrityConfidence: String?
+    let gradedAt: String?
+    let isRetry: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case bundleId = "bundle_id"
+        case title
+        case difficulty
+        case roleTrack = "role_track"
+        case overallScore = "overall_score"
+        case integrityConfidence = "integrity_confidence"
+        case gradedAt = "graded_at"
+        case isRetry = "is_retry"
     }
 }
 
@@ -527,10 +624,14 @@ struct CodingMasteryAttempt: Codable, Sendable, Identifiable {
 struct CodingMasteryStats: Codable, Sendable {
     let totalDrillsGraded: Int
     let averageScore: Int?
+    let totalCapstonesGraded: Int?
+    let averageCapstoneScore: Int?
 
     enum CodingKeys: String, CodingKey {
         case totalDrillsGraded = "total_drills_graded"
         case averageScore = "average_score"
+        case totalCapstonesGraded = "total_capstones_graded"
+        case averageCapstoneScore = "average_capstone_score"
     }
 }
 
