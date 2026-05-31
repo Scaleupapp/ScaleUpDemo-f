@@ -10,6 +10,11 @@ import SwiftUI
 ///   - Retry-from-history if a graded session is tapped
 struct V2CodingHomeView: View {
     let onClose: () -> Void
+    /// When hosted inside V2CodingHubView, the hub already provides the
+    /// NavigationStack, title and Close button, and the Progress segment owns
+    /// the mastery view — so we render bare content and skip the duplicate
+    /// mastery section.
+    var embedded: Bool = false
 
     @State private var summary: APICapstoneSummary?
     @State private var track: CapstoneTrackResponse?
@@ -28,69 +33,95 @@ struct V2CodingHomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    if isLoading && summary == nil {
-                        ProgressView().tint(ColorTokens.gold)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 60)
-                    } else if let summary, !summary.eligible {
-                        ineligibleState(summary: summary)
-                    } else if let summary {
-                        intro(summary: summary)
-                        if let inProgress = summary.inProgress {
-                            inProgressCard(inProgress, line: summary.summaryLine)
+        Group {
+            if embedded {
+                core
+            } else {
+                NavigationStack {
+                    core
+                        .navigationTitle("Coding capstones")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarLeading) {
+                                Button("Close", action: onClose)
+                            }
                         }
-                        if let t = track, t.enrolled == true, let steps = t.steps, !steps.isEmpty {
-                            trackSection(t, steps: steps)
-                        }
-                        if let mastery = summary.mastery {
-                            masterySection(mastery)
-                        }
-                        if !summary.recentCapstones.isEmpty {
-                            historySection(summary.recentCapstones)
-                        }
-                        startNewButton(summary: summary)
-                        generateButton()
-                        Spacer().frame(height: 40)
-                    } else if let error {
-                        errorState(message: error)
-                    }
                 }
-                .padding(.horizontal, V2Theme.pad)
-                .padding(.top, 16)
-            }
-            .background(ColorTokens.background.ignoresSafeArea())
-            .navigationTitle("Coding capstones")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close", action: onClose)
-                }
-            }
-            .refreshable { await load() }
-            .sheet(isPresented: $pickingNew) {
-                if let bundle = pendingBundle {
-                    CapstonePreflightView(bundle: bundle, onClose: { pickingNew = false })
-                } else {
-                    ProgressView().tint(ColorTokens.gold).padding(40)
-                }
-            }
-            .sheet(isPresented: $showGenerator) {
-                CapstoneGeneratorSheet(
-                    onClose: { showGenerator = false },
-                    onReady: { entry in
-                        // Dismiss the generator and hand the freshly-built,
-                        // already-proven capstone straight to Preflight.
-                        showGenerator = false
-                        pendingBundle = entry
-                        pickingNew = true
-                    }
-                )
             }
         }
         .task { await load() }
+    }
+
+    private var core: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                if isLoading && summary == nil {
+                    ProgressView().tint(ColorTokens.gold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 60)
+                } else if let summary, !summary.eligible {
+                    ineligibleState(summary: summary)
+                } else if let summary {
+                    intro(summary: summary)
+                    if let inProgress = summary.inProgress {
+                        inProgressCard(inProgress, line: summary.summaryLine)
+                    }
+                    if let t = track, t.enrolled == true, let steps = t.steps, !steps.isEmpty {
+                        trackSection(t, steps: steps)
+                    }
+                    // Mastery lives in the hub's Progress segment when embedded.
+                    if !embedded, let mastery = summary.mastery {
+                        masterySection(mastery)
+                    }
+                    if !summary.recentCapstones.isEmpty {
+                        historySection(summary.recentCapstones)
+                    }
+                    startNewButton(summary: summary)
+                    generateButton()
+                    // Full paginated history + the recruiter share link.
+                    NavigationLink {
+                        CapstoneHistoryView()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "clock.arrow.circlepath")
+                            Text("All capstones & share")
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption2)
+                        }
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
+                    Spacer().frame(height: 40)
+                } else if let error {
+                    errorState(message: error)
+                }
+            }
+            .padding(.horizontal, V2Theme.pad)
+            .padding(.top, 16)
+        }
+        .background(ColorTokens.background.ignoresSafeArea())
+        .refreshable { await load() }
+        .sheet(isPresented: $pickingNew) {
+            if let bundle = pendingBundle {
+                CapstonePreflightView(bundle: bundle, onClose: { pickingNew = false })
+            } else {
+                ProgressView().tint(ColorTokens.gold).padding(40)
+            }
+        }
+        .sheet(isPresented: $showGenerator) {
+            CapstoneGeneratorSheet(
+                onClose: { showGenerator = false },
+                onReady: { entry in
+                    // Dismiss the generator and hand the freshly-built,
+                    // already-proven capstone straight to Preflight.
+                    showGenerator = false
+                    pendingBundle = entry
+                    pickingNew = true
+                }
+            )
+        }
     }
 
     // MARK: - Sections
@@ -359,7 +390,8 @@ struct V2CodingHomeView: View {
                 Text(step.briefPreview.isEmpty ? "Step \(step.index + 1)" : step.briefPreview)
                     .font(V2Theme.small)
                     .foregroundStyle(isActive || isDone ? ColorTokens.textPrimary : ColorTokens.textTertiary)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 if let d = step.difficulty {
                     Text(d.capitalized + (step.overallScore != nil ? " · \(step.overallScore!)/100" : ""))
                         .font(V2Theme.tiny)

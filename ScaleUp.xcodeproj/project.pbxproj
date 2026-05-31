@@ -404,6 +404,7 @@
 		ADFD3022E2A3098E45830223 /* ActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = C545DA6F0DCF8B099E7AFDE3 /* ActionBar.swift */; };
 		AED260DD10C8FF805D704F39 /* GenerateJourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D27957FF796512FA9CD896 /* GenerateJourneyView.swift */; };
 		AF64ADEED5685DD1FBE41EF9 /* PlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7D651438987D7C3AD1FBC34 /* PlayerService.swift */; };
+		AF69B9C7B4040F7DAA7BFD63 /* V2CodingHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35F88FB060018D7D89D93AA /* V2CodingHubView.swift */; };
 		B0B8434D6F2D86F72324217D /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97F9AE5C6E8D15E38A5E573B /* KeychainManager.swift */; };
 		B0C81C4E80CA515723CE59CF /* AppNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58CFB298CB55E9D16FA6DAA /* AppNotification.swift */; };
 		B18F9B764D2D715901408091 /* APIGetPlanStatus200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 429CB3F8ABEFC808AF63355B /* APIGetPlanStatus200Response.swift */; };
@@ -927,6 +928,7 @@
 		A14BC562CD68FB346065C4FC /* CapstoneResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneResultView.swift; sourceTree = "<group>"; };
 		A17337CA9E0C9DB0427EC9B0 /* APIRequestOnDemandDrill200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIRequestOnDemandDrill200Response.swift; sourceTree = "<group>"; };
 		A28AACAD27654F251AF899D4 /* APICapstoneSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstoneSessionView.swift; sourceTree = "<group>"; };
+		A35F88FB060018D7D89D93AA /* V2CodingHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2CodingHubView.swift; sourceTree = "<group>"; };
 		A546731260B4178018CCB2BA /* APIGetCodeDrillResult200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCodeDrillResult200Response.swift; sourceTree = "<group>"; };
 		A573A22924A83C9A935F325B /* APICapstoneSessionCounters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstoneSessionCounters.swift; sourceTree = "<group>"; };
 		A5CF1309822CB906608094BF /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
@@ -1200,6 +1202,7 @@
 				0BE472FEC509E5CDB1BEFCC9 /* DrillSubmittingView.swift */,
 				051F47A7A3D99C91E8AC8A85 /* PromptDrillInputView.swift */,
 				530C3B1210253B6048ACEB44 /* V2CodingDrillRequestView.swift */,
+				A35F88FB060018D7D89D93AA /* V2CodingHubView.swift */,
 				EDC5D07EEB5C2D527920C5E6 /* V2CodingMasteryView.swift */,
 				8BD507FCD8FEF0C423189AD6 /* VerifyDrillInputView.swift */,
 			);
@@ -3189,6 +3192,7 @@
 				EC56DA2C01F2A56D045588A8 /* V2CalibrationInsightsViewModel.swift in Sources */,
 				C4E08DBAAE3B04D01C2AC514 /* V2CodingDrillRequestView.swift in Sources */,
 				06BF7D4ED9A4D7044F58C773 /* V2CodingHomeView.swift in Sources */,
+				AF69B9C7B4040F7DAA7BFD63 /* V2CodingHubView.swift in Sources */,
 				F8E751268BC208BBFCBB4691 /* V2CodingMasteryView.swift in Sources */,
 				55FC9DD2868F895CC57E0B5E /* V2CompassHistoryView.swift in Sources */,
 				CFE2D15F40B5DD7CC8717FC8 /* V2CompassView.swift in Sources */,
@@ -3332,7 +3336,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 174;
+				CURRENT_PROJECT_VERSION = 175;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3408,7 +3412,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 174;
+				CURRENT_PROJECT_VERSION = 175;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

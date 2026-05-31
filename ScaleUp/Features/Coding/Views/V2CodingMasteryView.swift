@@ -1,6 +1,13 @@
 import SwiftUI
 
 struct V2CodingMasteryView: View {
+    /// Controls which parts render so the same view can back two hub segments:
+    ///  - .practiceOnly → drill CTAs + recent drill attempts (the "do" tab)
+    ///  - .progressOnly → stats + per-skill mastery bars (the "Progress" tab)
+    ///  - .full         → everything (standalone, e.g. previews)
+    enum Mode { case full, practiceOnly, progressOnly }
+    var mode: Mode = .full
+
     @State private var state: LoadState = .loading
     @State private var todayStatus: TodayDrillStatus = .unknown
     @State private var showDrillModal = false
@@ -35,12 +42,22 @@ struct V2CodingMasteryView: View {
     }
 
     var body: some View {
+        // When hosted in V2CodingHubView the hub owns the nav title ("Coding"),
+        // so only the standalone (.full) variant sets its own title.
+        if mode == .full {
+            scrollBody
+                .navigationTitle("Coding mastery")
+                .navigationBarTitleDisplayMode(.large)
+        } else {
+            scrollBody
+        }
+    }
+
+    private var scrollBody: some View {
         ScrollView {
             content
                 .padding(20)
         }
-        .navigationTitle("Coding mastery")
-        .navigationBarTitleDisplayMode(.large)
         .task { await load() }
         .sheet(isPresented: $showDrillModal) {
             DrillModalView()
@@ -142,61 +159,66 @@ struct V2CodingMasteryView: View {
 
     private func loadedView(_ data: CodingMasteryResponse) -> some View {
         VStack(alignment: .leading, spacing: 24) {
-            // Stats card
-            statsCard(data.stats)
+            // Stats + per-skill mastery bars live in the hub's Progress segment
+            // (and the standalone view). Hidden in the Practice segment.
+            if mode != .practiceOnly {
+                statsCard(data.stats)
 
-            // Per-track mastery bars
-            ForEach(data.tracks, id: \.roleTrack) { track in
-                trackCard(track)
+                ForEach(data.tracks, id: \.roleTrack) { track in
+                    trackCard(track)
+                }
             }
 
-            // Recent attempts
-            if !data.recentAttempts.isEmpty {
+            // Recent drill attempts — the Practice segment + standalone, not Progress.
+            if mode != .progressOnly, !data.recentAttempts.isEmpty {
                 recentAttemptsList(data.recentAttempts)
             }
 
-            // CTA — gold button only when today's drill is still available.
-            // After completion, swap for an informational card so the user
-            // doesn't tap into the modal just to see "daily quota used".
-            switch todayStatus {
-            case .completedToday(let nextAt):
-                completedTodayCard(nextAt: nextAt)
-            default:
+            // The "do a drill" controls — hidden in the read-only Progress segment.
+            if mode != .progressOnly {
+                // CTA — gold button only when today's drill is still available.
+                // After completion, swap for an informational card so the user
+                // doesn't tap into the modal just to see "daily quota used".
+                switch todayStatus {
+                case .completedToday(let nextAt):
+                    completedTodayCard(nextAt: nextAt)
+                default:
+                    Button {
+                        showDrillModal = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "play.fill")
+                            Text("Take today's drill")
+                        }
+                        .fontWeight(.semibold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                }
+
                 Button {
-                    showDrillModal = true
+                    showPracticeAnotherSheet = true
                 } label: {
                     HStack {
-                        Image(systemName: "play.fill")
-                        Text("Take today's drill")
+                        Image(systemName: "plus.circle")
+                        Text("Practice another")
                     }
                     .fontWeight(.semibold)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 12)
+                    .foregroundStyle(.tint)
+                    .background(Color.accentColor.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
+                .buttonStyle(.plain)
+                .padding(.top, 4)
             }
 
-            Button {
-                showPracticeAnotherSheet = true
-            } label: {
-                HStack {
-                    Image(systemName: "plus.circle")
-                    Text("Practice another")
-                }
-                .fontWeight(.semibold)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .foregroundStyle(.tint)
-                .background(Color.accentColor.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
-
-            // Capstones — longer-form (60/75/90 min) sessions on the laptop.
-            // Spec §3.2: every capstone has a brief + starter repo + acceptance
-            // criteria + Compass-as-Coder + recording + evaluation.
+            // Capstones link only in the standalone view — in the hub, capstones
+            // are their own segment, so this would be redundant.
+            if mode == .full {
             Button {
                 showCapstoneLibrary = true
             } label: {
@@ -212,6 +234,7 @@ struct V2CodingMasteryView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+            } // end if mode == .full (Browse capstones)
         }
     }
 

@@ -443,22 +443,15 @@ struct V2YouView: View {
             }
             .buttonStyle(.plain)
 
-            // Standard nav row — matches the rest of the You-tab list.
+            // One unified coding entry — drills, capstones, and progress live
+            // together in the hub (replaces the old split "drills & practice"
+            // and "capstones & history" rows that confused learners).
             NavigationLink {
-                CapstoneHistoryView()
+                V2CodingHubView(onClose: {}, showsCloseButton: false)
                     .environment(appState)
                     .environment(objectiveContext)
             } label: {
-                row(icon: "trophy.fill", label: "Coding capstones & history")
-            }
-            .buttonStyle(.plain)
-
-            NavigationLink {
-                V2CodingMasteryView()
-                    .environment(appState)
-                    .environment(objectiveContext)
-            } label: {
-                row(icon: "chevron.left.forwardslash.chevron.right", label: "Coding drills & practice")
+                row(icon: "chevron.left.forwardslash.chevron.right", label: "Coding")
             }
             .buttonStyle(.plain)
 

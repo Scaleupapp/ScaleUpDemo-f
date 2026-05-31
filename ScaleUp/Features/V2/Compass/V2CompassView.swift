@@ -192,10 +192,12 @@ struct V2CompassView: View {
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             case .codingCapstone:
-                V2CodingHomeView(onClose: { vm.presentedHome = nil })
-                    .environment(appState)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+                NavigationStack {
+                    V2CodingHubView(onClose: { vm.presentedHome = nil }, initialSegment: .capstones)
+                }
+                .environment(appState)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         }
         // Compass action-card drill flow — uses sheet(item:) to avoid the
