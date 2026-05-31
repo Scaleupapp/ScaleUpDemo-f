@@ -55,7 +55,7 @@ struct V2CodingHomeView: View {
 
     private var core: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
+            VStack(alignment: .leading, spacing: 22) {
                 if isLoading && summary == nil {
                     ProgressView().tint(ColorTokens.gold)
                         .frame(maxWidth: .infinity)
@@ -67,11 +67,15 @@ struct V2CodingHomeView: View {
                     if let inProgress = summary.inProgress {
                         inProgressCard(inProgress, line: summary.summaryLine)
                     }
+                    // Primary actions, up top — not buried under history.
+                    startNewButton(summary: summary)
+                    generateButton()
                     if let t = track, t.enrolled == true, let steps = t.steps, !steps.isEmpty {
                         trackSection(t, steps: steps)
                     }
-                    if !generations.isEmpty {
-                        generationsSection(generations)
+                    let shownGen = displayGenerations(generations)
+                    if !shownGen.isEmpty {
+                        generationsSection(shownGen)
                     }
                     // Mastery lives in the hub's Progress segment when embedded.
                     if !embedded, let mastery = summary.mastery {
@@ -80,24 +84,8 @@ struct V2CodingHomeView: View {
                     if !summary.recentCapstones.isEmpty {
                         historySection(summary.recentCapstones)
                     }
-                    startNewButton(summary: summary)
-                    generateButton()
-                    // Full paginated history + the recruiter share link.
-                    NavigationLink {
-                        CapstoneHistoryView()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "clock.arrow.circlepath")
-                            Text("All capstones & share")
-                            Spacer()
-                            Image(systemName: "chevron.right").font(.caption2)
-                        }
-                        .font(V2Theme.small)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.plain)
-                    Spacer().frame(height: 40)
+                    allCapstonesLink
+                    Spacer().frame(height: 32)
                 } else if let error {
                     errorState(message: error)
                 }
@@ -321,11 +309,11 @@ struct V2CodingHomeView: View {
             }
             Spacer()
             if g.status == "ready", let bid = g.bundleId {
-                Button("Start") { Task { await startGenerated(bundleId: bid) } }
-                    .font(V2Theme.tiny).foregroundStyle(ColorTokens.gold)
+                Button { Task { await startGenerated(bundleId: bid) } } label: { inlineActionPill("Start") }
+                    .buttonStyle(.plain)
             } else if g.status == "failed" {
-                Button("Retry") { showGenerator = true }
-                    .font(V2Theme.tiny).foregroundStyle(ColorTokens.gold)
+                Button { showGenerator = true } label: { inlineActionPill("Retry") }
+                    .buttonStyle(.plain)
             }
         }
     }
@@ -354,6 +342,44 @@ struct V2CodingHomeView: View {
         } catch {
             self.error = "Couldn't open this capstone."
         }
+    }
+
+    /// Declutter: show all in-progress/ready generations, but only the single
+    /// most-recent failed one (the list was a wall of "Couldn't build that one").
+    private func displayGenerations(_ items: [CapstoneGenerationSummary]) -> [CapstoneGenerationSummary] {
+        let active = items.filter { $0.status != "failed" }
+        let recentFailed = Array(items.filter { $0.status == "failed" }.prefix(1))
+        return active + recentFailed
+    }
+
+    /// Consistent small gold pill for inline row actions (Start / Retry) — was a
+    /// mix of bare text buttons of different sizes.
+    private func inlineActionPill(_ text: String) -> some View {
+        Text(text)
+            .font(V2Theme.tiny.weight(.semibold))
+            .padding(.horizontal, 12).padding(.vertical, 6)
+            .background(Capsule().fill(ColorTokens.gold.opacity(0.16)))
+            .foregroundStyle(ColorTokens.gold)
+    }
+
+    private var allCapstonesLink: some View {
+        NavigationLink {
+            CapstoneHistoryView()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                Text("All capstones")
+                Spacer()
+                Image(systemName: "chevron.right").font(.caption2)
+            }
+            .font(V2Theme.small)
+            .foregroundStyle(ColorTokens.textSecondary)
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(V2Theme.cardBg)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
     }
 
     private func generateButton() -> some View {
@@ -481,9 +507,8 @@ struct V2CodingHomeView: View {
             }
             Spacer()
             if isActive {
-                Button("Start") { Task { await startStep(step) } }
-                    .font(V2Theme.tiny)
-                    .foregroundStyle(ColorTokens.gold)
+                Button { Task { await startStep(step) } } label: { inlineActionPill("Start") }
+                    .buttonStyle(.plain)
             }
         }
     }

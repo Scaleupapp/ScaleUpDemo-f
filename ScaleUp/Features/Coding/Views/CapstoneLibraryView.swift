@@ -92,7 +92,9 @@ struct CapstoneLibraryView: View {
     private func row(_ e: CapstoneLibraryEntry) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(e.brief)
+                // Title (first line) only — the full brief belongs on Preflight,
+                // not mashed into a list row.
+                Text(e.brief.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? e.brief)
                     .font(.subheadline.weight(.medium))
                     .lineLimit(2)
                 Spacer()
