@@ -829,4 +829,95 @@ We agreed the next step is critique + brainstorm before touching the pitch site.
 
 ---
 
-*End of audit. Last updated: 2026-05-29.*
+## 9. Capstone — updates since this audit (addendum, 2026-05-31)
+
+This audit is a 2026-05-29 snapshot. In the two days since, the Capstone subsystem
+gained a Phase-3 feature set, a UX consolidation, and a long fix-chain that took
+on-demand generation from "always errored" to "provably working." Read §2.7 and
+§6 together with this addendum.
+
+### 9.1 On-demand Capstone Generator — now WORKING (was the headline gap)
+- **Capability:** Any eligible learner pastes a job description (or topic) and picks
+  difficulty (Auto / Easy / Medium / Hard); the platform builds a *bespoke* capstone.
+  Two-step AI verification: **Claude Opus drafts → the reference solution is proven
+  in a sandbox** (must pass every visible + hidden test; a corrupted copy must fail)
+  **→ a second model (Gemini) reviews quality →** only then is it activated.
+- **Status:** V2-ACTIVE, confirmed end-to-end (a server-side run reached `ready`,
+  Gemini-approved). Open to all eligible learners; 5/hour per-user cap; deterministic
+  language by track (SWE→JS, DS/AI→Python).
+- **History (why it never worked before):** nine layered bugs were fixed —
+  malformed `tools` payload (HTTP 400 `tools.0: Input should be an object`),
+  4096-token output truncation, a validator `.lean()` crash, a 15s validation
+  timeout that killed `npm install`, `--silent` hiding failures from the retry
+  critique, validating the reference solution *without* the starter_repo (npm
+  ENOENT on package.json), `NODE_ENV=production` skipping devDependencies (jest not
+  found), no retry on the quality gate, and the model not always declaring its test
+  deps. The two Gemini gates were then rebalanced to block only **genuine** defects
+  (unsolvable / unfair hidden tests / internal contradictions / untested criteria)
+  rather than stylistic nitpicks — so legitimate capstones pass while the sandbox
+  proof still guarantees they actually run.
+
+### 9.2 Async "submit & walk away" generation
+- **Capability:** Generation legitimately takes ~3–5 min, so the learner can submit
+  and leave. A push fires on completion (`CODING_CAPSTONE_GENERATED` /
+  `CODING_CAPSTONE_GENERATION_FAILED`), and the Coding hub's Capstones tab shows a
+  "Your generated capstones" strip (Building… / Start / Retry) via
+  `GET /api/coding/capstones/generations`.
+- **Status:** Backend V2-ACTIVE; iOS build 176.
+
+### 9.3 Auto-assembled Capstone Tracks
+- **Capability:** A per-learner, difficulty-ramping sequence (easy→hard, up to 5
+  steps) auto-assembled from the learner's role-track, skipping already-graded
+  bundles. Unlock-on-grade; self-heals past retired steps; one active track per user
+  (partial-unique index).
+- **Status:** V2-ACTIVE (backend + iOS/Android), surfaced in the Coding hub.
+
+### 9.4 Recruiter / public share
+- **Capability:** A learner mints a public, no-auth profile link from history showing
+  **scores + competency only — no code, no full briefs, no PII beyond first name**.
+  Revocable / expirable; invalid, revoked, and expired tokens all return an identical
+  404 (no information leak). Web page is SSR + `noindex`.
+- **Status:** V2-ACTIVE (backend + web profile page + iOS/Android share button).
+
+### 9.5 Multi-language
+- **Capability:** Capstone language support extended beyond JS / TS / Python / Java /
+  SQL to **Go, Rust, Kotlin, Swift, C++** (bundle schema, evaluator lint + install
+  steps, e2b template env-vars with graceful fallback, web Monaco mapping).
+- **Status:** V2-ACTIVE. Locked-egress templates for the new languages still pending
+  (need Docker) — they fall back to the default open-egress image today.
+
+### 9.6 Mid-session crash recovery
+- **Capability:** S3 snapshots let a dropped capstone session restore its files; the
+  web IDE shows a recovery banner and offers to restore.
+- **Status:** V2-ACTIVE (backend + web).
+
+### 9.7 UX consolidation — the unified Coding hub
+- **Capability:** One `V2CodingHubView` with **Practice | Capstones | Progress**
+  segments (per-segment explainer copy). Practice = today's drill + recent drills;
+  Capstones = track + start + generate + your-generations + history/share; Progress =
+  the single mastery view.
+- **Resolves prior issues:** §6 "Redundant / duplicate" **#1** (*Multiple capstone
+  entry points* — the four overlapping flows) and **#7** (*Three drill request
+  paths*). The You-tab's two coding rows are now one "Coding" entry; the Compass chip
+  deep-links into the hub's Capstones segment. Also fixed: the "data couldn't be read
+  because it is missing" crash on the coding home (an unstarted session serialized
+  without `expires_at`), and stale never-started sessions blocking new starts (GC now
+  reaps them).
+- **Status:** V2-ACTIVE, iOS build 175.
+
+### 9.8 Status changes to issues flagged above
+- **§6 Broken #4 / §7 prod-readiness #1 — Capstone laptop Vercel preview URL:** the
+  raw `api.scaleupapp.club` and the Vercel domain are now hidden behind Vercel
+  rewrites; a branded custom domain remains the ideal end-state.
+- **Start hang:** a warm-pool bug that handed out already-reaped (dead) sandboxes —
+  surfacing as an endless "Setting up your sandbox…" — is fixed (age-eviction of
+  stale warm entries + fall-through to a fresh provision instead of aborting).
+- **§5 Hidden — Voice Reflection / Replay:** unchanged (still post-result only).
+
+### 9.9 Builds
+- iOS **175** (unified Coding hub) and **176** (async generation UX). Backend fully
+  deployed (auto-deploy on push to `master`).
+
+---
+
+*End of audit. Last updated: 2026-05-29 (Capstone addendum 2026-05-31, §9).*

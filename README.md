@@ -2,7 +2,7 @@
 
 Native iOS client for ScaleUp, an outcome-driven adaptive learning platform. Learners declare an objective (placement, role switch, interview prep, competitive exam, upskilling), and the system computes the path, runs diagnostics, generates a personalized plan, and tracks a single **Readiness Score** that compounds toward the goal.
 
-> **Status:** V2 redesign is live on TestFlight. Build 157+ on `master`. iOS is the lead platform; Android is still on V1 parity.
+> **Status:** V2 redesign is live on TestFlight. Build 176+ on `master`. iOS is the lead platform; Android is still on V1 parity.
 
 ---
 
@@ -26,6 +26,7 @@ ScaleUp organizes learning around a few core surfaces:
 | **Quizzes** | On-demand AI-generated quizzes after content; daily role-specific skill assessments. |
 | **Notes** | AI-assisted note-taking from lessons; optional publish to Creator Hub; auto-flashcards. |
 | **Interview Practice** | Mock interviews (technical + behavioral). Dual pipeline: **Gemini Live** (real-time streaming) or **Whisper + GPT-4o + TTS** (async fallback). |
+| **Coding Drills & Capstones** | Daily meta-skill **drills** (Prompt / Bug-Hunt / Decompose) and longer **capstones** coded on a paired laptop (mobile = command + anti-cheat surface), 6-dimension AI scoring + voice reflection. Auto-assembled **tracks**, a paste-a-JD **capstone generator** (Claude drafts → sandbox-proven → Gemini quality-reviewed → async, notifies on ready), recruiter **share** links (scores only, no code), and Compass-as-Coder pair-programmer. All under one **Coding** hub (Practice / Capstones / Progress). Languages: JS/TS, Python, Java, SQL, Go, Rust, Kotlin, Swift, C++. |
 | **Readiness & Mastery** | 0–100 readiness ring visible everywhere; per-topic mastery, coverage + recall, trajectory forecast. |
 | **Creator Hub** | Apply, tier up, upload lessons/notes, view reach/engagement/outcome analytics. |
 | **Competition & Cohorts** | Opt-in skill challenges, leaderboards, quiet streak tracking. No global feed. |
@@ -70,6 +71,7 @@ ScaleUpDemo-f/
 │   │   ├── notes/           # Notes + flashcards
 │   │   ├── player/          # Content player (video / article)
 │   │   ├── interview/       # Mock interview (Gemini Live + async)
+│   │   ├── Coding/          # Coding drills + capstones (hub, generator, tracks, preflight, pair, live, result, share)
 │   │   ├── progress/        # Mastery, readiness ring, analytics
 │   │   ├── journey/         # Journey timeline
 │   │   ├── competition/     # Cohorts, leaderboards
@@ -148,7 +150,7 @@ Or just hit ⌘R in Xcode.
 ## Release / TestFlight
 
 - Marketing version: `1.0.0`
-- Current build: `157` (see [project.yml](project.yml))
+- Current build: `176` (see [project.yml](project.yml))
 - Team: `NK5P69WG2H`
 - Signing: Automatic (Apple Distribution)
 
