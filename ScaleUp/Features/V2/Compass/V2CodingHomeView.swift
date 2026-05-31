@@ -25,6 +25,8 @@ struct V2CodingHomeView: View {
     @State private var presentedSessionId: String?
     @State private var showGenerator = false
     @State private var generations: [CapstoneGenerationSummary] = []
+    @State private var isStarting = false        // overlay while opening a capstone
+    @State private var actionError: String?      // surfaced as an alert (was silently swallowed)
 
     private let service = CapstoneService.shared
 
@@ -51,6 +53,30 @@ struct V2CodingHomeView: View {
             }
         }
         .task { await load() }
+        .overlay {
+            if isStarting {
+                ZStack {
+                    Color.black.opacity(0.35).ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView().tint(.white).scaleEffect(1.2)
+                        Text("Opening capstone…")
+                            .font(V2Theme.small).foregroundStyle(.white)
+                    }
+                    .padding(24)
+                    .background(.regularMaterial)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+                .transition(.opacity)
+            }
+        }
+        .alert("Couldn't open", isPresented: Binding(
+            get: { actionError != nil },
+            set: { if !$0 { actionError = nil } }
+        )) {
+            Button("OK", role: .cancel) { actionError = nil }
+        } message: {
+            Text(actionError ?? "")
+        }
     }
 
     private var core: some View {
@@ -99,7 +125,15 @@ struct V2CodingHomeView: View {
             if let bundle = pendingBundle {
                 CapstonePreflightView(bundle: bundle, onClose: { pickingNew = false })
             } else {
-                ProgressView().tint(ColorTokens.gold).padding(40)
+                // Never strand the user on a bare infinite spinner.
+                VStack(spacing: 14) {
+                    Text("Couldn't open that capstone.")
+                        .font(V2Theme.body).foregroundStyle(ColorTokens.textPrimary)
+                    Button("Close") { pickingNew = false }
+                        .font(V2Theme.bodyMedium).foregroundStyle(ColorTokens.gold)
+                }
+                .padding(40)
+                .presentationDetents([.height(180)])
             }
         }
         .sheet(isPresented: $showGenerator) {
@@ -330,20 +364,6 @@ struct V2CodingHomeView: View {
         }
     }
 
-    private func startGenerated(bundleId: String) async {
-        do {
-            let library = try await service.listLibrary()
-            if let match = library.first(where: { $0.bundleId == bundleId }) {
-                pendingBundle = match
-                pickingNew = true
-            } else {
-                self.error = "This capstone isn't available right now."
-            }
-        } catch {
-            self.error = "Couldn't open this capstone."
-        }
-    }
-
     /// Declutter: show all in-progress/ready generations, but only the single
     /// most-recent failed one (the list was a wall of "Couldn't build that one").
     private func displayGenerations(_ items: [CapstoneGenerationSummary]) -> [CapstoneGenerationSummary] {
@@ -514,39 +534,59 @@ struct V2CodingHomeView: View {
     }
 
     private func startStep(_ step: CapstoneTrackStep) async {
-        // Reuse requestNext's preview shape isn't right here; build a minimal
-        // library entry from the step and hand to Preflight via pickingNew.
+        isStarting = true
+        defer { isStarting = false }
         do {
             let library = try await service.listLibrary()
             if let match = library.first(where: { $0.bundleId == step.bundleId }) {
                 self.pendingBundle = match
                 self.pickingNew = true
             } else {
-                self.error = "This step isn't available right now."
+                self.actionError = "This step isn't available right now. Pull to refresh and try again."
             }
         } catch {
-            self.error = "Couldn't open this step."
+            self.actionError = "Couldn't open this step. Check your connection and try again."
         }
     }
 
     private func pickNext() async {
+        isStarting = true
+        defer { isStarting = false }
         do {
             let bundle = try await service.requestNext()
             self.pendingBundle = bundle
             self.pickingNew = true
         } catch {
-            self.error = "No capstone available right now. Try again after your next graded session."
+            self.actionError = "No capstone available right now. Try again after your next graded session."
+        }
+    }
+
+    private func startGenerated(bundleId: String) async {
+        isStarting = true
+        defer { isStarting = false }
+        do {
+            let library = try await service.listLibrary()
+            if let match = library.first(where: { $0.bundleId == bundleId }) {
+                pendingBundle = match
+                pickingNew = true
+            } else {
+                self.actionError = "This capstone isn't available right now. Pull to refresh and try again."
+            }
+        } catch {
+            self.actionError = "Couldn't open this capstone. Check your connection and try again."
         }
     }
 
     private func retry(bundleId: String) async {
+        isStarting = true
+        defer { isStarting = false }
         do {
             _ = try await service.retry(bundleId: bundleId)
             await load()
         } catch CapstoneServiceError.invalidTransition {
-            self.error = "Finish or abort your in-progress capstone first."
+            self.actionError = "Finish or abort your in-progress capstone first."
         } catch {
-            self.error = "Couldn't start a retry. Try again."
+            self.actionError = "Couldn't start a retry. Try again."
         }
     }
 }
