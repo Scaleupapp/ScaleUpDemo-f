@@ -330,6 +330,33 @@ struct CapstoneGenerationStatus: Codable, Sendable {
     }
 }
 
+/// One of the learner's recent on-demand generation requests (for the hub's
+/// "Your generated capstones" strip — submit-and-walk-away UX).
+struct CapstoneGenerationSummary: Codable, Sendable, Identifiable {
+    let requestId: String
+    let status: String   // queued | generating | validating | cross_checking | ready | failed
+    let difficulty: String?
+    let roleTrack: String?
+    let bundleId: String?
+    let briefPreview: String?
+    let error: String?
+
+    var id: String { requestId }
+
+    var isTerminal: Bool { status == "ready" || status == "failed" }
+    var isBuilding: Bool { !isTerminal }
+
+    enum CodingKeys: String, CodingKey {
+        case requestId = "request_id"
+        case status
+        case difficulty
+        case roleTrack = "role_track"
+        case bundleId = "bundle_id"
+        case briefPreview = "brief_preview"
+        case error
+    }
+}
+
 // MARK: - Tracks (Phase 4, auto-assembled)
 
 struct CapstoneTrackResponse: Codable, Sendable {

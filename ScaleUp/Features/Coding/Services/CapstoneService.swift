@@ -114,6 +114,14 @@ final class CapstoneService {
         try await client.getCoding("/capstones/generations/\(requestId)")
     }
 
+    /// GET /capstones/generations — the learner's recent generation requests so
+    /// the hub can show Building…/Ready/Failed without holding a poll.
+    func listGenerations() async throws -> [CapstoneGenerationSummary] {
+        struct Resp: Codable { let generations: [CapstoneGenerationSummary] }
+        let r: Resp = try await client.getCoding("/capstones/generations")
+        return r.generations
+    }
+
     /// GET /capstones/track — the learner's auto-assembled track (auto-enrolls on
     /// first call when eligible).
     func track() async throws -> CapstoneTrackResponse {

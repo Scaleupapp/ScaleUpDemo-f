@@ -24,6 +24,7 @@ struct V2CodingHomeView: View {
     @State private var pendingBundle: CapstoneLibraryEntry?
     @State private var presentedSessionId: String?
     @State private var showGenerator = false
+    @State private var generations: [CapstoneGenerationSummary] = []
 
     private let service = CapstoneService.shared
 
@@ -68,6 +69,9 @@ struct V2CodingHomeView: View {
                     }
                     if let t = track, t.enrolled == true, let steps = t.steps, !steps.isEmpty {
                         trackSection(t, steps: steps)
+                    }
+                    if !generations.isEmpty {
+                        generationsSection(generations)
                     }
                     // Mastery lives in the hub's Progress segment when embedded.
                     if !embedded, let mastery = summary.mastery {
@@ -276,6 +280,82 @@ struct V2CodingHomeView: View {
         .disabled(!availableNow || summary.inProgress != nil)
     }
 
+    // MARK: - Generated capstones (async submit-and-walk-away)
+
+    @ViewBuilder
+    private func generationsSection(_ items: [CapstoneGenerationSummary]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Your generated capstones", systemImage: "sparkles")
+                .font(V2Theme.bodyMedium)
+                .foregroundStyle(ColorTokens.gold)
+            ForEach(items) { g in
+                generationRow(g)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(V2Theme.cardBg)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    @ViewBuilder
+    private func generationRow(_ g: CapstoneGenerationSummary) -> some View {
+        HStack(spacing: 10) {
+            if g.status == "ready" {
+                Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.green)
+            } else if g.status == "failed" {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            } else {
+                ProgressView().scaleEffect(0.7).frame(width: 18, height: 18)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text((g.briefPreview?.isEmpty == false) ? g.briefPreview! :
+                        (g.status == "failed" ? "Couldn't build that one" : "Building your capstone…"))
+                    .font(V2Theme.small)
+                    .foregroundStyle(g.status == "ready" || g.isBuilding ? ColorTokens.textPrimary : ColorTokens.textSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(generationStatusSubtitle(g))
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            Spacer()
+            if g.status == "ready", let bid = g.bundleId {
+                Button("Start") { Task { await startGenerated(bundleId: bid) } }
+                    .font(V2Theme.tiny).foregroundStyle(ColorTokens.gold)
+            } else if g.status == "failed" {
+                Button("Retry") { showGenerator = true }
+                    .font(V2Theme.tiny).foregroundStyle(ColorTokens.gold)
+            }
+        }
+    }
+
+    private func generationStatusSubtitle(_ g: CapstoneGenerationSummary) -> String {
+        switch g.status {
+        case "ready":          return "Ready to start"
+        case "failed":         return "Tap Retry to try a clearer description"
+        case "queued":         return "Queued…"
+        case "generating":     return "Drafting…"
+        case "validating":     return "Proving it works in a sandbox…"
+        case "cross_checking": return "Final quality review…"
+        default:               return "Working…"
+        }
+    }
+
+    private func startGenerated(bundleId: String) async {
+        do {
+            let library = try await service.listLibrary()
+            if let match = library.first(where: { $0.bundleId == bundleId }) {
+                pendingBundle = match
+                pickingNew = true
+            } else {
+                self.error = "This capstone isn't available right now."
+            }
+        } catch {
+            self.error = "Couldn't open this capstone."
+        }
+    }
+
     private func generateButton() -> some View {
         VStack(spacing: 6) {
             Button {
@@ -350,8 +430,9 @@ struct V2CodingHomeView: View {
         } catch {
             self.error = error.localizedDescription
         }
-        // Track is best-effort; never blocks the summary.
+        // Track + generations are best-effort; never block the summary.
         if let t = try? await service.track() { self.track = t }
+        if let g = try? await service.listGenerations() { self.generations = g }
         isLoading = false
     }
 

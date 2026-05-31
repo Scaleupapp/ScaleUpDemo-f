@@ -113,11 +113,27 @@ struct CapstoneGeneratorSheet: View {
             ProgressView().scaleEffect(1.3)
             Text(statusLabel.isEmpty ? "Working…" : statusLabel)
                 .font(.headline)
-            Text("Hang tight — building and proving your capstone. You can leave this open.")
+            Text("This takes about 1–3 minutes. You don't have to wait here — we'll notify you the moment it's ready, and it'll show up under Capstones. Feel free to keep using the app.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+                .padding(.horizontal, 28)
+            Button {
+                // Leave the screen — the server keeps building and a push fires
+                // on completion. (If you stay, it hands off to Preflight live.)
+                pollTask?.cancel()
+                onClose()
+            } label: {
+                Text("Done — notify me when it's ready")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.accentColor.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 28)
+            .padding(.top, 6)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -162,7 +178,7 @@ struct CapstoneGeneratorSheet: View {
     private func poll(requestId: String) {
         pollTask?.cancel()
         pollTask = Task {
-            for _ in 0..<90 { // up to ~3 min at 2s
+            for _ in 0..<150 { // up to ~5 min at 2s (covers the cross-check convergence rounds)
                 if Task.isCancelled { return }
                 do {
                     let s = try await service.generationStatus(requestId: requestId)
