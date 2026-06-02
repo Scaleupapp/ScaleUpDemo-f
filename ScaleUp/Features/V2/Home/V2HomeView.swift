@@ -32,6 +32,9 @@ struct V2HomeView: View {
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(V2NavState.self) private var nav
     @Environment(AppState.self) private var appState
+    @Environment(ObjectiveContext.self) private var objectiveContext
+    @State private var showWhatsNext = false
+    @State private var didPresentReady = false
 
     private enum HomeChip: String, Identifiable {
         case pending, getAhead, pushHarder
@@ -96,6 +99,69 @@ struct V2HomeView: View {
             .environment(taskRouter)
             .environment(appState)
             .environment(nav)
+        }
+        // Ready moment — full-screen Seal takeover shown once when the user
+        // has crossed their target and hasn't seen the moment yet.
+        .fullScreenCover(isPresented: Binding(
+            get: { (vm.data?.ready?.isReady == true) && (vm.data?.ready?.momentSeen == false) && !didPresentReady },
+            set: { if !$0 { didPresentReady = true } })) {
+            if let r = readyForMoment(vm.data) {
+                V2ReadyMomentView(ready: r,
+                    onWhatsNext: { didPresentReady = true; showWhatsNext = true },
+                    onSeen: {
+                        Task { let _: V2APIResponse<SeenResponse>? = try? await V2APIClient.shared.post("/you/ready/seen", body: ReadyEmptyBody()) }
+                        didPresentReady = true
+                    })
+            }
+        }
+        // What's-next 3-path sheet — opened from the Seal moment or the
+        // persistent gold READY button in the status bar.
+        .sheet(isPresented: $showWhatsNext) {
+            if let r = readyForMoment(vm.data) {
+                V2WhatsNextView(ready: r,
+                    onDeeper: { Task { await deepen() } },
+                    onWider: { showWhatsNext = false; nav.selectedTab = .you },
+                    onProve: { route in showWhatsNext = false; routeProve(route) })
+            }
+        }
+    }
+
+    // MARK: - Ready helpers
+
+    private struct SeenResponse: Codable {
+        let ok: Bool?
+    }
+
+    /// Empty Codable body for fire-and-forget POSTs (ready/seen, deepen).
+    private struct ReadyEmptyBody: Codable {}
+
+    /// Maps the lean Home ready block into the ReadyBlock shape the subviews
+    /// expect. Summary is nil (not returned by /plan/today) — subviews tolerate it.
+    private func readyForMoment(_ data: V2HomeData?) -> V2YouOverview.ReadinessBlock.ReadyBlock? {
+        guard let hr = data?.ready, hr.isReady else { return nil }
+        return V2YouOverview.ReadinessBlock.ReadyBlock(
+            isReady: true, readyAt: hr.readyAt, momentSeen: hr.momentSeen,
+            readinessAtReady: data?.trajectory?.today,
+            summary: nil, proveIt: hr.proveIt)
+    }
+
+    /// POST /objectives/:id/deepen — raises bar to Exceptional and replans.
+    /// Uses objectiveContext.activeObjectiveId (the active/primary objective's id).
+    private func deepen() async {
+        guard let id = objectiveContext.activeObjectiveId else { showWhatsNext = false; return }
+        struct DeepenResponse: Codable { let target: Int? }
+        _ = try? await V2APIClient.shared.post("/objectives/\(id)/deepen", body: ReadyEmptyBody()) as V2APIResponse<DeepenResponse>
+        showWhatsNext = false
+        await vm.load()
+    }
+
+    /// Routes the "prove it" action based on the backend route string.
+    /// interview → Compass tab (where mock interviews live); others fall back
+    /// gracefully — proof teaser copy lives inside V2WhatsNextView.
+    private func routeProve(_ route: String) {
+        switch route {
+        case "interview": nav.selectedTab = .compass
+        default: break // proof/exam_ready/capstone teaser handled in sheet copy
         }
     }
 
@@ -249,23 +315,39 @@ struct V2HomeView: View {
 
             // Big-numbers row IS the trajectory tap target — separate from
             // the sub-line below so the "Open Coach" link gets its own tap.
+            // When the user is READY (and has seen the moment), the row turns
+            // gold and opens the what's-next sheet instead of the trajectory.
             Button {
-                showTrajectorySheet = true
+                if data.ready?.isReady == true && data.ready?.momentSeen == true {
+                    showWhatsNext = true
+                } else {
+                    showTrajectorySheet = true
+                }
             } label: {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("\(traj.today)%")
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(ColorTokens.textPrimary)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(ColorTokens.textTertiary)
-                    Text("\(traj.targetReadiness)% needed")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(ColorTokens.gold)
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(ColorTokens.textTertiary)
+                    if data.ready?.isReady == true && data.ready?.momentSeen == true {
+                        Text("· READY")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(ColorTokens.gold)
+                        Spacer()
+                        Text("what's next ›")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(ColorTokens.gold)
+                    } else {
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                        Text("\(traj.targetReadiness)% needed")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(ColorTokens.gold)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
                 }
                 .contentShape(Rectangle())
             }
@@ -1221,5 +1303,6 @@ private struct ObjectivePill: View {
     V2HomeView()
         .environment(V2TaskRouter())
         .environment(V2NavState())
+        .environment(ObjectiveContext())
         .preferredColorScheme(.dark)
 }
