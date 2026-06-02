@@ -481,6 +481,7 @@
 		D5F8B1BF306718132E5E10CC /* ProfileStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91A395DB118F51FC07A29A6 /* ProfileStepView.swift */; };
 		D67C4C2CA197F041F1D9C115 /* Journey.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA107548E1AC3D003991C6E5 /* Journey.swift */; };
 		D687725736CBAB6462625C6E /* APICapstonePairRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8852163B828A66CE9A33597 /* APICapstonePairRequest.swift */; };
+		D6884A8969D43AA417B735FE /* V2OutcomeSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C2AC094794C7926E81A2C44 /* V2OutcomeSheet.swift */; };
 		D7AC0343A9C1954F5FDE5607 /* InterviewProctor.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAFBBBEFC7F40D2E03DD2852 /* InterviewProctor.swift */; };
 		D802F9003C1F887FB38C45F0 /* Endpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1647243F39A6C50AFA3E64 /* Endpoint.swift */; };
 		D808DE6C96B1D64D4480A4D9 /* APIGetCompassCoderBudget200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FA33E47D3517B989BB42A53 /* APIGetCompassCoderBudget200Response.swift */; };
@@ -708,6 +709,7 @@
 		3B80AD03BA1112C7C314256B /* APIPlanTopicMastery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIPlanTopicMastery.swift; sourceTree = "<group>"; };
 		3BC92F97F941077BB4D55218 /* UserInferenceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserInferenceService.swift; sourceTree = "<group>"; };
 		3BECD5B7FA8AF8104DFD69B5 /* CreatorProfileData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorProfileData.swift; sourceTree = "<group>"; };
+		3C2AC094794C7926E81A2C44 /* V2OutcomeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2OutcomeSheet.swift; sourceTree = "<group>"; };
 		3D74913C68D15BC39922415C /* APIRunCapstoneCommandRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIRunCapstoneCommandRequest.swift; sourceTree = "<group>"; };
 		3EDAFD875C00AB40BBF1D752 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		3F2AECFFBEB873421CD5FDDC /* UploadProgressOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadProgressOverlay.swift; sourceTree = "<group>"; };
@@ -2156,6 +2158,7 @@
 			children = (
 				098DB85D0841478030C0F896 /* V2HomeView.swift */,
 				6DDB828F8C0A46067D9E6472 /* V2HomeViewModel.swift */,
+				3C2AC094794C7926E81A2C44 /* V2OutcomeSheet.swift */,
 				179D3C908C4A8B9FDE2648EE /* V2ReadyMomentView.swift */,
 				31256CBC79DF85CABDACC527 /* V2WhatsNextView.swift */,
 			);
@@ -3222,6 +3225,7 @@
 				E48C7A9A29762D7AEFBC55DA /* V2OnboardingFlowView.swift in Sources */,
 				DC8BCB0CF71B853D6A34DED7 /* V2OnboardingService.swift in Sources */,
 				2A5ED5A6DE4B1E1648326DFA /* V2OnboardingState.swift in Sources */,
+				D6884A8969D43AA417B735FE /* V2OutcomeSheet.swift in Sources */,
 				255FF657885F98B5D89C1B25 /* V2PlanCreationView.swift in Sources */,
 				9620D6B63BDAF5D28A3013A0 /* V2PlanDetailView.swift in Sources */,
 				A6DACC5DC03DA7A222E51095 /* V2PlanDetailViewModel.swift in Sources */,
@@ -3348,7 +3352,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 183;
+				CURRENT_PROJECT_VERSION = 184;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3424,7 +3428,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 183;
+				CURRENT_PROJECT_VERSION = 184;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

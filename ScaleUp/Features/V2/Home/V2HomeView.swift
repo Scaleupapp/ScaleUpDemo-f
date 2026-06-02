@@ -35,6 +35,9 @@ struct V2HomeView: View {
     @Environment(ObjectiveContext.self) private var objectiveContext
     @State private var showWhatsNext = false
     @State private var didPresentReady = false
+    /// Phase 4A — outcome capture sheet.
+    @State private var showOutcome = false
+    @State private var outcomeShownThisSession = false
 
     private enum HomeChip: String, Identifiable {
         case pending, getAhead, pushHarder
@@ -122,6 +125,18 @@ struct V2HomeView: View {
                     onDeeper: { Task { await deepen() } },
                     onWider: { showWhatsNext = false; nav.selectedTab = .you },
                     onProve: { route in showWhatsNext = false; routeProve(route) })
+            }
+        }
+        // Phase 4A — outcome capture: auto-present once per session when due.
+        .onChange(of: vm.data?.outcomePrompt?.due) { _, due in
+            if due == true && !outcomeShownThisSession {
+                outcomeShownThisSession = true
+                showOutcome = true
+            }
+        }
+        .sheet(isPresented: $showOutcome) {
+            if let p = vm.data?.outcomePrompt {
+                V2OutcomeSheet(prompt: p, onDone: { Task { await vm.load() } })
             }
         }
     }
@@ -354,6 +369,15 @@ struct V2HomeView: View {
             .buttonStyle(.plain)
 
             statusSubLine(traj: traj)
+
+            // Phase 4A — "I got it!" affordance: shown only when the server
+            // has provided an outcomePrompt (v1: gated on server prompt).
+            if data.outcomePrompt != nil {
+                Button("I got it! 🎉") { showOutcome = true }
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                    .padding(.top, 4)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
