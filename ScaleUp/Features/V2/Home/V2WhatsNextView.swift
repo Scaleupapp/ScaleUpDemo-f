@@ -26,6 +26,7 @@ struct V2WhatsNextView: View {
 
     @State private var shareURL: URL?
     @State private var publishing = false
+    @State private var publishError = false
 
     var body: some View {
         NavigationStack {
@@ -57,6 +58,11 @@ struct V2WhatsNextView: View {
         .sheet(item: $shareURL) { url in
             ActivityView(items: [url])
         }
+        .alert("Could not share", isPresented: $publishError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Please try again in a moment.")
+        }
     }
 
     // MARK: - Publish + share
@@ -71,7 +77,7 @@ struct V2WhatsNextView: View {
                 let r: V2APIResponse<PubResp> = try await V2APIClient.shared.post("/you/proof/publish", body: Empty())
                 if let u = URL(string: r.data.url) { shareURL = u }
             } catch {
-                // silently swallow — no toast surface in this sheet; user can retry
+                publishError = true
             }
             publishing = false
         }
