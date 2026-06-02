@@ -70,8 +70,10 @@ struct V2ReadinessBreakdownSheet: View {
             Text(readiness.onTrackText)
                 .font(.system(size: 13))
                 .foregroundStyle(ColorTokens.textSecondary)
-            if let coverage = readiness.coverage {
-                Text("You've measured \(Int((coverage * 100).rounded()))% of what matters for this goal.")
+            if !items.isEmpty {
+                Text(items.count == assessed.count
+                     ? "Based on all \(items.count) skills this goal needs."
+                     : "Based on \(assessed.count) of \(items.count) skills measured so far.")
                     .font(.system(size: 12))
                     .foregroundStyle(ColorTokens.textTertiary)
                     .padding(.top, 2)
