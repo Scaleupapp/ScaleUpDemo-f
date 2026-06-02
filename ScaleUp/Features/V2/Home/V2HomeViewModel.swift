@@ -44,7 +44,10 @@ struct V2HomeData: Codable {
     /// Single-paragraph insight from the backend describing what to focus on
     /// this week and why. Surfaced just below the readiness card.
     let weeklyInsight: String?
-    let ready: HomeReady?
+    // `var` + default (not `let`): a `let` with a default is omitted from the
+    // synthesized Decodable; `var` with a default is still decoded (decodeIfPresent)
+    // AND keeps it out of the memberwise init so the big sampleData literal compiles.
+    var ready: HomeReady? = nil
 
     struct HomeReady: Codable {
         let isReady: Bool
