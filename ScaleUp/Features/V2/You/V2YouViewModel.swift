@@ -32,6 +32,31 @@ struct V2YouOverview: Codable {
         let targetBands: TargetBands?
         let coverage: Double?
         let breakdown: [BreakdownItem]?
+        let ready: ReadyBlock?
+
+        struct ReadyBlock: Codable {
+            let isReady: Bool
+            let readyAt: String?
+            let momentSeen: Bool?
+            let readinessAtReady: Int?
+            let summary: Summary?
+            let proveIt: ProveIt?
+
+            struct Summary: Codable {
+                let objectiveLabel: String?
+                let score: Int
+                let competenciesStrong: Int
+                let competenciesTotal: Int
+                let assessmentsCount: Int
+                let weeksClimbed: Int?
+            }
+            struct ProveIt: Codable {
+                let kind: String
+                let label: String
+                let route: String
+                let comingSoonProof: Bool?
+            }
+        }
 
         struct TargetBands: Codable {
             let competitive: Int

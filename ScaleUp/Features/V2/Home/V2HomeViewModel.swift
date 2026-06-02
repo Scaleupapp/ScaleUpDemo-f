@@ -44,6 +44,14 @@ struct V2HomeData: Codable {
     /// Single-paragraph insight from the backend describing what to focus on
     /// this week and why. Surfaced just below the readiness card.
     let weeklyInsight: String?
+    let ready: HomeReady?
+
+    struct HomeReady: Codable {
+        let isReady: Bool
+        let readyAt: String?
+        let momentSeen: Bool?
+        let proveIt: V2YouOverview.ReadinessBlock.ReadyBlock.ProveIt?
+    }
 
     /// One row in the multi-week plan strip on V2 Home.
     struct PlanWeek: Codable, Identifiable {
