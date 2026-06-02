@@ -33,6 +33,19 @@ struct V2YouOverview: Codable {
         let coverage: Double?
         let breakdown: [BreakdownItem]?
         let ready: ReadyBlock?
+        // Calibration evidence: null until the archetype has 25+ real outcomes.
+        // Must be `var` with a default so the synthesized Decodable doesn't omit
+        // it and sampleData memberwise inits keep compiling without passing it.
+        var calibration: Calibration? = nil
+
+        struct Calibration: Codable {
+            let basedOnOutcomes: Int
+            let archetype: String
+            let archetypeLabel: String
+            let successRate: Double
+            let target: Int
+            let computedAt: String
+        }
 
         struct ReadyBlock: Codable {
             let isReady: Bool

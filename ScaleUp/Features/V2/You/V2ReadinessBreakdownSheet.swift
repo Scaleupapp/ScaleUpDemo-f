@@ -28,6 +28,9 @@ struct V2ReadinessBreakdownSheet: View {
                     if let bands = readiness.targetBands {
                         targetBandsCard(bands: bands)
                     }
+                    if let cal = readiness.calibration {
+                        calibrationEvidenceCard(cal)
+                    }
                     if hasComposite {
                         if !assessed.isEmpty {
                             competencySection(title: "What's shaping your number", items: assessed)
@@ -117,6 +120,32 @@ struct V2ReadinessBreakdownSheet: View {
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(reached ? ColorTokens.gold : ColorTokens.textSecondary)
         }
+    }
+
+    // MARK: - Calibration evidence ("Backed by real outcomes")
+
+    private func calibrationEvidenceCard(_ cal: V2YouOverview.ReadinessBlock.Calibration) -> some View {
+        let inTen = Int((cal.successRate * 10).rounded())
+        let body = "About \(inTen) in 10 people with \(cal.archetypeLabel) who reached \(cal.target)% readiness went on to succeed — based on \(cal.basedOnOutcomes) real journeys so far."
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("BACKED BY REAL OUTCOMES")
+                    .font(.system(size: 10, weight: .bold)).tracking(1.2)
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            Text(body)
+                .font(.system(size: 13))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(ColorTokens.surface))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .stroke(ColorTokens.gold.opacity(0.25), lineWidth: 1))
     }
 
     // MARK: - Competency breakdown
