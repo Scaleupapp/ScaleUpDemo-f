@@ -19,6 +19,7 @@ struct V2YouView: View {
     @State private var showCreatorApp = false
     @State private var showCreateContent = false
     @State private var showAppStatus = false
+    @State private var showReadinessBreakdown = false
 
     // Inference panel
     @State private var inferences: [UserInference] = []
@@ -77,6 +78,11 @@ struct V2YouView: View {
             CreateContentView()
                 .environment(appState)
                 .environment(objectiveContext)
+        }
+        .sheet(isPresented: $showReadinessBreakdown) {
+            if let data = vm.data {
+                V2ReadinessBreakdownSheet(readiness: data.readiness)
+            }
         }
     }
 
@@ -267,40 +273,66 @@ struct V2YouView: View {
     // MARK: - Readiness ring & stats
 
     private func readinessRing(readiness: V2YouOverview.ReadinessBlock) -> some View {
-        VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .stroke(ColorTokens.surfaceElevated, lineWidth: 9)
-                    .frame(width: 130, height: 130)
-                Circle()
-                    .trim(from: 0, to: CGFloat(readiness.score) / 100.0)
-                    .stroke(ColorTokens.gold, style: StrokeStyle(lineWidth: 9, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                    .frame(width: 130, height: 130)
-                VStack(spacing: 2) {
-                    HStack(alignment: .firstTextBaseline, spacing: 1) {
-                        Text("\(readiness.score)").font(.system(size: 32, weight: .bold))
-                        Text("%").font(.system(size: 18, weight: .bold)).foregroundStyle(ColorTokens.textSecondary)
+        // The whole ring is the tap target for the breakdown sheet ("what's in
+        // your number" + "why this target"). The inline Target line surfaces the
+        // personalized P2 target without opening the sheet.
+        Button {
+            showReadinessBreakdown = true
+        } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .stroke(ColorTokens.surfaceElevated, lineWidth: 9)
+                        .frame(width: 130, height: 130)
+                    Circle()
+                        .trim(from: 0, to: CGFloat(readiness.score) / 100.0)
+                        .stroke(ColorTokens.gold, style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 130, height: 130)
+                    VStack(spacing: 2) {
+                        HStack(alignment: .firstTextBaseline, spacing: 1) {
+                            Text("\(readiness.score)").font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                            Text("%").font(.system(size: 18, weight: .bold)).foregroundStyle(ColorTokens.textSecondary)
+                        }
+                        Text("READINESS")
+                            .font(.system(size: 10, weight: .semibold)).tracking(1.2)
+                            .foregroundStyle(ColorTokens.textTertiary)
                     }
-                    Text("READINESS")
-                        .font(.system(size: 10, weight: .semibold)).tracking(1.2)
-                        .foregroundStyle(ColorTokens.textTertiary)
                 }
-            }
-            Text(readiness.onTrackText)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(readiness.weeksOverdue != nil ? ColorTokens.warning : ColorTokens.gold)
+                Text(readiness.onTrackText)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(readiness.weeksOverdue != nil ? ColorTokens.warning : ColorTokens.gold)
 
-            if let weeks = readiness.weeksRemaining, weeks > 0 {
-                Text("\(weeks) week\(weeks == 1 ? "" : "s") remaining")
-                    .font(.system(size: 11)).foregroundStyle(ColorTokens.textTertiary)
-            } else if let overdue = readiness.weeksOverdue, overdue > 0 {
-                Text("\(overdue) week\(overdue == 1 ? "" : "s") past deadline")
-                    .font(.system(size: 11))
-                    .foregroundStyle(ColorTokens.warning)
+                if let weeks = readiness.weeksRemaining, weeks > 0 {
+                    Text("\(weeks) week\(weeks == 1 ? "" : "s") remaining")
+                        .font(.system(size: 11)).foregroundStyle(ColorTokens.textTertiary)
+                } else if let overdue = readiness.weeksOverdue, overdue > 0 {
+                    Text("\(overdue) week\(overdue == 1 ? "" : "s") past deadline")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.warning)
+                }
+
+                HStack(spacing: 6) {
+                    if let target = readiness.target {
+                        Text("Target \(target)%")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                        Text("·").font(.system(size: 11)).foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Text("What's in your number")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .padding(.top, 2)
             }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: .infinity)
+        .buttonStyle(.plain)
     }
 
     private func statsBlock(data: V2YouOverview) -> some View {

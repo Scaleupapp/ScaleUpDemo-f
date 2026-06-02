@@ -25,6 +25,27 @@ struct V2YouOverview: Codable {
         let targetDate: String?
         let weeksRemaining: Int?
         let weeksOverdue: Int?
+        // Readiness redesign (v2.2): personalized target + bands (P2 "why this
+        // target") and the per-competency breakdown + coverage (P1b "what's in
+        // your number"). All optional so older API responses still decode.
+        let target: Int?
+        let targetBands: TargetBands?
+        let coverage: Double?
+        let breakdown: [BreakdownItem]?
+
+        struct TargetBands: Codable {
+            let competitive: Int
+            let strong: Int
+            let exceptional: Int
+        }
+        struct BreakdownItem: Codable, Identifiable, Hashable {
+            let name: String
+            let weight: Int
+            let score: Int
+            let assessed: Bool
+            let primitive: String
+            var id: String { name }
+        }
     }
     struct WeekProgressBlock: Codable {
         let done: Int
