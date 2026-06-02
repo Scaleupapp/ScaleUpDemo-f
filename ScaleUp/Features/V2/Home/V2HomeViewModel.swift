@@ -48,12 +48,28 @@ struct V2HomeData: Codable {
     // synthesized Decodable; `var` with a default is still decoded (decodeIfPresent)
     // AND keeps it out of the memberwise init so the big sampleData literal compiles.
     var ready: HomeReady? = nil
+    /// Phase 4A — outcome capture prompt. `var` + default so sampleData compiles
+    /// unchanged (same pattern as `ready`).
+    var outcomePrompt: OutcomePrompt? = nil
 
     struct HomeReady: Codable {
         let isReady: Bool
         let readyAt: String?
         let momentSeen: Bool?
         let proveIt: V2YouOverview.ReadinessBlock.ReadyBlock.ProveIt?
+    }
+
+    /// Phase 4A — objective outcome capture prompt from the backend.
+    struct OutcomePrompt: Codable {
+        let due: Bool
+        let objectiveId: String
+        let objectiveLabel: String?
+        let options: [Option]
+        struct Option: Codable, Identifiable {
+            let key: String
+            let label: String
+            var id: String { key }
+        }
     }
 
     /// One row in the multi-week plan strip on V2 Home.
