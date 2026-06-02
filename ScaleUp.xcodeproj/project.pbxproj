@@ -227,6 +227,7 @@
 		5E38BE1004B14155875BEF68 /* APICompassCoderTurnResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB2CB018CAF23A6E21541F6F /* APICompassCoderTurnResponse.swift */; };
 		60AF23DDBD2447ECC960F7F9 /* APICompleteJourneyAssignmentRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 565049CC4E690BDE6E6220B2 /* APICompleteJourneyAssignmentRequest.swift */; };
 		611B14B825701B2607439D73 /* APIAuthRegisterRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD444E7B066DFEBE83C880C3 /* APIAuthRegisterRequest.swift */; };
+		613BEF684615CB84D89A8A06 /* V2ReadyMomentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 179D3C908C4A8B9FDE2648EE /* V2ReadyMomentView.swift */; };
 		615E7F6767F7CBB9FCCAA20A /* PreviewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B97BBDC4FB5495822539FB2 /* PreviewHelpers.swift */; };
 		61F424D3C042ABAD49F68FC7 /* APIGetMe200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = A85B44DE34B53F1C0A7DC5C3 /* APIGetMe200Response.swift */; };
 		62341DB18FD436BDCDF53B65 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC3FF8BEE662D44A13BAE021 /* SettingsView.swift */; };
@@ -383,6 +384,7 @@
 		A1FE7786D0AC250F33E64FBF /* PlanGenerationBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 096FC693282A94CFA70DFDF1 /* PlanGenerationBanner.swift */; };
 		A292A17DC5D02BE495D5E3C9 /* PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66B828D0A86A77D8A2CD67FE /* PlaylistDetailView.swift */; };
 		A2B351904D3CC9E5684B7CB9 /* V2YouView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88AACD5887ADAE12E5D3EBF6 /* V2YouView.swift */; };
+		A2CDFF8AB533147DBDD145EB /* V2WhatsNextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31256CBC79DF85CABDACC527 /* V2WhatsNextView.swift */; };
 		A3B0225D5A07D505DF3B8300 /* APIJourneyDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 419139DD99D5271EB345824A /* APIJourneyDay.swift */; };
 		A3FFC38CBFF9891564E7436C /* ChallengeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E362E314447D6CCCDE1023A /* ChallengeReviewView.swift */; };
 		A4E1D6F6E88B0AA7180CA8B7 /* AITutorTypingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A9DD6FC8946940AE8F458D /* AITutorTypingIndicator.swift */; };
@@ -634,6 +636,7 @@
 		16771E7523419F120DF73DCD /* AnalyticsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsProvider.swift; sourceTree = "<group>"; };
 		16C309F5DEE1E728216A72A7 /* PlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerView.swift; sourceTree = "<group>"; };
 		17800730A10305BCD2D9DB35 /* V2OnboardingState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2OnboardingState.swift; sourceTree = "<group>"; };
+		179D3C908C4A8B9FDE2648EE /* V2ReadyMomentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ReadyMomentView.swift; sourceTree = "<group>"; };
 		17DF31A52EED73D361A97EFB /* CalibrationProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalibrationProgressBar.swift; sourceTree = "<group>"; };
 		19284A76A18D0235F60010AD /* APIAuthResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIAuthResult.swift; sourceTree = "<group>"; };
 		1A8127ACC54344AB8CD71207 /* ContentDestinationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentDestinationView.swift; sourceTree = "<group>"; };
@@ -675,6 +678,7 @@
 		2FA09B254AA58FEF1E644D95 /* APICapstoneResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstoneResult.swift; sourceTree = "<group>"; };
 		2FDF28E47E57B426FD56C53F /* APIJourney.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIJourney.swift; sourceTree = "<group>"; };
 		301D2A39466D217CD6E0FC8F /* MindMap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MindMap.swift; sourceTree = "<group>"; };
+		31256CBC79DF85CABDACC527 /* V2WhatsNextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2WhatsNextView.swift; sourceTree = "<group>"; };
 		314D01601386BD44512AC3AC /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		32226F67910DD95B1DF0A3FF /* Interview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interview.swift; sourceTree = "<group>"; };
 		323626E51973063858C16201 /* APIGetTodayPlan200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetTodayPlan200Response.swift; sourceTree = "<group>"; };
@@ -2152,6 +2156,8 @@
 			children = (
 				098DB85D0841478030C0F896 /* V2HomeView.swift */,
 				6DDB828F8C0A46067D9E6472 /* V2HomeViewModel.swift */,
+				179D3C908C4A8B9FDE2648EE /* V2ReadyMomentView.swift */,
+				31256CBC79DF85CABDACC527 /* V2WhatsNextView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -3225,6 +3231,7 @@
 				3BF32D95F511628BE3661127 /* V2QuizHomeView.swift in Sources */,
 				98BD425A7657BE394FB2117C /* V2QuizRequestLoaderSheet.swift in Sources */,
 				CCA57E6E45E7ECCB3BB90162 /* V2ReadinessBreakdownSheet.swift in Sources */,
+				613BEF684615CB84D89A8A06 /* V2ReadyMomentView.swift in Sources */,
 				1FDB65BD377BB14B0EF98F55 /* V2ResumeHomeView.swift in Sources */,
 				37C9EC028B8946A232D103B1 /* V2RootView.swift in Sources */,
 				CF8AB9E06F5B2DE8B6075645 /* V2Tab.swift in Sources */,
@@ -3233,6 +3240,7 @@
 				1928542B25C207EE412AC4F6 /* V2Theme.swift in Sources */,
 				123E2720B611EBC02A46C82F /* V2TopicProficiencyView.swift in Sources */,
 				4B893C84E48E6BB10EC8BFFF /* V2TopicSelectionView.swift in Sources */,
+				A2CDFF8AB533147DBDD145EB /* V2WhatsNextView.swift in Sources */,
 				8400DD82E072D6A2238215F6 /* V2YouAnalyticsView.swift in Sources */,
 				D0F2DBDB9B1435F03B35E7C9 /* V2YouSections.swift in Sources */,
 				A2B351904D3CC9E5684B7CB9 /* V2YouView.swift in Sources */,
@@ -3340,7 +3348,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 181;
+				CURRENT_PROJECT_VERSION = 182;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3416,7 +3424,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 181;
+				CURRENT_PROJECT_VERSION = 182;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
