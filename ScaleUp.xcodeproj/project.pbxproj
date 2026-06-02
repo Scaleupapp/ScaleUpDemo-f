@@ -459,6 +459,7 @@
 		CB6D1EDA4B885721BE2A091D /* APICapstonePairResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3A6A671E903FF5893A12F3F /* APICapstonePairResponse.swift */; };
 		CBC69ABF3934483B1754D952 /* V2ObjectiveConfirmView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 770F3677EA3F6C6717C9B720 /* V2ObjectiveConfirmView.swift */; };
 		CC8C9DA27722178A0F4278D9 /* DiagnosticResultsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F29D83283717BDEBC5824884 /* DiagnosticResultsViewModel.swift */; };
+		CCA57E6E45E7ECCB3BB90162 /* V2ReadinessBreakdownSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E14D8C78AB6BDCD8238761 /* V2ReadinessBreakdownSheet.swift */; };
 		CCD65DC516E760E119C96DA6 /* RecalibrationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03F387C72BEACD066343A33F /* RecalibrationCard.swift */; };
 		CD28C24C814498DC8FD54D9B /* DecompositionStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA78987754DCA44BB0C49092 /* DecompositionStepRow.swift */; };
 		CE3318DEC10C0FF2B6FD4C57 /* APICapstoneSummaryInProgress.swift in Sources */ = {isa = PBXBuildFile; fileRef = 456B22941B839409661F5AE3 /* APICapstoneSummaryInProgress.swift */; };
@@ -757,6 +758,7 @@
 		55F3E776BE87546F4D96E291 /* ColorTokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTokens.swift; sourceTree = "<group>"; };
 		5633F29ED915AA7767689BB4 /* ApplicationStatusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApplicationStatusView.swift; sourceTree = "<group>"; };
 		565049CC4E690BDE6E6220B2 /* APICompleteJourneyAssignmentRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICompleteJourneyAssignmentRequest.swift; sourceTree = "<group>"; };
+		56E14D8C78AB6BDCD8238761 /* V2ReadinessBreakdownSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ReadinessBreakdownSheet.swift; sourceTree = "<group>"; };
 		56F897C3D8F750F25666C0F4 /* AdminService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminService.swift; sourceTree = "<group>"; };
 		56FB9E00928BE506699C7CB5 /* CapstoneVoiceReflectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneVoiceReflectionView.swift; sourceTree = "<group>"; };
 		57EBF6E4DCBD7366542B3841 /* TabCoachMarkModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabCoachMarkModifier.swift; sourceTree = "<group>"; };
@@ -2310,6 +2312,7 @@
 				99350018B2C0E0FBB8335E7F /* V2CompassHistoryView.swift */,
 				6D7E860E60987B3363F64551 /* V2PlanDetailView.swift */,
 				92B0D37303D25C8D1064CD20 /* V2PlanDetailViewModel.swift */,
+				56E14D8C78AB6BDCD8238761 /* V2ReadinessBreakdownSheet.swift */,
 				0C2AE1C1102C84213D76DEBC /* V2YouAnalyticsView.swift */,
 				E452EF3484AC92A1DBF87924 /* V2YouSections.swift */,
 				88AACD5887ADAE12E5D3EBF6 /* V2YouView.swift */,
@@ -3221,6 +3224,7 @@
 				54695CBBA8731C241B32C61C /* V2QuizGenerateSheet.swift in Sources */,
 				3BF32D95F511628BE3661127 /* V2QuizHomeView.swift in Sources */,
 				98BD425A7657BE394FB2117C /* V2QuizRequestLoaderSheet.swift in Sources */,
+				CCA57E6E45E7ECCB3BB90162 /* V2ReadinessBreakdownSheet.swift in Sources */,
 				1FDB65BD377BB14B0EF98F55 /* V2ResumeHomeView.swift in Sources */,
 				37C9EC028B8946A232D103B1 /* V2RootView.swift in Sources */,
 				CF8AB9E06F5B2DE8B6075645 /* V2Tab.swift in Sources */,
@@ -3336,7 +3340,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3412,7 +3416,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
