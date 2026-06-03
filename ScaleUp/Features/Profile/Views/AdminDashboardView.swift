@@ -135,6 +135,17 @@ struct AdminDashboardView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            NavigationLink {
+                AdminEmployerRequestsView()
+            } label: {
+                adminNavRow(
+                    icon: "building.2.fill", title: "Company Requests",
+                    subtitle: "Approve employers for the talent marketplace", color: ColorTokens.gold,
+                    badge: nil
+                )
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, Spacing.md)
     }
