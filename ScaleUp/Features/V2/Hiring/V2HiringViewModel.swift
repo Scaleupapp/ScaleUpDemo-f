@@ -83,11 +83,11 @@ final class V2HiringViewModel {
         loading = true
         error = nil
         do {
-            let _: V2APIResponse<OkResult> = try await V2APIClient.shared.post("/you/talent/opt-out", body: EmptyPostBody())
+            let _: V2APIResponse<OkResult> = try await V2APIClient.shared.post("/you/talent/opt-out", body: HiringEmptyBody())
             optedIn = false
             await load()
         } catch {
-            error = friendlyMessage(for: error, fallback: "Couldn't turn this off. Try again.")
+            self.error = friendlyMessage(for: error, fallback: "Couldn't turn this off. Try again.")
         }
         loading = false
     }
@@ -102,7 +102,7 @@ final class V2HiringViewModel {
             let response: V2APIResponse<[CandidateConn]> = try await V2APIClient.shared.get("/you/talent/connections")
             connections = response.data
         } catch {
-            error = friendlyMessage(for: error, fallback: "Couldn't load your inbox. Pull to refresh.")
+            self.error = friendlyMessage(for: error, fallback: "Couldn't load your inbox. Pull to refresh.")
         }
         loading = false
     }
@@ -121,14 +121,14 @@ final class V2HiringViewModel {
         error = nil
         do {
             let _: V2APIResponse<ConnectionRespondResult> =
-                try await V2APIClient.shared.post("/you/talent/connections/\(id)/\(decision)", body: EmptyPostBody())
+                try await V2APIClient.shared.post("/you/talent/connections/\(id)/\(decision)", body: HiringEmptyBody())
             // Re-fetch so an approval pulls in the freshly-revealed employer details.
             await loadConnections()
         } catch V2APIError.httpError(let status, _) where status == 409 {
             // ALREADY_RESPONDED — someone/somewhere already actioned it; just resync.
             await loadConnections()
         } catch {
-            error = friendlyMessage(for: error, fallback: "Couldn't update this request. Try again.")
+            self.error = friendlyMessage(for: error, fallback: "Couldn't update this request. Try again.")
         }
     }
 

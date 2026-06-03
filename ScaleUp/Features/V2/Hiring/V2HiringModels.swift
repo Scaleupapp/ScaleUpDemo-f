@@ -79,7 +79,8 @@ struct TalentOptInBody: Codable {
 }
 
 /// Empty POST body for opt-out (the client requires a Codable body type).
-struct EmptyPostBody: Codable {}
+/// Named `Hiring…` to avoid colliding with the file-private `EmptyPostBody` in DrillService.
+struct HiringEmptyBody: Codable {}
 
 /// `{ ok: true }` envelope returned by opt-in / opt-out.
 struct OkResult: Codable {
