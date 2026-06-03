@@ -26,6 +26,11 @@ struct V2YouView: View {
     @State private var inferencesExpanded = false
     private let inferenceService = UserInferenceService()
 
+    // Hire from ScaleUp — candidate side. Self-gated: the "Open to opportunities"
+    // entry only renders when `available == true` (GET /you/talent didn't 404),
+    // so the whole feature stays invisible until FEATURE_EMPLOYER_MARKETPLACE flips.
+    @State private var hiringVM = V2HiringViewModel()
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -42,10 +47,12 @@ struct V2YouView: View {
         .task {
             await vm.load()
             await loadInferences()
+            await loadHiring()
         }
         .refreshable {
             await vm.load()
             await loadInferences()
+            await loadHiring()
         }
         // Re-inject env on every sheet — v1 views read AppState / ObjectiveContext
         // directly and SwiftUI doesn't reliably propagate @Observable across sheets.
@@ -108,6 +115,13 @@ struct V2YouView: View {
             // MY LEARNING
             sectionLabel("My learning")
             learningRows(weekProgress: data.weekProgress)
+
+            // OPEN TO OPPORTUNITIES (self-gated — only when the hiring feature is live)
+            if hiringVM.available == true {
+                sectionDivider.padding(.vertical, 18)
+                sectionLabel("Career")
+                openToOpportunitiesRow
+            }
 
             // Inference panel (collapsible)
             if !inferences.isEmpty {
@@ -920,6 +934,70 @@ struct V2YouView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Open to opportunities (Hire from ScaleUp)
+
+    /// Self-gated You-tab entry into the candidate hiring flow. Shows opted-in
+    /// state and a pending-employer-interest badge; taps open the Open-to-work
+    /// screen (which itself links into the connection inbox). Passes the shared
+    /// `hiringVM` so opt-in state + the badge stay in sync after edits.
+    private var openToOpportunitiesRow: some View {
+        NavigationLink {
+            V2OpenToWorkView(viewModel: hiringVM)
+                .environment(appState)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "briefcase")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 32, height: 32)
+                    .background(ColorTokens.gold.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Open to opportunities")
+                        .font(V2Theme.bodyMedium)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Text(hiringVM.optedIn ? "Discoverable to vetted employers" : "Let employers discover your readiness")
+                        .font(.system(size: 11))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                Spacer()
+                if hiringVM.pendingCount > 0 {
+                    Text("\(hiringVM.pendingCount)")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(ColorTokens.buttonPrimaryText)
+                        .frame(minWidth: 22, minHeight: 22)
+                        .background(ColorTokens.gold)
+                        .clipShape(Capsule())
+                } else if hiringVM.optedIn {
+                    Text("ON")
+                        .font(.system(size: 10, weight: .bold)).tracking(0.5)
+                        .foregroundStyle(ColorTokens.success)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(ColorTokens.success.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.vertical, 14)
+            .overlay(alignment: .bottom) {
+                Rectangle().fill(V2Theme.cardBorder).frame(height: 1)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func loadHiring() async {
+        await hiringVM.load()
+        // If the feature is live, also pull connections so the pending badge is
+        // accurate on first paint (a 404 already short-circuited `available`).
+        if hiringVM.available == true {
+            await hiringVM.loadConnections()
+        }
     }
 
     // MARK: - Settings + footer
