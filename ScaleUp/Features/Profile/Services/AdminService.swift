@@ -58,6 +58,20 @@ actor AdminService {
         _ = try await api.requestRaw(AdminEndpoints.rejectApplication(id: id), body: body)
     }
 
+    // MARK: - Employer (Talent Marketplace) Approvals
+
+    func fetchPendingEmployers() async throws -> [PendingEmployer] {
+        try await api.request(AdminEndpoints.pendingEmployers)
+    }
+
+    func approveEmployer(id: String) async throws {
+        _ = try await api.requestRaw(AdminEndpoints.approveEmployer(id: id))
+    }
+
+    func rejectEmployer(id: String) async throws {
+        _ = try await api.requestRaw(AdminEndpoints.rejectEmployer(id: id))
+    }
+
     func moderateContent(id: String, status: String, note: String?) async throws {
         let body = ModerateRequest(moderationStatus: status, moderationNote: note)
         _ = try await api.requestRaw(AdminEndpoints.moderateContent(id: id), body: body)
@@ -203,6 +217,9 @@ private enum AdminEndpoints: Endpoint {
     case removeContent(id: String)
     case dismissReports(id: String)
     case contentReports(contentId: String)
+    case pendingEmployers
+    case approveEmployer(id: String)
+    case rejectEmployer(id: String)
 
     var path: String {
         switch self {
@@ -220,14 +237,17 @@ private enum AdminEndpoints: Endpoint {
         case .removeContent(let id): return "/admin/content/\(id)/remove"
         case .dismissReports(let id): return "/admin/content/\(id)/dismiss"
         case .contentReports(let id): return "/admin/content/\(id)/reports"
+        case .pendingEmployers: return "/admin/employers/pending"
+        case .approveEmployer(let id): return "/admin/employers/\(id)/approve"
+        case .rejectEmployer(let id): return "/admin/employers/\(id)/reject"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .stats, .users, .applications, .content, .contentReports, .creators: return .get
+        case .stats, .users, .applications, .content, .contentReports, .creators, .pendingEmployers: return .get
         case .ban, .unban, .moderateContent, .promoteCreator, .removeContent, .dismissReports: return .put
-        case .approveApplication, .rejectApplication: return .post
+        case .approveApplication, .rejectApplication, .approveEmployer, .rejectEmployer: return .post
         }
     }
 
