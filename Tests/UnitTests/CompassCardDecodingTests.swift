@@ -30,4 +30,14 @@ final class CompassCardDecodingTests: XCTestCase {
         guard case .unknown = cards[0].payload else { return XCTFail("should be unknown") }
         XCTAssertEqual(cards[0].type, "future_card")
     }
+
+    func testDecodesTutoringResultCard() throws {
+        let json = """
+        [{"type":"tutoring_result","payload":{"topic":"recursion","checkScore":75,"beforeScore":35,"afterScore":52,"delta":17}}]
+        """.data(using: .utf8)!
+        let cards = try JSONDecoder().decode([CompassCard].self, from: json)
+        guard case let .tutoringResult(p) = cards[0].payload else { return XCTFail("wrong payload") }
+        XCTAssertEqual(p.delta, 17)
+        XCTAssertEqual(p.topic, "recursion")
+    }
 }

@@ -13,6 +13,7 @@ enum CompassCardPayload {
     case topicDetail(CompassTopicDetailPayload)
     case weakTopics([CompassWeakTopic])
     case recentActivity([CompassActivityItem])
+    case tutoringResult(CompassTutoringResultPayload)
     case unknown
 }
 
@@ -35,6 +36,7 @@ struct CompassCard: Codable, Identifiable {
         case "topic_detail":          payload = .topicDetail(try c.decode(CompassTopicDetailPayload.self, forKey: .payload))
         case "weak_topics":           payload = .weakTopics((try c.decode(WeakTopicsWrapper.self, forKey: .payload)).topics)
         case "recent_activity":       payload = .recentActivity((try c.decode(RecentActivityWrapper.self, forKey: .payload)).items)
+        case "tutoring_result":       payload = .tutoringResult(try c.decode(CompassTutoringResultPayload.self, forKey: .payload))
         default:                      payload = .unknown
         }
     }
@@ -48,6 +50,7 @@ struct CompassCard: Codable, Identifiable {
         case .topicDetail(let p):     try c.encode(p, forKey: .payload)
         case .weakTopics(let t):      try c.encode(WeakTopicsWrapper(topics: t), forKey: .payload)
         case .recentActivity(let i):  try c.encode(RecentActivityWrapper(items: i), forKey: .payload)
+        case .tutoringResult(let p):  try c.encode(p, forKey: .payload)
         case .unknown:                try c.encodeNil(forKey: .payload)
         }
     }
@@ -87,4 +90,12 @@ struct CompassWeakTopic: Codable, Identifiable {
 struct CompassActivityItem: Codable, Identifiable {
     let id = UUID(); let type: String; let title: String; let score: Double?; let date: String?
     private enum CodingKeys: String, CodingKey { case type, title, score, date }
+}
+
+struct CompassTutoringResultPayload: Codable {
+    let topic: String
+    let checkScore: Double?
+    let beforeScore: Double?
+    let afterScore: Double?
+    let delta: Double?
 }

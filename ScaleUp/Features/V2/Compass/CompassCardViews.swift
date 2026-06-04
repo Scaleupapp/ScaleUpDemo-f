@@ -5,12 +5,13 @@ struct CompassCardView: View {
     let card: CompassCard
     var body: some View {
         switch card.payload {
-        case .readiness(let p):       CompassReadinessCard(payload: p)
-        case .activityResult(let p):  CompassActivityResultCard(payload: p)
-        case .topicDetail(let p):     CompassTopicDetailCard(payload: p)
-        case .weakTopics(let topics): CompassWeakTopicsCard(topics: topics)
+        case .readiness(let p):          CompassReadinessCard(payload: p)
+        case .activityResult(let p):     CompassActivityResultCard(payload: p)
+        case .topicDetail(let p):        CompassTopicDetailCard(payload: p)
+        case .weakTopics(let topics):    CompassWeakTopicsCard(topics: topics)
         case .recentActivity(let items): CompassRecentActivityCard(items: items)
-        case .unknown:                EmptyView()
+        case .tutoringResult(let p):     CompassTutoringResultCard(payload: p)
+        case .unknown:                   EmptyView()
         }
     }
 }
@@ -94,6 +95,42 @@ struct CompassRecentActivityCard: View {
         CardShell(title: "Recent activity", systemImage: "clock.arrow.circlepath") {
             ForEach(items) { it in
                 HStack { Text("\(it.type.capitalized): \(it.title)").font(.subheadline).foregroundStyle(ColorTokens.textPrimary).lineLimit(1); Spacer(); if let s = it.score { Text("\(scoreText(s))").font(.subheadline).foregroundStyle(ColorTokens.textSecondary) } }
+            }
+        }
+    }
+}
+
+struct CompassTutoringResultCard: View {
+    let payload: CompassTutoringResultPayload
+    var body: some View {
+        CardShell(title: "Tutoring check \u{00B7} \(payload.topic.capitalized)", systemImage: "graduationcap.fill") {
+            if let s = payload.checkScore {
+                Text("You scored \(Int(s.rounded()))%")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+            }
+            HStack(spacing: 6) {
+                Text("\(payload.topic.capitalized) mastery:")
+                    .font(.subheadline)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                if let b = payload.beforeScore {
+                    Text("\(Int(b.rounded()))%")
+                        .font(.subheadline)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                Image(systemName: "arrow.right")
+                    .font(.caption2)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                if let a = payload.afterScore {
+                    Text("\(Int(a.rounded()))%")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                }
+                if let d = payload.delta, d != 0 {
+                    Text(d > 0 ? "\u{2191}\(Int(d.rounded()))" : "\u{2193}\(Int(abs(d).rounded()))")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(d > 0 ? .green : .red)
+                }
             }
         }
     }
