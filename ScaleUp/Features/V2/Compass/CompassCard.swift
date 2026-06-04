@@ -2,6 +2,10 @@ import Foundation
 
 // Rich answer cards from Compass Progress Intelligence. Decoded by `type`;
 // unknown types decode to `.unknown` and are rendered as nothing (forward-compatible).
+//
+// These are response-only types, but the V2 API client constrains response models
+// to `Codable`, so they conform to Codable. encode(to:) is provided for CompassCard
+// (its enum payload can't be synthesized) but is never exercised at runtime.
 
 enum CompassCardPayload {
     case readiness(CompassReadinessPayload)
@@ -12,14 +16,14 @@ enum CompassCardPayload {
     case unknown
 }
 
-struct CompassCard: Decodable, Identifiable {
+struct CompassCard: Codable, Identifiable {
     let id = UUID()
     let type: String
     let payload: CompassCardPayload
 
     private enum CodingKeys: String, CodingKey { case type, payload }
-    private struct WeakTopicsWrapper: Decodable { let topics: [CompassWeakTopic] }
-    private struct RecentActivityWrapper: Decodable { let items: [CompassActivityItem] }
+    private struct WeakTopicsWrapper: Codable { let topics: [CompassWeakTopic] }
+    private struct RecentActivityWrapper: Codable { let items: [CompassActivityItem] }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -34,40 +38,53 @@ struct CompassCard: Decodable, Identifiable {
         default:                      payload = .unknown
         }
     }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(type, forKey: .type)
+        switch payload {
+        case .readiness(let p):       try c.encode(p, forKey: .payload)
+        case .activityResult(let p):  try c.encode(p, forKey: .payload)
+        case .topicDetail(let p):     try c.encode(p, forKey: .payload)
+        case .weakTopics(let t):      try c.encode(WeakTopicsWrapper(topics: t), forKey: .payload)
+        case .recentActivity(let i):  try c.encode(RecentActivityWrapper(items: i), forKey: .payload)
+        case .unknown:                try c.encodeNil(forKey: .payload)
+        }
+    }
 }
 
-struct CompassReadinessPayload: Decodable {
+struct CompassReadinessPayload: Codable {
     let value: Double?; let target: Double?; let source: String?
     let distanceToTarget: Double?; let contributors: [Contributor]; let topDraggers: [Dragger]; let note: String
-    struct Contributor: Decodable, Identifiable { let id = UUID(); let name: String; let score: Double?; let weight: Double?; let assessed: Bool
+    struct Contributor: Codable, Identifiable { let id = UUID(); let name: String; let score: Double?; let weight: Double?; let assessed: Bool
         private enum CodingKeys: String, CodingKey { case name, score, weight, assessed } }
-    struct Dragger: Decodable, Identifiable { let id = UUID(); let name: String; let score: Double?; let weight: Double?
+    struct Dragger: Codable, Identifiable { let id = UUID(); let name: String; let score: Double?; let weight: Double?
         private enum CodingKeys: String, CodingKey { case name, score, weight } }
 }
 
-struct CompassActivityResultPayload: Decodable {
+struct CompassActivityResultPayload: Codable {
     let activityType: String; let title: String; let date: String?
     let overallScore: Double?; let scoreLabel: String; let dimensions: [Dimension]; let highlights: Highlights
-    struct Dimension: Decodable, Identifiable { let id = UUID(); let name: String; let score: Double?; let feedback: String?
+    struct Dimension: Codable, Identifiable { let id = UUID(); let name: String; let score: Double?; let feedback: String?
         private enum CodingKeys: String, CodingKey { case name, score, feedback } }
-    struct Highlights: Decodable { let strengths: [String]; let improvements: [String] }
+    struct Highlights: Codable { let strengths: [String]; let improvements: [String] }
 }
 
-struct CompassTopicDetailPayload: Decodable {
+struct CompassTopicDetailPayload: Codable {
     let topic: String; let score: Double?; let level: String?; let trend: String?
     let history: [Point]; let misconceptions: [Misconception]; let dueConcepts: [String]
-    struct Point: Decodable, Identifiable { let id = UUID(); let score: Double?; let date: String?
+    struct Point: Codable, Identifiable { let id = UUID(); let score: Double?; let date: String?
         private enum CodingKeys: String, CodingKey { case score, date } }
-    struct Misconception: Decodable, Identifiable { let id = UUID(); let tag: String; let explanation: String
+    struct Misconception: Codable, Identifiable { let id = UUID(); let tag: String; let explanation: String
         private enum CodingKeys: String, CodingKey { case tag, explanation } }
 }
 
-struct CompassWeakTopic: Decodable, Identifiable {
+struct CompassWeakTopic: Codable, Identifiable {
     let id = UUID(); let topic: String; let score: Double?; let trend: String; let assessedBy: [String]
     private enum CodingKeys: String, CodingKey { case topic, score, trend, assessedBy }
 }
 
-struct CompassActivityItem: Decodable, Identifiable {
+struct CompassActivityItem: Codable, Identifiable {
     let id = UUID(); let type: String; let title: String; let score: Double?; let date: String?
     private enum CodingKeys: String, CodingKey { case type, title, score, date }
 }
