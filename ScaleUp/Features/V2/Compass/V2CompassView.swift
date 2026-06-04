@@ -579,6 +579,17 @@ struct V2CompassView: View {
         }
     }
 
+    private func submitCompassInput() {
+        if let img = stagedImage {
+            let prompt = vm.inputText
+            stagedImage = nil
+            vm.inputText = ""
+            Task { await vm.sendVision(image: img, prompt: prompt) }
+        } else {
+            vm.send()
+        }
+    }
+
     private var inputBar: some View {
         VStack(spacing: 0) {
             stagedPhotoPreview
@@ -606,17 +617,10 @@ struct V2CompassView: View {
                     .font(V2Theme.body)
                     .foregroundStyle(ColorTokens.textPrimary)
                     .submitLabel(.send)
-                    .onSubmit { vm.send() }
+                    .onSubmit { submitCompassInput() }
 
                 Button {
-                    if let img = stagedImage {
-                        let prompt = vm.inputText
-                        stagedImage = nil
-                        vm.inputText = ""
-                        Task { await vm.sendVision(image: img, prompt: prompt) }
-                    } else {
-                        vm.send()
-                    }
+                    submitCompassInput()
                 } label: {
                     Image(systemName: "arrow.up")
                         .font(.system(size: 14, weight: .bold))

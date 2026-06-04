@@ -429,6 +429,8 @@ final class CompassViewModel {
             messages.append(.init(role: .compass, text: "I couldn't process that image — try another?"))
             return
         }
+        activeConfig = nil
+        showSuggestions = false
         // Local user bubble with the thumbnail (in memory only — never persisted server-side).
         messages.append(CompassMessage(role: .user, text: prompt, imageData: enc.data))
         isWaitingForReply = true
