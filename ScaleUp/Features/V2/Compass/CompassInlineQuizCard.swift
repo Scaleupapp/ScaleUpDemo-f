@@ -52,10 +52,11 @@ struct CompassInlineQuizCard: View {
                 ProgressView().tint(ColorTokens.gold)
 
             case .done:
+                // Fix 4: always show the score, even when per-question review is unavailable
+                Text("Check: \(Int((model.checkScore ?? 0).rounded()))%")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(ColorTokens.textPrimary)
                 if let rq = model.reviewedQuiz {
-                    Text("Check: \(Int((model.checkScore ?? 0).rounded()))%")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(ColorTokens.textPrimary)
                     ForEach(Array(rq.questions.enumerated()), id: \.offset) { idx, q in
                         let mine = model.answers[idx]
                         let correct = q.correctAnswer
@@ -91,7 +92,9 @@ struct CompassInlineQuizCard: View {
                 .strokeBorder(ColorTokens.gold.opacity(0.2), lineWidth: 1)
         )
         .onChange(of: model.phase) { _, newPhase in
-            if newPhase == .done || newPhase == .failed {
+            // Fix 1: guard ensures onFinished fires exactly once, preventing double-POST of tutor_result
+            if (newPhase == .done || newPhase == .failed), !model.finished {
+                model.finished = true
                 onFinished()
             }
         }
