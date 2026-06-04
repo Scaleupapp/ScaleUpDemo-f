@@ -201,7 +201,6 @@ enum CompassHomeRoute: String, Identifiable, CaseIterable {
     case quiz
     case interview
     case notes
-    case resume
     case plan
     case compete
     case codingDrill
@@ -221,7 +220,6 @@ enum CompassHomeRoute: String, Identifiable, CaseIterable {
         if s.contains("quiz")      { return .quiz }
         if s.contains("interview") { return .interview }
         if s.contains("note")      { return .notes }
-        if s.contains("resume")    { return .resume }
         if s.contains("plan")      { return .plan }
         if s.contains("compete") || s.contains("competition") || s.contains("challenge") {
             return .compete
@@ -261,7 +259,7 @@ final class CompassViewModel {
     private var didSendCoachOpener = false
 
     /// Set when the user picks a Compass quick-action chip that maps to a
-    /// dedicated destination screen (Quiz/Interview/Notes/Resume Home). The
+    /// dedicated destination screen (Quiz/Interview/Notes/Plan/Compete). The
     /// view presents the right home via .sheet(item:) on this value.
     var presentedHome: CompassHomeRoute?
 
@@ -356,7 +354,6 @@ final class CompassViewModel {
             .replacingOccurrences(of: "⚡ ", with: "")
             .replacingOccurrences(of: "🎙️ ", with: "")
             .replacingOccurrences(of: "📝 ", with: "")
-            .replacingOccurrences(of: "📄 ", with: "")
             .replacingOccurrences(of: "↗ ", with: "")
             .replacingOccurrences(of: "🤔 ", with: "")
         messages.append(.init(role: .user, text: userMsg))
@@ -567,7 +564,6 @@ final class CompassViewModel {
         if chip.contains("Quiz")      { return "quiz_config" }
         if chip.contains("interview") { return "interview_config" }
         if chip.contains("note")      { return "note" }
-        if chip.contains("resume")    { return "conversation" }
         return "conversation"
     }
 
@@ -653,7 +649,6 @@ final class CompassViewModel {
             "⚡ Quiz me",
             "🎙️ Practice interview",
             "📝 Make a note",
-            "📄 Build my resume",
             "↗ Plan my next 2 days",
             "🤔 Explain something",
         ]

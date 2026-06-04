@@ -134,9 +134,9 @@ struct V2CompassView: View {
             Task { await loadCompetitionStatus() }
         }
         // Compass quick actions → dedicated home destinations. Plan routes
-        // straight to the Home tab; Notes / Quiz / Interview / Resume each
-        // present a focused screen (where the user can see history + start
-        // new). Explain stays in the chat.
+        // straight to the Home tab; Notes / Quiz / Interview each present a
+        // focused screen (where the user can see history + start new).
+        // Explain stays in the chat.
         .sheet(item: $vm.presentedHome, onDismiss: { vm.presentedHome = nil }) { route in
             switch route {
             case .quiz:
@@ -160,11 +160,6 @@ struct V2CompassView: View {
                 .presentationDragIndicator(.visible)
             case .notes:
                 V2NoteFlowView(onClose: { vm.presentedHome = nil })
-                    .environment(appState)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
-            case .resume:
-                V2ResumeHomeView(onClose: { vm.presentedHome = nil })
                     .environment(appState)
                     .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
@@ -574,7 +569,7 @@ struct V2CompassView: View {
 
 /// The capability set Compass exposes, surfaced as an always-visible strip.
 /// `chip` text is what gets fed to CompassViewModel.handleSuggestion — keep
-/// the keywords ("Quiz", "interview", "note", "resume") so inferMode routes.
+/// the keywords ("Quiz", "interview", "note") so inferMode routes correctly.
 struct CompassQuickAction {
     let label: String
     let icon: String
@@ -586,7 +581,6 @@ struct CompassQuickAction {
         .init(label: "Practice interview", icon: "mic.fill", chip: "Practice interview"),
         .init(label: "Coding capstone", icon: "chevron.left.forwardslash.chevron.right", chip: "Show me my coding capstone"),
         .init(label: "Make a note", icon: "doc.text.fill", chip: "Make a note"),
-        .init(label: "Build my resume", icon: "person.text.rectangle.fill", chip: "Build my resume"),
         .init(label: "Plan my days", icon: "calendar", chip: "Plan my next 2 days"),
         .init(label: "Explain something", icon: "questionmark.circle.fill", chip: "Explain something"),
     ]

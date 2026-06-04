@@ -80,7 +80,6 @@
 		1F554D357378194E5C55A746 /* APIStartCodeDrill404Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14FA66C9DB9DF455ADD3EFF0 /* APIStartCodeDrill404Response.swift */; };
 		1F800912454BC2E926A6F2B7 /* LiveEventResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D17141FD37287891A9725EA6 /* LiveEventResultsView.swift */; };
 		1F82F1BDE435E3180B681F9D /* V2ActivitiesDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96352E6FD6E8E2F64864EAD /* V2ActivitiesDetailView.swift */; };
-		1FDB65BD377BB14B0EF98F55 /* V2ResumeHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E385671A73951A7B656868B5 /* V2ResumeHomeView.swift */; };
 		2013B559561303269E6DBAE3 /* DailyChallengeCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BB707A3DC976EB2862BD5DA /* DailyChallengeCarousel.swift */; };
 		2024206D6EB3B56969CEA0E2 /* APIAuthVerifyPhoneOTPRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DB9C4DAE14E2911E43F32A6 /* APIAuthVerifyPhoneOTPRequest.swift */; };
 		206C6B9D2B425F12D8311750 /* AddObjectiveSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF036AE29224BAD23476945 /* AddObjectiveSheet.swift */; };
@@ -1091,7 +1090,6 @@
 		E22D20414A86D29F1D18AEDF /* ImageCropView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCropView.swift; sourceTree = "<group>"; };
 		E2A99168AB09FFE14F464A05 /* APIGetCodeDrillResult202Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCodeDrillResult202Response.swift; sourceTree = "<group>"; };
 		E2CCD0AF3E6AF66E5A894554 /* OnboardingContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingContainerView.swift; sourceTree = "<group>"; };
-		E385671A73951A7B656868B5 /* V2ResumeHomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ResumeHomeView.swift; sourceTree = "<group>"; };
 		E452EF3484AC92A1DBF87924 /* V2YouSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2YouSections.swift; sourceTree = "<group>"; };
 		E464DA632A809ED9ADE511DE /* APIUploadCapstoneVoiceReflection202Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIUploadCapstoneVoiceReflection202Response.swift; sourceTree = "<group>"; };
 		E4CE3EA22A9EAC01A653DCC8 /* AddMilestoneSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddMilestoneSheet.swift; sourceTree = "<group>"; };
@@ -1704,7 +1702,6 @@
 				B64F8F93D23CF6FB7A4DB610 /* V2PlanHomeView.swift */,
 				B66BF020392CB45539BA484D /* V2QuizGenerateSheet.swift */,
 				D4C67E0561CB1C45E197956D /* V2QuizHomeView.swift */,
-				E385671A73951A7B656868B5 /* V2ResumeHomeView.swift */,
 			);
 			path = Compass;
 			sourceTree = "<group>";
@@ -3280,7 +3277,6 @@
 				98BD425A7657BE394FB2117C /* V2QuizRequestLoaderSheet.swift in Sources */,
 				CCA57E6E45E7ECCB3BB90162 /* V2ReadinessBreakdownSheet.swift in Sources */,
 				613BEF684615CB84D89A8A06 /* V2ReadyMomentView.swift in Sources */,
-				1FDB65BD377BB14B0EF98F55 /* V2ResumeHomeView.swift in Sources */,
 				37C9EC028B8946A232D103B1 /* V2RootView.swift in Sources */,
 				CF8AB9E06F5B2DE8B6075645 /* V2Tab.swift in Sources */,
 				7290BDFE59FC31E34B4886A3 /* V2TaskRouter.swift in Sources */,
