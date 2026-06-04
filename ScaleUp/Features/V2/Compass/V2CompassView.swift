@@ -721,19 +721,30 @@ private struct MessageView: View {
         HStack {
             if message.role == .user {
                 Spacer(minLength: 40)
-                Text(message.text)
-                    .font(V2Theme.body)
-                    .foregroundStyle(ColorTokens.goldLight)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(ColorTokens.gold.opacity(0.14))
-                            .overlay(
+                VStack(alignment: .trailing, spacing: 6) {
+                    if let data = message.imageData, let ui = UIImage(data: data) {
+                        Image(uiImage: ui)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(maxWidth: 200, maxHeight: 200)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    if !message.text.isEmpty {
+                        Text(message.text)
+                            .font(V2Theme.body)
+                            .foregroundStyle(ColorTokens.goldLight)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(
                                 RoundedRectangle(cornerRadius: 16)
-                                    .strokeBorder(ColorTokens.gold.opacity(0.25), lineWidth: 1)
+                                    .fill(ColorTokens.gold.opacity(0.14))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .strokeBorder(ColorTokens.gold.opacity(0.25), lineWidth: 1)
+                                    )
                             )
-                    )
+                    }
+                }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(message.text)

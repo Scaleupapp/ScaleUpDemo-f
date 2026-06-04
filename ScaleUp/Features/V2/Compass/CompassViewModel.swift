@@ -34,6 +34,7 @@ struct CompassMessage: Identifiable {
     let text: String
     var suggestedAction: CompassSuggestedAction? = nil
     var cards: [CompassCard] = []
+    var imageData: Data? = nil
 }
 
 struct CompassConfigField {
@@ -85,6 +86,8 @@ private struct CompassPayload: Codable {
     var topic: String?       // coach mode (scope=topic) or tutor_topic/tutor_result
     var attemptId: String?   // tutor_result mode — the completed quiz attempt
     var beforeScore: Double? // tutor_result mode — mastery before the check
+    var imageBase64: String? // vision mode — base64-encoded JPEG
+    var mimeType: String?    // vision mode — e.g. "image/jpeg"
 }
 
 private struct CompassHistoryEntry: Codable {
@@ -421,8 +424,24 @@ final class CompassViewModel {
         Task { await callConversation(message: userText) }
     }
 
-    /// Task 4 stub — full implementation in Task 5.
-    func sendVision(image: UIImage, prompt: String) async {}
+    func sendVision(image: UIImage, prompt: String) async {
+        guard let enc = CompassImageEncoder.downscaleAndEncode(image) else {
+            messages.append(.init(role: .compass, text: "I couldn't process that image — try another?"))
+            return
+        }
+        // Local user bubble with the thumbnail (in memory only — never persisted server-side).
+        messages.append(CompassMessage(role: .user, text: prompt, imageData: enc.data))
+        isWaitingForReply = true
+        defer { isWaitingForReply = false }
+        do {
+            let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post(
+                "/compass", body: CompassRequest(mode: "vision", payload: CompassPayload(message: prompt, imageBase64: enc.base64, mimeType: enc.mimeType))
+            )
+            messages.append(.init(role: .compass, text: resp.data.output.reply ?? "Here's what I see."))
+        } catch {
+            messages.append(.init(role: .compass, text: "I had trouble reading that — try again?"))
+        }
+    }
 
     /// Route into the v1 detail screen for whichever action the user configured.
     /// Caller passes the shared V2TaskRouter so the sheet appears at the root.
