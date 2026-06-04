@@ -435,6 +435,7 @@
 		BD29E4F8C14D74A3152BE7BF /* NotificationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A50C0E0E38C2E8E0696C23C /* NotificationListView.swift */; };
 		BDA3F6A07473E732E80F2BB8 /* ChallengeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD1E5A6254777BF377EEFDA7 /* ChallengeViewModel.swift */; };
 		BDA6421BB1960B89710657CD /* InterviewLiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAEFB419EFF55B0323D499EC /* InterviewLiveView.swift */; };
+		BDAC1E1CDA3D94ADF9F19C44 /* CompassCardViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 942B88FA81E4612717FF4615 /* CompassCardViews.swift */; };
 		BDE3B82D6CC3195C5F7D4CBD /* ContentDestinationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A8127ACC54344AB8CD71207 /* ContentDestinationView.swift */; };
 		BEFD07762B1D219E8F035E39 /* DrillServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FF69604500DE1F3692F05E3 /* DrillServiceTests.swift */; };
 		BEFE7645A5AF8D241580A3BB /* APISelfRating.swift in Sources */ = {isa = PBXBuildFile; fileRef = 824B9A9875530591C0249920 /* APISelfRating.swift */; };
@@ -909,6 +910,7 @@
 		93354A6B89EA951F852B2A32 /* APIGetCapstoneRecentSessions200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCapstoneRecentSessions200Response.swift; sourceTree = "<group>"; };
 		93AC614423E7A593D4020704 /* AITutorMessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorMessageBubble.swift; sourceTree = "<group>"; };
 		9418C5EEA9285B884F03CDF3 /* RecalibrationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecalibrationResultsView.swift; sourceTree = "<group>"; };
+		942B88FA81E4612717FF4615 /* CompassCardViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompassCardViews.swift; sourceTree = "<group>"; };
 		9439C432F6F7EB9E084E6DAD /* AnalyticsEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsEvent.swift; sourceTree = "<group>"; };
 		949054D0EF8015DD51B777C7 /* BugLocationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BugLocationRow.swift; sourceTree = "<group>"; };
 		94B68F2C12943EFBA45D59C2 /* NotificationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationViewModel.swift; sourceTree = "<group>"; };
@@ -1690,6 +1692,7 @@
 			isa = PBXGroup;
 			children = (
 				EA7C896E5E0AEBDEBE1448C5 /* CompassCard.swift */,
+				942B88FA81E4612717FF4615 /* CompassCardViews.swift */,
 				D48F344D6955FD0985EA481C /* CompassFAB.swift */,
 				995F525A254B17872ED0E1BD /* CompassViewModel.swift */,
 				BC6051A1794F83F35BE047F6 /* V2CodingHomeView.swift */,
@@ -2995,6 +2998,7 @@
 				837C3C0E8D09A83CC4FC2227 /* ColorTokens.swift in Sources */,
 				7C3772FFA78186E3726E7186 /* Comment.swift in Sources */,
 				E9A868A1B910A84B40566356 /* CompassCard.swift in Sources */,
+				BDAC1E1CDA3D94ADF9F19C44 /* CompassCardViews.swift in Sources */,
 				EF2ECD78B475A8EDACAD6415 /* CompassFAB.swift in Sources */,
 				6CC200749DD97835B15144C1 /* CompassViewModel.swift in Sources */,
 				D8B4DBB7AB675F1AB77883E6 /* CompetencyScoreBar.swift in Sources */,

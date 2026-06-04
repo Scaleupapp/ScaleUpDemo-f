@@ -660,6 +660,9 @@ private struct MessageView: View {
                     if let action = message.suggestedAction, action.type == "request_drill" {
                         suggestedActionCard(action)
                     }
+                    ForEach(message.cards) { card in
+                        CompassCardView(card: card)
+                    }
                 }
                 Spacer(minLength: 40)
             }
