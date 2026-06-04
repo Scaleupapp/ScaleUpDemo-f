@@ -41,6 +41,24 @@ struct CompassConfig {
     let startEndpoint: String?    // e.g., /api/v1/quizzes/request
 }
 
+// MARK: - Thread restore models
+
+private struct CompassThreadEnvelope: Codable {
+    let threadId: String?
+    let title: String?
+    let messageCount: Int?
+    let lastMessageAt: String?
+    let messages: [ThreadMessage]
+}
+
+private struct ThreadMessage: Codable {
+    let role: String
+    let content: String
+    let mode: String?
+    let followups: [String]?
+    let cards: [CompassCard]?
+}
+
 // MARK: - Backend payload types
 
 private struct CompassRequest: Codable {
@@ -305,7 +323,12 @@ final class CompassViewModel {
             suggestions = ["Explain the key idea simply", "Give me a real example", "Quiz me on this"]
             showSuggestions = true
         } else {
-            Task { await callGreeting(context: context) }
+            // Default Compass mode: try to restore the persisted thread first.
+            // Only fall back to the greeting if nothing was restored.
+            Task {
+                if await restoreThreadIfAvailable() { return }
+                await callGreeting(context: context)
+            }
         }
     }
 
@@ -407,6 +430,32 @@ final class CompassViewModel {
         )
         messages.append(.init(role: .compass, text: "Opening now…"))
         activeConfig = nil
+    }
+
+    // MARK: - Thread restore
+
+    /// Fetches the persisted Compass thread from the backend and populates
+    /// `messages` with it. Returns true if at least one message was restored
+    /// so the caller can skip the greeting. Only called for the default
+    /// Compass mode (no tutor/coach context).
+    func restoreThreadIfAvailable() async -> Bool {
+        do {
+            let resp: V2APIResponse<CompassThreadEnvelope> = try await V2APIClient.shared.get("/compass/thread")
+            let restored = resp.data.messages.compactMap { m -> CompassMessage? in
+                guard !m.content.isEmpty else { return nil }
+                return CompassMessage(
+                    role: m.role == "assistant" ? .compass : .user,
+                    text: m.content,
+                    suggestedAction: nil,
+                    cards: m.cards ?? []
+                )
+            }
+            guard !restored.isEmpty else { return false }
+            messages = restored
+            return true
+        } catch {
+            return false
+        }
     }
 
     // MARK: - Backend calls
