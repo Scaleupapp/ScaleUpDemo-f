@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import VisionKit
 
 /// V2 Compass Tab — conversation-led, with inline configurator routing to detail pages.
 ///
@@ -55,6 +57,13 @@ struct V2CompassView: View {
     /// Legacy review context — kept so old TaskRouter routes still compile.
     /// Forwarded into the VM which now treats it as coach scope=week.
     var reviewContext: CompassReviewContext?
+
+    // ── Photo capture state ──
+    @State private var showingScanner = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var stagedImage: UIImage?
+    @State private var showCaptureMenu = false
+    @State private var showingPhotoPicker = false
 
     // ── Topic picker (Coach scope=topic) ──
     @State private var topicPickerInput: String = ""
@@ -542,41 +551,107 @@ struct V2CompassView: View {
 
     // MARK: - Input bar
 
-    private var inputBar: some View {
-        HStack(spacing: 10) {
-            Button { vm.presentedHome = .notes } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(ColorTokens.textTertiary)
-                    .frame(width: 28, height: 28)
+    private var stagedPhotoPreview: some View {
+        Group {
+            if let img = stagedImage {
+                HStack {
+                    Spacer()
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: img)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        Button {
+                            stagedImage = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                                .background(Circle().fill(ColorTokens.background))
+                        }
+                        .offset(x: 6, y: -6)
+                    }
+                }
+                .padding(.horizontal, V2Theme.pad)
+                .padding(.top, 4)
             }
-            TextField("Or type what you need...", text: $vm.inputText)
-                .focused($inputFocused)
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textPrimary)
-                .submitLabel(.send)
-                .onSubmit { vm.send() }
-
-            Button { vm.send() } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(ColorTokens.background)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(ColorTokens.gold))
-            }
-            .disabled(vm.inputText.isEmpty)
-            .opacity(vm.inputText.isEmpty ? 0.45 : 1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            Capsule()
-                .fill(ColorTokens.surface)
-                .overlay(Capsule().strokeBorder(V2Theme.cardBorder, lineWidth: 1))
-        )
-        .padding(.horizontal, V2Theme.pad)
-        .padding(.bottom, 18)
-        .padding(.top, 8)
+    }
+
+    private var inputBar: some View {
+        VStack(spacing: 0) {
+            stagedPhotoPreview
+            HStack(spacing: 10) {
+                Button { vm.presentedHome = .notes } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .frame(width: 28, height: 28)
+                }
+
+                Button { showCaptureMenu = true } label: {
+                    Image(systemName: "camera")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                        .frame(width: 28, height: 28)
+                }
+                .confirmationDialog("Add a photo", isPresented: $showCaptureMenu, titleVisibility: .visible) {
+                    Button("Scan") { showingScanner = true }
+                    Button("Choose photo") { showingPhotoPicker = true }
+                }
+
+                TextField("Or type what you need...", text: $vm.inputText)
+                    .focused($inputFocused)
+                    .font(V2Theme.body)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .submitLabel(.send)
+                    .onSubmit { vm.send() }
+
+                Button {
+                    if let img = stagedImage {
+                        let prompt = vm.inputText
+                        stagedImage = nil
+                        vm.inputText = ""
+                        Task { await vm.sendVision(image: img, prompt: prompt) }
+                    } else {
+                        vm.send()
+                    }
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ColorTokens.background)
+                        .frame(width: 32, height: 32)
+                        .background(Circle().fill(ColorTokens.gold))
+                }
+                .disabled(vm.inputText.isEmpty && stagedImage == nil)
+                .opacity((vm.inputText.isEmpty && stagedImage == nil) ? 0.45 : 1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule()
+                    .fill(ColorTokens.surface)
+                    .overlay(Capsule().strokeBorder(V2Theme.cardBorder, lineWidth: 1))
+            )
+            .padding(.horizontal, V2Theme.pad)
+            .padding(.bottom, 18)
+            .padding(.top, 8)
+        }
+        .sheet(isPresented: $showingScanner) {
+            // DocumentScannerView is declared at file scope in Features/Notes/Views/CreateNotesView.swift
+            DocumentScannerView { images in stagedImage = images.first }
+        }
+        .photosPicker(isPresented: $showingPhotoPicker, selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                    stagedImage = img
+                }
+                photoItem = nil
+            }
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 // MARK: - Compass message & config models
 
@@ -419,6 +420,9 @@ final class CompassViewModel {
 
         Task { await callConversation(message: userText) }
     }
+
+    /// Task 4 stub — full implementation in Task 5.
+    func sendVision(image: UIImage, prompt: String) async {}
 
     /// Route into the v1 detail screen for whichever action the user configured.
     /// Caller passes the shared V2TaskRouter so the sheet appears at the root.
