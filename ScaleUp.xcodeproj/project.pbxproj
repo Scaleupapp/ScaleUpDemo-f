@@ -415,6 +415,7 @@
 		AF69B9C7B4040F7DAA7BFD63 /* V2CodingHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A35F88FB060018D7D89D93AA /* V2CodingHubView.swift */; };
 		B0B8434D6F2D86F72324217D /* KeychainManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97F9AE5C6E8D15E38A5E573B /* KeychainManager.swift */; };
 		B0C81C4E80CA515723CE59CF /* AppNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = F58CFB298CB55E9D16FA6DAA /* AppNotification.swift */; };
+		B14281C1D959AA23E74FB0E6 /* CompassImageEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B218DAD7779B63D6EDFFC13D /* CompassImageEncoderTests.swift */; };
 		B18F9B764D2D715901408091 /* APIGetPlanStatus200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 429CB3F8ABEFC808AF63355B /* APIGetPlanStatus200Response.swift */; };
 		B2285C1CB097C26282C5EB70 /* APIPlanTaskCompletion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FA83529EA44E22C10753409 /* APIPlanTaskCompletion.swift */; };
 		B257805CAF001B75D840D31B /* CompletionStepView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B875570EEE19B26D37FAE6F /* CompletionStepView.swift */; };
@@ -513,6 +514,7 @@
 		DF07C1439DCAFA2E29B401D2 /* EditProfileSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 376BD5CDCF1DAA8D172B48BB /* EditProfileSheet.swift */; };
 		DF7F57053586729F704F8850 /* MixpanelProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3517C645C1CE5990BBBEE2 /* MixpanelProvider.swift */; };
 		DF95001964136BA998CB7FF4 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7700874D4435AC344364177B /* APIError.swift */; };
+		DFD97A41DB96DD9F7255C1D3 /* CompassImageEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73EFEA9C1E85BC74ACA8D9BD /* CompassImageEncoder.swift */; };
 		E054705878CCA025523247E2 /* APIUpdateOnboardingPreferencesRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C1CC4825F170AC49DE2C20C /* APIUpdateOnboardingPreferencesRequest.swift */; };
 		E122C1AD8E08F78DA9895EA6 /* APIRequestNextCapstone200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = F05230E3527F2CBDD42BB2EB /* APIRequestNextCapstone200Response.swift */; };
 		E16622215E22FACEFE2C014D /* APISubmitDiagnosticAnswerRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9FF0F92BD07861A2F3ECC3 /* APISubmitDiagnosticAnswerRequest.swift */; };
@@ -842,6 +844,7 @@
 		737D8EEF7A57EBB923B9E9AD /* Flashcard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Flashcard.swift; sourceTree = "<group>"; };
 		73A1FDB5D53217A0221EB81F /* DiagnosticTuneUpBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticTuneUpBanner.swift; sourceTree = "<group>"; };
 		73B1699FB8EDE40BBE383989 /* APIGetCapstoneCostSummary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCapstoneCostSummary200Response.swift; sourceTree = "<group>"; };
+		73EFEA9C1E85BC74ACA8D9BD /* CompassImageEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompassImageEncoder.swift; sourceTree = "<group>"; };
 		74080EDBB82330F54039BA22 /* MilestoneCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneCard.swift; sourceTree = "<group>"; };
 		745763EE8FF0F674F82AFFD7 /* AdminStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminStats.swift; sourceTree = "<group>"; };
 		74C25A2CC4E3F115C44DE618 /* DrillSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSession.swift; sourceTree = "<group>"; };
@@ -983,6 +986,7 @@
 		B1BA0A748861879E69F594E8 /* ConsumptionHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsumptionHistoryView.swift; sourceTree = "<group>"; };
 		B1EEABD841199E7E343C5DB4 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		B20198ECB97E103D23288C50 /* APICapstoneLibraryEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstoneLibraryEntry.swift; sourceTree = "<group>"; };
+		B218DAD7779B63D6EDFFC13D /* CompassImageEncoderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompassImageEncoderTests.swift; sourceTree = "<group>"; };
 		B2820B137EFDBD763061FB3B /* APIMarkPlanTaskCompleteRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIMarkPlanTaskCompleteRequest.swift; sourceTree = "<group>"; };
 		B283BCCBD8959B333C18CE0E /* Quiz.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Quiz.swift; sourceTree = "<group>"; };
 		B310ABACDBD9E0B76B6759D1 /* APISpecifics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISpecifics.swift; sourceTree = "<group>"; };
@@ -1696,6 +1700,7 @@
 				EA7C896E5E0AEBDEBE1448C5 /* CompassCard.swift */,
 				942B88FA81E4612717FF4615 /* CompassCardViews.swift */,
 				D48F344D6955FD0985EA481C /* CompassFAB.swift */,
+				73EFEA9C1E85BC74ACA8D9BD /* CompassImageEncoder.swift */,
 				F67E3B96F8EA8CB3B7BD53F1 /* CompassInlineQuizCard.swift */,
 				DE4588DEDE27DBC314BC6591 /* CompassInlineQuizModel.swift */,
 				995F525A254B17872ED0E1BD /* CompassViewModel.swift */,
@@ -2535,6 +2540,7 @@
 			children = (
 				F8960A22FE408D6A695B1737 /* CalibrationPromptStoreTests.swift */,
 				F7C9BC496EB8BBF370CAC97D /* CompassCardDecodingTests.swift */,
+				B218DAD7779B63D6EDFFC13D /* CompassImageEncoderTests.swift */,
 				3FF69604500DE1F3692F05E3 /* DrillServiceTests.swift */,
 				4AA93212D56D702469F45826 /* OnboardingTopicServiceTests.swift */,
 				661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */,
@@ -2742,6 +2748,7 @@
 			files = (
 				D0CA54FC086BC5190ABF50D0 /* CalibrationPromptStoreTests.swift in Sources */,
 				ACE4C912D69D88D0DDA70C99 /* CompassCardDecodingTests.swift in Sources */,
+				B14281C1D959AA23E74FB0E6 /* CompassImageEncoderTests.swift in Sources */,
 				BEFD07762B1D219E8F035E39 /* DrillServiceTests.swift in Sources */,
 				3D517C056950512834615C4A /* OnboardingTopicServiceTests.swift in Sources */,
 				4A7778CD73147E15F6E0355D /* ScaleUpTests.swift in Sources */,
@@ -3003,6 +3010,7 @@
 				E9A868A1B910A84B40566356 /* CompassCard.swift in Sources */,
 				BDAC1E1CDA3D94ADF9F19C44 /* CompassCardViews.swift in Sources */,
 				EF2ECD78B475A8EDACAD6415 /* CompassFAB.swift in Sources */,
+				DFD97A41DB96DD9F7255C1D3 /* CompassImageEncoder.swift in Sources */,
 				166EEDF57D64680D36AB6E10 /* CompassInlineQuizCard.swift in Sources */,
 				4E47570F83923BAF75B6904C /* CompassInlineQuizModel.swift in Sources */,
 				6CC200749DD97835B15144C1 /* CompassViewModel.swift in Sources */,
