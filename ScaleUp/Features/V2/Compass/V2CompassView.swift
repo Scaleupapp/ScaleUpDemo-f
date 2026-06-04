@@ -71,9 +71,18 @@ struct V2CompassView: View {
                     ScrollView {
                         VStack(spacing: 14) {
                             ForEach(vm.messages) { msg in
-                                MessageView(message: msg) { action in
-                                    Task { await handleSuggestedAction(action) }
-                                }
+                                MessageView(
+                                    message: msg,
+                                    onSuggestedAction: { action in
+                                        Task { await handleSuggestedAction(action) }
+                                    },
+                                    onStartTutoring: { topic in
+                                        Task { await vm.startTutoring(topic: topic) }
+                                    },
+                                    onStartInlineCheck: { topic, count, before in
+                                        vm.startInlineCheck(topic: topic, questionCount: count, beforeScore: before)
+                                    }
+                                )
                                 .id(msg.id)
                             }
 
@@ -81,6 +90,12 @@ struct V2CompassView: View {
                                 TypingIndicatorBubble()
                                     .id("typing")
                                     .transition(.opacity)
+                            }
+
+                            if let quiz = vm.inlineQuiz {
+                                CompassInlineQuizCard(model: quiz, onFinished: { Task { await vm.finishInlineCheck() } })
+                                    .padding(.horizontal)
+                                    .id("inlineQuiz")
                             }
 
                             // Coach mode scope picker — shown only on the
@@ -612,10 +627,19 @@ struct V2CompassSheetView: View {
 private struct MessageView: View {
     let message: CompassMessage
     let onSuggestedAction: (CompassSuggestedAction) -> Void
+    let onStartTutoring: (String) -> Void
+    let onStartInlineCheck: (String, Int, Double?) -> Void
 
-    init(message: CompassMessage, onSuggestedAction: @escaping (CompassSuggestedAction) -> Void = { _ in }) {
+    init(
+        message: CompassMessage,
+        onSuggestedAction: @escaping (CompassSuggestedAction) -> Void = { _ in },
+        onStartTutoring: @escaping (String) -> Void = { _ in },
+        onStartInlineCheck: @escaping (String, Int, Double?) -> Void = { _, _, _ in }
+    ) {
         self.message = message
         self.onSuggestedAction = onSuggestedAction
+        self.onStartTutoring = onStartTutoring
+        self.onStartInlineCheck = onStartInlineCheck
     }
 
     var body: some View {
@@ -651,8 +675,13 @@ private struct MessageView: View {
                                 )
                         )
 
-                    if let action = message.suggestedAction, action.type == "request_drill" {
-                        suggestedActionCard(action)
+                    if let action = message.suggestedAction {
+                        switch action.type {
+                        case "request_drill":    suggestedActionCard(action)
+                        case "start_tutoring":   tutoringOfferCard(action)
+                        case "start_check_quiz": checkQuizCTACard(action)
+                        default:                 EmptyView()
+                        }
                     }
                     ForEach(message.cards) { card in
                         CompassCardView(card: card)
@@ -685,6 +714,55 @@ private struct MessageView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "play.fill").font(.caption)
                     Text("Start drill").fontWeight(.semibold)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(ColorTokens.gold)
+                .foregroundStyle(ColorTokens.background)
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(ColorTokens.gold.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(ColorTokens.gold.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func tutoringOfferCard(_ action: CompassSuggestedAction) -> some View {
+        let topic = action.topic ?? "this topic"
+        let scoreText = action.score.map { " — \(Int($0.rounded()))%" } ?? ""
+        tutoringCardShell(icon: "target", title: "Improve: \(topic.capitalized)\(scoreText)", cta: "Start") {
+            onStartTutoring(topic)
+        }
+    }
+
+    @ViewBuilder
+    private func checkQuizCTACard(_ action: CompassSuggestedAction) -> some View {
+        tutoringCardShell(icon: "checkmark.circle", title: "Ready for a quick check?", cta: "Start check") {
+            onStartInlineCheck(action.topic ?? "", action.questionCount ?? 4, action.beforeScore)
+        }
+    }
+
+    private func tutoringCardShell(icon: String, title: String, cta: String, onTap: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(ColorTokens.gold)
+            }
+            Button {
+                onTap()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "play.fill").font(.caption)
+                    Text(cta).fontWeight(.semibold)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .background(ColorTokens.gold)

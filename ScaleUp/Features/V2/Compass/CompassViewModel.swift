@@ -5,16 +5,25 @@ import Foundation
 enum CompassRole { case user, compass }
 
 struct CompassSuggestedAction: Codable, Sendable {
-    let type: String              // "request_drill" (only value for now)
+    let type: String              // "request_drill" | "start_tutoring" | "start_check_quiz"
     let drillSubtype: String?
     let difficulty: String?
     let topicHint: String?
+    // tutoring
+    let topic: String?
+    let score: Double?
+    let questionCount: Int?
+    let beforeScore: Double?
 
     enum CodingKeys: String, CodingKey {
         case type
         case drillSubtype = "drill_subtype"
         case difficulty
         case topicHint = "topic_hint"
+        case topic
+        case score
+        case questionCount = "question_count"
+        case beforeScore = "before_score"
     }
 }
 
@@ -72,7 +81,9 @@ private struct CompassPayload: Codable {
     var contentId: String?   // tutor mode — the content this turn is scoped to
     var weekNumber: Int?     // legacy review_week mode — kept for any in-flight server state
     var scope: String?       // coach mode — week | month | all_time | topic
-    var topic: String?       // coach mode (scope=topic) — the chosen topic
+    var topic: String?       // coach mode (scope=topic) or tutor_topic/tutor_result
+    var attemptId: String?   // tutor_result mode — the completed quiz attempt
+    var beforeScore: Double? // tutor_result mode — mastery before the check
 }
 
 private struct CompassHistoryEntry: Codable {
@@ -281,6 +292,9 @@ final class CompassViewModel {
     /// view presents the right home via .sheet(item:) on this value.
     var presentedHome: CompassHomeRoute?
 
+    /// Non-nil while an inline check-quiz is running inside the chat.
+    var inlineQuiz: CompassInlineQuizModel?
+
     /// True when the user's active objective maps to a coding role track.
     /// Probed once on Compass open; gates the "💻 Start a coding drill" chip.
     var isCodingEligible: Bool = false
@@ -430,6 +444,47 @@ final class CompassViewModel {
         )
         messages.append(.init(role: .compass, text: "Opening now…"))
         activeConfig = nil
+    }
+
+    // MARK: - Tutoring methods
+
+    func startTutoring(topic: String) async {
+        isWaitingForReply = true
+        defer { isWaitingForReply = false }
+        do {
+            let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post(
+                "/compass", body: CompassRequest(mode: "tutor_topic", payload: CompassPayload(topic: topic))
+            )
+            let out = resp.data.output
+            messages.append(.init(role: .compass, text: out.reply ?? "Let's work on \(topic).",
+                                  suggestedAction: out.suggestedAction, cards: out.cards ?? []))
+        } catch {
+            messages.append(.init(role: .compass, text: "I couldn't start that just now — try again?"))
+        }
+    }
+
+    func startInlineCheck(topic: String, questionCount: Int, beforeScore: Double?) {
+        let model = CompassInlineQuizModel(topic: topic, questionCount: questionCount, beforeScore: beforeScore)
+        inlineQuiz = model
+        Task {
+            await model.begin()
+        }
+    }
+
+    func finishInlineCheck() async {
+        guard let model = inlineQuiz, let attemptId = model.attemptId else { inlineQuiz = nil; return }
+        let topic = model.topic, before = model.beforeScore
+        inlineQuiz = nil
+        do {
+            let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post(
+                "/compass", body: CompassRequest(mode: "tutor_result", payload: CompassPayload(topic: topic, attemptId: attemptId, beforeScore: before))
+            )
+            let out = resp.data.output
+            messages.append(.init(role: .compass, text: out.reply ?? "Nice work.",
+                                  suggestedAction: out.suggestedAction, cards: out.cards ?? []))
+        } catch {
+            messages.append(.init(role: .compass, text: "You finished the check — your mastery will update shortly."))
+        }
     }
 
     // MARK: - Thread restore
