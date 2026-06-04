@@ -23,6 +23,7 @@ struct CompassMessage: Identifiable {
     let role: CompassRole
     let text: String
     var suggestedAction: CompassSuggestedAction? = nil
+    var cards: [CompassCard] = []
 }
 
 struct CompassConfigField {
@@ -82,6 +83,8 @@ private struct CompassOutput: Codable {
     let items: [InsightItem]?
     // on-demand drill action card
     let suggestedAction: CompassSuggestedAction?
+    // Progress Intelligence answer cards
+    let cards: [CompassCard]?
 }
 
 private struct SuggestedAction: Codable {
@@ -548,7 +551,7 @@ final class CompassViewModel {
         do {
             let resp: V2APIResponse<CompassResponseEnvelope> = try await V2APIClient.shared.post("/compass", body: body)
             let reply = resp.data.output.reply ?? "Tell me more."
-            messages.append(.init(role: .compass, text: reply, suggestedAction: resp.data.output.suggestedAction))
+            messages.append(.init(role: .compass, text: reply, suggestedAction: resp.data.output.suggestedAction, cards: resp.data.output.cards ?? []))
             if let followups = resp.data.output.followups, !followups.isEmpty {
                 suggestions = followups
                 showSuggestions = true
