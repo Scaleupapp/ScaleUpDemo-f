@@ -68,6 +68,8 @@ struct RecalibrationResultsView: View {
 
                 planRebalanceSection
 
+                nextStepCard(dto)
+
                 Spacer().frame(height: Spacing.xxl)
             }
             .padding(.horizontal, Spacing.lg)
@@ -234,6 +236,18 @@ struct RecalibrationResultsView: View {
             RoundedRectangle(cornerRadius: 14)
                 .fill(ColorTokens.surface)
         )
+    }
+
+    // MARK: - Next Step Card
+
+    @ViewBuilder private func nextStepCard(_ dto: RecalibrationResultsDTO) -> some View {
+        let gapTopic: String? = dto.recalibrationGrowth?.newGaps.first
+            ?? dto.recalibrationGrowth?.growthBars.min(by: { $0.newScore < $1.newScore })?.canonicalName
+        if let gap = gapTopic {
+            NextStepCard(lead: "Your biggest remaining gap is", highlight: gap, actionTitle: "Practice it now") {
+                NextStepCoordinator.shared.fire(.launchQuiz(topic: gap))
+            }
+        }
     }
 
     // MARK: - Error

@@ -83,7 +83,19 @@ struct CompassWeakTopicsCard: View {
     var body: some View {
         CardShell(title: "Weakest topics", systemImage: "exclamationmark.triangle") {
             ForEach(topics) { t in
-                HStack { Text(t.topic.capitalized).font(.subheadline).foregroundStyle(ColorTokens.textPrimary); Spacer(); Text("\(scoreText(t.score))%").font(.subheadline).foregroundStyle(ColorTokens.textSecondary) }
+                Button {
+                    NextStepCoordinator.shared.fire(.launchQuiz(topic: t.topic))
+                } label: {
+                    HStack {
+                        Text(t.topic.capitalized).font(.subheadline).foregroundStyle(ColorTokens.textPrimary)
+                        Spacer()
+                        Text("\(scoreText(t.score))%").font(.subheadline).foregroundStyle(ColorTokens.textSecondary)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
     }
