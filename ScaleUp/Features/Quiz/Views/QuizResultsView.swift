@@ -64,6 +64,9 @@ struct QuizResultsView: View {
                             nextActionsSection
                         }
 
+                        // Next step — turn the result into action
+                        nextStepCard
+
                         // Bottom actions
                         bottomActions
 
@@ -611,6 +614,29 @@ struct QuizResultsView: View {
     }
 
     // MARK: - Bottom Actions
+
+    /// The single most useful next action, derived from the weakest topic.
+    private var weakestTopicName: String? {
+        if let t = viewModel.topicBreakdown.min(by: { $0.percentage < $1.percentage })?.topic,
+           !t.isEmpty {
+            return t
+        }
+        return viewModel.analysis?.weaknesses?.first
+    }
+
+    @ViewBuilder private var nextStepCard: some View {
+        if let topic = weakestTopicName {
+            NextStepCard(
+                lead: "Your weakest area is",
+                highlight: topic.capitalized,
+                actionTitle: "Practice it now"
+            ) {
+                NextStepCoordinator.shared.fire(.launchQuiz(topic: topic))
+                dismiss()
+            }
+            .opacity(showDetails ? 1 : 0)
+        }
+    }
 
     private var bottomActions: some View {
         VStack(spacing: 10) {
