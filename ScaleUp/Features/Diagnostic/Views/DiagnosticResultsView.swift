@@ -74,6 +74,9 @@ struct DiagnosticResultsView: View {
                 seePlanButton
                     .padding(.horizontal, Spacing.lg)
                     .padding(.top, Spacing.sm)
+
+                nextStepCard
+                    .padding(.horizontal, Spacing.lg)
                     .padding(.bottom, Spacing.xxl)
             }
             .padding(.top, Spacing.md)
@@ -266,6 +269,14 @@ struct DiagnosticResultsView: View {
         .padding(Spacing.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: CornerRadius.medium).fill(ColorTokens.surface))
+    }
+
+    @ViewBuilder private var nextStepCard: some View {
+        if let gap = focusTopic {
+            NextStepCard(lead: "Start with your biggest gap:", highlight: gap.displayName, actionTitle: "Practice it now") {
+                NextStepCoordinator.shared.fire(.launchQuiz(topic: gap.canonicalName))
+            }
+        }
     }
 
     private var seePlanButton: some View {

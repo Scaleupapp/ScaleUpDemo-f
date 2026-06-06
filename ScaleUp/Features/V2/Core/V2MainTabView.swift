@@ -7,6 +7,7 @@ import SwiftUI
 struct V2MainTabView: View {
     @State private var nav = V2NavState()
     @State private var taskRouter = V2TaskRouter()
+    @State private var nextStep = NextStepCoordinator.shared
     /// Forwarded into the task sheet so v1 screens that need it (e.g.
     /// CompetitionHubView) have it — sheets don't reliably inherit it.
     @Environment(ObjectiveContext.self) private var objectiveContext
@@ -62,6 +63,34 @@ struct V2MainTabView: View {
                 .environment(taskRouter)
                 .environment(objectiveContext)
                 .environment(appState)
+        }
+        .onChange(of: nextStep.pending) { _, intent in
+            guard let intent else { return }
+            nextStep.pending = nil
+            routeNextStep(intent)
+        }
+    }
+
+    /// Translates a `NextStepCoordinator` intent into real navigation. Clears
+    /// any open sheet first, then routes after it dismisses to avoid
+    /// sheet-over-sheet races.
+    private func routeNextStep(_ intent: NextStepCoordinator.Intent) {
+        taskRouter.close()
+        nav.compassSheetOpen = false
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(400))
+            switch intent {
+            case .launchQuiz(let topic):
+                taskRouter.route = .quizByTopic(topic: topic, weekNumber: nil)
+            case .startInterview:
+                taskRouter.route = .interview(scenarioId: nil)
+            case .reviewQuiz(let quizId):
+                taskRouter.route = .quiz(quizId: quizId)
+            case .launchDrill(let subtype):
+                taskRouter.route = .codingDrill(subtype: subtype)
+            case .tutorOn, .openPlan:
+                break // wired in a later pass
+            }
         }
     }
 }

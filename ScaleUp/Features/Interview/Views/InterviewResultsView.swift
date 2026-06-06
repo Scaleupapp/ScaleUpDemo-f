@@ -34,6 +34,8 @@ struct InterviewResultsView: View {
                         integrityBadge(evaluation)
                         perQuestionSection(evaluation)
 
+                        nextStepCard
+
                         // Back to profile button
                         Button {
                             dismiss()
@@ -203,10 +205,10 @@ struct InterviewResultsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(spacing: Spacing.sm) {
-                subScoreBar(label: "Communication", subScore: evaluation.communication, icon: "bubble.left.and.bubble.right.fill")
-                subScoreBar(label: "Content", subScore: evaluation.content, icon: "doc.text.fill")
-                subScoreBar(label: "Structure", subScore: evaluation.structure, icon: "list.bullet.rectangle.fill")
-                subScoreBar(label: "Confidence", subScore: evaluation.confidence, icon: "person.fill.checkmark")
+                subScoreBar(label: "Communication", subScore: evaluation.communication, icon: "bubble.left.and.bubble.right.fill", definition: "How clearly and concisely you got your ideas across.")
+                subScoreBar(label: "Content", subScore: evaluation.content, icon: "doc.text.fill", definition: "The substance, relevance and depth of your answers.")
+                subScoreBar(label: "Structure", subScore: evaluation.structure, icon: "list.bullet.rectangle.fill", definition: "How well-organised your answers were — e.g. using STAR.")
+                subScoreBar(label: "Confidence", subScore: evaluation.confidence, icon: "person.fill.checkmark", definition: "Steady pace and directness — fewer hedges and long pauses.")
             }
             .padding(Spacing.md)
             .background(ColorTokens.surface)
@@ -214,7 +216,7 @@ struct InterviewResultsView: View {
         }
     }
 
-    private func subScoreBar(label: String, subScore: InterviewSubScore?, icon: String) -> some View {
+    private func subScoreBar(label: String, subScore: InterviewSubScore?, icon: String, definition: String) -> some View {
         let score = subScore?.score ?? 0
 
         return VStack(alignment: .leading, spacing: 6) {
@@ -243,6 +245,10 @@ struct InterviewResultsView: View {
                 }
             }
             .frame(height: 6)
+
+            Text(definition)
+                .font(.system(size: 11))
+                .foregroundStyle(ColorTokens.textTertiary)
         }
     }
 
@@ -527,6 +533,35 @@ struct InterviewResultsView: View {
         .padding(Spacing.md)
         .background(ColorTokens.surface)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.medium))
+    }
+
+    // MARK: - Weakest Dimension
+
+    private var weakestDimensionName: String? {
+        guard let evaluation = viewModel.evaluation else { return nil }
+        let candidates: [(name: String, score: Int?)] = [
+            ("Communication", evaluation.communication?.score),
+            ("Content",       evaluation.content?.score),
+            ("Structure",     evaluation.structure?.score),
+            ("Confidence",    evaluation.confidence?.score),
+        ]
+        // Only consider dimensions that have a score
+        let scored = candidates.compactMap { pair -> (name: String, score: Int)? in
+            guard let s = pair.score else { return nil }
+            return (pair.name, s)
+        }
+        return scored.min(by: { $0.score < $1.score })?.name
+    }
+
+    // MARK: - Next Step Card
+
+    @ViewBuilder private var nextStepCard: some View {
+        if let weakest = weakestDimensionName {
+            NextStepCard(lead: "Your weakest area was", highlight: weakest, actionTitle: "Practice with another interview") {
+                NextStepCoordinator.shared.fire(.startInterview)
+                dismiss()
+            }
+        }
     }
 
     // MARK: - New Interview Button

@@ -44,10 +44,23 @@ struct V2YouAnalyticsView: View {
             if hasCognitive(a.cognitive) { cognitive(a.cognitive) }
             if !a.recentActivity.isEmpty { recentActivity(a.recentActivity) }
             if !a.achievements.isEmpty { achievements(a.achievements) }
+            nextStepCard(a)
             Spacer().frame(height: 60)
         }
         .padding(.horizontal, V2Theme.pad)
         .padding(.top, 16)
+    }
+
+    // MARK: - Next step card
+
+    @ViewBuilder
+    private func nextStepCard(_ a: V2YouAnalytics) -> some View {
+        let gap = a.weaknesses.first ?? a.masteryMap.sorted { $0.score < $1.score }.first?.topic
+        if let gap {
+            NextStepCard(lead: "Your weakest topic is", highlight: gap.capitalized, actionTitle: "Practice it now") {
+                NextStepCoordinator.shared.fire(.launchQuiz(topic: gap))
+            }
+        }
     }
 
     // MARK: - Lifetime counts

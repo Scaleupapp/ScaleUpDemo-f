@@ -25,6 +25,7 @@ struct LiveEventResultsView: View {
                     scoreHero
                     statsRow
                     leaderboardSection
+                    nextStepCard
                     actionButtons
 
                     Spacer().frame(height: Spacing.xxxl)
@@ -222,6 +223,15 @@ struct LiveEventResultsView: View {
         )
     }
 
+    // MARK: - Next Step Card
+
+    @ViewBuilder private var nextStepCard: some View {
+        NextStepCard(lead: "Sharpen up on", highlight: prettyTopic, actionTitle: "Practice this topic") {
+            NextStepCoordinator.shared.fire(.launchQuiz(topic: topic))
+            dismiss()
+        }
+    }
+
     // MARK: - Action Buttons
 
     private var actionButtons: some View {
@@ -259,6 +269,15 @@ struct LiveEventResultsView: View {
     }
 
     // MARK: - Helpers
+
+    private var prettyTopic: String {
+        topic
+            .replacingOccurrences(of: "-", with: " ")
+            .replacingOccurrences(of: "_", with: " ")
+            .split(separator: " ")
+            .map { $0.prefix(1).uppercased() + $0.dropFirst().lowercased() }
+            .joined(separator: " ")
+    }
 
     private var scoreProgress: Double {
         min(1.0, max(0, (results.attempt?.handicappedScore ?? 0) / 100.0))

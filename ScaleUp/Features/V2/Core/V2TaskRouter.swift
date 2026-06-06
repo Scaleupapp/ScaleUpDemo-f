@@ -61,6 +61,9 @@ final class V2TaskRouter {
         case external(url: URL)
         /// Weekly Compass review — opens Compass in review_week mode.
         case compassReview(weekNumber: Int, taskId: String?)
+        /// Coding drill request — opened from a Next Step card. `subtype` is
+        /// advisory; the request view defaults to Auto (targets the weakest axis).
+        case codingDrill(subtype: String?)
         case unavailable(message: String)
 
         var id: String {
@@ -73,6 +76,7 @@ final class V2TaskRouter {
             case .challengeAttempt(let id, _): return "challenge-\(id)"
             case .external(let url):   return "external-\(url.absoluteString)"
             case .compassReview(let w, _): return "compass-review-\(w)"
+            case .codingDrill(let s):  return "drill-\(s ?? "auto")"
             case .unavailable(let m):  return "unavailable-\(m)"
             }
         }

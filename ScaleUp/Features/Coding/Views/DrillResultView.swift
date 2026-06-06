@@ -16,6 +16,8 @@ struct DrillResultView: View {
                 whatToTryNextCard
                 whatYouMissedSection
 
+                nextStepCard
+
                 Color.clear.frame(height: 80)
             }
             .padding(.horizontal, 20)
@@ -131,6 +133,23 @@ struct DrillResultView: View {
     }
 
     // MARK: - What you missed
+
+    private var weakestDimension: String? {
+        grade.rubricBreakdown.min(by: { $0.score < $1.score })?.dimension
+    }
+
+    @ViewBuilder private var nextStepCard: some View {
+        if let pretty = weakestDimension?.replacingOccurrences(of: "_", with: " ").capitalized {
+            NextStepCard(
+                lead: "Your weakest area was",
+                highlight: pretty,
+                actionTitle: "Practice another drill"
+            ) {
+                NextStepCoordinator.shared.fire(.launchDrill(subtype: nil))
+                onDone()
+            }
+        }
+    }
 
     @ViewBuilder
     private var whatYouMissedSection: some View {

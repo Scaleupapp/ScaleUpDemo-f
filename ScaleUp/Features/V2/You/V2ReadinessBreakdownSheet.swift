@@ -38,6 +38,7 @@ struct V2ReadinessBreakdownSheet: View {
                         if !gaps.isEmpty {
                             competencySection(title: "Not measured yet", items: gaps)
                         }
+                        nextStepCard
                     } else {
                         emptyState
                     }
@@ -190,6 +191,18 @@ struct V2ReadinessBreakdownSheet: View {
             Text("\(primitiveLabel(item.primitive)) · weight \(item.weight)")
                 .font(.system(size: 10))
                 .foregroundStyle(ColorTokens.textTertiary)
+        }
+    }
+
+    // MARK: - Next step card
+
+    @ViewBuilder
+    private var nextStepCard: some View {
+        if let gap = assessed.min(by: { $0.score < $1.score })?.name {
+            NextStepCard(lead: "Your weakest skill is", highlight: gap.capitalized, actionTitle: "Practice it now") {
+                NextStepCoordinator.shared.fire(.launchQuiz(topic: gap))
+                dismiss()
+            }
         }
     }
 
