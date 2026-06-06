@@ -90,6 +90,7 @@ struct CapstoneResultView: View {
                 if let parallel = result.interviewParallel, !parallel.isEmpty {
                     interviewParallel(parallel)
                 }
+                nextStepCard(result)
                 actionButtons(result)
                 Spacer(minLength: 60)
             }
@@ -289,6 +290,19 @@ struct CapstoneResultView: View {
             Text(text).font(.subheadline)
         }
         .padding(14).background(Color.accentColor.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder private func nextStepCard(_ result: CapstoneResult) -> some View {
+        if let gap = result.gaps.first {
+            NextStepCard(
+                lead: "Strengthen your weakest area:",
+                highlight: gap,
+                actionTitle: "Practice with a drill"
+            ) {
+                NextStepCoordinator.shared.fire(.launchDrill(subtype: nil))
+                onClose()
+            }
+        }
     }
 
     private func actionButtons(_ result: CapstoneResult) -> some View {

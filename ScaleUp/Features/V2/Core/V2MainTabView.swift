@@ -86,8 +86,10 @@ struct V2MainTabView: View {
                 taskRouter.route = .interview(scenarioId: nil)
             case .reviewQuiz(let quizId):
                 taskRouter.route = .quiz(quizId: quizId)
-            case .launchDrill, .tutorOn, .openPlan:
-                break // wired in Phase 2
+            case .launchDrill(let subtype):
+                taskRouter.route = .codingDrill(subtype: subtype)
+            case .tutorOn, .openPlan:
+                break // wired in a later pass
             }
         }
     }

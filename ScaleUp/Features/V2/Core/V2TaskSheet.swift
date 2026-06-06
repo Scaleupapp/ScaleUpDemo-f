@@ -90,6 +90,9 @@ struct V2TaskSheet: View {
             case .external(let url):
                 SafariView(url: url, onClose: onClose)
 
+            case .codingDrill:
+                V2CodingDrillRequestView(onClose: onClose)
+
             case .unavailable(let message):
                 V2TaskUnavailableView(message: message, onClose: onClose)
             }
