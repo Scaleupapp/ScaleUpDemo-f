@@ -942,9 +942,23 @@ struct V2YouView: View {
     /// state and a pending-employer-interest badge; taps open the Open-to-work
     /// screen (which itself links into the connection inbox). Passes the shared
     /// `hiringVM` so opt-in state + the badge stay in sync after edits.
+    /// Names the readiness band from the score + band thresholds, so the
+    /// Open-to-work value banner can show it before the user has opted in.
+    private func hiringBandName(_ r: V2YouOverview.ReadinessBlock?) -> String? {
+        guard let r, let b = r.targetBands else { return nil }
+        if r.score >= b.exceptional { return "Exceptional" }
+        if r.score >= b.strong { return "Strong" }
+        if r.score >= b.competitive { return "Competitive" }
+        return nil
+    }
+
     private var openToOpportunitiesRow: some View {
         NavigationLink {
-            V2OpenToWorkView(viewModel: hiringVM)
+            V2OpenToWorkView(
+                viewModel: hiringVM,
+                seedScore: vm.data?.readiness.score,
+                seedBand: hiringBandName(vm.data?.readiness)
+            )
                 .environment(appState)
         } label: {
             HStack(spacing: 14) {

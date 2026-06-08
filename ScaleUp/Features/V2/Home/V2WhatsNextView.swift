@@ -40,7 +40,7 @@ struct V2WhatsNextView: View {
                     pathCard(
                         icon: publishing ? "hourglass" : "checkmark.seal",
                         title: ready.proveIt?.label ?? "Go prove it",
-                        subtitle: publishing ? "Publishing…" : "Share your verified proof."
+                        subtitle: publishing ? "Publishing…" : "A verified link to your skills, score & evidence — proof recruiters can trust."
                     ) {
                         let route = ready.proveIt?.route ?? "proof"
                         if route == "interview" {
