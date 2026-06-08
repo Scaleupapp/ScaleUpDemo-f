@@ -1,6 +1,4 @@
 import SwiftUI
-import CoreImage.CIFilterBuiltins
-import UIKit
 
 /// Pairing screen — shows the 6-digit code + QR + copy-link CTA, polls
 /// /status until backend reports `in_progress` (the laptop has redeemed
@@ -20,9 +18,6 @@ struct CapstonePairView: View {
     @State private var currentStatus: CapstoneSessionStatus
     @State private var pollTask: Task<Void, Never>?
     @State private var showLive = false
-    @State private var copiedFlash: CopiedKind?
-
-    enum CopiedKind { case url, code }
 
     /// Where the laptop should go. Points at the deployed web IDE.
     /// Override at runtime via the `CAPSTONE_WEB_URL` Info.plist key if you
@@ -49,12 +44,6 @@ struct CapstonePairView: View {
                     statusHeader
 
                     codeDisplay
-
-                    qrCode
-
-                    urlPanel
-
-                    expiryLine
 
                     Spacer(minLength: 24)
                 }
@@ -152,138 +141,11 @@ struct CapstonePairView: View {
     // MARK: - Code + copy
 
     private var codeDisplay: some View {
-        VStack(spacing: 10) {
-            Text(formattedCode)
-                .font(.system(size: 56, weight: .heavy, design: .rounded).monospacedDigit())
-                .tracking(8)
-                .padding(.vertical, 18)
-                .padding(.horizontal, 32)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 18))
-                .accessibilityLabel("Pairing code \(startResponse.pairingCode)")
-
-            Button {
-                UIPasteboard.general.string = startResponse.pairingCode
-                flash(.code)
-            } label: {
-                Label(copiedFlash == .code ? "Code copied" : "Copy code",
-                      systemImage: copiedFlash == .code ? "checkmark" : "doc.on.doc")
-                    .font(.footnote.weight(.semibold))
-                    .padding(.horizontal, 14).padding(.vertical, 7)
-                    .background(Capsule().fill(Color.accentColor.opacity(0.18)))
-                    .foregroundStyle(.tint)
-            }
-            .buttonStyle(.plain)
-        }
-    }
-
-    // MARK: - URL panel — primary CTA for the laptop
-
-    private var urlPanel: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "link")
-                    .foregroundStyle(.tint)
-                Text(laptopURL)
-                    .font(.callout.monospaced())
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Button {
-                    UIPasteboard.general.string = "https://\(laptopURL)"
-                    flash(.url)
-                } label: {
-                    Image(systemName: copiedFlash == .url ? "checkmark" : "doc.on.doc")
-                        .font(.body.weight(.semibold))
-                        .padding(8)
-                        .background(Color.accentColor.opacity(0.18))
-                        .clipShape(Circle())
-                        .foregroundStyle(.tint)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Copy URL")
-            }
-            .padding(.horizontal, 14).padding(.vertical, 12)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            HStack(spacing: 10) {
-                ShareLink(item: "Open \(laptopURL) and enter \(startResponse.pairingCode)") {
-                    Label("Email / message link", systemImage: "paperplane.fill")
-                        .font(.footnote.weight(.semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Color(.tertiarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-            }
-
-            if copiedFlash == .url {
-                Text("URL copied — paste it in your laptop's browser")
-                    .font(.caption2)
-                    .foregroundStyle(.tint)
-                    .transition(.opacity)
-            }
-        }
-        .padding(.horizontal, 24)
-    }
-
-    // MARK: - QR
-
-    private var qrCode: some View {
-        VStack(spacing: 8) {
-            Group {
-                if let img = generateQR(for: "https://\(laptopURL)?code=\(startResponse.pairingCode)") {
-                    Image(uiImage: img)
-                        .interpolation(.none)
-                        .resizable()
-                        .frame(width: 200, height: 200)
-                        .padding(12)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                } else {
-                    ProgressView().frame(width: 200, height: 200)
-                }
-            }
-            Text("Or scan the QR with your laptop camera")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private var expiryLine: some View {
-        Text("Code expires \(relativeExpiry)")
-            .font(.footnote)
-            .foregroundStyle(.tertiary)
-    }
-
-    // MARK: - QR generator
-
-    private func generateQR(for payload: String) -> UIImage? {
-        let filter = CIFilter.qrCodeGenerator()
-        filter.message = Data(payload.utf8)
-        filter.correctionLevel = "M"
-        guard let output = filter.outputImage else { return nil }
-        let scaled = output.transformed(by: CGAffineTransform(scaleX: 10, y: 10))
-        let context = CIContext()
-        guard let cg = context.createCGImage(scaled, from: scaled.extent) else { return nil }
-        return UIImage(cgImage: cg)
-    }
-
-    // MARK: - Copy flash
-
-    private func flash(_ kind: CopiedKind) {
-        withAnimation(.spring(response: 0.25)) { copiedFlash = kind }
-        Task {
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
-            await MainActor.run {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    if copiedFlash == kind { copiedFlash = nil }
-                }
-            }
-        }
+        CapstonePairingCodePanel(
+            pairingCode: startResponse.pairingCode,
+            expiresAt: startResponse.expiresAt,
+            laptopURL: laptopURL
+        )
     }
 
     // MARK: - Polling
@@ -315,12 +177,6 @@ struct CapstonePairView: View {
     }
 
     // MARK: - Formatting helpers
-
-    private var formattedCode: String {
-        let s = startResponse.pairingCode
-        guard s.count == 6 else { return s }
-        return "\(s.prefix(3)) \(s.suffix(3))"
-    }
 
     private var relativeExpiry: String {
         let formatter = RelativeDateTimeFormatter()

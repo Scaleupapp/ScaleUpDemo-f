@@ -328,6 +328,24 @@ struct CapstoneReplay: Codable, Sendable {
     }
 }
 
+/// Response from POST /capstones/:id/rejoin — a fresh pairing code + QR
+/// the user can use to reconnect the laptop mid-session.
+struct CapstoneRejoinResponse: Codable, Identifiable, Sendable {
+    let sessionId: String
+    let pairingCode: String
+    let expiresAt: Date
+
+    /// Identifiable conformance keyed on pairingCode so each new code
+    /// triggers a fresh sheet presentation.
+    var id: String { pairingCode }
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case pairingCode = "pairing_code"
+        case expiresAt = "expires_at"
+    }
+}
+
 /// Errors the service layer can throw — mapped to learner-readable strings
 /// by the view-model layer.
 enum CapstoneServiceError: Error, Sendable {
@@ -341,6 +359,7 @@ enum CapstoneServiceError: Error, Sendable {
     case reflectionAlreadyRecorded
     case sessionNotGraded(currentStatus: String?)
     case stillEvaluating
+    case notResumable(currentStatus: String?)
 }
 
 // MARK: - History

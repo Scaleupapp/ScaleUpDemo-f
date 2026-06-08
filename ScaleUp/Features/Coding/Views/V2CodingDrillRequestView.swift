@@ -5,6 +5,10 @@ import SwiftUI
 /// loading overlay + error alert, then opens DrillModalView via sheet(item:).
 struct V2CodingDrillRequestView: View {
     let onClose: () -> Void
+    /// Optional subtype raw-value string forwarded from a result screen.
+    /// When non-nil the picker pre-selects the matching `DrillSubtype` and
+    /// shows a small contextual hint.  nil → Auto (unchanged default behaviour).
+    var preselectedSubtype: String? = nil
 
     @State private var selectedSubtype: DrillSubtype? = nil
     @State private var selectedDifficulty: DrillDifficulty? = nil
@@ -19,11 +23,18 @@ struct V2CodingDrillRequestView: View {
                     intro
 
                     pickerSection(label: "Drill type") {
-                        HStack(spacing: 8) {
-                            subtypeChip(nil, label: "Auto", icon: "sparkles")
-                            subtypeChip(.prompt, label: "Prompt", icon: "text.bubble")
-                            subtypeChip(.verify, label: "Bug Hunt", icon: "magnifyingglass")
-                            subtypeChip(.decompose, label: "Decompose", icon: "list.number")
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 8) {
+                                subtypeChip(nil, label: "Auto", icon: "sparkles")
+                                subtypeChip(.prompt, label: "Prompt", icon: "text.bubble")
+                                subtypeChip(.verify, label: "Bug Hunt", icon: "magnifyingglass")
+                                subtypeChip(.decompose, label: "Decompose", icon: "list.number")
+                            }
+                            if preselectedSubtype != nil && selectedSubtype != nil {
+                                Label("Suggested from your last result", systemImage: "arrow.up.forward.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.tint)
+                            }
                         }
                     }
 
@@ -42,6 +53,13 @@ struct V2CodingDrillRequestView: View {
             }
             .navigationTitle("Coding drill")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                // Pre-select the subtype suggested by the originating result screen.
+                // DrillSubtype raw values: "prompt", "verify", "decompose" — direct match.
+                if let raw = preselectedSubtype {
+                    selectedSubtype = DrillSubtype(rawValue: raw)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { onClose() } label: {

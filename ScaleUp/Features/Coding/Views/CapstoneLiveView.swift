@@ -23,6 +23,8 @@ struct CapstoneLiveView: View {
     @State private var error: String?
     @State private var showAbortConfirm = false
     @State private var showResult = false
+    @State private var rejoinResponse: CapstoneRejoinResponse?
+    @State private var isLoadingRejoin = false
 
     var body: some View {
         NavigationStack {
@@ -74,6 +76,9 @@ struct CapstoneLiveView: View {
             .fullScreenCover(isPresented: $showResult) {
                 CapstoneResultView(sessionId: sessionId, onClose: onClose)
             }
+            .sheet(item: $rejoinResponse) { resp in
+                RejoinCodeSheet(rejoinResponse: resp)
+            }
         }
     }
 
@@ -90,7 +95,12 @@ struct CapstoneLiveView: View {
     }
 
     private var timerSection: some View {
-        TimerDisplay(startedAt: startedAt, totalSeconds: timeBudgetSeconds, pausedTotalSeconds: pausedTotalSec)
+        TimerDisplay(
+            startedAt: startedAt,
+            totalSeconds: timeBudgetSeconds,
+            pausedTotalSeconds: pausedTotalSec,
+            isPaused: status == .paused
+        )
     }
 
     private var countersGrid: some View {
@@ -131,35 +141,58 @@ struct CapstoneLiveView: View {
     }
 
     private var actionRow: some View {
-        HStack(spacing: 12) {
-            Button(role: .destructive) {
-                showAbortConfirm = true
-            } label: {
-                Text("Abort")
-                    .frame(maxWidth: .infinity).padding(.vertical, 14)
-                    .background(Color.red.opacity(0.18))
-                    .foregroundStyle(.red)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+        VStack(spacing: 10) {
+            HStack(spacing: 12) {
+                Button(role: .destructive) {
+                    showAbortConfirm = true
+                } label: {
+                    Text("Abort")
+                        .frame(maxWidth: .infinity).padding(.vertical, 14)
+                        .background(Color.red.opacity(0.18))
+                        .foregroundStyle(.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                if status == .in_progress {
+                    Button {
+                        Task { await togglePause() }
+                    } label: {
+                        Label("Pause", systemImage: "pause.fill")
+                            .frame(maxWidth: .infinity).padding(.vertical, 14)
+                            .background(Color(.tertiarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                } else if status == .paused {
+                    Button {
+                        Task { await togglePause() }
+                    } label: {
+                        Label("Resume", systemImage: "play.fill")
+                            .frame(maxWidth: .infinity).padding(.vertical, 14)
+                            .background(Color.accentColor)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
             }
-            if status == .in_progress {
+
+            if status == .in_progress || status == .paused {
                 Button {
-                    Task { await togglePause() }
+                    Task { await requestRejoin() }
                 } label: {
-                    Label("Pause", systemImage: "pause.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 14)
-                        .background(Color(.tertiarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    HStack(spacing: 6) {
+                        if isLoadingRejoin {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "laptopcomputer.and.iphone")
+                        }
+                        Text(isLoadingRejoin ? "Getting code…" : "Resume on laptop")
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-            } else if status == .paused {
-                Button {
-                    Task { await togglePause() }
-                } label: {
-                    Label("Resume", systemImage: "play.fill")
-                        .frame(maxWidth: .infinity).padding(.vertical, 14)
-                        .background(Color.accentColor)
-                        .foregroundStyle(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
+                .disabled(isLoadingRejoin)
             }
         }
     }
@@ -217,9 +250,30 @@ struct CapstoneLiveView: View {
     private func togglePause() async {
         do {
             let next: CapstoneControlAction = status == .paused ? .resume : .pause
-            _ = try await CapstoneService.shared.control(sessionId: sessionId, action: next)
+            // Capture the updated session view returned by the control endpoint
+            // and apply it immediately — without this the timer keeps ticking for
+            // up to 10 s until the next heartbeat poll updates local state.
+            let updated = try await CapstoneService.shared.control(sessionId: sessionId, action: next)
+            status = updated.status
+            pausedTotalSec = updated.pausedTotalSeconds
+            if let c = updated.counters { counters = c }
         } catch {
             self.error = "Couldn't change session state."
+        }
+    }
+
+    private func requestRejoin() async {
+        isLoadingRejoin = true
+        defer { isLoadingRejoin = false }
+        do {
+            let resp = try await CapstoneService.shared.rejoin(sessionId: sessionId)
+            rejoinResponse = resp
+        } catch CapstoneServiceError.notResumable {
+            self.error = "This session can't be resumed on a new laptop connection right now."
+        } catch CapstoneServiceError.sessionNotFound {
+            self.error = "Session not found. It may have already ended."
+        } catch {
+            self.error = "Couldn't get a laptop code. Please try again."
         }
     }
 
@@ -273,25 +327,64 @@ private struct TimerDisplay: View {
     let startedAt: Date?
     let totalSeconds: Int
     let pausedTotalSeconds: Int
+    let isPaused: Bool
 
     @State private var now = Date()
+    /// When paused we latch the last computed remaining value so the display
+    /// freezes instantly rather than drifting until the next heartbeat.
+    @State private var frozenRemaining: Int?
 
     private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
             Text(timeString)
                 .font(.system(size: 56, weight: .bold, design: .rounded).monospacedDigit())
                 .foregroundStyle(color)
-            Text("remaining").font(.caption2).foregroundStyle(.secondary)
+            if isPaused {
+                Label("Paused", systemImage: "pause.circle.fill")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .transition(.opacity)
+            } else {
+                Text("remaining")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .transition(.opacity)
+            }
         }
-        .onReceive(ticker) { now = $0 }
+        .animation(.easeInOut(duration: 0.2), value: isPaused)
+        .onReceive(ticker) { tick in
+            // When paused: latch the last known value and stop advancing.
+            if isPaused {
+                if frozenRemaining == nil { frozenRemaining = computeRemaining(at: now) }
+                return
+            }
+            // When running: clear the latch and advance normally.
+            frozenRemaining = nil
+            now = tick
+        }
+        .onChange(of: isPaused) { _, paused in
+            if paused {
+                // Latch immediately on the tick that caused the pause so we
+                // never show the pre-pause value tick forward while waiting.
+                frozenRemaining = computeRemaining(at: now)
+            } else {
+                frozenRemaining = nil
+                now = Date()
+            }
+        }
+    }
+
+    private func computeRemaining(at date: Date) -> Int {
+        guard let start = startedAt else { return totalSeconds }
+        let elapsed = max(0, Int(date.timeIntervalSince(start)) - pausedTotalSeconds)
+        return max(0, totalSeconds - elapsed)
     }
 
     private var remaining: Int {
-        guard let start = startedAt else { return totalSeconds }
-        let elapsed = max(0, Int(now.timeIntervalSince(start)) - pausedTotalSeconds)
-        return max(0, totalSeconds - elapsed)
+        if let frozen = frozenRemaining { return frozen }
+        return computeRemaining(at: now)
     }
 
     private var timeString: String {
@@ -304,5 +397,53 @@ private struct TimerDisplay: View {
         if frac > 0.5 { return .green }
         if frac > 0.2 { return .yellow }
         return .red
+    }
+}
+
+// MARK: - Rejoin sheet
+
+/// Modal presented when the learner taps "Resume on laptop". Shows the fresh
+/// pairing code + QR using the same CapstonePairingCodePanel used at session
+/// start — nothing new to learn, same interaction pattern.
+private struct RejoinCodeSheet: View {
+    let rejoinResponse: CapstoneRejoinResponse
+    @Environment(\.dismiss) private var dismiss
+
+    private var laptopURL: String {
+        if let v = Bundle.main.object(forInfoDictionaryKey: "CAPSTONE_WEB_URL") as? String,
+           !v.isEmpty { return v }
+        return "scaleup-web-seven.vercel.app/capstone"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    Text("Reconnect your laptop")
+                        .font(.title3.weight(.semibold))
+                        .padding(.top, 28)
+
+                    Text("Enter this code on your laptop to pick up where you left off.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+
+                    CapstonePairingCodePanel(
+                        pairingCode: rejoinResponse.pairingCode,
+                        expiresAt: rejoinResponse.expiresAt,
+                        laptopURL: laptopURL
+                    )
+
+                    Spacer(minLength: 24)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
     }
 }

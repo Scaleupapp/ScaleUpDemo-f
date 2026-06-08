@@ -138,6 +138,25 @@ struct DrillResultView: View {
         grade.rubricBreakdown.min(by: { $0.score < $1.score })?.dimension
     }
 
+    /// Maps a drill rubric dimension string to a subtype raw value using
+    /// contains-based matching.  Dimensions seen in practice:
+    ///   prompt_clarity, prompt_quality, prompt_* → "prompt"
+    ///   verification_*, verify_*, *verif*         → "verify"
+    ///   decomposition_*, decompos*                → "decompose"
+    ///   output_quality, ai_pair_effectiveness, …  → nil (Auto)
+    private func drillSubtype(for dimension: String) -> String? {
+        let d = dimension.lowercased()
+        if d.contains("prompt")   { return "prompt" }
+        if d.contains("verif")    { return "verify" }
+        if d.contains("decompos") { return "decompose" }
+        return nil
+    }
+
+    private var weakestDrillSubtype: String? {
+        guard let weakest = weakestDimension else { return nil }
+        return drillSubtype(for: weakest)
+    }
+
     @ViewBuilder private var nextStepCard: some View {
         if let pretty = weakestDimension?.replacingOccurrences(of: "_", with: " ").capitalized {
             NextStepCard(
@@ -145,7 +164,7 @@ struct DrillResultView: View {
                 highlight: pretty,
                 actionTitle: "Practice another drill"
             ) {
-                NextStepCoordinator.shared.fire(.launchDrill(subtype: nil))
+                NextStepCoordinator.shared.fire(.launchDrill(subtype: weakestDrillSubtype))
                 onDone()
             }
         }

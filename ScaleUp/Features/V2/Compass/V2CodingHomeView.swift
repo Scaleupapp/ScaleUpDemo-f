@@ -289,45 +289,50 @@ struct V2CodingHomeView: View {
     }
 
     private func historyRow(_ row: APICapstoneSummaryRecentEntry) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(row.overallScore.map { String(format: "%.1f / 10", $0) } ?? "— / 10")
-                    .font(V2Theme.bodyMedium.monospacedDigit())
-                    .foregroundStyle(ColorTokens.gold)
-                if let d = row.difficulty {
-                    Text(d.rawValue.capitalized)
-                        .font(V2Theme.tiny)
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(V2Theme.cardBg.opacity(0.6))
-                        .clipShape(Capsule())
-                        .foregroundStyle(ColorTokens.textSecondary)
-                }
-                Spacer()
-                Text(row.gradedAt.map { $0.shortRelative() } ?? "")
-                    .font(V2Theme.tiny)
-                    .foregroundStyle(ColorTokens.textTertiary)
-            }
-            if let preview = row.bundleBriefPreview, !preview.isEmpty {
-                Text(preview)
-                    .font(V2Theme.small)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                    .lineLimit(2)
-            }
-            if let bundleId = row.bundleId {
-                Button {
-                    Task { await retry(bundleId: bundleId) }
-                } label: {
-                    Label("Try this one again", systemImage: "arrow.clockwise")
-                        .font(V2Theme.tiny)
+        Button {
+            presentedSessionId = IdentifiedString(value: row.sessionId)
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(row.overallScore.map { String(format: "%.1f / 10", $0) } ?? "— / 10")
+                        .font(V2Theme.bodyMedium.monospacedDigit())
                         .foregroundStyle(ColorTokens.gold)
+                    if let d = row.difficulty {
+                        Text(d.rawValue.capitalized)
+                            .font(V2Theme.tiny)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(V2Theme.cardBg.opacity(0.6))
+                            .clipShape(Capsule())
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                    Spacer()
+                    Text(row.gradedAt.map { $0.shortRelative() } ?? "")
+                        .font(V2Theme.tiny)
+                        .foregroundStyle(ColorTokens.textTertiary)
                 }
-                .buttonStyle(.plain)
+                if let preview = row.bundleBriefPreview, !preview.isEmpty {
+                    Text(preview)
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                        .lineLimit(2)
+                }
+                if let bundleId = row.bundleId {
+                    Button {
+                        Task { await retry(bundleId: bundleId) }
+                    } label: {
+                        Label("Try this one again", systemImage: "arrow.clockwise")
+                            .font(V2Theme.tiny)
+                            .foregroundStyle(ColorTokens.gold)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(V2Theme.cardBg)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(V2Theme.cardBg)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .buttonStyle(.plain)
     }
 
     private func startNewButton(summary: APICapstoneSummary) -> some View {

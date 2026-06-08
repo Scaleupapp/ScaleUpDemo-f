@@ -292,14 +292,32 @@ struct CapstoneResultView: View {
         .padding(14).background(Color.accentColor.opacity(0.08)).clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
+    /// Maps a capstone dimension id to a drill subtype raw value.
+    /// Unmapped dimensions (correctness, code_quality, reflection_quality) return nil → Auto.
+    private static let capstoneToSubtype: [String: String] = [
+        "ai_pair_effectiveness": "prompt",
+        "verification_discipline": "verify",
+        "decomposition": "decompose"
+    ]
+
+    /// Finds the weakest dimension that has a corresponding drill subtype,
+    /// sorted ascending by score. Returns nil if none map.
+    private func weakestDrillSubtype(for result: CapstoneResult) -> String? {
+        result.dimensionRows
+            .sorted { $0.score < $1.score }
+            .compactMap { row in Self.capstoneToSubtype[row.id] }
+            .first
+    }
+
     @ViewBuilder private func nextStepCard(_ result: CapstoneResult) -> some View {
         if let gap = result.gaps.first {
+            let subtype = weakestDrillSubtype(for: result)
             NextStepCard(
                 lead: "Strengthen your weakest area:",
                 highlight: gap,
                 actionTitle: "Practice with a drill"
             ) {
-                NextStepCoordinator.shared.fire(.launchDrill(subtype: nil))
+                NextStepCoordinator.shared.fire(.launchDrill(subtype: subtype))
                 onClose()
             }
         }
