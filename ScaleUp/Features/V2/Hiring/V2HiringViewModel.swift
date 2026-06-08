@@ -28,6 +28,10 @@ final class V2HiringViewModel {
     /// has no objective — drives the friendly "take an assessment first" state.
     var ineligibleReason: String? = nil
 
+    /// The raw eligibility error code (NO_OBJECTIVE / NO_SNAPSHOT / NOT_ELIGIBLE),
+    /// so the view can show a specific "what you need" path.
+    var ineligibleCode: String? = nil
+
     // MARK: - Derived
 
     /// Count of pending (requested) connections — surfaced as the inbox badge.
@@ -64,6 +68,7 @@ final class V2HiringViewModel {
         loading = true
         error = nil
         ineligibleReason = nil
+        ineligibleCode = nil
         let body = TalentOptInBody(city: normalized(city),
                                    noticePeriod: normalized(noticePeriod),
                                    workPref: normalized(workPref))
@@ -137,6 +142,7 @@ final class V2HiringViewModel {
     private func handleOptInError(_ error: Error) {
         if case V2APIError.httpError(let status, let data) = error, status == 400 {
             let code = errorCode(from: data)
+            ineligibleCode = code
             switch code {
             case "NOT_ELIGIBLE":
                 ineligibleReason = "You're not eligible for the talent pool yet — keep building evidence on a career goal."

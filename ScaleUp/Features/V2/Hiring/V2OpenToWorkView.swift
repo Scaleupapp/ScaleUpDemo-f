@@ -16,6 +16,11 @@ struct V2OpenToWorkView: View {
     @State private var vm: V2HiringViewModel
     @Environment(AppState.self) private var appState
 
+    /// Optional readiness seed from the You tab — lets the value banner show the
+    /// user's band/score even before opt-in (the talent snapshot only exists after).
+    private let seedScore: Int?
+    private let seedBand: String?
+
     // Editable recruiter fields (seeded from the loaded profile).
     @State private var city: String = ""
     @State private var noticePeriod: String = ""
@@ -24,8 +29,10 @@ struct V2OpenToWorkView: View {
 
     /// Pass in a shared view model from the You tab so opt-in state and the inbox
     /// badge stay in sync after the user makes changes here.
-    init(viewModel: V2HiringViewModel = V2HiringViewModel()) {
+    init(viewModel: V2HiringViewModel = V2HiringViewModel(), seedScore: Int? = nil, seedBand: String? = nil) {
         _vm = State(initialValue: viewModel)
+        self.seedScore = seedScore
+        self.seedBand = seedBand
     }
 
     private let workPrefs: [(value: String, label: String)] = [
@@ -40,6 +47,7 @@ struct V2OpenToWorkView: View {
             ColorTokens.background.ignoresSafeArea()
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    valueBanner
                     toggleCard
                     explainerCard
                     if vm.ineligibleReason != nil {
@@ -73,6 +81,42 @@ struct V2OpenToWorkView: View {
             await vm.load()
             seedFields(force: true)
         }
+    }
+
+    // MARK: - Value banner (sells the opt-in)
+
+    private var bannerScore: Int? { vm.profile?.snapshot?.readinessScore ?? seedScore }
+    private var bannerBand: String? { vm.profile?.snapshot?.readinessBand ?? seedBand }
+
+    @ViewBuilder private var valueBanner: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if let band = bannerBand, let score = bannerScore {
+                Text(vm.optedIn ? "YOU'RE VISIBLE" : "YOU'RE A STRONG CANDIDATE")
+                    .font(.system(size: 10, weight: .bold)).tracking(1.2)
+                    .foregroundStyle(ColorTokens.gold)
+                (Text("You're in the ").foregroundStyle(ColorTokens.textSecondary)
+                 + Text("\(band.capitalized) band").foregroundStyle(ColorTokens.gold).fontWeight(.semibold)
+                 + Text(" — \(score)% ready.").foregroundStyle(ColorTokens.textSecondary))
+                    .font(.system(size: 15, weight: .medium))
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Employers search ScaleUp by verified readiness like yours — not résumés.")
+                    .font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("GET DISCOVERED")
+                    .font(.system(size: 10, weight: .bold)).tracking(1.2)
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Let vetted employers find you by your verified readiness — not résumés.")
+                    .font(.system(size: 15, weight: .medium)).foregroundStyle(ColorTokens.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("You stay anonymous until you approve a connection.")
+                    .font(.system(size: 12)).foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(ColorTokens.gold.opacity(0.08)))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
     }
 
     // MARK: - Toggle
@@ -169,16 +213,34 @@ struct V2OpenToWorkView: View {
                     .font(.system(size: 10, weight: .bold)).tracking(1.2)
                     .foregroundStyle(ColorTokens.warning)
             }
-            Text(vm.ineligibleReason ?? "Take an assessment on a career goal to join the talent pool.")
+            Text(vm.ineligibleReason ?? "A couple of steps unlock the talent pool.")
                 .font(.system(size: 13))
                 .foregroundStyle(ColorTokens.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 6) {
+                eligibilityRequirement("A career goal — interview prep, career switch, or upskilling")
+                eligibilityRequirement("One completed assessment, capstone, or mock interview")
+            }
+            .padding(.top, 4)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(ColorTokens.surface))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
             .stroke(ColorTokens.warning.opacity(0.3), lineWidth: 1))
+    }
+
+    private func eligibilityRequirement(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "circle")
+                .font(.system(size: 11))
+                .foregroundStyle(ColorTokens.gold)
+                .padding(.top, 2)
+            Text(text)
+                .font(.system(size: 12.5))
+                .foregroundStyle(ColorTokens.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     // MARK: - Recruiter details (editable; saved via opt-in)

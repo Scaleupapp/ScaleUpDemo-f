@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// "Interested employers" — the candidate connection inbox for Hire from ScaleUp.
 ///
@@ -15,6 +16,8 @@ struct V2ConnectionInboxView: View {
     @State private var vm: V2HiringViewModel
     @Environment(AppState.self) private var appState
     @State private var didLoad = false
+    @State private var share: ShareItem?
+    @State private var copiedId: String?
 
     /// Accepts the shared view model from the Open-to-work screen so the inbox
     /// badge / pending count stay consistent across the flow.
@@ -53,6 +56,9 @@ struct V2ConnectionInboxView: View {
             }
         }
         .refreshable { await vm.loadConnections() }
+        .sheet(item: $share) { item in
+            ActivityView(items: [item.text])
+        }
     }
 
     // MARK: - Card router
@@ -139,6 +145,8 @@ struct V2ConnectionInboxView: View {
                 }
                 .padding(.top, 12)
             }
+
+            reachOutBlock(conn)
         }
         .cardChrome()
     }
@@ -224,6 +232,65 @@ struct V2ConnectionInboxView: View {
         }
     }
 
+    // MARK: - Reach out (post-approval)
+
+    @ViewBuilder private func reachOutBlock(_ conn: CandidateConn) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Rectangle().fill(V2Theme.cardBorder).frame(height: 1).padding(.top, 14)
+            Text("REACH OUT")
+                .font(.system(size: 10, weight: .bold)).tracking(1.2)
+                .foregroundStyle(ColorTokens.gold)
+            if let email = conn.reveal?.email, !email.isEmpty {
+                Button {
+                    UIPasteboard.general.string = email
+                    Haptics.success()
+                    copiedId = conn.connectionId
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: copiedId == conn.connectionId ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(copiedId == conn.connectionId ? "Email copied" : "Copy email")
+                            .font(.system(size: 13, weight: .semibold))
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(ColorTokens.gold)
+                    .padding(.vertical, 10).padding(.horizontal, 12)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(ColorTokens.gold.opacity(0.12)))
+                }
+                .buttonStyle(.plain)
+            }
+            Text(introMessage(for: conn))
+                .font(.system(size: 12.5))
+                .foregroundStyle(ColorTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 11).fill(ColorTokens.surfaceElevated))
+            Button {
+                Haptics.light()
+                share = ShareItem(text: introMessage(for: conn))
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
+                    Text("Share intro").font(.system(size: 13, weight: .semibold))
+                    Spacer(minLength: 0)
+                }
+                .foregroundStyle(ColorTokens.textPrimary)
+                .padding(.vertical, 10).padding(.horizontal, 12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(ColorTokens.surfaceElevated))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.top, 4)
+    }
+
+    private func introMessage(for conn: CandidateConn) -> String {
+        let hi = (conn.reveal?.name).map { "Hi \($0)," } ?? "Hi,"
+        let roleBit = (conn.roleContext).map { " about the \($0) role" } ?? ""
+        let companyBit = (conn.reveal?.companyName).map { " at \($0)" } ?? ""
+        return "\(hi)\n\nThanks for connecting on ScaleUp! I'd love to chat\(roleBit)\(companyBit). My verified readiness, skills and evidence are on my ScaleUp profile — happy to share more whenever works for you."
+    }
+
     private var reassuranceLine: some View {
         VStack(spacing: 4) {
             Text("Three gates protect you")
@@ -283,6 +350,12 @@ private extension View {
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(V2Theme.cardBorder, lineWidth: 1))
     }
+}
+
+/// Identifiable wrapper so a shareable intro string can drive `.sheet(item:)`.
+private struct ShareItem: Identifiable {
+    let id = UUID()
+    let text: String
 }
 
 #Preview { NavigationStack { V2ConnectionInboxView() }.preferredColorScheme(.dark) }
