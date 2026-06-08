@@ -164,6 +164,31 @@ final class CapstoneService {
         }
     }
 
+    // MARK: - Rejoin
+
+    /// POST /capstones/:id/rejoin — mints a fresh pairing code so the learner
+    /// can reconnect the laptop to an active (in_progress / paused) session.
+    /// Throws `.notResumable` on 409, `.sessionNotFound` on 404.
+    func rejoin(sessionId: String) async throws -> CapstoneRejoinResponse {
+        let (data, status) = try await client.rawCodingData(
+            method: "POST",
+            path: "/capstones/\(sessionId)/rejoin",
+            body: EmptyBody()
+        )
+        if status == 200 || status == 201 {
+            return try JSONDecoder.capstoneDecoder.decode(CapstoneRejoinResponse.self, from: data)
+        }
+        if status == 409 {
+            struct Err: Codable { let error: String?; let current_status: String? }
+            let err = try? JSONDecoder().decode(Err.self, from: data)
+            throw CapstoneServiceError.notResumable(currentStatus: err?.current_status)
+        }
+        if status == 404 {
+            throw CapstoneServiceError.sessionNotFound
+        }
+        throw V2APIError.httpError(status, data)
+    }
+
     // MARK: - Result polling
 
     /// Polls `/result`. Returns `.graded` when status is 200, `.pending`

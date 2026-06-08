@@ -13,6 +13,12 @@ struct CapstoneHistoryView: View {
     @State private var retryBusy: String?
     @State private var shareURL: String?
     @State private var sharing = false
+    @State private var selectedSessionId: IdentifiedString?
+
+    private struct IdentifiedString: Identifiable, Hashable {
+        let value: String
+        var id: String { value }
+    }
 
     private let service = CapstoneService.shared
 
@@ -55,6 +61,9 @@ struct CapstoneHistoryView: View {
                     "Here's my ScaleUp coding profile — graded capstone results: \(url)"
                 ])
             }
+        }
+        .sheet(item: $selectedSessionId) { ident in
+            CapstoneResultView(sessionId: ident.value, onClose: { selectedSessionId = nil })
         }
         .task { await load() }
         .refreshable { await load() }
@@ -204,64 +213,69 @@ struct CapstoneHistoryView: View {
     // MARK: - History row
 
     private func historyRow(_ row: CapstoneHistoryItem) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                if let score = row.overallScore {
-                    Text("\(score)")
-                        .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
-                        .foregroundStyle(.tint)
-                    Text("/ 100")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if row.isRetry {
-                    badge(text: "RETRY", tint: .secondary)
-                }
-                if let d = row.difficulty {
-                    badge(text: d.capitalized, tint: .secondary)
-                }
-                if let track = row.roleTrack {
-                    badge(text: track.uppercased(), tint: .secondary)
-                }
-            }
-
-            Text(row.bundleBriefPreview)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-
-            HStack {
-                Text(row.gradedAt.map(relative) ?? "—")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                if let bundleId = row.bundleId {
-                    Button {
-                        Task { await retry(bundleId: bundleId) }
-                    } label: {
-                        HStack(spacing: 4) {
-                            if retryBusy == bundleId {
-                                ProgressView().scaleEffect(0.65)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
-                            }
-                            Text("Try again")
-                        }
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tint)
+        Button {
+            selectedSessionId = IdentifiedString(value: row.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    if let score = row.overallScore {
+                        Text("\(score)")
+                            .font(.system(.title3, design: .rounded).weight(.bold).monospacedDigit())
+                            .foregroundStyle(.tint)
+                        Text("/ 100")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(retryBusy != nil)
+                    Spacer()
+                    if row.isRetry {
+                        badge(text: "RETRY", tint: .secondary)
+                    }
+                    if let d = row.difficulty {
+                        badge(text: d.capitalized, tint: .secondary)
+                    }
+                    if let track = row.roleTrack {
+                        badge(text: track.uppercased(), tint: .secondary)
+                    }
+                }
+
+                Text(row.bundleBriefPreview)
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                HStack {
+                    Text(row.gradedAt.map(relative) ?? "—")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    if let bundleId = row.bundleId {
+                        Button {
+                            Task { await retry(bundleId: bundleId) }
+                        } label: {
+                            HStack(spacing: 4) {
+                                if retryBusy == bundleId {
+                                    ProgressView().scaleEffect(0.65)
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                                Text("Try again")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tint)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(retryBusy != nil)
+                    }
                 }
             }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.secondarySystemBackground))
+            )
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .buttonStyle(.plain)
     }
 
     private func badge(text: String, tint: Color) -> some View {

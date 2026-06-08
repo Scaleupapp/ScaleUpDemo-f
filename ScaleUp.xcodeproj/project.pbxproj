@@ -12,6 +12,7 @@
 		019975614B85ECD9668E4AEC /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = F35C0859D0728200E1BB4898 /* Nuke */; };
 		01CA282C4073408605DBA949 /* APIGetCodeDrillResult200ResponseWhatYouMissedInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA11E42CE2204821731D4D9D /* APIGetCodeDrillResult200ResponseWhatYouMissedInner.swift */; };
 		0224DC891BE11CEB9E2CAEE3 /* ProgressTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 447E3DF77CC36E2D69C9EFF0 /* ProgressTabView.swift */; };
+		0316ED22CDCD5558015763E1 /* NextStepCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65C07F6CC5260D706CFE10E5 /* NextStepCard.swift */; };
 		04C30917260D33A8F3FC7AA5 /* APIPlanMastery.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE4EE6D38BF983E72CE2DBFA /* APIPlanMastery.swift */; };
 		04E4F1F5445C1F1CED42595E /* Creator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B39675BE768F19F3B1D4832 /* Creator.swift */; };
 		0512AA5B994B1887CCBACFB6 /* CompletionConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A9687A05B6AF5628940DFC4 /* CompletionConfettiView.swift */; };
@@ -175,6 +176,7 @@
 		45DB7229E9FD9144C8617556 /* APICapstoneLibraryEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20198ECB97E103D23288C50 /* APICapstoneLibraryEntry.swift */; };
 		461F0AA439EB28CC49C975DE /* Dashboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2C3B9DB023B92AFFD0744 /* Dashboard.swift */; };
 		463BA9D88F718910EA93D7A9 /* APIRunCapstoneCommand200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = D746684C7215658AF8C1CCD8 /* APIRunCapstoneCommand200Response.swift */; };
+		468F4DB182EA33131F458180 /* CapstonePairingCodePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 740F470C4034F29D08C9A7FB /* CapstonePairingCodePanel.swift */; };
 		47332A8B30DFFA38FA76AC2F /* APICodingMasteryResponseData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D11D07B1CC2DF644D4791E2F /* APICodingMasteryResponseData.swift */; };
 		4762FFB0CF67B0ED6F7C0399 /* APICodingMasteryAttemptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1C5D13ECAF012EC76A7D79 /* APICodingMasteryAttemptView.swift */; };
 		47CC358B2973BA342D513B8F /* APIGetCodingHealth200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B5716D3D97B7D1D0C6DEA4A /* APIGetCodingHealth200Response.swift */; };
@@ -268,6 +270,7 @@
 		6D51BFCABD0573CB38F73490 /* DiagnosticViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7868CAF3A35804E812732C /* DiagnosticViewModel.swift */; };
 		6E24E648AB8BDCF9B3A9081E /* CreatorService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A03E34B6A50E38145ACED09D /* CreatorService.swift */; };
 		6EB6CF5F031D584CE2D61CAA /* UserInference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DEA0CBA5D95F9BF82E4CF15 /* UserInference.swift */; };
+		6F252D4B32C1AB28F37CC509 /* NextStepCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A64E8B9FAFCD2209406E29 /* NextStepCoordinator.swift */; };
 		6F78A5861A1789372CC98025 /* APITokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84B93B6EEF5E5FCA41BDF5D6 /* APITokens.swift */; };
 		6F965FDD791079262E854C71 /* APIApiErrorEnvelope.swift in Sources */ = {isa = PBXBuildFile; fileRef = D988EB0D9B7CBAE699E225D1 /* APIApiErrorEnvelope.swift */; };
 		6F96ECC5EE0557B41E3CA8D2 /* ScaleUpTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB853FBC14783D0A166BC32D /* ScaleUpTextField.swift */; };
@@ -803,6 +806,7 @@
 		6389E189DF6F2D824E87AF1F /* JourneyTimelineStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyTimelineStrip.swift; sourceTree = "<group>"; };
 		650E6DE6B277B1B9ABBE57AE /* APIUpdateOnboardingInterestsRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIUpdateOnboardingInterestsRequest.swift; sourceTree = "<group>"; };
 		6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorHistoryView.swift; sourceTree = "<group>"; };
+		65C07F6CC5260D706CFE10E5 /* NextStepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepCard.swift; sourceTree = "<group>"; };
 		661A37CCE04448BCF14FAF7C /* ScaleUpTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaleUpTests.swift; sourceTree = "<group>"; };
 		66B828D0A86A77D8A2CD67FE /* PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaylistDetailView.swift; sourceTree = "<group>"; };
 		66C4AEAAA9180662E702A037 /* APIGetCodeDrillToday200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCodeDrillToday200Response.swift; sourceTree = "<group>"; };
@@ -846,6 +850,7 @@
 		73B1699FB8EDE40BBE383989 /* APIGetCapstoneCostSummary200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCapstoneCostSummary200Response.swift; sourceTree = "<group>"; };
 		73EFEA9C1E85BC74ACA8D9BD /* CompassImageEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompassImageEncoder.swift; sourceTree = "<group>"; };
 		74080EDBB82330F54039BA22 /* MilestoneCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MilestoneCard.swift; sourceTree = "<group>"; };
+		740F470C4034F29D08C9A7FB /* CapstonePairingCodePanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstonePairingCodePanel.swift; sourceTree = "<group>"; };
 		745763EE8FF0F674F82AFFD7 /* AdminStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminStats.swift; sourceTree = "<group>"; };
 		74C25A2CC4E3F115C44DE618 /* DrillSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillSession.swift; sourceTree = "<group>"; };
 		7514BEB988C13693790E69B2 /* QuizSessionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuizSessionViewModel.swift; sourceTree = "<group>"; };
@@ -1058,6 +1063,7 @@
 		D07FE6A478E0C0097E4990AE /* InsightsGeneratingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsGeneratingView.swift; sourceTree = "<group>"; };
 		D11D07B1CC2DF644D4791E2F /* APICodingMasteryResponseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICodingMasteryResponseData.swift; sourceTree = "<group>"; };
 		D17141FD37287891A9725EA6 /* LiveEventResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventResultsView.swift; sourceTree = "<group>"; };
+		D1A64E8B9FAFCD2209406E29 /* NextStepCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepCoordinator.swift; sourceTree = "<group>"; };
 		D1FA5BD1786F46AE28508314 /* APICompassCoderChatResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICompassCoderChatResponse.swift; sourceTree = "<group>"; };
 		D20F3B86992253A8F04C33ED /* APIGetPlanMastery200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetPlanMastery200Response.swift; sourceTree = "<group>"; };
 		D22F18DCCE58CE3B311003EF /* CreatorApplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreatorApplication.swift; sourceTree = "<group>"; };
@@ -1220,6 +1226,7 @@
 				07CDBEC56B0162BC3729A281 /* CapstoneLibraryView.swift */,
 				8232345B6320092F5A094F25 /* CapstoneLiveView.swift */,
 				544D782934327ED7886947FE /* CapstoneMilestoneCard.swift */,
+				740F470C4034F29D08C9A7FB /* CapstonePairingCodePanel.swift */,
 				91022B8C3F94C9B8D4F0FA85 /* CapstonePairView.swift */,
 				FE450517481A01A6F9E1568A /* CapstonePreflightView.swift */,
 				54103B499386B37D07E5A6E4 /* CapstoneReplayView.swift */,
@@ -1564,6 +1571,7 @@
 			isa = PBXGroup;
 			children = (
 				5C34E3FE94073E09883514F4 /* Compass */,
+				6990F3117789CDCB9459159E /* Components */,
 				72D6F2B9A8BD094D338ECC7F /* Core */,
 				2B1F8431BE9A1FAA5BDF8BDA /* Diagnostic */,
 				300010399656A6B8B7014D34 /* Hiring */,
@@ -1954,6 +1962,14 @@
 			path = Notes;
 			sourceTree = "<group>";
 		};
+		6990F3117789CDCB9459159E /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				65C07F6CC5260D706CFE10E5 /* NextStepCard.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		6E81F984272A501DB36547E7 /* Views */ = {
 			isa = PBXGroup;
 			children = (
@@ -1987,6 +2003,7 @@
 		72D6F2B9A8BD094D338ECC7F /* Core */ = {
 			isa = PBXGroup;
 			children = (
+				D1A64E8B9FAFCD2209406E29 /* NextStepCoordinator.swift */,
 				1ABE4584C3464CD685DF5BF5 /* V2APIClient.swift */,
 				594BDDC53959E2E1A04EFDAE /* V2FeatureFlag.swift */,
 				B616B55EEC231D50E4933CA3 /* V2MainTabView.swift */,
@@ -2990,6 +3007,7 @@
 				BCF1B101CA417029F030AA4D /* CapstoneMilestoneCard.swift in Sources */,
 				54454CCDFDF4A9D2EAEF373E /* CapstoneModels.swift in Sources */,
 				A9DB103CD8393E3D9B7A9459 /* CapstonePairView.swift in Sources */,
+				468F4DB182EA33131F458180 /* CapstonePairingCodePanel.swift in Sources */,
 				DC63ED4C254A798824C5B785 /* CapstonePreflightView.swift in Sources */,
 				E5888B625E142F9ACFCCB7C6 /* CapstoneReplayView.swift in Sources */,
 				D526A0B40AA608342909860F /* CapstoneResultView.swift in Sources */,
@@ -3143,6 +3161,8 @@
 				086C014105400FD29D3F6A91 /* MyPlanView.swift in Sources */,
 				E5BF813F0281CE194D7A6056 /* MyPlanViewModel.swift in Sources */,
 				AC329186404F466932D45926 /* NextCheckInPill.swift in Sources */,
+				0316ED22CDCD5558015763E1 /* NextStepCard.swift in Sources */,
+				6F252D4B32C1AB28F37CC509 /* NextStepCoordinator.swift in Sources */,
 				3BE25943FDCB76F03D4E403E /* NoteManageView.swift in Sources */,
 				95BD4FCED9087DF1302B0A57 /* NoteRequest.swift in Sources */,
 				235F53435431AD4A159A5B8C /* NoteRequestDetailView.swift in Sources */,
@@ -3408,7 +3428,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 191;
+				CURRENT_PROJECT_VERSION = 193;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3484,7 +3504,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 191;
+				CURRENT_PROJECT_VERSION = 193;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
