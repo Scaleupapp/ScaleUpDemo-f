@@ -58,3 +58,7 @@ build_sim/
 openapitools.json
 build187.log
 build188.log
+
+# Business/strategy docs — keep out of the app repo
+PROOF_VIRALITY_MONETIZATION_PLAY_*.md
+HIRE_FROM_SCALEUP_FLOWS_*.md
