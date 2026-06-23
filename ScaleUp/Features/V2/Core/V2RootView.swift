@@ -14,7 +14,12 @@ struct V2RootView: View {
     var body: some View {
         Group {
             if flag.isEnabled {
-                V2MainTabView()
+                if appState.userContext?.isPlacement == true {
+                    // Institution (placement) users get the Placements shell.
+                    PlacementsMainTabView()
+                } else {
+                    V2MainTabView()
+                }
             } else {
                 MainTabView()
             }

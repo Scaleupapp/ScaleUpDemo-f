@@ -19,6 +19,10 @@ final class AppState {
 
     var launchState: AppLaunchState = .splash
     var currentUser: User?
+    /// Persona/placement context from GET /api/v2/me/context. Nil or
+    /// `persona == "general"` for D2C users; only placement (institution) users
+    /// carry a non-nil `placement` block, which drives the PlacementsRoot shell.
+    var userContext: UserContext?
     var isCheckingAuth = true
     var selectedTab: Tab = .home
 
@@ -37,6 +41,9 @@ final class AppState {
             let user: User = try await APIClient.shared.request(MeEndpoint())
             currentUser = user
             AnalyticsService.shared.identify(userId: user.id)
+            // Resolve persona BEFORE launchState so the first .home render picks
+            // the right shell (no general→placement flash).
+            await loadUserContext()
 
             // v2 per-user status — server decides v1 vs v2 and whether the
             // user still needs the v2 onboarding flow. Awaited before
@@ -77,11 +84,27 @@ final class AppState {
         )
         currentUser = authData.user
         AnalyticsService.shared.identify(userId: authData.user.id)
+        await loadUserContext()
 
         // v2 per-user status — server decides v1 vs v2 and whether the user
         // (a fresh registration is forced onto v2) still needs onboarding.
         await V2FeatureFlag.shared.syncUserStatus()
         launchState = resolveLaunchState(for: authData.user)
+    }
+
+    // MARK: - Persona / Placement Context
+
+    /// Resolves the user's persona (general vs placement) and, for placement
+    /// users, their institution/cohort/objective context. Best-effort: on any
+    /// failure `userContext` is left nil and the user gets the general (D2C)
+    /// experience — so this never blocks login or breaks D2C.
+    func loadUserContext() async {
+        do {
+            let resp: V2APIResponse<UserContext> = try await V2APIClient.shared.get("/me/context")
+            userContext = resp.data
+        } catch {
+            userContext = nil
+        }
     }
 
     // MARK: - Onboarding
@@ -139,6 +162,7 @@ final class AppState {
         await KeychainManager.shared.clearTokens()
         URLCache.shared.removeAllCachedResponses()
         currentUser = nil
+        userContext = nil
         AnalyticsService.shared.reset()
         launchState = .welcome
     }
