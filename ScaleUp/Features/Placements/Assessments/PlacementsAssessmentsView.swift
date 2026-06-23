@@ -1,4 +1,6 @@
 import SwiftUI
+import UIKit
+import Combine
 
 // MARK: - Main Assessments Section
 
@@ -14,7 +16,10 @@ struct PlacementsAssessmentsView: View {
     @State private var startError: String?
     @State private var startingId: String?   // which card shows a spinner
 
-    /// Injected from PlacementsMainTabView — needed by InterviewSessionView's sub-views.
+    /// Background grade-poll task for submitted-but-not-graded sessions.
+    @State private var gradePollTask: Task<Void, Never>?
+
+    /// Injected from PlacementsMainTabView — needed by PlacementInterviewTakeView.
     @Environment(V2NavState.self) private var v2Nav
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(AppState.self) private var appState
@@ -61,6 +66,11 @@ struct PlacementsAssessmentsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .task { await load() }
+        // Refresh on app foreground
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            Task { await load() }
+        }
+        .onDisappear { gradePollTask?.cancel() }
         // MCQ sheet
         .sheet(item: Binding(
             get: { activeStart.flatMap { $0.engine.type == "mcq" ? $0 : nil } },
@@ -74,7 +84,6 @@ struct PlacementsAssessmentsView: View {
                     }
                 }
             } else {
-                // quizId missing — show fallback
                 VStack(spacing: 16) {
                     Text("MCQ assessment is not configured yet.")
                         .font(V2Theme.body)
@@ -93,8 +102,11 @@ struct PlacementsAssessmentsView: View {
                 start: start,
                 onComplete: {
                     Task {
-                        await sync(assessmentSessionId: start.assessmentSessionId)
+                        let syncResult = await sync(assessmentSessionId: start.assessmentSessionId)
                         await load()
+                        if let status = syncResult?.status, status != "graded" {
+                            startGradePoll(assessmentSessionId: start.assessmentSessionId)
+                        }
                     }
                 }
             )
@@ -106,26 +118,20 @@ struct PlacementsAssessmentsView: View {
         .sheet(item: Binding(
             get: { activeStart.flatMap { $0.engine.type == "capstone" ? $0 : nil } },
             set: { if $0 == nil { activeStart = nil } }
-        )) { _ in
-            VStack(spacing: 20) {
-                Image(systemName: "laptopcomputer")
-                    .font(.system(size: 40))
-                    .foregroundStyle(ColorTokens.gold)
-                Text("Open on your laptop")
-                    .font(V2Theme.h2)
-                    .foregroundStyle(ColorTokens.textPrimary)
-                Text("This capstone assessment must be completed on a laptop or desktop browser. Log in to scaleupapp.club to continue.")
-                    .font(V2Theme.body)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                Button("Got it") { activeStart = nil }
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(ColorTokens.gold)
-            }
-            .padding(32)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(ColorTokens.background)
+        )) { start in
+            PlacementCapstonePairView(
+                start: start,
+                onClose: {
+                    Task {
+                        let syncResult = await sync(assessmentSessionId: start.assessmentSessionId)
+                        activeStart = nil
+                        await load()
+                        if let status = syncResult?.status, status != "graded" {
+                            startGradePoll(assessmentSessionId: start.assessmentSessionId)
+                        }
+                    }
+                }
+            )
         }
     }
 
@@ -133,10 +139,20 @@ struct PlacementsAssessmentsView: View {
 
     private func handleTap(row: PlacementAssessmentRow) {
         let status = row.session?.status
-        // Only allow starting if not already graded or submitted
-        guard status != "graded", status != "submitted" else { return }
+        // Guard: graded, submitted, and expired are terminal — no action.
+        guard status != "graded", status != "submitted", status != "expired" else { return }
 
+        // Auto-clear any previous start error.
         startError = nil
+
+        // Guard: in_progress — resume (re-present) rather than starting a new session.
+        if status == "in_progress" {
+            // We don't have the original AssessmentStartResult anymore.
+            // Block re-tap and rely on sync poll + foreground refresh.
+            // The row already shows "In progress" label.
+            return
+        }
+
         startingId = row.id
         Task {
             defer { startingId = nil }
@@ -144,9 +160,47 @@ struct PlacementsAssessmentsView: View {
                 let result = try await api.startAssessment(row.id)
                 activeStart = result
             } catch {
-                startError = "Could not start assessment: \(error.localizedDescription)"
+                startError = friendlyError(error, for: row)
             }
         }
+    }
+
+    /// Maps API errors to learner-friendly strings.
+    private func friendlyError(_ error: Error, for row: PlacementAssessmentRow) -> String {
+        // V2APIError path (used by V2APIClient — the PlacementsAssessmentsApi client)
+        if let v2Err = error as? V2APIError {
+            if let code = v2Err.extractCode() {
+                switch code {
+                case "NOT_OPEN":    return "This assessment hasn't opened yet."
+                case "CLOSED":      return "This assessment is closed."
+                case "NOT_ENROLLED": return "You're not enrolled in this cohort."
+                default:            break
+                }
+            }
+            // 403 without a code
+            if case .httpError(403, _) = v2Err {
+                return "You're not enrolled in this cohort."
+            }
+            if case .httpError(409, _) = v2Err {
+                return "This assessment is not available right now."
+            }
+        }
+        // Legacy APIError path (fallback)
+        if let apiErr = error as? APIError {
+            switch apiErr {
+            case .forbidden: return "You're not enrolled in this cohort."
+            case .conflictWithCode(let code, _, _):
+                switch code {
+                case "NOT_OPEN":    return "This assessment hasn't opened yet."
+                case "CLOSED":      return "This assessment is closed."
+                case "NOT_ENROLLED": return "You're not enrolled in this cohort."
+                default:            break
+                }
+            default:
+                break
+            }
+        }
+        return "Could not start assessment: \(error.localizedDescription)"
     }
 
     private func load() async {
@@ -160,9 +214,38 @@ struct PlacementsAssessmentsView: View {
         isLoading = false
     }
 
-    private func sync(assessmentSessionId: String) async {
-        // Best-effort: ignore errors
-        _ = try? await api.syncSession(assessmentSessionId)
+    @discardableResult
+    private func sync(assessmentSessionId: String) async -> AssessmentSyncResult? {
+        // Best-effort: ignore errors; return result so caller can inspect status.
+        return try? await api.syncSession(assessmentSessionId)
+    }
+
+    // MARK: - Submitted-not-graded background poll
+
+    /// Polls listAssessments every 20 s up to 5 min until any session shows
+    /// "graded". Cancels if the view disappears (onDisappear cancels gradePollTask).
+    private func startGradePoll(assessmentSessionId: String) {
+        gradePollTask?.cancel()
+        gradePollTask = Task {
+            for _ in 0..<15 {   // 15 × 20 s = 5 min
+                guard !Task.isCancelled else { return }
+                try? await Task.sleep(nanoseconds: 20_000_000_000)
+                guard !Task.isCancelled else { return }
+                // Try a direct sync first.
+                if let result = try? await api.syncSession(assessmentSessionId),
+                   result.status == "graded" {
+                    await load()
+                    return
+                }
+                // Also reload the list (catches server-driven status changes).
+                await load()
+                // Check if any row is now graded for this session.
+                let anyGraded = rows.contains { r in
+                    r.session?.id == assessmentSessionId && r.session?.status == "graded"
+                }
+                if anyGraded { return }
+            }
+        }
     }
 }
 
@@ -175,8 +258,12 @@ private struct AssessmentRowCard: View {
 
     private var statusLabel: String {
         switch row.session?.status {
-        case "graded":      return "Graded"
-        case "submitted":   return "Submitted"
+        case "graded":
+            if let score = row.session?.result?.score {
+                return "Graded — \(Int(score.rounded()))%"
+            }
+            return "Graded"
+        case "submitted":   return "Submitted — grading…"
         case "in_progress": return "In progress"
         case "scheduled":   return "Not started"
         case "expired":     return "Expired"
@@ -196,7 +283,7 @@ private struct AssessmentRowCard: View {
 
     private var isActionable: Bool {
         let s = row.session?.status
-        return s != "graded" && s != "submitted" && s != "expired"
+        return s != "graded" && s != "submitted" && s != "expired" && s != "in_progress"
     }
 
     private var typeIcon: String {
@@ -205,6 +292,22 @@ private struct AssessmentRowCard: View {
         case "capstone":  return "laptopcomputer"
         default:          return "checklist"
         }
+    }
+
+    /// Human-readable window subtitle, e.g. "Opens 25 Jun · Closes 28 Jun"
+    private var windowLabel: String? {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "d MMM"
+        var parts: [String] = []
+        if let s = row.assessment.opensAt,
+           let d = ISO8601DateFormatter().date(from: s) {
+            parts.append("Opens \(fmt.string(from: d))")
+        }
+        if let s = row.assessment.closesAt,
+           let d = ISO8601DateFormatter().date(from: s) {
+            parts.append("Closes \(fmt.string(from: d))")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     var body: some View {
@@ -226,6 +329,12 @@ private struct AssessmentRowCard: View {
                     Text(row.assessment.type.uppercased())
                         .font(V2Theme.tiny)
                         .foregroundStyle(ColorTokens.textTertiary)
+
+                    if let window = windowLabel {
+                        Text(window)
+                            .font(V2Theme.tiny)
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
 
                     HStack(spacing: 6) {
                         Circle()
@@ -255,36 +364,7 @@ private struct AssessmentRowCard: View {
         }
         .buttonStyle(.plain)
         .disabled(!isActionable || isStarting)
-        .opacity(!isActionable ? 0.6 : 1.0)
-    }
-}
-
-// MARK: - Interview Take View
-
-/// Inline launcher that holds an `InterviewViewModel`, renders `InterviewSessionView`,
-/// and calls `vm.attachSession(...)` on appear. On sheet dismiss the caller syncs
-/// the assessment session.
-struct PlacementInterviewTakeView: View {
-    let start: AssessmentStartResult
-    let onComplete: () -> Void
-
-    @State private var vm = InterviewViewModel()
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        InterviewSessionView(viewModel: vm)
-            .task {
-                await vm.attachSession(
-                    sessionId: start.engine.sessionId ?? "",
-                    systemInstruction: start.meta?.systemInstruction ?? ""
-                )
-            }
-            .onChange(of: vm.state) { _, newState in
-                if case .results = newState {
-                    onComplete()
-                    dismiss()
-                }
-            }
+        .opacity((!isActionable && row.session?.status != "in_progress") ? 0.6 : 1.0)
     }
 }
 

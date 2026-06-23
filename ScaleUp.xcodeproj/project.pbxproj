@@ -290,6 +290,7 @@
 		73FE2CE5AA7B352D52029797 /* ContentDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE175A34670E20BC35648307 /* ContentDetailView.swift */; };
 		74092C7FDF1ED88D4E8F4A2A /* AudioSummaryPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12630479D8F67D5702FA468C /* AudioSummaryPlayerView.swift */; };
 		74A5B66463665D8A7E46D378 /* APIRunCapstoneCommandRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D74913C68D15BC39922415C /* APIRunCapstoneCommandRequest.swift */; };
+		7541F88F28C10DB5B205B2E0 /* PlacementInterviewTakeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0791282F043D9142FFA9A4A /* PlacementInterviewTakeView.swift */; };
 		757EF225658D119BC6AD8D49 /* PlacementsAssessmentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68D011BBE83E8D075EACACC /* PlacementsAssessmentsView.swift */; };
 		761C16D907CD23D228AD9F15 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1EEABD841199E7E343C5DB4 /* WelcomeView.swift */; };
 		777233F4BA757780C658E900 /* NotesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8B139BE36014ACB42C3586 /* NotesService.swift */; };
@@ -348,6 +349,7 @@
 		8AFFD3CBFF553FBF1893BD60 /* APIStartCalibrationDrill200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3624635606476B6055F852F /* APIStartCalibrationDrill200Response.swift */; };
 		8B31F1D931643E273BDAA94A /* TopicTransitionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44016372734E4C9BABBA232B /* TopicTransitionCard.swift */; };
 		8BCE220E0CA7F83FB522E620 /* ReadinessScoreCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72EF300B6A65B4CAEDA341E5 /* ReadinessScoreCard.swift */; };
+		8C1BA4BCD4EA03557B6FCDC6 /* PlacementCapstonePairView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64205AB2B5D078CB68A7CDE8 /* PlacementCapstonePairView.swift */; };
 		8C9F4893A319027236B0832F /* ProgressRing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BED62C59C6A36689079698F /* ProgressRing.swift */; };
 		8D2838434EB6CF08380D2B99 /* SyllabusUploadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67B11B82CE011B235CE47E62 /* SyllabusUploadView.swift */; };
 		8DBD8300A8B76CB30DDAEC7F /* APICapstoneBundleViewStarterRepo.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3EA5DB4D2C3098C34AC184 /* APICapstoneBundleViewStarterRepo.swift */; };
@@ -814,6 +816,7 @@
 		6345CA87F28CAB287DBE9463 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		636132594A373ED3F6732DEA /* LiveEventViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventViewModel.swift; sourceTree = "<group>"; };
 		6389E189DF6F2D824E87AF1F /* JourneyTimelineStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyTimelineStrip.swift; sourceTree = "<group>"; };
+		64205AB2B5D078CB68A7CDE8 /* PlacementCapstonePairView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementCapstonePairView.swift; sourceTree = "<group>"; };
 		650E6DE6B277B1B9ABBE57AE /* APIUpdateOnboardingInterestsRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIUpdateOnboardingInterestsRequest.swift; sourceTree = "<group>"; };
 		6518D42EEA6917A558219FD1 /* AITutorHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorHistoryView.swift; sourceTree = "<group>"; };
 		65C07F6CC5260D706CFE10E5 /* NextStepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextStepCard.swift; sourceTree = "<group>"; };
@@ -1073,6 +1076,7 @@
 		CFF315BDB3AAE03E4E2795E0 /* UserService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserService.swift; sourceTree = "<group>"; };
 		D021B8CA080F14C064EF35B2 /* DashboardService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardService.swift; sourceTree = "<group>"; };
 		D0287C7D11C3928D8C7288BE /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		D0791282F043D9142FFA9A4A /* PlacementInterviewTakeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementInterviewTakeView.swift; sourceTree = "<group>"; };
 		D07FE6A478E0C0097E4990AE /* InsightsGeneratingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsGeneratingView.swift; sourceTree = "<group>"; };
 		D11D07B1CC2DF644D4791E2F /* APICodingMasteryResponseData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICodingMasteryResponseData.swift; sourceTree = "<group>"; };
 		D17141FD37287891A9725EA6 /* LiveEventResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveEventResultsView.swift; sourceTree = "<group>"; };
@@ -2367,6 +2371,8 @@
 		C1F100B47CEE86BB84E2F7D5 /* Assessments */ = {
 			isa = PBXGroup;
 			children = (
+				64205AB2B5D078CB68A7CDE8 /* PlacementCapstonePairView.swift */,
+				D0791282F043D9142FFA9A4A /* PlacementInterviewTakeView.swift */,
 				B10C0DF0D02F7528380227CF /* PlacementsAssessmentsApi.swift */,
 				A68D011BBE83E8D075EACACC /* PlacementsAssessmentsView.swift */,
 			);
@@ -3265,7 +3271,9 @@
 				BF1F6BFE4BCF8B3ACF595D5A /* PendingNotesReviewView.swift in Sources */,
 				349D172A6BCE73AE88FED836 /* PhoneAuthView.swift in Sources */,
 				68ADE57059A8830440FE418D /* PhoneVerificationView.swift in Sources */,
+				8C1BA4BCD4EA03557B6FCDC6 /* PlacementCapstonePairView.swift in Sources */,
 				AC39421FC0F7E349B8E2BA3F /* PlacementContext.swift in Sources */,
+				7541F88F28C10DB5B205B2E0 /* PlacementInterviewTakeView.swift in Sources */,
 				B587AD8609E65E33420F6B58 /* PlacementTab.swift in Sources */,
 				C5423B0A8F7B7965BDAD690B /* PlacementsAssessmentsApi.swift in Sources */,
 				757EF225658D119BC6AD8D49 /* PlacementsAssessmentsView.swift in Sources */,

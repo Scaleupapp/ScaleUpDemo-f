@@ -59,6 +59,10 @@ struct AssessmentEngine: Codable {
 
 struct AssessmentMeta: Codable {
     let systemInstruction: String?
+    // Capstone fields
+    let pairingCode: String?
+    let expiresAt: String?
+    let timeBudgetSeconds: Int?
 }
 
 // MARK: - Sync Result
@@ -102,5 +106,18 @@ final class PlacementsAssessmentsApi {
             body: _EmptyBody()
         )
         return resp.data
+    }
+}
+
+// MARK: - V2APIError helpers (Placement assessment use)
+
+extension V2APIError {
+    /// Extracts the machine `code` string from a 4xx response body shaped:
+    ///   { "success": false, "code": "NOT_OPEN", "message": "..." }
+    /// Returns nil when no `code` key is present.
+    func extractCode() -> String? {
+        guard case .httpError(_, let data) = self else { return nil }
+        struct CodeBody: Decodable { let code: String? }
+        return (try? JSONDecoder().decode(CodeBody.self, from: data))?.code
     }
 }
