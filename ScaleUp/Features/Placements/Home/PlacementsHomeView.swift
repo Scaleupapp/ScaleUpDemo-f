@@ -165,17 +165,10 @@ struct PlacementsHomeView: View {
         return "Placement season underway"
     }
 
-    // MARK: - Next steps (placeholder until assessments land)
+    // MARK: - Assessments section
 
     private var nextStepsCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Next steps").v2Eyebrow()
-            Text("Assessments scheduled by your placement office will appear here. In the meantime, keep building readiness with Compass and your daily plan.")
-                .font(V2Theme.body)
-                .foregroundStyle(ColorTokens.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .v2Card()
+        PlacementsAssessmentsView()
+            .v2Card()
     }
 }

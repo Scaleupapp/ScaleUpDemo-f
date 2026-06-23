@@ -152,6 +152,38 @@ final class InterviewViewModel {
         }
     }
 
+    // MARK: - Attach Existing Session (placement assessments)
+
+    /// Join an already-created InterviewSession (created server-side by the
+    /// placement assessment wrapper) — same as startInterview() but skips the
+    /// POST /interviews/start call.
+    func attachSession(sessionId: String, systemInstruction: String) async {
+        state = .connecting
+        do {
+            self.sessionId = sessionId
+            self.systemInstruction = systemInstruction
+            interviewStartTime = Date()
+            let tokenResponse = try await service.getRealtimeToken(sessionId: sessionId)
+            try await liveManager.startSession(systemInstruction: systemInstruction, token: tokenResponse.token)
+            proctor.startMonitoring(sessionId: sessionId, startTime: interviewStartTime!)
+            timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.elapsedTime = Date().timeIntervalSince(self.interviewStartTime ?? Date())
+                    if self.liveManager.isInterviewComplete && self.state == .interviewing {
+                        self.state = .concluding
+                        try? await Task.sleep(for: .seconds(3))
+                        await self.saveAndEvaluate()
+                    }
+                }
+            }
+            state = .interviewing
+        } catch {
+            print("[Interview] attachSession failed: \(error)")
+            state = .error(error.localizedDescription)
+        }
+    }
+
     // MARK: - End Interview (manual)
 
     func endInterview() async {
