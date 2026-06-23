@@ -66,6 +66,14 @@ final class AppState {
     /// follows the normal v1 progression.
     private func resolveLaunchState(for user: User) -> AppLaunchState {
         let flag = V2FeatureFlag.shared
+        // Placement (institution) students get a locked objective seeded by the
+        // backend (1B) at claim time — they skip the objective-selection
+        // onboarding entirely and go straight to the diagnostic (scoped to that
+        // objective), then the PlacementsRoot home. `userContext` is resolved
+        // before this runs (in checkAuth / handleAuthSuccess).
+        if userContext?.isPlacement == true {
+            return user.diagnosticComplete == true ? .home : .diagnostic
+        }
         if flag.isEnabled && flag.needsV2Onboarding {
             return .onboarding(step: 1)
         }
