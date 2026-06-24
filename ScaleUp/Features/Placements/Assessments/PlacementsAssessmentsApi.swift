@@ -13,7 +13,7 @@ struct PlacementAssessmentRow: Codable, Identifiable {
 /// Flattened Assessment document (only fields needed for the take-flow).
 struct PlacementAssessment: Codable, Identifiable {
     let id: String
-    let type: String          // "mcq" | "capstone" | "interview"
+    let type: String          // "mcq" | "capstone" | "interview" | "drill"
     let title: String
     let status: String?       // always "released" on list, but keep optional for tolerance
     let opensAt: String?      // ISO8601 string — backend uses Date but lean() returns string
@@ -40,6 +40,34 @@ struct PlacementSessionLite: Codable {
 struct PlacementSessionResult: Codable {
     let score: Double?
     let integrity: String?
+    let raw: PlacementResultRaw?
+}
+
+struct PlacementResultRaw: Codable {
+    // MCQ
+    let competencyBreakdown: [String: Double]?
+    // Interview
+    let dimensions: [PlacementResultDimension]?
+    // Capstone
+    let dimensionScores: [PlacementResultDimension]?
+    // Drill
+    let rubricBreakdown: [RubricItem]?      // RubricItem from DrillModels
+    let whatYouMissed: [WhatYouMissedItem]? // WhatYouMissedItem from DrillModels
+
+    enum CodingKeys: String, CodingKey {
+        case competencyBreakdown = "competency_breakdown"
+        case dimensions
+        case dimensionScores = "dimension_scores"
+        case rubricBreakdown = "rubric_breakdown"
+        case whatYouMissed = "what_you_missed"
+    }
+}
+
+struct PlacementResultDimension: Codable, Identifiable {
+    var id: String { name }
+    let name: String
+    let score: Double?
+    let feedback: String?
 }
 
 // MARK: - Start Result
@@ -52,9 +80,10 @@ struct AssessmentStartResult: Codable {
 }
 
 struct AssessmentEngine: Codable {
-    let type: String          // "mcq" | "capstone" | "interview"
-    let sessionId: String?    // interview / capstone engine session id
+    let type: String          // "mcq" | "capstone" | "interview" | "drill"
+    let sessionId: String?    // interview / capstone / drill engine session id (attemptId for drill)
     let quizId: String?       // mcq only
+    let bundleId: String?     // drill only — the DrillBundle id
 }
 
 struct AssessmentMeta: Codable {
@@ -63,6 +92,12 @@ struct AssessmentMeta: Codable {
     let pairingCode: String?
     let expiresAt: String?
     let timeBudgetSeconds: Int?
+    // Drill fields (from safeBundleView)
+    let brief: String?
+    let acceptanceCriteria: [String]?
+    let drillSubtype: String?
+    let timeBudgetMinutes: Int?
+    let starterRepo: StarterRepo?  // StarterRepo is defined in DrillModels.swift
 }
 
 // MARK: - Sync Result
@@ -106,6 +141,23 @@ final class PlacementsAssessmentsApi {
             body: _EmptyBody()
         )
         return resp.data
+    }
+
+    // POST /api/coding/drills/:attemptId/submit
+    func submitPlacementDrill(attemptId: String, body: DrillSubmitBody) async throws -> DrillSubmitResponse {
+        try await V2APIClient.shared.postCoding("/drills/\(attemptId)/submit", body: body)
+    }
+
+    // GET /api/coding/drills/:attemptId/result (200 = graded, 202 = pending)
+    func pollPlacementDrillResult(attemptId: String) async throws -> DrillResultPoll {
+        let (data, status) = try await V2APIClient.shared.rawCodingData(method: "GET", path: "/drills/\(attemptId)/result")
+        if status == 200 {
+            let graded = try JSONDecoder().decode(DrillResultGradedResponse.self, from: data)
+            return .graded(graded)
+        } else {
+            let pending = try JSONDecoder().decode(DrillResultPendingResponse.self, from: data)
+            return .pending(pending)
+        }
     }
 }
 

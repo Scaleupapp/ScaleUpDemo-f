@@ -424,4 +424,13 @@ struct DrillContext: Sendable {
         self.timeBudgetMinutes = cal.timeBudgetMinutes
         self.acceptanceCriteria = nil
     }
+
+    /// Memberwise init for placement-context drills where data comes from AssessmentMeta.
+    init(brief: String, drillSubtype: DrillSubtype, language: String?, timeBudgetMinutes: Int, acceptanceCriteria: [String]?) {
+        self.brief = brief
+        self.drillSubtype = drillSubtype
+        self.language = language
+        self.timeBudgetMinutes = timeBudgetMinutes
+        self.acceptanceCriteria = acceptanceCriteria
+    }
 }
