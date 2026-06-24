@@ -361,6 +361,7 @@
 		90AD15E3F578A5E9DC74F670 /* CapstoneSessionSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76373624F631793C7DDC5FF9 /* CapstoneSessionSocket.swift */; };
 		917DF2A509F0610D0FE00B6C /* PlacementsMainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F185663D093B435CDD2E0F0D /* PlacementsMainTabView.swift */; };
 		91915DB799D197946D60E024 /* APIPlanStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32A0BC1150B739D49FDE9557 /* APIPlanStatus.swift */; };
+		920BB214F68B5829BD3BBFBD /* PlacementAssessmentResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7F6344327E79610408E7A98 /* PlacementAssessmentResultView.swift */; };
 		925E7D1828384EE3D3B36C6F /* CapstoneStatsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7533566F009997B05D41E2EE /* CapstoneStatsCard.swift */; };
 		92FA9740B4568B67B6C820A8 /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A018DBD209C4B935F106CB8 /* LeaderboardView.swift */; };
 		948DDE9C1792CDDA7FFBF2C2 /* APICapstoneControlRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = C33417A6120E0FB3F6D9CA0B /* APICapstoneControlRequest.swift */; };
@@ -404,6 +405,7 @@
 		A51064E0372576297F52B409 /* APIPersistCapstoneFiles200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03580D13A522CAF4EC2AC7DE /* APIPersistCapstoneFiles200Response.swift */; };
 		A51E165DAE66C39F9C0527A3 /* DrillBriefView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAD3E0600E3527335A84F83D /* DrillBriefView.swift */; };
 		A5398C5DCB115047D6518A59 /* APICapstoneSessionCounters.swift in Sources */ = {isa = PBXBuildFile; fileRef = A573A22924A83C9A935F325B /* APICapstoneSessionCounters.swift */; };
+		A5E28B3DCEA12AFC6EEA0D40 /* PlacementDrillTakeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF874B0FD058635414171ED7 /* PlacementDrillTakeView.swift */; };
 		A6DACC5DC03DA7A222E51095 /* V2PlanDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92B0D37303D25C8D1064CD20 /* V2PlanDetailViewModel.swift */; };
 		A703E9DF52CCF91FD0938F45 /* APIGetCapstoneAnchorDrift200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CB0D7CC77F66B84FBCD3048 /* APIGetCapstoneAnchorDrift200Response.swift */; };
 		A83885FA05E7ACCA95D62AF8 /* DiagnosticVoiceAnswerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 514F574E0633E3092A999985 /* DiagnosticVoiceAnswerView.swift */; };
@@ -1094,6 +1096,7 @@
 		D54EFF71CEC11AB7F8EBDE49 /* OnboardingTopicService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingTopicService.swift; sourceTree = "<group>"; };
 		D746684C7215658AF8C1CCD8 /* APIRunCapstoneCommand200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIRunCapstoneCommand200Response.swift; sourceTree = "<group>"; };
 		D7D651438987D7C3AD1FBC34 /* PlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerService.swift; sourceTree = "<group>"; };
+		D7F6344327E79610408E7A98 /* PlacementAssessmentResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementAssessmentResultView.swift; sourceTree = "<group>"; };
 		D8852163B828A66CE9A33597 /* APICapstonePairRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstonePairRequest.swift; sourceTree = "<group>"; };
 		D96352E6FD6E8E2F64864EAD /* V2ActivitiesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ActivitiesDetailView.swift; sourceTree = "<group>"; };
 		D988EB0D9B7CBAE699E225D1 /* APIApiErrorEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIApiErrorEnvelope.swift; sourceTree = "<group>"; };
@@ -1112,6 +1115,7 @@
 		DF5B95CDF700809D5652C004 /* MixpanelDiagnosticEvents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixpanelDiagnosticEvents.swift; sourceTree = "<group>"; };
 		DF6B0C77CCDBA195F5F5B857 /* APIRequestOnDemandDrill200ResponseVisibleTestsInner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIRequestOnDemandDrill200ResponseVisibleTestsInner.swift; sourceTree = "<group>"; };
 		DF6B932A440AE583D491E2AF /* PhoneVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneVerificationView.swift; sourceTree = "<group>"; };
+		DF874B0FD058635414171ED7 /* PlacementDrillTakeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementDrillTakeView.swift; sourceTree = "<group>"; };
 		E02B4C9DD91C35751226AC82 /* APICodingMasteryTrack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICodingMasteryTrack.swift; sourceTree = "<group>"; };
 		E0FF99476E690746FB73C8A1 /* BriefCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BriefCard.swift; sourceTree = "<group>"; };
 		E12E645CC5045EF597C4A5EF /* Onboarding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Onboarding.swift; sourceTree = "<group>"; };
@@ -2371,7 +2375,9 @@
 		C1F100B47CEE86BB84E2F7D5 /* Assessments */ = {
 			isa = PBXGroup;
 			children = (
+				D7F6344327E79610408E7A98 /* PlacementAssessmentResultView.swift */,
 				64205AB2B5D078CB68A7CDE8 /* PlacementCapstonePairView.swift */,
+				DF874B0FD058635414171ED7 /* PlacementDrillTakeView.swift */,
 				D0791282F043D9142FFA9A4A /* PlacementInterviewTakeView.swift */,
 				B10C0DF0D02F7528380227CF /* PlacementsAssessmentsApi.swift */,
 				A68D011BBE83E8D075EACACC /* PlacementsAssessmentsView.swift */,
@@ -3271,8 +3277,10 @@
 				BF1F6BFE4BCF8B3ACF595D5A /* PendingNotesReviewView.swift in Sources */,
 				349D172A6BCE73AE88FED836 /* PhoneAuthView.swift in Sources */,
 				68ADE57059A8830440FE418D /* PhoneVerificationView.swift in Sources */,
+				920BB214F68B5829BD3BBFBD /* PlacementAssessmentResultView.swift in Sources */,
 				8C1BA4BCD4EA03557B6FCDC6 /* PlacementCapstonePairView.swift in Sources */,
 				AC39421FC0F7E349B8E2BA3F /* PlacementContext.swift in Sources */,
+				A5E28B3DCEA12AFC6EEA0D40 /* PlacementDrillTakeView.swift in Sources */,
 				7541F88F28C10DB5B205B2E0 /* PlacementInterviewTakeView.swift in Sources */,
 				B587AD8609E65E33420F6B58 /* PlacementTab.swift in Sources */,
 				C5423B0A8F7B7965BDAD690B /* PlacementsAssessmentsApi.swift in Sources */,

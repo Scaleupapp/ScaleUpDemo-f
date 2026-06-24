@@ -13,6 +13,7 @@ struct PlacementsAssessmentsView: View {
 
     /// Sheet state: which assessment the student just started.
     @State private var activeStart: AssessmentStartResult?
+    @State private var activeResult: PlacementAssessmentRow?
     @State private var startError: String?
     @State private var startingId: String?   // which card shows a spinner
 
@@ -133,23 +134,56 @@ struct PlacementsAssessmentsView: View {
                 }
             )
         }
+        // Drill sheet
+        .sheet(item: Binding(
+            get: { activeStart.flatMap { $0.engine.type == "drill" ? $0 : nil } },
+            set: { if $0 == nil { activeStart = nil } }
+        )) { start in
+            PlacementDrillTakeView(
+                start: start,
+                onComplete: {
+                    Task {
+                        await sync(assessmentSessionId: start.assessmentSessionId)
+                        await load()
+                    }
+                }
+            )
+        }
+        // Result detail sheet
+        .sheet(item: $activeResult) { row in
+            PlacementAssessmentResultView(row: row)
+        }
     }
 
     // MARK: - Actions
 
     private func handleTap(row: PlacementAssessmentRow) {
         let status = row.session?.status
-        // Guard: graded, submitted, and expired are terminal — no action.
-        guard status != "graded", status != "submitted", status != "expired" else { return }
+
+        // Graded: open result detail.
+        if status == "graded" {
+            activeResult = row
+            return
+        }
+
+        // Guard: submitted and expired are terminal — no action.
+        guard status != "submitted", status != "expired" else { return }
 
         // Auto-clear any previous start error.
         startError = nil
 
-        // Guard: in_progress — resume (re-present) rather than starting a new session.
+        // Guard: in_progress — resume: call startAssessment (idempotent — backend returns existing session + engine ref)
         if status == "in_progress" {
-            // We don't have the original AssessmentStartResult anymore.
-            // Block re-tap and rely on sync poll + foreground refresh.
-            // The row already shows "In progress" label.
+            startingId = row.id
+            Task {
+                defer { startingId = nil }
+                do {
+                    let result = try await api.startAssessment(row.id)
+                    activeStart = result
+                } catch {
+                    startError = friendlyError(error, for: row)
+                }
+            }
             return
         }
 
@@ -283,13 +317,14 @@ private struct AssessmentRowCard: View {
 
     private var isActionable: Bool {
         let s = row.session?.status
-        return s != "graded" && s != "submitted" && s != "expired" && s != "in_progress"
+        return s != "submitted" && s != "expired"
     }
 
     private var typeIcon: String {
         switch row.assessment.type {
         case "interview": return "mic.fill"
         case "capstone":  return "laptopcomputer"
+        case "drill":     return "bolt.fill"
         default:          return "checklist"
         }
     }
@@ -311,7 +346,7 @@ private struct AssessmentRowCard: View {
     }
 
     var body: some View {
-        Button(action: { if isActionable { onTap() } }) {
+        Button(action: { onTap() }) {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: typeIcon)
                     .font(.system(size: 15, weight: .semibold))
@@ -363,8 +398,8 @@ private struct AssessmentRowCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(!isActionable || isStarting)
-        .opacity((!isActionable && row.session?.status != "in_progress") ? 0.6 : 1.0)
+        .disabled(isStarting || row.session?.status == "submitted" || row.session?.status == "expired")
+        .opacity((row.session?.status == "submitted" || row.session?.status == "expired") ? 0.6 : 1.0)
     }
 }
 
