@@ -138,6 +138,32 @@ final class AppState {
         }
     }
 
+    /// Redeems a 6-digit college invite code, enrolling the (already logged-in)
+    /// student into their cohort. POSTs the code, adopts the returned
+    /// `UserContext` (now carrying the placement persona), then re-routes
+    /// exactly like `switchContext` so the shell re-renders into the placement
+    /// experience. Returns `true` on success. On any failure (non-2xx / thrown)
+    /// the state is left unchanged and `false` is returned.
+    func redeemInviteCode(_ code: String) async -> Bool {
+        struct ClaimBody: Codable { let code: String }
+        do {
+            let resp: V2APIResponse<UserContext> = try await V2APIClient.shared.post(
+                "/me/claim-code", body: ClaimBody(code: code)
+            )
+            userContext = resp.data
+            // Re-route like the launch flow does after loadUserContext(): the
+            // new persona drives whether resolveLaunchState picks the placement
+            // or personal shell.
+            if let user = currentUser {
+                launchState = resolveLaunchState(for: user)
+            }
+            return true
+        } catch {
+            // Leave userContext (and the current shell) unchanged on failure.
+            return false
+        }
+    }
+
     // MARK: - Onboarding
 
     func advanceOnboarding(to step: Int) {

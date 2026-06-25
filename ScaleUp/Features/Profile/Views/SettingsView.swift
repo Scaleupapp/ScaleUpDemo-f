@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var isDeactivating = false
     @State private var isExportingData = false
     @State private var showExportSuccess = false
+    @State private var showInviteCode = false
 
     private let userService = UserService()
     private let api = APIClient.shared
@@ -18,6 +19,9 @@ struct SettingsView: View {
 
             List {
                 accountSection
+                if appState.userContext?.isPlacement != true {
+                    inviteCodeSection
+                }
                 if appState.userContext?.isDual == true {
                     contextSwitchSection
                 }
@@ -31,6 +35,9 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showInviteCode) {
+            InviteCodeView()
+        }
         .alert("Log Out", isPresented: $showLogoutAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Log Out", role: .destructive) {
@@ -63,6 +70,36 @@ struct SettingsView: View {
                         value: appState.currentUser?.authProvider?.rawValue.capitalized ?? "Local")
         } header: {
             sectionHeader("Account")
+        }
+        .listRowBackground(ColorTokens.surface)
+    }
+
+    // MARK: - Invite Code
+
+    /// Lets any student redeem a 6-digit college invite code to enrol into a
+    /// placement cohort. Hidden once the user is already on the placement
+    /// persona (they're enrolled).
+    private var inviteCodeSection: some View {
+        Section {
+            Button {
+                showInviteCode = true
+            } label: {
+                HStack {
+                    Image(systemName: "ticket.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+                    Text("Have a college invite code?")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+        } header: {
+            sectionHeader("Placement")
         }
         .listRowBackground(ColorTokens.surface)
     }

@@ -30,6 +30,7 @@
 		0AE0B61C10E4BC21197A3887 /* APISubmitCalibrationDrill202Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11600ADCEAA0F95873F0C701 /* APISubmitCalibrationDrill202Response.swift */; };
 		0B7C8E9FE29ED26029F80DFB /* VerifiedBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD1AB34682085C2E0DF7638 /* VerifiedBadge.swift */; };
 		0C0CAE935FB4E8D101D82193 /* SkeletonLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 518A75D7CDAD16E4055CF774 /* SkeletonLoader.swift */; };
+		0C1BF4EDEBA3DF6379C783C0 /* InviteCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8D5594AA2A5DF0211EC67 /* InviteCodeView.swift */; };
 		0C279AD2C0A9FABF50C6DDC1 /* DashboardService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D021B8CA080F14C064EF35B2 /* DashboardService.swift */; };
 		0C50E65B7C1FA21C82DE4F35 /* APIUpdateOnboardingProfileRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B327CE146B3E17D1E814B993 /* APIUpdateOnboardingProfileRequest.swift */; };
 		0C88881AA6026C42462F9B0E /* V2PostDiagnosticRealityCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B39FA4CFE728234293A6309 /* V2PostDiagnosticRealityCheckView.swift */; };
@@ -1055,6 +1056,7 @@
 		C0CBA8C4A2028989A2C51C64 /* APIGetRecalibrationEligibility200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetRecalibrationEligibility200Response.swift; sourceTree = "<group>"; };
 		C2290C2F304BB0F83E54A99E /* APIStartCodeDrill429Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIStartCodeDrill429Response.swift; sourceTree = "<group>"; };
 		C33417A6120E0FB3F6D9CA0B /* APICapstoneControlRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstoneControlRequest.swift; sourceTree = "<group>"; };
+		C3B8D5594AA2A5DF0211EC67 /* InviteCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InviteCodeView.swift; sourceTree = "<group>"; };
 		C4C6CD37E62B0155F006A7BF /* APIGetCalibrationDrillResult200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCalibrationDrillResult200Response.swift; sourceTree = "<group>"; };
 		C4CD9331DBC527F5CE63433C /* APIGetOnboardingStatus200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetOnboardingStatus200Response.swift; sourceTree = "<group>"; };
 		C4FB2C220E581862392CF89A /* V2HiringModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2HiringModels.swift; sourceTree = "<group>"; };
@@ -1734,6 +1736,7 @@
 			isa = PBXGroup;
 			children = (
 				029B07DAB649158A0ED7CFF3 /* ContextChooserSheet.swift */,
+				C3B8D5594AA2A5DF0211EC67 /* InviteCodeView.swift */,
 				139D21EC6225860F198DE3BA /* PlacementContext.swift */,
 				F185663D093B435CDD2E0F0D /* PlacementsMainTabView.swift */,
 				FA8C3825B59D84C1EC043466 /* PlacementTab.swift */,
@@ -3217,6 +3220,7 @@
 				354BAA8EDECF15FCBED4B040 /* InterviewSessionView.swift in Sources */,
 				4E02DCFB1C1E17B07EDE3A7B /* InterviewSetupView.swift in Sources */,
 				26B7CDA6E99F030EE7AE3E7E /* InterviewViewModel.swift in Sources */,
+				0C1BF4EDEBA3DF6379C783C0 /* InviteCodeView.swift in Sources */,
 				D67C4C2CA197F041F1D9C115 /* Journey.swift in Sources */,
 				D957C3C0A64E49BFAFD7293E /* JourneyService.swift in Sources */,
 				C995955DF8B854A208B42C00 /* JourneyTimelineStrip.swift in Sources */,
@@ -3528,7 +3532,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 196;
+				CURRENT_PROJECT_VERSION = 197;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3604,7 +3608,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 196;
+				CURRENT_PROJECT_VERSION = 197;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
