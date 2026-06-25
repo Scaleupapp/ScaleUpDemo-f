@@ -24,17 +24,6 @@ struct V2RootView: View {
                 MainTabView()
             }
         }
-        // Dual-context chooser: shown only while a dual user has not yet chosen
-        // an experience. Non-dual users never carry `needsContextChoice`, so this
-        // never presents for them. Read-only binding — it dismisses once the
-        // chosen context comes back with `needsContextChoice` false/absent.
-        .fullScreenCover(isPresented: Binding(
-            get: { appState.userContext?.needsContextChoice == true },
-            set: { _ in }
-        )) {
-            ContextChooserSheet()
-                .environment(appState)
-        }
         .sheet(isPresented: Binding(
             get: { !flag.isEnabled && flag.shouldShowV2Prompt },
             set: { if !$0 { flag.shouldShowV2Prompt = false } }

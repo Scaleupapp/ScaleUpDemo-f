@@ -162,7 +162,6 @@
 		3CEC5037F171D350D4273A5A /* APIMarkPlanTaskComplete200ResponseAllOfData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CB51FA6675D9367997D1C3F /* APIMarkPlanTaskComplete200ResponseAllOfData.swift */; };
 		3D517C056950512834615C4A /* OnboardingTopicServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4AA93212D56D702469F45826 /* OnboardingTopicServiceTests.swift */; };
 		3D55F36EC5ADA9A6E811A919 /* Spacing.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBBFCAB5849606EA89B48A3F /* Spacing.swift */; };
-		3D6246103EA42A367ABA4AE7 /* ContextChooserSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 029B07DAB649158A0ED7CFF3 /* ContextChooserSheet.swift */; };
 		3D86D35443C5B1EA806DDBDF /* APIAppendCapstoneEventsRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8199A45A0FC9F1F813713D13 /* APIAppendCapstoneEventsRequest.swift */; };
 		3DAD4B8C7F84D67E8F37C73E /* APIGetDiagnosticSynthesis200Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E9452C3BDEF1A34DC9A538 /* APIGetDiagnosticSynthesis200Response.swift */; };
 		3E02D102F408174B39E7E7AC /* APISubmitDiagnosticSelfRatingRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EB4C9CAD786EF7CE0A54381 /* APISubmitDiagnosticSelfRatingRequest.swift */; };
@@ -618,7 +617,6 @@
 		00C8E5C8D26D15DE67BA0760 /* EditContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditContentView.swift; sourceTree = "<group>"; };
 		0134DC2EF16B56E3328E3192 /* AnyCodable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnyCodable.swift; sourceTree = "<group>"; };
 		014A1EE7D8D898D7A96DD88C /* DrillViewState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillViewState.swift; sourceTree = "<group>"; };
-		029B07DAB649158A0ED7CFF3 /* ContextChooserSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContextChooserSheet.swift; sourceTree = "<group>"; };
 		02C72BECA2D7FD3E424F74BC /* SyllabusUploadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyllabusUploadService.swift; sourceTree = "<group>"; };
 		0341D4ED2579F943758511CA /* CapstoneHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneHistoryView.swift; sourceTree = "<group>"; };
 		03580D13A522CAF4EC2AC7DE /* APIPersistCapstoneFiles200Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIPersistCapstoneFiles200Response.swift; sourceTree = "<group>"; };
@@ -1737,7 +1735,6 @@
 		5468154A13A36297BBD1A9E8 /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				029B07DAB649158A0ED7CFF3 /* ContextChooserSheet.swift */,
 				C3B8D5594AA2A5DF0211EC67 /* InviteCodeView.swift */,
 				139D21EC6225860F198DE3BA /* PlacementContext.swift */,
 				D8FB8E96490FFED2C284F80E /* PlacementOnboardingIntroView.swift */,
@@ -3143,7 +3140,6 @@
 				8AAD449E31D5CD31A57E9A5B /* ContentProgress.swift in Sources */,
 				D0AECD8CC98476147DAD769C /* ContentRow.swift in Sources */,
 				2DDB61FCEDDB71E02A494B6F /* ContentService.swift in Sources */,
-				3D6246103EA42A367ABA4AE7 /* ContextChooserSheet.swift in Sources */,
 				52062178F9FB54DDB902F51C /* ContributorCardView.swift in Sources */,
 				B2EDB2E781A1CDD8832897D4 /* CornerRadius.swift in Sources */,
 				4F6342DA46706F0B12B3D5BD /* CreateContentView.swift in Sources */,

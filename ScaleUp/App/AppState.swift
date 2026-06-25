@@ -121,33 +121,10 @@ final class AppState {
         }
     }
 
-    /// Switches a dual-context user between their placement and personal
-    /// experience. POSTs the choice, adopts the returned `UserContext` (which
-    /// carries the new `persona`), then re-routes exactly like the launch flow
-    /// so the shell re-renders to the chosen experience. Best-effort: on any
-    /// failure the context is left unchanged.
-    func switchContext(to context: String) async {
-        struct SwitchBody: Codable { let context: String }
-        do {
-            let resp: V2APIResponse<UserContext> = try await V2APIClient.shared.post(
-                "/me/context/switch", body: SwitchBody(context: context)
-            )
-            userContext = resp.data
-            // Re-route like the launch flow does after loadUserContext(): the
-            // new persona drives whether resolveLaunchState picks the placement
-            // or personal shell.
-            if let user = currentUser {
-                launchState = resolveLaunchState(for: user)
-            }
-        } catch {
-            // Leave userContext (and the current shell) unchanged on failure.
-        }
-    }
-
     /// Redeems a 6-digit college invite code, enrolling the (already logged-in)
     /// student into their cohort. POSTs the code, adopts the returned
     /// `UserContext` (now carrying the placement persona), then re-routes
-    /// exactly like `switchContext` so the shell re-renders into the placement
+    /// like the launch flow so the shell re-renders into the placement
     /// experience. Returns `true` on success. On any failure (non-2xx / thrown)
     /// the state is left unchanged and `false` is returned.
     func redeemInviteCode(_ code: String) async -> Bool {
