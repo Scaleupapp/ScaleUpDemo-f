@@ -160,7 +160,15 @@ final class AppState {
     /// `V2OnboardingFlowView` instead of v1 onboarding. Skipping this sync
     /// (setting `.onboarding` directly) is what left new users on v1.
     func routeFreshRegistrationToOnboarding() async {
+        // A roster email auto-enrols the student server-side at register time, so
+        // resolve the placement context first: a placement student skips the generic
+        // onboarding and goes straight to the short placement intro (NOT the D2C flow).
+        await loadUserContext()
         await V2FeatureFlag.shared.syncUserStatus()
+        if userContext?.isPlacement == true {
+            launchState = .placementOnboardingIntro
+            return
+        }
         launchState = .onboarding(step: 1)
     }
 
