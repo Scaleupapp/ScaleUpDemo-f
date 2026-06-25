@@ -144,7 +144,7 @@ final class V2APIClient {
         return data
     }
 
-    private func rawDataWithStatus<B: Codable>(version: APIVersion, method: String, path: String, body: B?) async throws -> (Data, Int) {
+    private func rawDataWithStatus<B: Codable>(version: APIVersion, method: String, path: String, body: B?, allowRefresh: Bool = true) async throws -> (Data, Int) {
         guard let url = URL(string: "\(baseURL(for: version))\(path)") else { throw V2APIError.invalidURL }
 
         var req = URLRequest(url: url)
@@ -163,12 +163,42 @@ final class V2APIClient {
             throw V2APIError.serverError(0)
         }
         let status = http.statusCode
+        // Expired access token → refresh once and retry, mirroring the v1 APIClient.
+        // Without this, EVERY v2 call (including /me/context) silently 401s after the
+        // 15-minute access-token expiry — which dropped a placement student to the
+        // generic D2C experience even though the v1 home (which DOES refresh) loaded.
+        if status == 401, allowRefresh, await refreshAccessToken() {
+            return try await rawDataWithStatus(version: version, method: method, path: path, body: body, allowRefresh: false)
+        }
         // Don't throw on 202 (accepted / still processing) — let caller decide.
         // Throw on 4xx/5xx.
         if status >= 400 {
             throw V2APIError.httpError(status, data)
         }
         return (data, status)
+    }
+
+    /// Refreshes the access token using the stored refresh token. Returns true on
+    /// success (new tokens saved to the Keychain). Mirrors APIClient.refreshToken.
+    private func refreshAccessToken() async -> Bool {
+        guard let refresh = await KeychainManager.shared.refreshToken else { return false }
+        guard let url = URL(string: "\(baseURL(for: .v1))/auth/refresh-token") else { return false }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        struct RefreshBody: Codable { let refreshToken: String }
+        struct TokenData: Codable { let accessToken: String; let refreshToken: String }
+        struct Wrap: Codable { let data: TokenData? }
+        do {
+            request.httpBody = try JSONEncoder().encode(RefreshBody(refreshToken: refresh))
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return false }
+            guard let tokens = try JSONDecoder().decode(Wrap.self, from: data).data else { return false }
+            await KeychainManager.shared.saveTokens(access: tokens.accessToken, refresh: tokens.refreshToken)
+            return true
+        } catch {
+            return false
+        }
     }
 }
 
