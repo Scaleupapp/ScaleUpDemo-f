@@ -18,6 +18,9 @@ struct SettingsView: View {
 
             List {
                 accountSection
+                if appState.userContext?.isDual == true {
+                    contextSwitchSection
+                }
                 preferencesSection
                 privacySection
                 appSection
@@ -62,6 +65,46 @@ struct SettingsView: View {
             sectionHeader("Account")
         }
         .listRowBackground(ColorTokens.surface)
+    }
+
+    // MARK: - Context Switch (dual-context users only)
+
+    /// Shown ONLY for dual-context users (placement + personal). On the D2C
+    /// (personal) shell this offers a jump to the placement experience.
+    private var contextSwitchSection: some View {
+        Section {
+            Button {
+                Task { await appState.switchContext(to: appState.userContext?.otherContext ?? "placement") }
+            } label: {
+                HStack {
+                    Image(systemName: "rectangle.2.swap")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+                    Text(contextSwitchLabel)
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+            }
+        } header: {
+            sectionHeader("Experience")
+        }
+        .listRowBackground(ColorTokens.surface)
+    }
+
+    /// Names the destination experience from the user's `otherContext`. On the
+    /// personal shell this resolves to the institution name; on the placement
+    /// shell it resolves to "Personal".
+    private var contextSwitchLabel: String {
+        if appState.userContext?.otherContext == "personal" {
+            return "Switch to Personal"
+        }
+        let name = appState.userContext?.placement?.institution.name ?? "Placement"
+        return "Switch to \(name)"
     }
 
     // MARK: - Preferences

@@ -10,7 +10,20 @@ struct UserContext: Codable {
     let persona: String
     let placement: PlacementContext?
 
+    /// Dual-context fields (present ONLY for users who have both a placement
+    /// enrollment AND a personal objective). Absent for pure D2C or pure
+    /// placement users, so `isDual` stays false and the chooser never shows.
+    let needsContextChoice: Bool?
+    let activeContext: String?
+    let availableContexts: [String]?
+
     var isPlacement: Bool { persona == "placement" }
+
+    /// True when the user can switch between both placement and personal.
+    var isDual: Bool { (availableContexts?.count ?? 0) == 2 }
+
+    /// The context to switch *to* from the current `activeContext`.
+    var otherContext: String { activeContext == "personal" ? "placement" : "personal" }
 }
 
 struct PlacementContext: Codable {

@@ -116,6 +116,15 @@ struct V2YouView: View {
             sectionLabel("My learning")
             learningRows(weekProgress: data.weekProgress)
 
+            // EXPERIENCE SWITCH (dual-context users only — placement + personal).
+            // Invisible to non-dual users (isDual is false when the dual fields
+            // are absent). On the placement shell this reads "Switch to Personal".
+            if appState.userContext?.isDual == true {
+                sectionDivider.padding(.vertical, 18)
+                sectionLabel("Experience")
+                contextSwitchRow
+            }
+
             // OPEN TO OPPORTUNITIES (self-gated — only when the hiring feature is live)
             if hiringVM.available == true {
                 sectionDivider.padding(.vertical, 18)
@@ -1012,6 +1021,27 @@ struct V2YouView: View {
         if hiringVM.available == true {
             await hiringVM.loadConnections()
         }
+    }
+
+    // MARK: - Experience switch (dual-context users only)
+
+    /// Switches a dual-context user to their other experience. The label and
+    /// target are derived from `otherContext`: on the placement shell this reads
+    /// "Switch to Personal"; on the personal shell, "Switch to {institution}".
+    private var contextSwitchRow: some View {
+        let ctx = appState.userContext
+        let target = ctx?.otherContext ?? "personal"
+        let label: String = {
+            if target == "personal" { return "Switch to Personal" }
+            return "Switch to \(ctx?.placement?.institution.name ?? "Placement")"
+        }()
+        return Button {
+            Haptics.selection()
+            Task { await appState.switchContext(to: target) }
+        } label: {
+            row(icon: "rectangle.2.swap", label: label)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Settings + footer
