@@ -80,11 +80,20 @@ final class AppState {
             // diagnostic), NOT the generic D2C onboarding.
             return user.diagnosticComplete == true ? .home : .placementOnboardingIntro
         }
+        // Finishing the diagnostic is the last step of onboarding — so a user who
+        // has completed it must NEVER be routed back through onboarding. This is the
+        // safety net for a placement student whose /me/context briefly resolved to
+        // 'general' after a session refresh: they reached the diagnostic, so send
+        // them Home (the shell self-corrects once the placement context reloads),
+        // never back into the generic "set up your profile" flow.
+        if user.diagnosticComplete == true {
+            return .home
+        }
         if flag.isEnabled && flag.needsV2Onboarding {
             return .onboarding(step: 1)
         }
         if user.onboardingComplete == true {
-            return user.diagnosticComplete == true ? .home : .diagnostic
+            return .diagnostic
         }
         return .onboarding(step: max(1, user.onboardingStep ?? 1))
     }
@@ -113,12 +122,19 @@ final class AppState {
     /// failure `userContext` is left nil and the user gets the general (D2C)
     /// experience — so this never blocks login or breaks D2C.
     func loadUserContext() async {
-        do {
-            let resp: V2APIResponse<UserContext> = try await V2APIClient.shared.get("/me/context")
-            userContext = resp.data
-        } catch {
-            userContext = nil
+        for attempt in 0..<3 {
+            do {
+                let resp: V2APIResponse<UserContext> = try await V2APIClient.shared.get("/me/context")
+                userContext = resp.data
+                return
+            } catch {
+                // Transient (e.g. an access-token refresh mid-flight after a session
+                // expiry) — retry before giving up rather than instantly assuming D2C.
+                if attempt < 2 { try? await Task.sleep(for: .milliseconds(600)) }
+            }
         }
+        // All retries failed: KEEP any context we already resolved rather than nuking
+        // a placement student down to 'general'. Only a true first launch stays nil.
     }
 
     /// Redeems a 6-digit college invite code, enrolling the (already logged-in)
