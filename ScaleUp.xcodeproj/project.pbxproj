@@ -414,6 +414,7 @@
 		A983B3041464CBDAE120BAB0 /* APICompleteOnboardingRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3567831B57BA6D8CE99DD261 /* APICompleteOnboardingRequest.swift */; };
 		A9895314335F03C298A82A95 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6345CA87F28CAB287DBE9463 /* Assets.xcassets */; };
 		A9DB103CD8393E3D9B7A9459 /* CapstonePairView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91022B8C3F94C9B8D4F0FA85 /* CapstonePairView.swift */; };
+		AA9E7BDEF0701DC5A2D9435A /* PlacementOnboardingIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8FB8E96490FFED2C284F80E /* PlacementOnboardingIntroView.swift */; };
 		ABD51A9D77C9927139CD9784 /* ConsumptionHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1BA0A748861879E69F594E8 /* ConsumptionHistoryView.swift */; };
 		AC329186404F466932D45926 /* NextCheckInPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BF0A3755F8D22CB0668186 /* NextCheckInPill.swift */; };
 		AC39421FC0F7E349B8E2BA3F /* PlacementContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139D21EC6225860F198DE3BA /* PlacementContext.swift */; };
@@ -1102,6 +1103,7 @@
 		D7D651438987D7C3AD1FBC34 /* PlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerService.swift; sourceTree = "<group>"; };
 		D7F6344327E79610408E7A98 /* PlacementAssessmentResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementAssessmentResultView.swift; sourceTree = "<group>"; };
 		D8852163B828A66CE9A33597 /* APICapstonePairRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APICapstonePairRequest.swift; sourceTree = "<group>"; };
+		D8FB8E96490FFED2C284F80E /* PlacementOnboardingIntroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementOnboardingIntroView.swift; sourceTree = "<group>"; };
 		D96352E6FD6E8E2F64864EAD /* V2ActivitiesDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ActivitiesDetailView.swift; sourceTree = "<group>"; };
 		D988EB0D9B7CBAE699E225D1 /* APIApiErrorEnvelope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIApiErrorEnvelope.swift; sourceTree = "<group>"; };
 		D993DCA6A9D0B27C556024FA /* APIDiagnosticAttemptStart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIDiagnosticAttemptStart.swift; sourceTree = "<group>"; };
@@ -1738,6 +1740,7 @@
 				029B07DAB649158A0ED7CFF3 /* ContextChooserSheet.swift */,
 				C3B8D5594AA2A5DF0211EC67 /* InviteCodeView.swift */,
 				139D21EC6225860F198DE3BA /* PlacementContext.swift */,
+				D8FB8E96490FFED2C284F80E /* PlacementOnboardingIntroView.swift */,
 				F185663D093B435CDD2E0F0D /* PlacementsMainTabView.swift */,
 				FA8C3825B59D84C1EC043466 /* PlacementTab.swift */,
 			);
@@ -3290,6 +3293,7 @@
 				AC39421FC0F7E349B8E2BA3F /* PlacementContext.swift in Sources */,
 				A5E28B3DCEA12AFC6EEA0D40 /* PlacementDrillTakeView.swift in Sources */,
 				7541F88F28C10DB5B205B2E0 /* PlacementInterviewTakeView.swift in Sources */,
+				AA9E7BDEF0701DC5A2D9435A /* PlacementOnboardingIntroView.swift in Sources */,
 				B587AD8609E65E33420F6B58 /* PlacementTab.swift in Sources */,
 				C5423B0A8F7B7965BDAD690B /* PlacementsAssessmentsApi.swift in Sources */,
 				757EF225658D119BC6AD8D49 /* PlacementsAssessmentsView.swift in Sources */,
@@ -3532,7 +3536,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 197;
+				CURRENT_PROJECT_VERSION = 198;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3608,7 +3612,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 197;
+				CURRENT_PROJECT_VERSION = 198;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

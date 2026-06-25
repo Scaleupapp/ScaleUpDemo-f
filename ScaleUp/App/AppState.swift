@@ -7,6 +7,9 @@ enum AppLaunchState: Equatable {
     case welcome
     case phoneVerification
     case onboarding(step: Int)
+    /// Placement students skip the generic D2C onboarding (their objective is
+    /// already seeded server-side) and see a short intro before the diagnostic.
+    case placementOnboardingIntro
     case diagnostic
     case home
 }
@@ -72,7 +75,10 @@ final class AppState {
         // objective), then the PlacementsRoot home. `userContext` is resolved
         // before this runs (in checkAuth / handleAuthSuccess).
         if userContext?.isPlacement == true {
-            return user.diagnosticComplete == true ? .home : .diagnostic
+            // A placement student who hasn't finished the diagnostic sees the
+            // short PlacementOnboardingIntroView first (which hands off to the
+            // diagnostic), NOT the generic D2C onboarding.
+            return user.diagnosticComplete == true ? .home : .placementOnboardingIntro
         }
         if flag.isEnabled && flag.needsV2Onboarding {
             return .onboarding(step: 1)
@@ -187,6 +193,15 @@ final class AppState {
         } else {
             launchState = .diagnostic
         }
+    }
+
+    // MARK: - Placement Onboarding
+
+    /// Advances a placement student from the intro screen to the existing
+    /// diagnostic. Their locked placement objective is already the active
+    /// primary objective server-side, so the diagnostic is scoped correctly.
+    func proceedFromPlacementIntro() {
+        launchState = .diagnostic
     }
 
     // MARK: - Diagnostic

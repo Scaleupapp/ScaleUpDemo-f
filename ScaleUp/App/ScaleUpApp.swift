@@ -95,6 +95,13 @@ struct ScaleUpApp: App {
                     .trackScreen("onboarding_step_\(step)")
             }
 
+        case .placementOnboardingIntro:
+            // Placement students skip the generic D2C onboarding entirely and
+            // see this short intro, then proceed to the existing diagnostic.
+            PlacementOnboardingIntroView()
+                .transition(.opacity)
+                .trackScreen("placement_onboarding_intro")
+
         case .diagnostic:
             // When v2 onboarding is on, the diagnostic still uses v1's pool +
             // adaptive engine — but on completion we hand off to the v2
