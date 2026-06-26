@@ -171,6 +171,7 @@
 		3EFB35CF7EA39AF222C893AD /* ObjectiveBriefCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F61D9B13B018736EBE661913 /* ObjectiveBriefCard.swift */; };
 		3F3350E9AAC39FA5C48C3E08 /* OpenAILiveManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 290CB75726D2085FFF36CF3D /* OpenAILiveManager.swift */; };
 		42EDE31D53C7D8D712B6D308 /* WeekStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC3609F353FCE053E9B79B05 /* WeekStrip.swift */; };
+		43535D1915408AEC09637E82 /* PlacementsCampusApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D5F3DE82F94AA496A847CF /* PlacementsCampusApi.swift */; };
 		4366D5B14F70570D77250353 /* APIPlanWeeklyEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09C939F11581917B97939EF8 /* APIPlanWeeklyEntry.swift */; };
 		446A3E26E597E5B271B306B1 /* APIUploadAvatar200ResponseAllOfData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 394BB47B85813DBB77179DEE /* APIUploadAvatar200ResponseAllOfData.swift */; };
 		45200D8121476AEA0A71F4B6 /* APIPlanTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97C1B65519885DC264E4D2B7 /* APIPlanTask.swift */; };
@@ -799,6 +800,7 @@
 		56E14D8C78AB6BDCD8238761 /* V2ReadinessBreakdownSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ReadinessBreakdownSheet.swift; sourceTree = "<group>"; };
 		56F897C3D8F750F25666C0F4 /* AdminService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminService.swift; sourceTree = "<group>"; };
 		56FB9E00928BE506699C7CB5 /* CapstoneVoiceReflectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapstoneVoiceReflectionView.swift; sourceTree = "<group>"; };
+		57D5F3DE82F94AA496A847CF /* PlacementsCampusApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementsCampusApi.swift; sourceTree = "<group>"; };
 		57EBF6E4DCBD7366542B3841 /* TabCoachMarkModifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabCoachMarkModifier.swift; sourceTree = "<group>"; };
 		591C706B18BB45DA7ECCC2FF /* CompetencyScoreBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetencyScoreBar.swift; sourceTree = "<group>"; };
 		594BDDC53959E2E1A04EFDAE /* V2FeatureFlag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2FeatureFlag.swift; sourceTree = "<group>"; };
@@ -2373,6 +2375,7 @@
 		C01AAAB688A953ACEE738CD6 /* Campus */ = {
 			isa = PBXGroup;
 			children = (
+				57D5F3DE82F94AA496A847CF /* PlacementsCampusApi.swift */,
 				A5DA7BC1A2885947737849FA /* PlacementsCampusView.swift */,
 			);
 			path = Campus;
@@ -3293,6 +3296,7 @@
 				B587AD8609E65E33420F6B58 /* PlacementTab.swift in Sources */,
 				C5423B0A8F7B7965BDAD690B /* PlacementsAssessmentsApi.swift in Sources */,
 				757EF225658D119BC6AD8D49 /* PlacementsAssessmentsView.swift in Sources */,
+				43535D1915408AEC09637E82 /* PlacementsCampusApi.swift in Sources */,
 				D06AF9EFA2C868F7C5028BE7 /* PlacementsCampusView.swift in Sources */,
 				01EA608FC8A5AB914423596E /* PlacementsHomeView.swift in Sources */,
 				E71F9F2FE1547160004D5501 /* PlacementsLibraryView.swift in Sources */,
@@ -3532,7 +3536,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3608,7 +3612,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
