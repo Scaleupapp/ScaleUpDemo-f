@@ -143,7 +143,7 @@ struct V2YouView: View {
                 creatorHubSection
             }
 
-            if vm.isAdminRole {
+            if !isPlacement && vm.isAdminRole {
                 sectionDivider.padding(.vertical, 18)
                 adminToolsSection
             }

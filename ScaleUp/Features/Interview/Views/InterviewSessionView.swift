@@ -4,6 +4,10 @@ import SwiftUI
 /// Presented as a fullScreenCover from InterviewSetupView.
 struct InterviewSessionView: View {
     @State var viewModel: InterviewViewModel
+    /// When true (placement context), suppresses the B2C InterviewResultsView on
+    /// `.saving`, `.evaluating`, and `.results` states so the placement take-view's
+    /// `onComplete` / dismiss is the only result the student sees.
+    var isPlacement: Bool = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -27,10 +31,21 @@ struct InterviewSessionView: View {
                 concludingState
 
             case .saving, .evaluating:
-                InterviewResultsView(viewModel: viewModel)
+                if isPlacement {
+                    // Placement: suppress B2C results UI; PlacementInterviewTakeView
+                    // handles the handoff to PlacementAssessmentResultView.
+                    Color.clear
+                } else {
+                    InterviewResultsView(viewModel: viewModel)
+                }
 
             case .results:
-                InterviewResultsView(viewModel: viewModel)
+                if isPlacement {
+                    // Placement: suppress B2C results UI.
+                    Color.clear
+                } else {
+                    InterviewResultsView(viewModel: viewModel)
+                }
 
             case .error(let message):
                 errorView(message)

@@ -790,8 +790,9 @@ final class CompassViewModel {
             chips.insert("💻 Start a coding drill", at: 2)
         }
         if isPlacement {
-            // Remove "Plan my next 2 days" for placement students
-            chips.removeAll { $0.contains("Plan") }
+            // Remove exactly the "Plan my next 2 days" chip for placement students.
+            // Use an exact match so future "Plan…" suggestions aren't accidentally removed.
+            chips.removeAll { $0 == "↗ Plan my next 2 days" }
         }
         return chips
     }

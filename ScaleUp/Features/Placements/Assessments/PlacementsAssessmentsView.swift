@@ -79,6 +79,11 @@ struct PlacementsAssessmentsView: View {
         )) { start in
             if let quizId = start.engine.quizId {
                 PlanTaskQuizLoaderSheet(quizId: quizId) {
+                    // Close the MCQ sheet first (clear activeStart), then run
+                    // the async work and open the result sheet. This prevents
+                    // the sheet-binding's own `activeStart = nil` from racing
+                    // with the Task's `showResultForSession` / `activeResult` set.
+                    activeStart = nil
                     Task {
                         await sync(assessmentSessionId: start.assessmentSessionId)
                         await load()

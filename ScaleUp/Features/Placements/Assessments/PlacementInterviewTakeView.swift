@@ -98,7 +98,7 @@ struct PlacementInterviewTakeView: View {
 
     private var interviewBody: some View {
         ZStack {
-            InterviewSessionView(viewModel: vm)
+            InterviewSessionView(viewModel: vm, isPlacement: true)
                 .environment(v2Nav)
                 .environment(taskRouter)
                 .environment(appState)
