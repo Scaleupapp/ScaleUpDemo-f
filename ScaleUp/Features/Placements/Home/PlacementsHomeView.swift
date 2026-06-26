@@ -9,6 +9,8 @@ import SwiftUI
 struct PlacementsHomeView: View {
     @Environment(AppState.self) private var appState
     @State private var homeVM = V2HomeViewModel()
+    @State private var practice: PlacementPractice?
+    @State private var showingPractice = false
 
     private var placement: PlacementContext? { appState.userContext?.placement }
 
@@ -19,6 +21,7 @@ struct PlacementsHomeView: View {
                 readinessCard
                 objectiveCard
                 deadlineCard
+                practiceCard
                 nextStepsCard
             }
             .padding(.horizontal, V2Theme.pad)
@@ -27,8 +30,23 @@ struct PlacementsHomeView: View {
         }
         .frame(maxWidth: .infinity)
         .background(ColorTokens.background.ignoresSafeArea())
-        .task { await homeVM.load() }
-        .refreshable { await homeVM.load() }
+        .task {
+            await homeVM.load()
+            await loadPractice()
+        }
+        .refreshable {
+            await homeVM.load()
+            await loadPractice()
+        }
+        .sheet(isPresented: $showingPractice) {
+            PlacementsPracticeView()
+        }
+    }
+
+    // MARK: - Practice loading
+
+    private func loadPractice() async {
+        practice = try? await PlacementsPracticeApi.shared.fetchPractice()
     }
 
     // MARK: - Header
@@ -163,6 +181,45 @@ struct PlacementsHomeView: View {
         if days == 1 { return "1 day to go" }
         if days == 0 { return "Placement season is here" }
         return "Placement season underway"
+    }
+
+    // MARK: - Practice card
+
+    private var practiceCard: some View {
+        Button {
+            showingPractice = true
+        } label: {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                    .frame(width: 34, height: 34)
+                    .background(ColorTokens.gold.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Practice").v2Eyebrow()
+                    Text("Sharpen up")
+                        .font(V2Theme.h3)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    if let topRec = practice?.recommendations.first {
+                        Text("Try \(topRec.competency) — \(topRec.score)%")
+                            .font(V2Theme.small)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    } else {
+                        Text("Practice anytime · private, not shown to your college")
+                            .font(V2Theme.small)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(ColorTokens.textTertiary)
+                    .padding(.top, 4)
+            }
+            .v2Card()
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Assessments section

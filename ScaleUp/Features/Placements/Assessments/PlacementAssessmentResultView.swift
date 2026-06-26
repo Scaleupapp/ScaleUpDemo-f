@@ -6,12 +6,22 @@ import SwiftUI
 struct PlacementAssessmentResultView: View {
     let row: PlacementAssessmentRow
     @Environment(\.dismiss) private var dismiss
+    @Environment(V2TaskRouter.self) private var taskRouter
 
     private var result: PlacementSessionResult? { row.session?.result }
     private var windowClosed: Bool { row.windowClosed == true }
 
     @State private var review: PlacementReviewResponse?
     @State private var isLoadingReview = false
+    @State private var showCapstone = false
+
+    /// Weakest competency derived from the MCQ competency breakdown (if present).
+    private var weakestCompetency: (name: String, score: Double)? {
+        guard let breakdown = result?.raw?.competencyBreakdown, !breakdown.isEmpty else { return nil }
+        let sorted = breakdown.sorted { $0.value < $1.value }
+        guard let first = sorted.first else { return nil }
+        return (name: first.key, score: first.value)
+    }
 
     var body: some View {
         NavigationStack {
@@ -31,6 +41,11 @@ struct PlacementAssessmentResultView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
 
+                    // Recommended practice — always visible (practice is private).
+                    if let weakest = weakestCompetency {
+                        recommendedPracticeBlock(competency: weakest.name, score: weakest.score)
+                    }
+
                     Spacer(minLength: 20)
                 }
                 .padding(.horizontal, 20)
@@ -45,6 +60,51 @@ struct PlacementAssessmentResultView: View {
             }
             .task { await loadReview() }
         }
+        .sheet(isPresented: $showCapstone) {
+            NavigationStack {
+                V2CodingHubView(onClose: { showCapstone = false }, initialSegment: .capstones)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Recommended practice block
+
+    private func recommendedPracticeBlock(competency: String, score: Double) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ColorTokens.gold)
+                Text("Recommended practice")
+                    .font(V2Theme.h3)
+                    .foregroundStyle(ColorTokens.textPrimary)
+            }
+            Text("You scored \(Int(score.rounded()))% on \(competency.replacingOccurrences(of: "_", with: " ").capitalized). Practice privately to improve — this won't affect your official scores.")
+                .font(V2Theme.small)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                taskRouter.route = .quizByTopic(topic: competency, weekNumber: nil)
+            } label: {
+                HStack {
+                    Spacer()
+                    Image(systemName: "bolt.fill")
+                    Text("Practice \(competency.replacingOccurrences(of: "_", with: " ").capitalized)")
+                        .font(V2Theme.bodyMedium)
+                    Spacer()
+                }
+                .foregroundStyle(ColorTokens.background)
+                .padding(.vertical, 13)
+                .background(ColorTokens.gold)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(ColorTokens.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     // MARK: - Review loading
