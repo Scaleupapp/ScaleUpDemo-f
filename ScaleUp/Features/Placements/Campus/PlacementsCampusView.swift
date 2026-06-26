@@ -50,9 +50,6 @@ struct PlacementsCampusView: View {
                                 .background(ColorTokens.gold.opacity(0.12))
                                 .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("No drives yet")
-                                    .font(V2Theme.h3)
-                                    .foregroundStyle(ColorTokens.textPrimary)
                                 Text("No drives yet — your TPO will add recruiters here.")
                                     .font(V2Theme.body)
                                     .foregroundStyle(ColorTokens.textSecondary)
