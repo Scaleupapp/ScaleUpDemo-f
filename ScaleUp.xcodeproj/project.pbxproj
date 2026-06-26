@@ -359,6 +359,7 @@
 		8EAD2D0C3F6E2DB68A2F4107 /* Haptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B6D97EDB884C2FD59E3A9A5 /* Haptics.swift */; };
 		8F3B46D3798F4B84A55855C0 /* APIRequestOnDemandDrill400Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 382DF0DA07291BAAFCA76D71 /* APIRequestOnDemandDrill400Response.swift */; };
 		903F83691E42397BF5BA5805 /* APISetOnboardingObjective201Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48EF3D6F775875707D1B7EA6 /* APISetOnboardingObjective201Response.swift */; };
+		905A52E4537590793A121E82 /* PlacementsLibraryApi.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AC323187306951BC09B5EBD /* PlacementsLibraryApi.swift */; };
 		9068688861614CE4EFD5593B /* ChallengeResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DC257BE3138B8CC144A06A8 /* ChallengeResultsView.swift */; };
 		90AD15E3F578A5E9DC74F670 /* CapstoneSessionSocket.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76373624F631793C7DDC5FF9 /* CapstoneSessionSocket.swift */; };
 		917DF2A509F0610D0FE00B6C /* PlacementsMainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F185663D093B435CDD2E0F0D /* PlacementsMainTabView.swift */; };
@@ -887,6 +888,7 @@
 		7A5C9E69390F6A5A71FE407B /* ContentProgress.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentProgress.swift; sourceTree = "<group>"; };
 		7A6B20B42A1B6AE579F42034 /* V2ConnectionInboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = V2ConnectionInboxView.swift; sourceTree = "<group>"; };
 		7AB9A3A5941AA766977C3E31 /* AdminEmployerRequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEmployerRequestsView.swift; sourceTree = "<group>"; };
+		7AC323187306951BC09B5EBD /* PlacementsLibraryApi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementsLibraryApi.swift; sourceTree = "<group>"; };
 		7B875570EEE19B26D37FAE6F /* CompletionStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompletionStepView.swift; sourceTree = "<group>"; };
 		7B97BBDC4FB5495822539FB2 /* PreviewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewHelpers.swift; sourceTree = "<group>"; };
 		7B9D3E65976611A01D01058A /* AITutorService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AITutorService.swift; sourceTree = "<group>"; };
@@ -1411,6 +1413,7 @@
 		1837FBE5E42A5DD535C6A938 /* Library */ = {
 			isa = PBXGroup;
 			children = (
+				7AC323187306951BC09B5EBD /* PlacementsLibraryApi.swift */,
 				0BBA031815FE173B28244F1B /* PlacementsLibraryView.swift */,
 			);
 			path = Library;
@@ -3299,6 +3302,7 @@
 				43535D1915408AEC09637E82 /* PlacementsCampusApi.swift in Sources */,
 				D06AF9EFA2C868F7C5028BE7 /* PlacementsCampusView.swift in Sources */,
 				01EA608FC8A5AB914423596E /* PlacementsHomeView.swift in Sources */,
+				905A52E4537590793A121E82 /* PlacementsLibraryApi.swift in Sources */,
 				E71F9F2FE1547160004D5501 /* PlacementsLibraryView.swift in Sources */,
 				917DF2A509F0610D0FE00B6C /* PlacementsMainTabView.swift in Sources */,
 				59899170E90FEB4C695CAE6F /* PlanBrewingPill.swift in Sources */,
@@ -3536,7 +3540,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 204;
+				CURRENT_PROJECT_VERSION = 206;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3612,7 +3616,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 204;
+				CURRENT_PROJECT_VERSION = 206;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
