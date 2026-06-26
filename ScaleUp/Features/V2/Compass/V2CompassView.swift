@@ -42,6 +42,11 @@ struct V2CompassView: View {
         let todayChallenge: UnplayedChallenge?
     }
 
+    /// When true, Compass is running inside the placement shell.
+    /// Hides Compete today / Coding capstone / Plan my days chips and the
+    /// Today's challenge competition banner. Defaults false (D2C unchanged).
+    var isPlacement: Bool = false
+
     /// Optional — the tab the user was on when Compass was launched via FAB.
     /// Used for mode-detection ("I can see you're on Home").
     var launchContext: V2Tab = .compass
@@ -74,7 +79,7 @@ struct V2CompassView: View {
             VStack(spacing: 0) {
                 header
                 Divider().background(V2Theme.cardBorder)
-                competitionBanner
+                if !isPlacement { competitionBanner }
 
                 ScrollViewReader { scroll in
                     ScrollView {
@@ -154,8 +159,9 @@ struct V2CompassView: View {
             if let tc = tutorContext { vm.tutorContext = tc }
             if let cc = coachContext { vm.coachContext = cc }
             if let rc = reviewContext { vm.reviewContext = rc }
+            vm.isPlacement = isPlacement
             vm.startConversation(context: launchContext)
-            Task { await loadCompetitionStatus() }
+            if !isPlacement { Task { await loadCompetitionStatus() } }
         }
         // Compass quick actions → dedicated home destinations. Plan routes
         // straight to the Home tab; Notes / Quiz / Interview each present a
@@ -519,10 +525,19 @@ struct V2CompassView: View {
 
     /// What Compass can do, surfaced persistently above the input so users
     /// never have to guess. Tapping one kicks off that flow.
+    private static let placementExcludedActions: Set<String> = ["Compete today", "Coding capstone", "Plan my days"]
+
+    private var filteredQuickActions: [CompassQuickAction] {
+        if isPlacement {
+            return CompassQuickAction.all.filter { !Self.placementExcludedActions.contains($0.label) }
+        }
+        return CompassQuickAction.all
+    }
+
     private var quickActionsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(CompassQuickAction.all, id: \.label) { action in
+                ForEach(filteredQuickActions, id: \.label) { action in
                     Button {
                         vm.handleSuggestion(action.chip)
                     } label: {
@@ -684,6 +699,8 @@ struct CompassQuickAction {
 
 struct V2CompassSheetView: View {
     var currentScreen: V2Tab = .home
+    /// When true, the Compass sheet is placement-scoped (hides B2C-only actions).
+    var isPlacement: Bool = false
     /// When set, the sheet opens Compass in tutor mode for this content.
     var tutorContext: CompassTutorContext?
     /// When set, the sheet opens Compass in Coach mode with the given scope
@@ -693,6 +710,7 @@ struct V2CompassSheetView: View {
     var reviewContext: CompassReviewContext?
     var body: some View {
         V2CompassView(
+            isPlacement: isPlacement,
             launchContext: currentScreen,
             tutorContext: tutorContext,
             coachContext: coachContext,

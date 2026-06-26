@@ -303,6 +303,10 @@ final class CompassViewModel {
     /// Probed once on Compass open; gates the "💻 Start a coding drill" chip.
     var isCodingEligible: Bool = false
 
+    /// Set by V2CompassView.onAppear when Compass is opened from the placement
+    /// shell. Filters "Plan my next 2 days" from default suggestions.
+    var isPlacement: Bool = false
+
     /// Used for fallback if backend is unreachable. Keeps UX coherent during outages.
     private var allowFallback = true
 
@@ -784,6 +788,10 @@ final class CompassViewModel {
         if isCodingEligible {
             // Insert after "Practice interview" (index 2) so it's near the practice chips
             chips.insert("💻 Start a coding drill", at: 2)
+        }
+        if isPlacement {
+            // Remove "Plan my next 2 days" for placement students
+            chips.removeAll { $0.contains("Plan") }
         }
         return chips
     }

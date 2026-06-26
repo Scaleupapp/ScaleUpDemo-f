@@ -49,7 +49,7 @@ struct PlacementsMainTabView: View {
         // Sheets don't reliably inherit @Observable environment objects — re-inject
         // exactly what the reused V2 screens read (see V2MainTabView for the same pattern).
         .sheet(isPresented: $nav.compassSheetOpen) {
-            V2CompassSheetView(currentScreen: .home)
+            V2CompassSheetView(currentScreen: .home, isPlacement: true)
                 .environment(v2Nav)
                 .environment(taskRouter)
                 .environment(appState)
