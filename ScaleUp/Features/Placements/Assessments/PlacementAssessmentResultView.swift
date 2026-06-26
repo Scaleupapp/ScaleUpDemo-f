@@ -8,15 +8,29 @@ struct PlacementAssessmentResultView: View {
     @Environment(\.dismiss) private var dismiss
 
     private var result: PlacementSessionResult? { row.session?.result }
+    private var windowClosed: Bool { row.windowClosed == true }
+
+    @State private var review: PlacementReviewResponse?
+    @State private var isLoadingReview = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     scoreSection
-                    if let raw = result?.raw {
-                        breakdownSection(raw: raw)
+
+                    if windowClosed {
+                        if let raw = result?.raw {
+                            breakdownSection(raw: raw)
+                        }
+                        questionReviewSection
+                    } else {
+                        Text("Detailed review unlocks once the assessment closes.")
+                            .font(V2Theme.small)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
+
                     Spacer(minLength: 20)
                 }
                 .padding(.horizontal, 20)
@@ -29,7 +43,18 @@ struct PlacementAssessmentResultView: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task { await loadReview() }
         }
+    }
+
+    // MARK: - Review loading
+
+    private func loadReview() async {
+        guard windowClosed, review == nil, !isLoadingReview else { return }
+        guard let sessionId = row.session?.id else { return }
+        isLoadingReview = true
+        defer { isLoadingReview = false }
+        review = try? await PlacementsAssessmentsApi.shared.fetchReview(sessionId: sessionId)
     }
 
     // MARK: - Score
@@ -219,6 +244,111 @@ struct PlacementAssessmentResultView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
+    }
+
+    // MARK: - Question Review
+
+    @ViewBuilder
+    private var questionReviewSection: some View {
+        if isLoadingReview && review == nil {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+        } else if let questions = review?.questions, !questions.isEmpty {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Question Review")
+                    .font(V2Theme.h3)
+                    .foregroundStyle(ColorTokens.textPrimary)
+
+                ForEach(questions) { question in
+                    questionCard(question)
+                }
+            }
+        }
+    }
+
+    private func questionCard(_ question: PlacementReviewQuestion) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("\(question.index + 1). \(question.questionText)")
+                .font(V2Theme.small)
+                .bold()
+                .foregroundStyle(ColorTokens.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let scenario = question.scenario, !scenario.isEmpty {
+                Text(scenario)
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if question.studentAnswer == nil {
+                Text("Not answered")
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.error)
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(question.options, id: \.label) { option in
+                    optionRow(option, question: question)
+                }
+            }
+
+            if let explanation = question.explanation, !explanation.isEmpty {
+                Text(explanation)
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 2)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTokens.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    @ViewBuilder
+    private func optionRow(_ option: PlacementReviewOption, question: PlacementReviewQuestion) -> some View {
+        let isCorrect = option.label == question.correctAnswer
+        let isStudentPick = option.label == question.studentAnswer
+        let isWrongPick = isStudentPick && !isCorrect
+
+        HStack(alignment: .top, spacing: 8) {
+            if isCorrect {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(ColorTokens.success)
+            } else if isWrongPick {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundStyle(ColorTokens.error)
+            } else {
+                Image(systemName: "circle")
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+
+            Text("\(option.label). \(option.text)\(isWrongPick ? " (your answer)" : "")")
+                .font(V2Theme.tiny)
+                .foregroundStyle(optionColor(isCorrect: isCorrect, isWrongPick: isWrongPick))
+                .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(optionBackground(isCorrect: isCorrect, isWrongPick: isWrongPick))
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+
+    private func optionColor(isCorrect: Bool, isWrongPick: Bool) -> Color {
+        if isCorrect { return ColorTokens.success }
+        if isWrongPick { return ColorTokens.error }
+        return ColorTokens.textPrimary
+    }
+
+    private func optionBackground(isCorrect: Bool, isWrongPick: Bool) -> Color {
+        if isCorrect { return ColorTokens.success.opacity(0.12) }
+        if isWrongPick { return ColorTokens.error.opacity(0.10) }
+        return Color.clear
     }
 
     // MARK: - Helpers

@@ -6,6 +6,7 @@ import Foundation
 struct PlacementAssessmentRow: Codable, Identifiable {
     let assessment: PlacementAssessment
     let session: PlacementSessionLite?
+    let windowClosed: Bool?
 
     var id: String { assessment.id }
 }
@@ -68,6 +69,34 @@ struct PlacementResultDimension: Codable, Identifiable {
     let name: String
     let score: Double?
     let feedback: String?
+}
+
+// MARK: - Review
+
+/// Response shape from GET /api/v2/me/assessments/sessions/:sessionId/review
+struct PlacementReviewResponse: Codable {
+    let windowClosed: Bool
+    let score: Double?
+    let engineType: String?
+    let questions: [PlacementReviewQuestion]
+}
+
+struct PlacementReviewQuestion: Codable, Identifiable {
+    let index: Int
+    let questionText: String
+    let scenario: String?
+    let options: [PlacementReviewOption]
+    let correctAnswer: String?
+    let explanation: String?
+    let studentAnswer: String?
+    let isCorrect: Bool?
+
+    var id: Int { index }
+}
+
+struct PlacementReviewOption: Codable {
+    let label: String
+    let text: String
 }
 
 // MARK: - Start Result
@@ -139,6 +168,14 @@ final class PlacementsAssessmentsApi {
         let resp: V2APIResponse<AssessmentSyncResult> = try await V2APIClient.shared.post(
             "/me/assessments/sessions/\(sessionId)/sync",
             body: _EmptyBody()
+        )
+        return resp.data
+    }
+
+    // GET /api/v2/me/assessments/sessions/:sessionId/review
+    func fetchReview(sessionId: String) async throws -> PlacementReviewResponse {
+        let resp: V2APIResponse<PlacementReviewResponse> = try await V2APIClient.shared.get(
+            "/me/assessments/sessions/\(sessionId)/review"
         )
         return resp.data
     }
