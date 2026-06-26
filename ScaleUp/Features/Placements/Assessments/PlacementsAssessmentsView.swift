@@ -82,6 +82,9 @@ struct PlacementsAssessmentsView: View {
                     Task {
                         await sync(assessmentSessionId: start.assessmentSessionId)
                         await load()
+                        // Placement: open PlacementAssessmentResultView for the
+                        // graded row instead of the B2C DiagnosticResultsView.
+                        showResultForSession(id: start.assessmentSessionId)
                     }
                 }
             } else {
@@ -105,7 +108,11 @@ struct PlacementsAssessmentsView: View {
                     Task {
                         let syncResult = await sync(assessmentSessionId: start.assessmentSessionId)
                         await load()
-                        if let status = syncResult?.status, status != "graded" {
+                        // Placement: open PlacementAssessmentResultView.
+                        // If not yet graded (async grading), start poll so it opens when ready.
+                        if let status = syncResult?.status, status == "graded" {
+                            showResultForSession(id: start.assessmentSessionId)
+                        } else {
                             startGradePoll(assessmentSessionId: start.assessmentSessionId)
                         }
                     }
@@ -143,8 +150,14 @@ struct PlacementsAssessmentsView: View {
                 start: start,
                 onComplete: {
                     Task {
-                        await sync(assessmentSessionId: start.assessmentSessionId)
+                        let syncResult = await sync(assessmentSessionId: start.assessmentSessionId)
                         await load()
+                        // Placement: open PlacementAssessmentResultView instead of B2C DrillResultView.
+                        if let status = syncResult?.status, status == "graded" {
+                            showResultForSession(id: start.assessmentSessionId)
+                        } else {
+                            startGradePoll(assessmentSessionId: start.assessmentSessionId)
+                        }
                     }
                 }
             )
@@ -235,6 +248,15 @@ struct PlacementsAssessmentsView: View {
             }
         }
         return "Could not start assessment: \(error.localizedDescription)"
+    }
+
+    /// After load(), finds the row whose session matches `id` and opens its result detail.
+    /// Called after an engine completes so PlacementAssessmentResultView appears
+    /// instead of a B2C result screen.
+    private func showResultForSession(id: String) {
+        if let row = rows.first(where: { $0.session?.id == id }) {
+            activeResult = row
+        }
     }
 
     private func load() async {

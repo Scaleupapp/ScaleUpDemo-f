@@ -52,11 +52,14 @@ struct PlacementDrillTakeView: View {
             inputView
         case .submitting:
             DrillSubmittingView()
-        case .result(let grade):
-            DrillResultView(grade: grade) {
-                onComplete()
-                dismiss()
-            }
+        case .result:
+            // Placement: auto-dismiss to PlacementAssessmentResultView (score-only,
+            // gated review). Never show the B2C DrillResultView (retry/next-step/mastery).
+            Color.clear
+                .onAppear {
+                    onComplete()
+                    dismiss()
+                }
         case .error(let msg):
             errorView(msg)
         }

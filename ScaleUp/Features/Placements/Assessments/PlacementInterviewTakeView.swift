@@ -19,7 +19,6 @@ struct PlacementInterviewTakeView: View {
 
     @State private var vm = InterviewViewModel()
     @State private var micState: MicState = .checking
-    @State private var showResultsOverlay = false
     @State private var showPlacementError: String?
 
     @Environment(\.dismiss) private var dismiss
@@ -105,9 +104,11 @@ struct PlacementInterviewTakeView: View {
                 .environment(appState)
                 .onChange(of: vm.state) { _, newState in
                     if case .results = newState {
-                        // Do NOT auto-dismiss — show overlay so student reads results.
-                        showResultsOverlay = true
+                        // Placement: auto-dismiss immediately so the student sees
+                        // PlacementAssessmentResultView (score-only, gated review),
+                        // not the B2C InterviewResultsView (retry / see-your-plan).
                         onComplete()
+                        dismiss()
                     }
                     // Override .error in placement context: capture it and show our overlay.
                     if case .error(let msg) = newState {
@@ -115,34 +116,10 @@ struct PlacementInterviewTakeView: View {
                     }
                 }
 
-            // Results overlay — student taps Done to dismiss.
-            if showResultsOverlay {
-                placementResultsDoneButton
-            }
-
             // Error overlay — Retry or Close.
             if let errMsg = showPlacementError {
                 placementErrorOverlay(errMsg)
             }
-        }
-    }
-
-    // MARK: - Results "Done" overlay
-
-    private var placementResultsDoneButton: some View {
-        VStack {
-            Spacer()
-            Button("Done") {
-                dismiss()
-            }
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(ColorTokens.buttonPrimaryText)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(ColorTokens.gold)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .padding(.horizontal, 24)
-            .padding(.bottom, 32)
         }
     }
 
