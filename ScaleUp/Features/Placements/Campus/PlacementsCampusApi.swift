@@ -65,11 +65,14 @@ final class PlacementsCampusApi {
     }
 
     // POST /api/v2/me/placement/notices/:id/read (ignore response body)
+    // Backend returns { "success": true } with no "data" field, so we decode
+    // data as an optional type so a missing key does not throw.
     func markNoticeRead(_ id: String) async throws {
-        struct Empty: Codable {}
-        let _: V2APIResponse<Empty> = try await V2APIClient.shared.post(
+        struct EmptyData: Codable {}
+        struct NoBody: Codable {}
+        let _: V2APIResponse<EmptyData?> = try await V2APIClient.shared.post(
             "/me/placement/notices/\(id)/read",
-            body: Empty()
+            body: NoBody()
         )
     }
 }
