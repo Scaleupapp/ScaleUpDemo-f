@@ -460,26 +460,30 @@ struct V2YouView: View {
             }
             .buttonStyle(.plain)
 
-            NavigationLink {
-                V2PlanDetailView()
-                    .environment(appState)
-                    .environment(objectiveContext)
-            } label: {
-                if let wp = weekProgress {
-                    row(icon: "calendar", label: "My plan", meta: "Week \(wp.week)")
-                } else {
-                    row(icon: "calendar", label: "My plan")
+            if !isPlacement {
+                NavigationLink {
+                    V2PlanDetailView()
+                        .environment(appState)
+                        .environment(objectiveContext)
+                } label: {
+                    if let wp = weekProgress {
+                        row(icon: "calendar", label: "My plan", meta: "Week \(wp.week)")
+                    } else {
+                        row(icon: "calendar", label: "My plan")
+                    }
                 }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
-            NavigationLink {
-                V2YouAnalyticsView()
-                    .environment(appState)
-            } label: {
-                row(icon: "chart.line.uptrend.xyaxis", label: "Progress & analytics")
+            if !isPlacement {
+                NavigationLink {
+                    V2YouAnalyticsView()
+                        .environment(appState)
+                } label: {
+                    row(icon: "chart.line.uptrend.xyaxis", label: "Progress & analytics")
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             NavigationLink {
                 MyNotesView()
@@ -511,14 +515,16 @@ struct V2YouView: View {
             }
             .buttonStyle(.plain)
 
-            NavigationLink {
-                CompetitionHubView()
-                    .environment(appState)
-                    .environment(objectiveContext)
-            } label: {
-                row(icon: "trophy.fill", label: "Daily challenges & competition")
+            if !isPlacement {
+                NavigationLink {
+                    CompetitionHubView()
+                        .environment(appState)
+                        .environment(objectiveContext)
+                } label: {
+                    row(icon: "trophy.fill", label: "Daily challenges & competition")
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             NavigationLink {
                 V2CompassHistoryView()
