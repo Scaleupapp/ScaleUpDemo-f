@@ -5,13 +5,19 @@ struct PlacementsCampusView: View {
     @Environment(AppState.self) private var appState
 
     @State private var drives: [PlacementDrive] = []
+    @State private var notices: [PlacementNotice] = []
     @State private var isLoading = false
     @State private var loadError: String?
+    @State private var noticesError: String?
 
     private let api = PlacementsCampusApi.shared
 
     private var institutionName: String {
         appState.userContext?.placement?.institution.name ?? "your college"
+    }
+
+    private var unreadCount: Int {
+        notices.filter { !$0.read }.count
     }
 
     var body: some View {
@@ -66,12 +72,52 @@ struct PlacementsCampusView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                // MARK: - TPO Notices (placeholder — Phase 3)
-                PlacementsPlaceholderCard(
-                    icon: "megaphone.fill",
-                    title: "TPO notices",
-                    message: "Announcements from your placement office will appear here so you never miss a deadline."
-                )
+                // MARK: - TPO Notices
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .center, spacing: 6) {
+                        Text("TPO notices").v2Eyebrow()
+                        if unreadCount > 0 {
+                            Text("\(unreadCount)")
+                                .font(V2Theme.tiny)
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(ColorTokens.gold)
+                                .clipShape(Capsule())
+                        }
+                    }
+
+                    if let noticesError {
+                        Text(noticesError)
+                            .font(V2Theme.small)
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .padding(.vertical, 8)
+                    } else if notices.isEmpty && !isLoading {
+                        HStack(alignment: .top, spacing: 14) {
+                            Image(systemName: "megaphone.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(ColorTokens.gold)
+                                .frame(width: 34, height: 34)
+                                .background(ColorTokens.gold.opacity(0.12))
+                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("No notices yet — your TPO will post updates here.")
+                                    .font(V2Theme.body)
+                                    .foregroundStyle(ColorTokens.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .v2Card()
+                    } else {
+                        ForEach(notices) { notice in
+                            NoticeRowCard(notice: notice) { id in
+                                await markRead(id: id)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, V2Theme.pad)
             .padding(.bottom, 120)
@@ -84,12 +130,121 @@ struct PlacementsCampusView: View {
     private func load() async {
         isLoading = true
         loadError = nil
+        noticesError = nil
+        async let drivesResult = api.fetchCompanies()
+        async let noticesResult = api.fetchNotices()
         do {
-            drives = try await api.fetchCompanies()
+            drives = try await drivesResult
         } catch {
             loadError = "Could not load drives. Pull to refresh."
         }
+        do {
+            notices = try await noticesResult
+        } catch {
+            noticesError = "Could not load notices."
+        }
         isLoading = false
+    }
+
+    private func markRead(id: String) async {
+        guard let idx = notices.firstIndex(where: { $0.id == id }) else { return }
+        guard !notices[idx].read else { return }
+        // Optimistically flip local state
+        let old = notices[idx]
+        notices[idx] = PlacementNotice(
+            id: old.id, title: old.title, body: old.body,
+            pinned: old.pinned, link: old.link, attachment: old.attachment, read: true
+        )
+        do {
+            try await api.markNoticeRead(id)
+        } catch {
+            // Revert on failure (best-effort; non-critical)
+            if let revertIdx = notices.firstIndex(where: { $0.id == id }) {
+                notices[revertIdx] = old
+            }
+        }
+    }
+}
+
+// MARK: - Notice Row Card
+
+private struct NoticeRowCard: View {
+    let notice: PlacementNotice
+    let onTap: (String) async -> Void
+
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        Button {
+            Task {
+                await onTap(notice.id)
+                // Open link or attachment after marking read
+                if let linkStr = notice.link, !linkStr.isEmpty, let url = URL(string: linkStr) {
+                    openURL(url)
+                } else if let attURL = notice.attachment?.url, !attURL.isEmpty, let url = URL(string: attURL) {
+                    openURL(url)
+                }
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "megaphone.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 34, height: 34)
+                        .background(ColorTokens.gold.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    if !notice.read {
+                        Circle()
+                            .fill(ColorTokens.gold)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 2, y: -2)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .center, spacing: 6) {
+                        Text(notice.title)
+                            .font(notice.read ? V2Theme.body : V2Theme.h3)
+                            .foregroundStyle(ColorTokens.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 0)
+                        if notice.pinned {
+                            Image(systemName: "pin.fill")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(ColorTokens.gold)
+                        }
+                    }
+
+                    Text(notice.body)
+                        .font(V2Theme.small)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let linkStr = notice.link, !linkStr.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "link")
+                                .font(.system(size: 10, weight: .medium))
+                            Text("Open link")
+                                .font(V2Theme.small)
+                        }
+                        .foregroundStyle(ColorTokens.gold)
+                    } else if let att = notice.attachment, let fileName = att.fileName, !fileName.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "paperclip")
+                                .font(.system(size: 10, weight: .medium))
+                            Text(fileName)
+                                .font(V2Theme.small)
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(ColorTokens.gold)
+                    }
+                }
+            }
+            .v2Card()
+        }
+        .buttonStyle(.plain)
     }
 }
 

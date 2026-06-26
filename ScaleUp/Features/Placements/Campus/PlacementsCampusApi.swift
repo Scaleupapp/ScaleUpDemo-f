@@ -20,9 +20,32 @@ struct PlacementDrive: Codable, Identifiable {
     }
 }
 
+/// Attachment metadata on a TPO notice (attachment.url is presigned GET URL).
+struct PlacementNoticeAttachment: Codable {
+    let fileName: String?
+    let mime: String?
+    let url: String?
+}
+
+/// A TPO notice returned by GET /api/v2/me/placement/notices.
+struct PlacementNotice: Codable, Identifiable {
+    let id: String
+    let title: String
+    let body: String
+    let pinned: Bool
+    let link: String?
+    let attachment: PlacementNoticeAttachment?
+    let read: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id = "_id"
+        case title, body, pinned, link, attachment, read
+    }
+}
+
 // MARK: - API Service
 
-/// Thin @MainActor service for the Campus placement companies endpoint.
+/// Thin @MainActor service for the Campus placement companies and notices endpoints.
 /// All networking goes through V2APIClient.shared (GET /api/v2).
 @MainActor
 final class PlacementsCampusApi {
@@ -33,5 +56,20 @@ final class PlacementsCampusApi {
     func fetchCompanies() async throws -> [PlacementDrive] {
         let resp: V2APIResponse<[PlacementDrive]> = try await V2APIClient.shared.get("/me/placement/companies")
         return resp.data
+    }
+
+    // GET /api/v2/me/placement/notices
+    func fetchNotices() async throws -> [PlacementNotice] {
+        let resp: V2APIResponse<[PlacementNotice]> = try await V2APIClient.shared.get("/me/placement/notices")
+        return resp.data
+    }
+
+    // POST /api/v2/me/placement/notices/:id/read (ignore response body)
+    func markNoticeRead(_ id: String) async throws {
+        struct Empty: Codable {}
+        let _: V2APIResponse<Empty> = try await V2APIClient.shared.post(
+            "/me/placement/notices/\(id)/read",
+            body: Empty()
+        )
     }
 }
