@@ -7,6 +7,12 @@ import SwiftUI
 /// Below: optional UserInference panel, role-gated Creator Hub / Admin Tools, Become-a-Creator card,
 /// Settings row, footer.
 struct V2YouView: View {
+    let isPlacement: Bool
+
+    init(isPlacement: Bool = false) {
+        self.isPlacement = isPlacement
+    }
+
     @State private var vm = V2YouViewModel()
     @Environment(AppState.self) private var appState
     @Environment(ObjectiveContext.self) private var objectiveContext
@@ -107,17 +113,19 @@ struct V2YouView: View {
 
             sectionDivider.padding(.vertical, 18)
 
-            // MY LIBRARY
-            sectionLabel("My library")
-            libraryStrip
-                .padding(.bottom, 16)
+            // MY LIBRARY (B2C only)
+            if !isPlacement {
+                sectionLabel("My library")
+                libraryStrip
+                    .padding(.bottom, 16)
+            }
 
             // MY LEARNING
             sectionLabel("My learning")
             learningRows(weekProgress: data.weekProgress)
 
-            // OPEN TO OPPORTUNITIES (self-gated — only when the hiring feature is live)
-            if hiringVM.available == true {
+            // OPEN TO OPPORTUNITIES (self-gated — only when the hiring feature is live; B2C only)
+            if !isPlacement && hiringVM.available == true {
                 sectionDivider.padding(.vertical, 18)
                 sectionLabel("Career")
                 openToOpportunitiesRow
@@ -129,8 +137,8 @@ struct V2YouView: View {
                 inferencePanel
             }
 
-            // Role-gated sections
-            if vm.isCreatorRole {
+            // Role-gated sections (B2C only)
+            if !isPlacement && vm.isCreatorRole {
                 sectionDivider.padding(.vertical, 18)
                 creatorHubSection
             }
@@ -140,8 +148,8 @@ struct V2YouView: View {
                 adminToolsSection
             }
 
-            // Become creator / application status
-            if vm.isConsumerOrContributor {
+            // Become creator / application status (B2C only)
+            if !isPlacement && vm.isConsumerOrContributor {
                 if vm.applicationStatus == nil {
                     becomeCreatorCard
                         .padding(.top, 18)
@@ -216,47 +224,49 @@ struct V2YouView: View {
                     .lineLimit(1)
             }
 
-            // Followers / following row
-            HStack(spacing: 0) {
-                Button {
-                    Haptics.selection()
-                    followListMode = .followers
-                    showFollowList = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("\(appState.currentUser?.followersCount ?? 0)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(ColorTokens.textPrimary)
-                        Text("followers")
-                            .font(.system(size: 13))
-                            .foregroundStyle(ColorTokens.textSecondary)
+            // Followers / following row (B2C only)
+            if !isPlacement {
+                HStack(spacing: 0) {
+                    Button {
+                        Haptics.selection()
+                        followListMode = .followers
+                        showFollowList = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("\(appState.currentUser?.followersCount ?? 0)")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                            Text("followers")
+                                .font(.system(size: 13))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                        }
                     }
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(.plain)
 
-                Text(" · ")
-                    .font(.system(size: 13))
-                    .foregroundStyle(ColorTokens.textTertiary)
+                    Text(" · ")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.textTertiary)
 
-                Button {
-                    Haptics.selection()
-                    followListMode = .following
-                    showFollowList = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("\(appState.currentUser?.followingCount ?? 0)")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(ColorTokens.textPrimary)
-                        Text("following")
-                            .font(.system(size: 13))
-                            .foregroundStyle(ColorTokens.textSecondary)
+                    Button {
+                        Haptics.selection()
+                        followListMode = .following
+                        showFollowList = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("\(appState.currentUser?.followingCount ?? 0)")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                            Text("following")
+                                .font(.system(size: 13))
+                                .foregroundStyle(ColorTokens.textSecondary)
+                        }
                     }
-                }
-                .buttonStyle(.plain)
+                    .buttonStyle(.plain)
 
-                Spacer()
+                    Spacer()
+                }
+                .padding(.top, 2)
             }
-            .padding(.top, 2)
         }
     }
 

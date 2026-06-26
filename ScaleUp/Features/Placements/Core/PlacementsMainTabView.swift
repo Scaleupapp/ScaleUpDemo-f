@@ -32,7 +32,7 @@ struct PlacementsMainTabView: View {
                     .tabItem { Label(PlacementTab.library.label, systemImage: PlacementTab.library.icon) }
                     .tag(PlacementTab.library)
 
-                V2YouView()
+                V2YouView(isPlacement: true)
                     .tabItem { Label(PlacementTab.you.label, systemImage: PlacementTab.you.icon) }
                     .tag(PlacementTab.you)
             }
