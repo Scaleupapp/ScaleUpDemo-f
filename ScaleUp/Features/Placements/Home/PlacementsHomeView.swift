@@ -227,6 +227,5 @@ struct PlacementsHomeView: View {
 
     private var nextStepsCard: some View {
         PlacementsAssessmentsView()
-            .placementCard()
     }
 }
