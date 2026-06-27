@@ -36,8 +36,8 @@ struct PlacementsLibraryView: View {
                 } else if shelves.isEmpty {
                     PlacementEmptyState(
                         icon: "books.vertical.fill",
-                        title: "No shelves yet",
-                        message: "Your TPO adds prep material here."
+                        title: "",
+                        message: "No shelves yet — your TPO adds prep material here."
                     )
                 } else {
                     ForEach(shelves) { shelf in

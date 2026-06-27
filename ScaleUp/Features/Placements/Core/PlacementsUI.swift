@@ -86,10 +86,12 @@ struct PlacementEmptyState: View {
                 .frame(width: 48, height: 48)
                 .background(ColorTokens.gold.opacity(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            Text(title)
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(ColorTokens.textPrimary)
-                .multilineTextAlignment(.center)
+            if !title.isEmpty {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                    .multilineTextAlignment(.center)
+            }
             Text(message)
                 .font(V2Theme.small)
                 .foregroundStyle(ColorTokens.textSecondary)

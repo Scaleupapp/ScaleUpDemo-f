@@ -50,8 +50,8 @@ struct PlacementsCampusView: View {
                     } else if drives.isEmpty {
                         PlacementEmptyState(
                             icon: "calendar.badge.clock",
-                            title: "No drives yet",
-                            message: "Recruiters your TPO adds for this season show up here."
+                            title: "",
+                            message: "No drives yet — recruiters your TPO adds for this season show up here."
                         )
                     } else {
                         ForEach(drives) { drive in
@@ -86,8 +86,8 @@ struct PlacementsCampusView: View {
                     } else if notices.isEmpty && !isLoading {
                         PlacementEmptyState(
                             icon: "megaphone.fill",
-                            title: "No notices yet",
-                            message: "Your placement office will post updates here."
+                            title: "",
+                            message: "No notices yet — your placement office will post updates here."
                         )
                     } else {
                         ForEach(notices) { notice in
@@ -377,7 +377,7 @@ private struct DriveRowCard: View {
                 }
                 if let pkg {
                     Text(pkg)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 20, weight: .bold))
                         .foregroundStyle(ColorTokens.gold)
                 }
             }
