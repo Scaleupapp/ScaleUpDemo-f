@@ -3,8 +3,8 @@ import SwiftUI
 /// Library tab — curated placement-prep content for the cohort.
 ///
 /// Fetches shelves from GET /api/v2/me/placement/shelves and renders each
-/// shelf as a titled section with its items. Falls back to an empty state
-/// message when the cohort has no shelves yet.
+/// shelf as a card with its items. Falls back to a quiet empty state when the
+/// cohort has no shelves yet.
 struct PlacementsLibraryView: View {
     @Environment(\.openURL) private var openURL
 
@@ -25,6 +25,7 @@ struct PlacementsLibraryView: View {
 
                 if isLoading {
                     ProgressView()
+                        .tint(ColorTokens.gold)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 32)
                 } else if let errorMessage {
@@ -33,21 +34,18 @@ struct PlacementsLibraryView: View {
                         .foregroundStyle(ColorTokens.textSecondary)
                         .padding(.top, 16)
                 } else if shelves.isEmpty {
-                    Text("No shelves yet — your TPO will add prep material here.")
-                        .font(V2Theme.body)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .padding(.top, 16)
+                    PlacementEmptyState(
+                        icon: "books.vertical.fill",
+                        title: "No shelves yet",
+                        message: "Your TPO adds prep material here."
+                    )
                 } else {
                     ForEach(shelves) { shelf in
-                        ShelfSectionView(shelf: shelf, openURL: openURL)
+                        ShelfCardView(shelf: shelf, openURL: openURL)
                     }
                 }
 
-                PlacementsPlaceholderCard(
-                    icon: "sparkles",
-                    title: "Ask Compass",
-                    message: "Tap the Compass button any time for explanations, practice, and guidance."
-                )
+                AskCompassHelper()
             }
             .padding(.horizontal, V2Theme.pad)
             .padding(.bottom, 120)
@@ -71,32 +69,48 @@ struct PlacementsLibraryView: View {
     }
 }
 
-// MARK: - Shelf Section
+// MARK: - Shelf Card
 
-private struct ShelfSectionView: View {
+private struct ShelfCardView: View {
     let shelf: PlacementShelf
     let openURL: OpenURLAction
 
+    private var itemCountLabel: String {
+        let n = shelf.items.count
+        return n == 1 ? "1 item" : "\(n) items"
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(shelf.title)
-                .font(V2Theme.h2)
-                .foregroundStyle(ColorTokens.textPrimary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(shelf.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Spacer(minLength: 0)
+                Text(itemCountLabel)
+                    .font(V2Theme.small)
+                    .foregroundStyle(ColorTokens.textSecondary)
+            }
 
             if shelf.items.isEmpty {
                 Text("No items in this shelf yet.")
-                    .font(V2Theme.body)
+                    .font(V2Theme.small)
                     .foregroundStyle(ColorTokens.textSecondary)
-                    .padding(.vertical, 4)
             } else {
-                ForEach(shelf.items) { item in
-                    ShelfItemRow(item: item, openURL: openURL)
+                VStack(spacing: 0) {
+                    ForEach(Array(shelf.items.enumerated()), id: \.element.id) { idx, item in
+                        if idx > 0 {
+                            Rectangle()
+                                .fill(ColorTokens.border)
+                                .frame(height: 1)
+                        }
+                        ShelfItemRow(item: item, openURL: openURL)
+                            .padding(.vertical, 10)
+                    }
                 }
             }
         }
-        .padding(14)
-        .background(ColorTokens.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .placementCard()
     }
 }
 
@@ -106,9 +120,9 @@ private struct ShelfItemRow: View {
     let item: PlacementShelfItem
     let openURL: OpenURLAction
 
-    private var glyphName: String {
-        item.type == "file" ? "doc.fill" : "link"
-    }
+    private var isFile: Bool { item.type == "file" }
+    private var glyphName: String { isFile ? "doc.fill" : "link" }
+    private var hasURL: Bool { item.url != nil }
 
     var body: some View {
         Button {
@@ -116,15 +130,17 @@ private struct ShelfItemRow: View {
                 openURL(url)
             }
         } label: {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .center, spacing: 12) {
                 Image(systemName: glyphName)
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
-                    .frame(width: 20, alignment: .center)
-                    .padding(.top, 2)
+                    .frame(width: 30, height: 30)
+                    .background(ColorTokens.gold.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
-                        .font(V2Theme.bodyMedium)
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(ColorTokens.textPrimary)
                         .multilineTextAlignment(.leading)
 
@@ -132,15 +148,53 @@ private struct ShelfItemRow: View {
                         Text(note)
                             .font(V2Theme.small)
                             .foregroundStyle(ColorTokens.textSecondary)
+                            .lineLimit(1)
                             .multilineTextAlignment(.leading)
                     }
                 }
 
                 Spacer(minLength: 0)
+
+                if hasURL {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
             }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(item.url == nil)
+        .disabled(!hasURL)
+    }
+}
+
+// MARK: - Ask Compass helper (subtle, not a primary card)
+
+private struct AskCompassHelper: View {
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(ColorTokens.gold)
+                .frame(width: 26, height: 26)
+                .background(ColorTokens.gold.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Ask Compass")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("Tap the Compass button any time for explanations, practice, and guidance.")
+                    .font(V2Theme.small)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(ColorTokens.surfaceElevated)
+        )
     }
 }

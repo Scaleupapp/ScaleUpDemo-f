@@ -13,10 +13,11 @@ struct PlacementDrive: Codable, Identifiable {
     let status: String
     let applyLink: String?
     let notes: String?
+    let bookmarked: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case name, role, package, driveDate, eligibility, status, applyLink, notes
+        case name, role, package, driveDate, eligibility, status, applyLink, notes, bookmarked
     }
 }
 
@@ -73,6 +74,25 @@ final class PlacementsCampusApi {
         let _: V2APIResponse<EmptyData?> = try await V2APIClient.shared.post(
             "/me/placement/notices/\(id)/read",
             body: NoBody()
+        )
+    }
+
+    // POST /api/v2/me/placement/companies/:id/bookmark
+    // Response body may or may not carry a "data" field, so decode as optional.
+    func bookmarkDrive(_ id: String) async throws {
+        struct EmptyData: Codable {}
+        struct NoBody: Codable {}
+        let _: V2APIResponse<EmptyData?> = try await V2APIClient.shared.post(
+            "/me/placement/companies/\(id)/bookmark",
+            body: NoBody()
+        )
+    }
+
+    // DELETE /api/v2/me/placement/companies/:id/bookmark
+    func unbookmarkDrive(_ id: String) async throws {
+        struct EmptyData: Codable {}
+        let _: V2APIResponse<EmptyData?> = try await V2APIClient.shared.delete(
+            "/me/placement/companies/\(id)/bookmark"
         )
     }
 }

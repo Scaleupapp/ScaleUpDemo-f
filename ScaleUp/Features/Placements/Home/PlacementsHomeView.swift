@@ -73,7 +73,7 @@ struct PlacementsHomeView: View {
         HStack(spacing: 16) {
             readinessRing(homeVM.data?.trajectory?.today)
             VStack(alignment: .leading, spacing: 6) {
-                Text("Placement readiness").v2Eyebrow()
+                SectionEyebrow("Placement readiness")
                 Text(readinessSubtitle)
                     .font(V2Theme.body)
                     .foregroundStyle(ColorTokens.textSecondary)
@@ -81,7 +81,7 @@ struct PlacementsHomeView: View {
             }
             Spacer(minLength: 0)
         }
-        .v2Card()
+        .placementCard()
     }
 
     private var readinessSubtitle: String {
@@ -124,21 +124,22 @@ struct PlacementsHomeView: View {
             Image(systemName: "lock.fill")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(ColorTokens.gold)
-                .frame(width: 34, height: 34)
-                .background(ColorTokens.gold.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .frame(width: 38, height: 38)
+                .background(ColorTokens.gold.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
-                Text("Your objective").v2Eyebrow()
+                SectionEyebrow("Your objective")
                 Text(objectiveName)
-                    .font(V2Theme.h3)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(ColorTokens.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Set by \(placement?.institution.name ?? "your college") · locked")
                     .font(V2Theme.small)
-                    .foregroundStyle(ColorTokens.textTertiary)
+                    .foregroundStyle(ColorTokens.textSecondary)
             }
             Spacer(minLength: 0)
         }
-        .v2Card()
+        .placementCard()
     }
 
     private var objectiveName: String {
@@ -154,23 +155,23 @@ struct PlacementsHomeView: View {
             Image(systemName: "calendar")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(ColorTokens.gold)
-                .frame(width: 34, height: 34)
-                .background(ColorTokens.gold.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                .frame(width: 38, height: 38)
+                .background(ColorTokens.gold.opacity(0.14))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
-                Text("Placement season").v2Eyebrow()
+                SectionEyebrow("Placement season")
                 Text(deadlineHeadline)
-                    .font(V2Theme.h3)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(ColorTokens.textPrimary)
                 if let date = PlacementDate.medium(placement?.placementSeason.deadline) {
                     Text("Target: \(date)")
                         .font(V2Theme.small)
-                        .foregroundStyle(ColorTokens.textTertiary)
+                        .foregroundStyle(ColorTokens.textSecondary)
                 }
             }
             Spacer(minLength: 0)
         }
-        .v2Card()
+        .placementCard()
     }
 
     private var deadlineHeadline: String {
@@ -193,13 +194,13 @@ struct PlacementsHomeView: View {
                 Image(systemName: "dumbbell.fill")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
-                    .frame(width: 34, height: 34)
-                    .background(ColorTokens.gold.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                    .frame(width: 38, height: 38)
+                    .background(ColorTokens.gold.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Practice").v2Eyebrow()
+                    SectionEyebrow("Practice")
                     Text("Sharpen up")
-                        .font(V2Theme.h3)
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(ColorTokens.textPrimary)
                     if let topRec = practice?.recommendations.first {
                         Text("Try \(topRec.competency) — \(topRec.score)%")
@@ -217,7 +218,7 @@ struct PlacementsHomeView: View {
                     .foregroundStyle(ColorTokens.textTertiary)
                     .padding(.top, 4)
             }
-            .v2Card()
+            .placementCard()
         }
         .buttonStyle(.plain)
     }
@@ -226,6 +227,6 @@ struct PlacementsHomeView: View {
 
     private var nextStepsCard: some View {
         PlacementsAssessmentsView()
-            .v2Card()
+            .placementCard()
     }
 }

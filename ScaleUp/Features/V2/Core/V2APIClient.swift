@@ -29,6 +29,10 @@ final class V2APIClient {
         try await request(version: .v2, method: "POST", path: path, body: body)
     }
 
+    func delete<T: Codable>(_ path: String) async throws -> V2APIResponse<T> {
+        try await request(version: .v2, method: "DELETE", path: path, body: Optional<EmptyBody>.none)
+    }
+
     // MARK: - v1 (raw, unwrapped response)
 
     func getV1<T: Codable>(_ path: String) async throws -> T {

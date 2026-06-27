@@ -103,8 +103,14 @@ struct PlacementAssessmentResultView: View {
             .buttonStyle(.plain)
         }
         .padding(16)
-        .background(ColorTokens.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(ColorTokens.surfaceElevated)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(ColorTokens.gold.opacity(0.35), lineWidth: 1)
+        )
     }
 
     // MARK: - Review loading
@@ -120,18 +126,11 @@ struct PlacementAssessmentResultView: View {
     // MARK: - Score
 
     private var scoreSection: some View {
-        VStack(spacing: 16) {
-            // Score + integrity
-            HStack(spacing: 24) {
+        VStack(spacing: 18) {
+            // Score ring + integrity
+            HStack(spacing: 28) {
                 if let score = result?.score {
-                    VStack(spacing: 4) {
-                        Text("\(Int(score.rounded()))%")
-                            .font(.system(size: 56, weight: .bold, design: .rounded))
-                            .foregroundStyle(scoreColor(score))
-                        Text("Score")
-                            .font(.caption)
-                            .foregroundStyle(ColorTokens.textSecondary)
-                    }
+                    scoreRing(score)
                 }
 
                 if let integrity = result?.integrity {
@@ -149,7 +148,7 @@ struct PlacementAssessmentResultView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
 
             // Assessment info
             VStack(spacing: 4) {
@@ -166,6 +165,26 @@ struct PlacementAssessmentResultView: View {
         .padding(20)
         .background(ColorTokens.surfaceElevated)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private func scoreRing(_ score: Double) -> some View {
+        ZStack {
+            Circle()
+                .stroke(ColorTokens.surface, lineWidth: 9)
+            Circle()
+                .trim(from: 0, to: CGFloat(max(0, min(100, score))) / 100)
+                .stroke(scoreColor(score), style: StrokeStyle(lineWidth: 9, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 0) {
+                Text("\(Int(score.rounded()))%")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Text("SCORE")
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .frame(width: 108, height: 108)
     }
 
     // MARK: - Breakdown
@@ -254,54 +273,75 @@ struct PlacementAssessmentResultView: View {
     }
 
     private func dimensionBreakdown(title: String, dimensions: [PlacementResultDimension]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
-            ForEach(dimensions) { dim in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(dim.name.replacingOccurrences(of: "_", with: " ").capitalized)
-                            .font(V2Theme.small)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                        if let feedback = dim.feedback, !feedback.isEmpty {
-                            Text(feedback)
-                                .font(V2Theme.tiny)
-                                .foregroundStyle(ColorTokens.textSecondary)
-                        }
-                    }
-                    Spacer()
-                    if let score = dim.score {
-                        Text(String(format: "%.0f", score))
-                            .font(V2Theme.h3)
-                            .foregroundStyle(scoreColor(score))
-                    }
+            VStack(spacing: 14) {
+                ForEach(dimensions) { dim in
+                    competencyBar(
+                        name: dim.name,
+                        value: dim.score,
+                        feedback: dim.feedback,
+                        suffix: ""
+                    )
                 }
-                .padding(12)
-                .background(ColorTokens.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
+            .padding(14)
+            .background(ColorTokens.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 
     private func mcqBreakdown(competency: [String: Double]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Competency Breakdown")
                 .font(V2Theme.h3)
                 .foregroundStyle(ColorTokens.textPrimary)
-            ForEach(competency.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
-                HStack {
-                    Text(key.replacingOccurrences(of: "_", with: " ").capitalized)
-                        .font(V2Theme.small)
-                        .foregroundStyle(ColorTokens.textPrimary)
-                    Spacer()
-                    Text(String(format: "%.0f%%", value))
-                        .font(V2Theme.h3)
+            VStack(spacing: 14) {
+                ForEach(competency.sorted(by: { $0.key < $1.key }), id: \.key) { key, value in
+                    competencyBar(name: key, value: value, feedback: nil, suffix: "%")
+                }
+            }
+            .padding(14)
+            .background(ColorTokens.surfaceElevated)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+    }
+
+    /// A clean labelled progress bar used by the dimension and competency breakdowns.
+    @ViewBuilder
+    private func competencyBar(name: String, value: Double?, feedback: String?, suffix: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(name.replacingOccurrences(of: "_", with: " ").capitalized)
+                    .font(V2Theme.small)
+                    .foregroundStyle(ColorTokens.textPrimary)
+                Spacer(minLength: 8)
+                if let value {
+                    Text(suffix == "%" ? String(format: "%.0f%%", value) : String(format: "%.0f", value))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(scoreColor(value))
                 }
-                .padding(12)
-                .background(ColorTokens.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            if let value {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(ColorTokens.surface)
+                            .frame(height: 6)
+                        Capsule()
+                            .fill(scoreColor(value))
+                            .frame(width: geo.size.width * CGFloat(max(0, min(100, value)) / 100), height: 6)
+                    }
+                }
+                .frame(height: 6)
+            }
+            if let feedback, !feedback.isEmpty {
+                Text(feedback)
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

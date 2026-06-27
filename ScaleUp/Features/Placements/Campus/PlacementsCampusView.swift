@@ -32,8 +32,8 @@ struct PlacementsCampusView: View {
                 .padding(.top, 8)
 
                 // MARK: - Company Drives
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Company drives").v2Eyebrow()
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionEyebrow("Company drives")
 
                     if isLoading && drives.isEmpty {
                         HStack {
@@ -48,38 +48,29 @@ struct PlacementsCampusView: View {
                             .foregroundStyle(ColorTokens.textSecondary)
                             .padding(.vertical, 8)
                     } else if drives.isEmpty {
-                        HStack(alignment: .top, spacing: 14) {
-                            Image(systemName: "calendar.badge.clock")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(ColorTokens.gold)
-                                .frame(width: 34, height: 34)
-                                .background(ColorTokens.gold.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("No drives yet — your TPO will add recruiters here.")
-                                    .font(V2Theme.body)
-                                    .foregroundStyle(ColorTokens.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .v2Card()
+                        PlacementEmptyState(
+                            icon: "calendar.badge.clock",
+                            title: "No drives yet",
+                            message: "Recruiters your TPO adds for this season show up here."
+                        )
                     } else {
                         ForEach(drives) { drive in
-                            DriveRowCard(drive: drive)
+                            DriveRowCard(drive: drive) { id, shouldBookmark in
+                                await toggleBookmark(id: id, shouldBookmark: shouldBookmark)
+                            }
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 // MARK: - TPO Notices
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .center, spacing: 6) {
-                        Text("TPO notices").v2Eyebrow()
+                        SectionEyebrow("TPO notices")
                         if unreadCount > 0 {
                             Text("\(unreadCount)")
                                 .font(V2Theme.tiny)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(ColorTokens.buttonPrimaryText)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
                                 .background(ColorTokens.gold)
@@ -93,22 +84,11 @@ struct PlacementsCampusView: View {
                             .foregroundStyle(ColorTokens.textSecondary)
                             .padding(.vertical, 8)
                     } else if notices.isEmpty && !isLoading {
-                        HStack(alignment: .top, spacing: 14) {
-                            Image(systemName: "megaphone.fill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(ColorTokens.gold)
-                                .frame(width: 34, height: 34)
-                                .background(ColorTokens.gold.opacity(0.12))
-                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("No notices yet — your TPO will post updates here.")
-                                    .font(V2Theme.body)
-                                    .foregroundStyle(ColorTokens.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .v2Card()
+                        PlacementEmptyState(
+                            icon: "megaphone.fill",
+                            title: "No notices yet",
+                            message: "Your placement office will post updates here."
+                        )
                     } else {
                         ForEach(notices) { notice in
                             NoticeRowCard(notice: notice) { id in
@@ -164,6 +144,36 @@ struct PlacementsCampusView: View {
             }
         }
     }
+
+    /// Optimistic bookmark toggle: flip local state immediately, revert on error.
+    private func toggleBookmark(id: String, shouldBookmark: Bool) async {
+        guard let idx = drives.firstIndex(where: { $0.id == id }) else { return }
+        let old = drives[idx]
+        drives[idx] = old.withBookmarked(shouldBookmark)
+        do {
+            if shouldBookmark {
+                try await api.bookmarkDrive(id)
+            } else {
+                try await api.unbookmarkDrive(id)
+            }
+        } catch {
+            if let revertIdx = drives.firstIndex(where: { $0.id == id }) {
+                drives[revertIdx] = old
+            }
+        }
+    }
+}
+
+// MARK: - PlacementDrive bookmark helper
+
+private extension PlacementDrive {
+    func withBookmarked(_ value: Bool) -> PlacementDrive {
+        PlacementDrive(
+            id: id, name: name, role: role, package: package,
+            driveDate: driveDate, eligibility: eligibility, status: status,
+            applyLink: applyLink, notes: notes, bookmarked: value
+        )
+    }
 }
 
 // MARK: - Notice Row Card
@@ -186,65 +196,73 @@ private struct NoticeRowCard: View {
                 }
             }
         } label: {
-            HStack(alignment: .top, spacing: 14) {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: "megaphone.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(ColorTokens.gold)
-                        .frame(width: 34, height: 34)
-                        .background(ColorTokens.gold.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                    if !notice.read {
-                        Circle()
-                            .fill(ColorTokens.gold)
-                            .frame(width: 8, height: 8)
-                            .offset(x: 2, y: -2)
-                    }
+            HStack(alignment: .top, spacing: 0) {
+                // Subtle gold left accent for pinned notices.
+                if notice.pinned {
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(ColorTokens.gold.opacity(0.7))
+                        .frame(width: 3)
+                        .padding(.trailing, 13)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .center, spacing: 6) {
-                        Text(notice.title)
-                            .font(notice.read ? V2Theme.body : V2Theme.h3)
-                            .foregroundStyle(ColorTokens.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 0)
-                        if notice.pinned {
-                            Image(systemName: "pin.fill")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(ColorTokens.gold)
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "megaphone.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(ColorTokens.gold)
+                            .frame(width: 38, height: 38)
+                            .background(ColorTokens.gold.opacity(0.14))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        if !notice.read {
+                            Circle()
+                                .fill(ColorTokens.gold)
+                                .frame(width: 8, height: 8)
+                                .offset(x: 2, y: -2)
                         }
                     }
 
-                    Text(notice.body)
-                        .font(V2Theme.small)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .center, spacing: 6) {
+                            Text(notice.title)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(ColorTokens.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 0)
+                            if notice.pinned {
+                                Image(systemName: "pin.fill")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(ColorTokens.gold)
+                            }
+                        }
 
-                    if let linkStr = notice.link, !linkStr.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "link")
-                                .font(.system(size: 10, weight: .medium))
-                            Text("Open link")
-                                .font(V2Theme.small)
+                        Text(notice.body)
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        if let linkStr = notice.link, !linkStr.isEmpty {
+                            metaLink(icon: "link", text: "Open link")
+                        } else if let att = notice.attachment, let fileName = att.fileName, !fileName.isEmpty {
+                            metaLink(icon: "paperclip", text: fileName)
                         }
-                        .foregroundStyle(ColorTokens.gold)
-                    } else if let att = notice.attachment, let fileName = att.fileName, !fileName.isEmpty {
-                        HStack(spacing: 4) {
-                            Image(systemName: "paperclip")
-                                .font(.system(size: 10, weight: .medium))
-                            Text(fileName)
-                                .font(V2Theme.small)
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(ColorTokens.gold)
                     }
                 }
             }
-            .v2Card()
+            .placementCard()
         }
         .buttonStyle(.plain)
+    }
+
+    private func metaLink(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .medium))
+            Text(text)
+                .font(V2Theme.small)
+                .lineLimit(1)
+        }
+        .foregroundStyle(ColorTokens.gold)
     }
 }
 
@@ -252,63 +270,58 @@ private struct NoticeRowCard: View {
 
 private struct DriveRowCard: View {
     let drive: PlacementDrive
+    /// (id, shouldBookmark) — parent performs the optimistic toggle.
+    let onBookmark: (String, Bool) async -> Void
+
     @Environment(\.openURL) private var openURL
+
+    private var isBookmarked: Bool { drive.bookmarked ?? false }
+
+    private var countdownDays: Int? {
+        guard let days = PlacementDate.daysUntil(drive.driveDate), days > 0 else { return nil }
+        return days
+    }
 
     var body: some View {
         let content = HStack(alignment: .top, spacing: 14) {
-            Image(systemName: "building.2")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(ColorTokens.gold)
-                .frame(width: 34, height: 34)
-                .background(ColorTokens.gold.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+            MonogramChip(text: drive.name)
 
             VStack(alignment: .leading, spacing: 6) {
                 // Name + status pill
                 HStack(alignment: .center, spacing: 8) {
                     Text(drive.name)
-                        .font(V2Theme.h3)
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(ColorTokens.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
-                    DriveStatusPill(status: drive.status)
+                    StatusPill(status: drive.status)
                 }
 
-                // Role / package subtitle
-                if let role = drive.role, let pkg = drive.package, !role.isEmpty, !pkg.isEmpty {
-                    Text("\(role) · \(pkg)")
-                        .font(V2Theme.body)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                } else if let role = drive.role, !role.isEmpty {
-                    Text(role)
-                        .font(V2Theme.body)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                } else if let pkg = drive.package, !pkg.isEmpty {
-                    Text(pkg)
-                        .font(V2Theme.body)
-                        .foregroundStyle(ColorTokens.textSecondary)
-                }
+                // Hero line: role · package (package gold/bold)
+                heroLine
 
-                // Drive date
+                // Meta row: calendar + date, then eligibility
                 if let dateStr = drive.driveDate, !dateStr.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "calendar")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(ColorTokens.textTertiary)
+                            .foregroundStyle(ColorTokens.textSecondary)
                         Text(formattedDate(dateStr))
-                            .font(V2Theme.small)
-                            .foregroundStyle(ColorTokens.textTertiary)
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundStyle(ColorTokens.textSecondary)
+                        if let days = countdownDays {
+                            countdownChip(days: days)
+                        }
                     }
                 }
 
-                // Eligibility
                 if let eligibility = drive.eligibility, !eligibility.isEmpty {
                     Text(eligibility)
-                        .font(V2Theme.small)
-                        .foregroundStyle(ColorTokens.textTertiary)
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundStyle(ColorTokens.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                // Apply link indicator
                 if drive.applyLink != nil {
                     HStack(spacing: 4) {
                         Image(systemName: "link")
@@ -319,8 +332,20 @@ private struct DriveRowCard: View {
                     .foregroundStyle(ColorTokens.gold)
                 }
             }
+
+            // Bookmark star
+            Button {
+                Task { await onBookmark(drive.id, !isBookmarked) }
+            } label: {
+                Image(systemName: isBookmarked ? "star.fill" : "star")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isBookmarked ? ColorTokens.gold : ColorTokens.textTertiary)
+                    .frame(width: 28, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
-        .v2Card()
+        .placementCard()
 
         if let linkStr = drive.applyLink, let url = URL(string: linkStr) {
             Button {
@@ -334,8 +359,43 @@ private struct DriveRowCard: View {
         }
     }
 
+    @ViewBuilder
+    private var heroLine: some View {
+        let role = (drive.role ?? "").isEmpty ? nil : drive.role
+        let pkg = (drive.package ?? "").isEmpty ? nil : drive.package
+        if role != nil || pkg != nil {
+            HStack(spacing: 0) {
+                if let role {
+                    Text(role)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(ColorTokens.textPrimary)
+                }
+                if role != nil, pkg != nil {
+                    Text("  ·  ")
+                        .font(.system(size: 14, weight: .regular))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                if let pkg {
+                    Text(pkg)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func countdownChip(days: Int) -> some View {
+        Text(days == 1 ? "in 1 day" : "in \(days) days")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(ColorTokens.gold)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 2)
+            .background(ColorTokens.gold.opacity(0.15))
+            .clipShape(Capsule())
+    }
+
     private func formattedDate(_ iso: String) -> String {
-        // Try ISO8601 with fractional seconds first, then plain
         let withFrac = ISO8601DateFormatter()
         withFrac.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let plain = ISO8601DateFormatter()
@@ -345,37 +405,7 @@ private struct DriveRowCard: View {
             fmt.timeStyle = .none
             return fmt.string(from: date)
         }
-        // Fallback: return raw string
         return iso
-    }
-}
-
-// MARK: - Drive Status Pill
-
-private struct DriveStatusPill: View {
-    let status: String
-
-    private var pillColor: Color {
-        switch status {
-        case "open":    return ColorTokens.success
-        case "closed":  return ColorTokens.error
-        case "visited": return ColorTokens.textTertiary
-        default:        return ColorTokens.gold   // "upcoming"
-        }
-    }
-
-    private var label: String {
-        status.prefix(1).uppercased() + status.dropFirst()
-    }
-
-    var body: some View {
-        Text(label)
-            .font(V2Theme.tiny)
-            .foregroundStyle(pillColor)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 3)
-            .background(pillColor.opacity(0.15))
-            .clipShape(Capsule())
     }
 }
 

@@ -466,6 +466,7 @@
 		C11F0B631A983A4A9335E56E /* APIUploadCapstoneVoiceReflection409Response.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F717E7A862767DB0CD83F2F /* APIUploadCapstoneVoiceReflection409Response.swift */; };
 		C1821075E3123D71236BDEA1 /* InterviewCameraCheckView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F107B5CF02DCD1F5EB3E5048 /* InterviewCameraCheckView.swift */; };
 		C2F2D8B673E811362318E001 /* APICapstoneReplaySnapshotsInner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67D47E2FB9D6BA4D60847EC6 /* APICapstoneReplaySnapshotsInner.swift */; };
+		C3528B3BAFC4D087D584B56E /* PlacementsUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 210D111FD1F64DECDD7313D4 /* PlacementsUI.swift */; };
 		C47DD2A5B52DFB0735B89947 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF68F8B4181048890E38B0FD /* PrimaryButton.swift */; };
 		C4C55B5BEE386EB0AEECA13B /* CreatorProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA5F5A722554BB4925C1BBDE /* CreatorProfileView.swift */; };
 		C4E08DBAAE3B04D01C2AC514 /* V2CodingDrillRequestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 530C3B1210253B6048ACEB44 /* V2CodingDrillRequestView.swift */; };
@@ -689,6 +690,7 @@
 		1EB4C9CAD786EF7CE0A54381 /* APISubmitDiagnosticSelfRatingRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APISubmitDiagnosticSelfRatingRequest.swift; sourceTree = "<group>"; };
 		1F66E15379C65CEEEB9838CF /* APIGetCodeDrillResult404Response.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCodeDrillResult404Response.swift; sourceTree = "<group>"; };
 		2062F9D60194386BD4BBAB03 /* DrillService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillService.swift; sourceTree = "<group>"; };
+		210D111FD1F64DECDD7313D4 /* PlacementsUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacementsUI.swift; sourceTree = "<group>"; };
 		2136325581705D88D44FB44F /* PlanTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanTabView.swift; sourceTree = "<group>"; };
 		213B2C3CB92A4EE770323F7C /* InterestsStepView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestsStepView.swift; sourceTree = "<group>"; };
 		2143F38AC36B4B1484200974 /* APIGetCalibrationDrillResult200ResponseBaselineAxes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIGetCalibrationDrillResult200ResponseBaselineAxes.swift; sourceTree = "<group>"; };
@@ -1749,6 +1751,7 @@
 				139D21EC6225860F198DE3BA /* PlacementContext.swift */,
 				D8FB8E96490FFED2C284F80E /* PlacementOnboardingIntroView.swift */,
 				F185663D093B435CDD2E0F0D /* PlacementsMainTabView.swift */,
+				210D111FD1F64DECDD7313D4 /* PlacementsUI.swift */,
 				FA8C3825B59D84C1EC043466 /* PlacementTab.swift */,
 			);
 			path = Core;
@@ -3321,6 +3324,7 @@
 				917DF2A509F0610D0FE00B6C /* PlacementsMainTabView.swift in Sources */,
 				242153A92064EEA98C69DE9F /* PlacementsPracticeApi.swift in Sources */,
 				CF38164AC88A2E10B39DB8F6 /* PlacementsPracticeView.swift in Sources */,
+				C3528B3BAFC4D087D584B56E /* PlacementsUI.swift in Sources */,
 				59899170E90FEB4C695CAE6F /* PlanBrewingPill.swift in Sources */,
 				BC681FC2EC5AB48F08E5F1BD /* PlanBrewingViewModel.swift in Sources */,
 				A1FE7786D0AC250F33E64FBF /* PlanGenerationBanner.swift in Sources */,
@@ -3556,7 +3560,7 @@
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 208;
+				CURRENT_PROJECT_VERSION = 209;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -3632,7 +3636,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 208;
+				CURRENT_PROJECT_VERSION = 209;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = NK5P69WG2H;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
