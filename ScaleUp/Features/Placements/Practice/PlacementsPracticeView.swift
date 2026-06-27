@@ -17,6 +17,7 @@ struct PlacementsPracticeView: View {
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var showCapstone = false
+    @State private var showQuizHome = false
 
     var body: some View {
         NavigationStack {
@@ -56,6 +57,15 @@ struct PlacementsPracticeView: View {
         .sheet(isPresented: $showCapstone) {
             NavigationStack {
                 V2CodingHubView(onClose: { showCapstone = false }, initialSegment: .capstones)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        // Free-practice quiz has no real topic — present V2QuizHomeView directly
+        // as a sheet so the student picks/generates a topic themselves.
+        .sheet(isPresented: $showQuizHome) {
+            NavigationStack {
+                V2QuizHomeView(onClose: { showQuizHome = false })
             }
             .presentationDetents([.large])
             .presentationDragIndicator(.visible)
@@ -198,7 +208,7 @@ struct PlacementsPracticeView: View {
             if !t.isEmpty {
                 taskRouter.route = .quizByTopic(topic: t, weekNumber: nil)
             } else {
-                taskRouter.route = .quizByTopic(topic: "practice", weekNumber: nil)
+                showQuizHome = true
             }
         case "drill":
             taskRouter.route = .codingDrill(subtype: nil)
