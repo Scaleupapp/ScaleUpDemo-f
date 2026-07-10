@@ -14,6 +14,31 @@ enum AppLaunchState: Equatable {
     case home
 }
 
+// MARK: - Placement First-Login Hook
+
+/// The 3-step first-login hook a placement student sees in place of the old
+/// intro→diagnostic path. Held in `AppState` so `ScaleUpApp` renders the right
+/// step for the single `.placementOnboardingIntro` launch state. Returning
+/// users (`diagnosticComplete == true`) never enter this flow — `resolveLaunchState`
+/// routes them straight to `.home`, unchanged.
+enum PlacementOnboardingStep: Equatable {
+    /// Step 1 — the existing intro (objective / branch / year confirmation).
+    case objective
+    /// Step 2 — placement-season window, cohort size, upcoming drives.
+    case season
+    /// Step 3 — a 2-minute practice win with AI feedback.
+    case win
+}
+
+/// A push-tap deep link targeting the placement shell. Placement-scoped and
+/// additive: only `PlacementsMainTabView` reads it, so D2C routing is untouched.
+enum PlacementDeepLink: Equatable {
+    /// Show the scheduled-assessments list (lives on the placement Home tab).
+    case assessments
+    /// Open a specific assessment's result/review.
+    case assessmentResult(assessmentId: String)
+}
+
 // MARK: - App State
 
 @Observable
@@ -28,6 +53,14 @@ final class AppState {
     var userContext: UserContext?
     var isCheckingAuth = true
     var selectedTab: Tab = .home
+
+    /// Current step of the placement first-login hook. Only meaningful while
+    /// `launchState == .placementOnboardingIntro`; ignored otherwise.
+    var placementOnboardingStep: PlacementOnboardingStep = .objective
+
+    /// A pending push-tap deep link for the placement shell, consumed by
+    /// `PlacementsMainTabView`. nil when there is nothing to route.
+    var placementDeepLink: PlacementDeepLink?
 
     private let authService = AuthService()
 
@@ -196,13 +229,30 @@ final class AppState {
         }
     }
 
-    // MARK: - Placement Onboarding
+    // MARK: - Placement Onboarding (first-login hook)
 
-    /// Advances a placement student from the intro screen to the existing
-    /// diagnostic. Their locked placement objective is already the active
-    /// primary objective server-side, so the diagnostic is scoped correctly.
+    /// Step 1 → 2. Advances from the intro (objective confirmation) to the
+    /// season screen. Replaces the old behaviour that jumped straight to the
+    /// diagnostic — placement students no longer take one.
     func proceedFromPlacementIntro() {
-        launchState = .diagnostic
+        placementOnboardingStep = .season
+    }
+
+    /// Step 2 → 3. Advances from the season screen to the 2-minute win.
+    func proceedFromPlacementSeason() {
+        placementOnboardingStep = .win
+    }
+
+    /// Finishes the first-login hook from ANY step — the final CTA or any
+    /// "Skip for now". Best-effort tells the backend onboarding is done
+    /// (idempotent; 404 for non-placement users), marks the local diagnostic
+    /// flag so `resolveLaunchState` never routes the student back here, and
+    /// drops them onto the placement Home. Never blocks on the network.
+    func finishPlacementOnboarding() async {
+        await PlacementOnboardingApi.shared.complete()
+        markDiagnosticComplete()
+        placementOnboardingStep = .objective
+        launchState = .home
     }
 
     // MARK: - Diagnostic
@@ -236,6 +286,8 @@ final class AppState {
         URLCache.shared.removeAllCachedResponses()
         currentUser = nil
         userContext = nil
+        placementOnboardingStep = .objective
+        placementDeepLink = nil
         AnalyticsService.shared.reset()
         launchState = .welcome
     }

@@ -14,13 +14,16 @@ struct PlacementsMainTabView: View {
     /// reused Compass sheet renders without crashing.
     @State private var v2Nav = V2NavState()
     @State private var taskRouter = V2TaskRouter()
+    /// Assessment id a push tap wants opened, threaded down to the Assessments
+    /// section on the Home tab. Set by `routePlacementDeepLink`.
+    @State private var focusAssessmentId: String?
     @Environment(ObjectiveContext.self) private var objectiveContext
     @Environment(AppState.self) private var appState
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $nav.selectedTab) {
-                PlacementsHomeView()
+                PlacementsHomeView(focusAssessmentId: $focusAssessmentId)
                     .tabItem { Label(PlacementTab.home.label, systemImage: PlacementTab.home.icon) }
                     .tag(PlacementTab.home)
 
@@ -63,5 +66,26 @@ struct PlacementsMainTabView: View {
                 .environment(objectiveContext)
                 .environment(appState)
         }
+        // Sole consumer of the placement push-tap deep link. `.onChange` covers
+        // a tap while the shell is live; `.task` covers a cold launch where the
+        // link was set before this view mounted.
+        .onChange(of: appState.placementDeepLink) { _, link in
+            routePlacementDeepLink(link)
+        }
+        .task {
+            routePlacementDeepLink(appState.placementDeepLink)
+        }
+    }
+
+    /// Switches to the Home tab (where the Assessments list lives) and, for a
+    /// results deep link, threads the assessment id down so its result opens.
+    /// Consumes the signal so it fires exactly once.
+    private func routePlacementDeepLink(_ link: PlacementDeepLink?) {
+        guard let link else { return }
+        nav.selectedTab = .home
+        if case .assessmentResult(let id) = link {
+            focusAssessmentId = id
+        }
+        appState.placementDeepLink = nil
     }
 }

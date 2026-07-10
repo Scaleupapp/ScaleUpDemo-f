@@ -51,6 +51,11 @@ struct V2HomeData: Codable {
     /// Phase 4A — outcome capture prompt. `var` + default so sampleData compiles
     /// unchanged (same pattern as `ready`).
     var outcomePrompt: OutcomePrompt? = nil
+    /// Which branch of the backend's currentReadiness waterfall produced the
+    /// number: `'snapshot' | 'diagnostic' | 'knowledge' | 'default'`. `'default'`
+    /// means a fabricated placeholder → clients show a LOCKED readiness ring
+    /// (no real evidence yet). `var` + default so sampleData compiles unchanged.
+    var readinessSource: String? = nil
 
     struct HomeReady: Codable {
         let isReady: Bool

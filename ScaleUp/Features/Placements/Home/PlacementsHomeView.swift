@@ -11,6 +11,14 @@ struct PlacementsHomeView: View {
     @State private var homeVM = V2HomeViewModel()
     @State private var practice: PlacementPractice?
     @State private var showingPractice = false
+    /// A push-tap deep link may ask for a specific assessment's result — this
+    /// is threaded down to the Assessments section. Defaults to a no-op binding
+    /// so previews / other callers still compile.
+    @Binding var focusAssessmentId: String?
+
+    init(focusAssessmentId: Binding<String?> = .constant(nil)) {
+        self._focusAssessmentId = focusAssessmentId
+    }
 
     private var placement: PlacementContext? { appState.userContext?.placement }
 
@@ -71,7 +79,11 @@ struct PlacementsHomeView: View {
 
     private var readinessCard: some View {
         HStack(spacing: 16) {
-            readinessRing(homeVM.data?.trajectory?.today)
+            if isReadinessLocked {
+                lockedReadinessRing
+            } else {
+                readinessRing(homeVM.data?.trajectory?.today)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 SectionEyebrow("Placement readiness")
                 Text(readinessSubtitle)
@@ -84,11 +96,20 @@ struct PlacementsHomeView: View {
         .placementCard()
     }
 
+    /// Locked when the backend has no real readiness evidence yet — it flags a
+    /// fabricated placeholder with `readinessSource == "default"`. Per D2 (no
+    /// fabricated numbers), the ring renders LOCKED until a real assessment or
+    /// practice result exists.
+    private var isReadinessLocked: Bool {
+        homeVM.data?.readinessSource == "default"
+    }
+
     private var readinessSubtitle: String {
         if homeVM.isLoading && homeVM.data == nil { return "Calculating your readiness…" }
-        guard let today = homeVM.data?.trajectory?.today else {
-            return "Complete your diagnostic to see how placement-ready you are."
+        if isReadinessLocked || homeVM.data?.trajectory?.today == nil {
+            return "Readiness unlocks after your first assessment or practice."
         }
+        let today = homeVM.data?.trajectory?.today ?? 0
         if let target = homeVM.data?.trajectory?.targetReadiness, target > 0 {
             return "You're at \(today)% — your cohort target is \(target)%. Keep going."
         }
@@ -110,6 +131,23 @@ struct PlacementsHomeView: View {
                     .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(ColorTokens.textPrimary)
                 Text("READY")
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+        }
+        .frame(width: 92, height: 92)
+    }
+
+    /// Locked readiness ring — a padlock in place of a number, no gold arc, so
+    /// we never imply a score we don't have.
+    private var lockedReadinessRing: some View {
+        ZStack {
+            Circle().stroke(ColorTokens.surfaceElevated, lineWidth: 9)
+            VStack(spacing: 3) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(ColorTokens.textTertiary)
+                Text("LOCKED")
                     .font(V2Theme.tiny)
                     .foregroundStyle(ColorTokens.textTertiary)
             }
@@ -226,6 +264,6 @@ struct PlacementsHomeView: View {
     // MARK: - Assessments section
 
     private var nextStepsCard: some View {
-        PlacementsAssessmentsView()
+        PlacementsAssessmentsView(focusAssessmentId: $focusAssessmentId)
     }
 }

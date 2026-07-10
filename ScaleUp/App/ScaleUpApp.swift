@@ -97,10 +97,10 @@ struct ScaleUpApp: App {
 
         case .placementOnboardingIntro:
             // Placement students skip the generic D2C onboarding entirely and
-            // see this short intro, then proceed to the existing diagnostic.
-            PlacementOnboardingIntroView()
+            // see the 3-step first-login hook (objective → season → 2-min win),
+            // which then routes to the placement Home. No diagnostic.
+            PlacementOnboardingFlowView()
                 .transition(.opacity)
-                .trackScreen("placement_onboarding_intro")
 
         case .diagnostic:
             // When v2 onboarding is on, the diagnostic still uses v1's pool +
@@ -122,6 +122,19 @@ struct ScaleUpApp: App {
     // MARK: - Deep Link Routing
 
     private func handleDeepLink(_ deepLink: String) {
+        // Placement (institution) deep links — routed inside the Placements
+        // shell via AppState.placementDeepLink (PlacementsMainTabView consumes
+        // it). Additive: D2C routing below is untouched.
+        if deepLink.hasPrefix("placement://assessment/") {
+            let id = String(deepLink.dropFirst("placement://assessment/".count))
+            appState.placementDeepLink = id.isEmpty ? .assessments : .assessmentResult(assessmentId: id)
+            return
+        }
+        if deepLink.hasPrefix("placement://assessments") {
+            appState.placementDeepLink = .assessments
+            return
+        }
+
         // Plan deep links
         if deepLink.hasPrefix("plan://") {
             appState.selectedTab = .journey

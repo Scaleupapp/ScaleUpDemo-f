@@ -22,6 +22,16 @@ struct PlacementOnboardingPayload: Codable {
     let objectiveLabel: String?
     let competencies: [PlacementOnboardingCompetency]?
 
+    // MARK: Season fields (additive — all nullable; render conditionally)
+    /// Placement-season name. Currently always null server-side — render only
+    /// when present.
+    let seasonName: String?
+    /// ISO-8601 season window start/end (nullable). Parsed via `PlacementDate`.
+    let seasonStartsAt: String?
+    let seasonEndsAt: String?
+    /// Count of non-withdrawn students in the cohort. Hide the line if null.
+    let cohortStudentCount: Int?
+
     /// Friendly label for the backend `year` enum.
     var yearLabel: String? {
         switch year {
@@ -50,9 +60,10 @@ struct PlacementOnboardingCompetency: Codable {
 /// of the generic D2C onboarding (which exists to create an objective + gather
 /// prefs — both already handled server-side for placement students).
 ///
-/// Flow: PlacementOnboardingIntroView → existing diagnostic → insights →
-/// placement home. The "Start my readiness check" button hands off to the
-/// diagnostic via `appState.proceedFromPlacementIntro()`.
+/// Step 1 of the 3-step first-login hook (see `PlacementOnboardingFlowView`):
+/// objective confirmation → season screen → 2-minute win → placement home.
+/// The "Continue" button advances to the season screen via
+/// `appState.proceedFromPlacementIntro()`. There is no diagnostic.
 ///
 /// Data is fetched from `GET /api/v2/me/placement-onboarding`. If that request
 /// fails (e.g. an unexpected 404), the screen falls back to the persona context
@@ -133,7 +144,7 @@ struct PlacementOnboardingIntroView: View {
                     .foregroundStyle(ColorTokens.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
 
-                Text("Your programme is set up and your objective is locked in. Let's run a quick readiness check so we can tailor your plan.")
+                Text("Your programme is set up and your objective is locked in by your college. Let's take a quick look at your placement season and get you started.")
                     .font(Typography.body)
                     .foregroundStyle(ColorTokens.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -154,7 +165,7 @@ struct PlacementOnboardingIntroView: View {
         }
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 0) {
-                PrimaryButton(title: "Start my readiness check", icon: "checkmark.seal.fill") {
+                PrimaryButton(title: "Continue", icon: "arrow.right") {
                     Haptics.success()
                     appState.proceedFromPlacementIntro()
                 }
@@ -256,8 +267,8 @@ struct PlacementOnboardingIntroView: View {
         } catch {
             // 404 (not a placement student) or any failure: leave `payload` nil
             // and fall back to the persona context already in AppState. The
-            // student is never blocked — the primary button still proceeds to
-            // the diagnostic.
+            // student is never blocked — the primary button still advances the
+            // first-login hook.
             payload = nil
         }
     }

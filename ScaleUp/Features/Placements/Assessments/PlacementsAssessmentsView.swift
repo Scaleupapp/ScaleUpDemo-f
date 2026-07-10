@@ -25,7 +25,16 @@ struct PlacementsAssessmentsView: View {
     @Environment(V2TaskRouter.self) private var taskRouter
     @Environment(AppState.self) private var appState
 
+    /// A push-tap deep link (`assessment_results`) may ask for a specific
+    /// assessment's result. When set, we open that row once the list has loaded,
+    /// reusing the same tap path as the UI. Defaults to a no-op binding.
+    @Binding var focusAssessmentId: String?
+
     private let api = PlacementsAssessmentsApi.shared
+
+    init(focusAssessmentId: Binding<String?> = .constant(nil)) {
+        self._focusAssessmentId = focusAssessmentId
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -66,7 +75,14 @@ struct PlacementsAssessmentsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .task { await load() }
+        .task {
+            await load()
+            await consumeFocusIfNeeded()
+        }
+        // A results deep link may arrive after the list is already on screen.
+        .onChange(of: focusAssessmentId) { _, _ in
+            Task { await consumeFocusIfNeeded() }
+        }
         // Refresh on app foreground
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             Task { await load() }
@@ -273,6 +289,18 @@ struct PlacementsAssessmentsView: View {
             loadError = "Could not load assessments."
         }
         isLoading = false
+    }
+
+    /// Opens the assessment a results push tapped through to, reusing the same
+    /// `handleTap` path as the UI (graded → result detail; otherwise start).
+    /// Loads the list first if it isn't ready, then consumes the id.
+    private func consumeFocusIfNeeded() async {
+        guard let id = focusAssessmentId else { return }
+        if rows.isEmpty { await load() }
+        if let row = rows.first(where: { $0.assessment.id == id }) {
+            handleTap(row: row)
+        }
+        focusAssessmentId = nil
     }
 
     @discardableResult
