@@ -84,6 +84,15 @@ final class PushNotificationManager: NSObject {
             }
         case "streak_reminder":
             return "home://competition"
+        case "assessment_assigned":
+            // New institution assessment — open the placement Assessments list.
+            return "placement://assessments"
+        case "assessment_results":
+            // Results are out — deep-link to that assessment's result/review.
+            if let assessmentId = data["assessmentId"] as? String, !assessmentId.isEmpty {
+                return "placement://assessment/\(assessmentId)"
+            }
+            return "placement://assessments"
         case "live_event_results":
             if let eventId = data["eventId"] as? String {
                 return "live_event_results://\(eventId)"

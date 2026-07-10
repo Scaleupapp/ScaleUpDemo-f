@@ -130,7 +130,7 @@ struct NotificationListView: View {
 
     private func iconBackground(_ type: NotificationType) -> Color {
         switch type {
-        case .quizAvailable, .milestoneReached, .competitionChallenge:
+        case .quizAvailable, .milestoneReached, .competitionChallenge, .assessmentAssigned, .other:
             return ColorTokens.gold.opacity(0.15)
         case .streakReminder, .competitionReminder:
             return Color.orange.opacity(0.15)
@@ -138,14 +138,14 @@ struct NotificationListView: View {
             return Color.blue.opacity(0.15)
         case .socialFollow:
             return Color.purple.opacity(0.15)
-        case .socialComment, .competitionResults:
+        case .socialComment, .competitionResults, .assessmentResults:
             return Color.green.opacity(0.15)
         }
     }
 
     private func iconForeground(_ type: NotificationType) -> Color {
         switch type {
-        case .quizAvailable, .milestoneReached, .competitionChallenge:
+        case .quizAvailable, .milestoneReached, .competitionChallenge, .assessmentAssigned, .other:
             return ColorTokens.gold
         case .streakReminder, .competitionReminder:
             return .orange
@@ -153,7 +153,7 @@ struct NotificationListView: View {
             return .blue
         case .socialFollow:
             return .purple
-        case .socialComment, .competitionResults:
+        case .socialComment, .competitionResults, .assessmentResults:
             return .green
         }
     }

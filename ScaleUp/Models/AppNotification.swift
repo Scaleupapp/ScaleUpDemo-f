@@ -32,6 +32,22 @@ enum NotificationType: String, Codable, Sendable {
     case competitionResults = "competition_results"
     case competitionReminder = "competition_reminder"
     case creatorApplication = "creator_application"
+    // Placement (institution) assessment notifications. The backend starts
+    // emitting these only after PLACEMENTS_NOTIFICATIONS_ENABLED flips on, but
+    // the app must decode them today so an early payload doesn't break the inbox.
+    case assessmentAssigned = "assessment_assigned"
+    case assessmentResults = "assessment_results"
+    /// Forward-compatible catch-all. ANY unrecognised server type decodes here
+    /// via `init(from:)` instead of throwing — a single unknown type used to
+    /// fail the whole `[AppNotification]` decode and blank the inbox.
+    case other = "other"
+
+    /// Decode-tolerant: unknown raw strings fall back to `.other` rather than
+    /// throwing, so future notification types never break older clients.
+    init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = NotificationType(rawValue: raw) ?? .other
+    }
 
     var icon: String {
         switch self {
@@ -45,6 +61,9 @@ enum NotificationType: String, Codable, Sendable {
         case .competitionResults: return "chart.bar.fill"
         case .competitionReminder: return "bell.badge.fill"
         case .creatorApplication: return "person.crop.circle.badge.checkmark"
+        case .assessmentAssigned: return "checklist"
+        case .assessmentResults: return "chart.bar.doc.horizontal.fill"
+        case .other: return "bell.fill"
         }
     }
 
@@ -60,6 +79,9 @@ enum NotificationType: String, Codable, Sendable {
         case .competitionResults: return "green"
         case .competitionReminder: return "orange"
         case .creatorApplication: return "blue"
+        case .assessmentAssigned: return "gold"
+        case .assessmentResults: return "green"
+        case .other: return "gold"
         }
     }
 }
