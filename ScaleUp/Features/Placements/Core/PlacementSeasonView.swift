@@ -3,8 +3,8 @@ import SwiftUI
 /// Step 2 of the placement first-login hook — orients the student in their
 /// placement season: the season window (if the backend has one), how many
 /// cohort-mates are preparing, and the next few company drives (reusing the
-/// existing student drives API + bookmark). Primary "Continue" advances to the
-/// 2-minute win; "Skip for now" finishes onboarding straight to Home.
+/// existing student drives API + bookmark). The primary CTA finishes
+/// onboarding straight to Home.
 struct PlacementSeasonView: View {
     @Environment(AppState.self) private var appState
 
@@ -44,7 +44,7 @@ struct PlacementSeasonView: View {
             VStack(alignment: .leading, spacing: 0) {
                 Spacer(minLength: Spacing.xl)
 
-                Text("STEP 2 OF 3").v2Eyebrow()
+                Text("STEP 2 OF 2").v2Eyebrow()
                     .padding(.bottom, Spacing.sm)
 
                 ZStack {
@@ -192,22 +192,11 @@ struct PlacementSeasonView: View {
 
     private var bottomBar: some View {
         VStack(spacing: Spacing.sm) {
-            PrimaryButton(title: "Continue", icon: "arrow.right", isLoading: isFinishing) {
-                Haptics.light()
-                appState.proceedFromPlacementSeason()
-            }
-            Button {
+            PrimaryButton(title: "Go to my homepage", icon: "house.fill", isLoading: isFinishing) {
                 guard !isFinishing else { return }
-                skip()
-            } label: {
-                Text("Skip for now")
-                    .font(Typography.bodyBold)
-                    .foregroundStyle(ColorTokens.textSecondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Spacing.sm)
+                Haptics.light()
+                finish()
             }
-            .buttonStyle(.plain)
-            .disabled(isFinishing)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.md)
@@ -217,7 +206,7 @@ struct PlacementSeasonView: View {
 
     // MARK: - Actions
 
-    private func skip() {
+    private func finish() {
         isFinishing = true
         Task { await appState.finishPlacementOnboarding() }
     }

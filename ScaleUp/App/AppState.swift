@@ -24,10 +24,8 @@ enum AppLaunchState: Equatable {
 enum PlacementOnboardingStep: Equatable {
     /// Step 1 — the existing intro (objective / branch / year confirmation).
     case objective
-    /// Step 2 — placement-season window, cohort size, upcoming drives.
+    /// Step 2 (final) — placement-season window, cohort size, upcoming drives.
     case season
-    /// Step 3 — a 2-minute practice win with AI feedback.
-    case win
 }
 
 /// A push-tap deep link targeting the placement shell. Placement-scoped and
@@ -238,11 +236,6 @@ final class AppState {
     /// diagnostic — placement students no longer take one.
     func proceedFromPlacementIntro() {
         placementOnboardingStep = .season
-    }
-
-    /// Step 2 → 3. Advances from the season screen to the 2-minute win.
-    func proceedFromPlacementSeason() {
-        placementOnboardingStep = .win
     }
 
     /// Finishes the first-login hook from ANY step — the final CTA or any
