@@ -104,13 +104,15 @@ final class AppState {
         let flag = V2FeatureFlag.shared
         // Placement (institution) students get a locked objective seeded by the
         // backend (1B) at claim time — they skip the objective-selection
-        // onboarding entirely and go straight to the diagnostic (scoped to that
-        // objective), then the PlacementsRoot home. `userContext` is resolved
-        // before this runs (in checkAuth / handleAuthSuccess).
+        // onboarding entirely and get the 3-step first-login hook (objective
+        // confirmation → season → 2-minute win; no diagnostic), then the
+        // PlacementsRoot home. `userContext` is resolved before this runs
+        // (in checkAuth / handleAuthSuccess).
         if userContext?.isPlacement == true {
-            // A placement student who hasn't finished the diagnostic sees the
-            // short PlacementOnboardingIntroView first (which hands off to the
-            // diagnostic), NOT the generic D2C onboarding.
+            // A placement student who hasn't completed the first-login hook
+            // (tracked via diagnosticComplete, flipped by
+            // finishPlacementOnboarding) sees it first, NOT the generic D2C
+            // onboarding — and never the diagnostic.
             return user.diagnosticComplete == true ? .home : .placementOnboardingIntro
         }
         // Finishing the diagnostic is the last step of onboarding — so a user who
@@ -249,10 +251,16 @@ final class AppState {
     /// flag so `resolveLaunchState` never routes the student back here, and
     /// drops them onto the placement Home. Never blocks on the network.
     func finishPlacementOnboarding() async {
-        await PlacementOnboardingApi.shared.complete()
+        // Route FIRST — the climax of onboarding must never wait on the network
+        // (the transport allows up to 120s on a black-hole connection). The
+        // completion call is idempotent best-effort; if it never lands, the
+        // flow just re-shows once on the next cold launch.
         markDiagnosticComplete()
         placementOnboardingStep = .objective
         launchState = .home
+        Task.detached(priority: .utility) {
+            await PlacementOnboardingApi.shared.complete()
+        }
     }
 
     // MARK: - Diagnostic
