@@ -64,7 +64,10 @@ final class DiagnosticViewModel {
 
     var progress: Double {
         guard totalQuestionsTarget > 0 else { return 0 }
-        return Double(questionsAnswered) / Double(totalQuestionsTarget)
+        // Display-only safety net (shared with D2C): if the server ever serves
+        // more answers than the planned total, the bar must not overflow past
+        // full. A no-op when the server serves the correct total.
+        return min(1.0, Double(questionsAnswered) / Double(totalQuestionsTarget))
     }
 
     // MARK: - Recalibration Bootstrap

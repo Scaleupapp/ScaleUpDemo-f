@@ -51,7 +51,7 @@ struct DiagnosticQuestionView: View {
                 Image(systemName: "questionmark.circle.fill")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
-                Text("Question \(viewModel.questionsAnswered + 1) of \(viewModel.totalQuestionsTarget)")
+                Text("Question \(min(viewModel.questionsAnswered + 1, viewModel.totalQuestionsTarget)) of \(viewModel.totalQuestionsTarget)")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(ColorTokens.gold)
             }
