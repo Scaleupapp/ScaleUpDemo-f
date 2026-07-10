@@ -29,6 +29,11 @@ struct PlayerView: View {
     @State private var showQuickQuiz = false
     @State private var postCompletionTopic: String?
 
+    // Comment moderation (report / block)
+    @State private var reportTargetComment: Comment?
+    @State private var blockTarget: BlockTarget?
+    struct BlockTarget: Identifiable { let id = UUID(); let userId: String; let name: String }
+
     enum PlayerTab: String, CaseIterable {
         case about = "About"
         case comments = "Comments"
@@ -233,6 +238,39 @@ struct PlayerView: View {
             reportSheet
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+        }
+        // Comment moderation — report reasons, block confirmation, and toast
+        .confirmationDialog("Report Comment", isPresented: Binding(get: { reportTargetComment != nil }, set: { if !$0 { reportTargetComment = nil } }), titleVisibility: .visible, presenting: reportTargetComment) { comment in
+            ForEach(ReportReason.allCases) { reason in
+                Button(reason.label, role: .destructive) {
+                    Task { await viewModel.reportComment(comment, reason: reason.rawValue); reportTargetComment = nil }
+                }
+            }
+            Button("Cancel", role: .cancel) { reportTargetComment = nil }
+        } message: { _ in Text("Why are you reporting this comment?") }
+        .confirmationDialog("Block User", isPresented: Binding(get: { blockTarget != nil }, set: { if !$0 { blockTarget = nil } }), titleVisibility: .visible, presenting: blockTarget) { target in
+            Button("Block \(target.name)", role: .destructive) {
+                Task { await viewModel.blockUser(target.userId, name: target.name); blockTarget = nil }
+            }
+            Button("Cancel", role: .cancel) { blockTarget = nil }
+        } message: { target in Text("You won't see \(target.name)'s comments or content, and they won't see yours.") }
+        .overlay(alignment: .bottom) {
+            if let toast = viewModel.moderationToast {
+                Text(toast)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Color.black.opacity(0.85)))
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 44)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task {
+                        try? await Task.sleep(nanoseconds: 2_600_000_000)
+                        viewModel.moderationToast = nil
+                    }
+            }
         }
         .fullScreenCover(isPresented: $isFullscreen) {
             ZStack {
@@ -755,6 +793,25 @@ struct PlayerView: View {
                                 .font(.system(size: 12))
                                 .foregroundStyle(ColorTokens.textTertiary)
                         }
+                    } else if let authorId = comment.userId?.id {
+                        // Other users' comments — report or block the author
+                        Menu {
+                            Button(role: .destructive) {
+                                reportTargetComment = comment
+                            } label: {
+                                Label("Report Comment", systemImage: "flag")
+                            }
+                            Button(role: .destructive) {
+                                blockTarget = BlockTarget(userId: authorId, name: comment.userId?.firstName ?? "this user")
+                            } label: {
+                                Label("Block User", systemImage: "hand.raised")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 12))
+                                .foregroundStyle(ColorTokens.textTertiary)
+                        }
+                        .accessibilityIdentifier("commentMoreMenu")
                     }
                 }
                 .padding(.top, 2)

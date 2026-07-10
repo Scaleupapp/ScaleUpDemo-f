@@ -164,6 +164,22 @@ struct SettingsView: View {
                 }
             }
 
+            NavigationLink {
+                BlockedAccountsView()
+            } label: {
+                HStack {
+                    Image(systemName: "hand.raised.slash.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 24)
+                    Text("Blocked Accounts")
+                        .font(Typography.body)
+                        .foregroundStyle(ColorTokens.textPrimary)
+                    Spacer()
+                }
+            }
+            .accessibilityIdentifier("blockedAccountsRow")
+
             Button {
                 Task { await exportData() }
             } label: {

@@ -45,6 +45,7 @@ final class PlayerViewModel {
     var newCommentText = ""
     var isPostingComment = false
     var commentError: String?
+    var moderationToast: String?
     var commentCount: Int = 0
     var commentPage: Int = 1
     var hasMoreComments = false
@@ -508,6 +509,36 @@ final class PlayerViewModel {
             Haptics.success()
         } catch {
             commentError = "Could not delete comment"
+            Haptics.error()
+        }
+    }
+
+    // MARK: - Moderation (report / block)
+
+    func reportComment(_ comment: Comment, reason: String) async {
+        do {
+            try await ModerationService.shared.report(targetType: "comment", targetId: comment.id, reason: reason)
+            moderationToast = "Reported. Thanks for helping keep ScaleUp safe."
+            Haptics.success()
+        } catch {
+            commentError = "Could not submit report"
+            Haptics.error()
+        }
+    }
+
+    func blockUser(_ userId: String, name: String) async {
+        do {
+            try await ModerationService.shared.blockUser(userId)
+            // Remove the blocked user's content from view immediately.
+            comments.removeAll { $0.userId?.id == userId }
+            for (key, var replies) in expandedReplies {
+                replies.removeAll { $0.userId?.id == userId }
+                expandedReplies[key] = replies
+            }
+            moderationToast = "Blocked \(name). You won't see their content."
+            Haptics.success()
+        } catch {
+            commentError = "Could not block user"
             Haptics.error()
         }
     }

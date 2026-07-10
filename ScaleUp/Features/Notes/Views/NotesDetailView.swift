@@ -24,7 +24,18 @@ struct NotesDetailView: View {
     @State private var showShareSheet = false
     @State private var showContributorCard = false
     @State private var readStartTime = Date()
+    // Moderation (report note / block author)
+    @State private var showReportDialog = false
+    @State private var showBlockDialog = false
+    @State private var showModerationOptions = false
+    @State private var moderationToast: String?
     @Environment(AppState.self) private var appState
+
+    /// UI-test-only: present the ⋯ options as an action sheet (reliable to
+    /// automate) instead of the SwiftUI Menu. Ships inert for real users.
+    private var useModerationSheet: Bool {
+        ProcessInfo.processInfo.environment["UITEST_MODERATION_SHEET"] == "1"
+    }
 
     private let contentService = ContentService()
     private let playerService = PlayerService()
@@ -68,6 +79,82 @@ struct NotesDetailView: View {
         }
         .navigationTitle("Notes")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                if useModerationSheet {
+                    Button {
+                        showModerationOptions = true
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                    .accessibilityIdentifier("notesMoreMenu")
+                } else {
+                    Menu {
+                        Button(role: .destructive) { showReportDialog = true } label: {
+                            Label("Report Note", systemImage: "flag")
+                        }
+                        if content?.creatorId?.id != nil {
+                            Button(role: .destructive) { showBlockDialog = true } label: {
+                                Label("Block Author", systemImage: "hand.raised")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(ColorTokens.textSecondary)
+                    }
+                    .accessibilityIdentifier("notesMoreMenu")
+                }
+            }
+        }
+        .confirmationDialog("Note options", isPresented: $showModerationOptions, titleVisibility: .visible) {
+            Button("Report Note", role: .destructive) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { showReportDialog = true }
+            }
+            if content?.creatorId?.id != nil {
+                Button("Block Author", role: .destructive) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { showBlockDialog = true }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .confirmationDialog("Report Note", isPresented: $showReportDialog, titleVisibility: .visible) {
+            ForEach(ReportReason.allCases) { reason in
+                Button(reason.label, role: .destructive) {
+                    Task {
+                        try? await ModerationService.shared.report(targetType: "content", targetId: contentId, reason: reason.rawValue)
+                        moderationToast = "Reported. Thanks for helping keep ScaleUp safe."
+                        Haptics.success()
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("Why are you reporting this note?") }
+        .confirmationDialog("Block Author", isPresented: $showBlockDialog, titleVisibility: .visible) {
+            Button("Block \(content?.creatorId?.displayName ?? "this author")", role: .destructive) {
+                if let uid = content?.creatorId?.id {
+                    Task {
+                        try? await ModerationService.shared.blockUser(uid)
+                        moderationToast = "Blocked. You won't see this author's content."
+                        Haptics.success()
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("You won't see this author's content, and they won't see yours.") }
+        .overlay(alignment: .bottom) {
+            if let toast = moderationToast {
+                Text(toast)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .background(Capsule().fill(Color.black.opacity(0.85)))
+                    .padding(.horizontal, 24).padding(.bottom, 30)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task { try? await Task.sleep(nanoseconds: 2_600_000_000); moderationToast = nil }
+            }
+        }
         .fullScreenCover(isPresented: $showPDFViewer) {
             if let pdfDocument {
                 FullScreenPDFView(document: pdfDocument, title: content?.title ?? "Notes") {

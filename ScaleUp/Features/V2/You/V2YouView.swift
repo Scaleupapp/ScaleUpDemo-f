@@ -212,6 +212,7 @@ struct V2YouView: View {
                             .padding(8)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("settingsGear")
                     .contentShape(Rectangle())
                 }
             }
@@ -1040,6 +1041,7 @@ struct V2YouView: View {
             row(icon: "gearshape", label: "Settings")
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("settingsRow")
     }
 
     private var footerView: some View {

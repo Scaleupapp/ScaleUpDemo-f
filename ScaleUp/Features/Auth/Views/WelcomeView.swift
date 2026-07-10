@@ -137,6 +137,16 @@ struct WelcomeView: View {
                         .buttonStyle(.plain)
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : 15)
+
+                        // Terms & Privacy agreement — presented before any sign-up / sign-in (App Store Guideline 1.2)
+                        Text("By continuing, you agree to our [Terms of Service](https://scaleupapp.club/terms.html) & [Privacy Policy](https://scaleupapp.club/privacy.html)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .tint(ColorTokens.gold)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 6)
+                            .padding(.horizontal, 8)
+                            .opacity(appeared ? 1 : 0)
                     }
                     .padding(.horizontal, Spacing.xl)
                     .padding(.bottom, 50)

@@ -69,6 +69,15 @@ struct V2MainTabView: View {
             nextStep.pending = nil
             routeNextStep(intent)
         }
+        // UI-test-only: deterministically open a specific note on launch so the
+        // moderation walkthrough recording doesn't depend on the (async, network
+        // -dependent) Learn recommendations/search. Inert for real users.
+        .task {
+            guard let cid = ProcessInfo.processInfo.environment["UITEST_OPEN_CONTENT"],
+                  !cid.isEmpty else { return }
+            try? await Task.sleep(for: .seconds(3))
+            taskRouter.route = .content(contentId: cid, title: "Notes")
+        }
     }
 
     /// Translates a `NextStepCoordinator` intent into real navigation. Clears

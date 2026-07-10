@@ -159,6 +159,7 @@ struct V2LearnView: View {
                             SearchResultRow(item: item)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("open-\(item.id)")
                     }
                 }
 
@@ -199,6 +200,7 @@ struct V2LearnView: View {
             if let hero = vm.hero {
                 todayEyebrow
                 EditorialHeroCard(item: hero, action: { openContent(hero) })
+                    .accessibilityIdentifier("open-\(hero.id)")
                     .padding(.bottom, 26)
             }
 
@@ -291,6 +293,7 @@ struct V2LearnView: View {
                         RailCard(item: item, showProgress: showProgress)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("open-\(item.id)")
                 }
             }
         }
