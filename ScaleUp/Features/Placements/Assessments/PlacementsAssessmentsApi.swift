@@ -31,10 +31,14 @@ struct PlacementSessionLite: Codable {
     let id: String?
     let status: String?       // "scheduled"|"in_progress"|"submitted"|"graded"|"expired"
     let result: PlacementSessionResult?
+    // Wave 3 (additive): timed-assessment window. `deadlineAt` is the absolute
+    // ISO time at which the take auto-submits; `durationSeconds` is its length.
+    let deadlineAt: String?
+    let durationSeconds: Int?
 
     enum CodingKeys: String, CodingKey {
         case id = "_id"
-        case status, result
+        case status, result, deadlineAt, durationSeconds
     }
 }
 
@@ -42,6 +46,10 @@ struct PlacementSessionResult: Codable {
     let score: Double?
     let integrity: String?
     let raw: PlacementResultRaw?
+    // Wave 3 (additive): the score is being human-reviewed before it's final.
+    let needsReview: Bool?
+    // Wave 3 (additive): "insufficient" == not enough evidence to grade.
+    let gradeStatus: String?
 }
 
 struct PlacementResultRaw: Codable {
@@ -106,6 +114,14 @@ struct AssessmentStartResult: Codable {
     let assessmentSessionId: String
     let engine: AssessmentEngine
     let meta: AssessmentMeta?
+    // Wave 3 (additive): timed-assessment deadline for this session. May arrive
+    // either at the top level or nested under `meta` depending on engine — read
+    // via `effectiveDeadlineAt`.
+    let deadlineAt: String?
+    let durationSeconds: Int?
+
+    /// Deadline to enforce on the take surface, tolerant of either nesting.
+    var effectiveDeadlineAt: String? { deadlineAt ?? meta?.deadlineAt }
 }
 
 struct AssessmentEngine: Codable {
@@ -127,6 +143,28 @@ struct AssessmentMeta: Codable {
     let drillSubtype: String?
     let timeBudgetMinutes: Int?
     let starterRepo: StarterRepo?  // StarterRepo is defined in DrillModels.swift
+    // Wave 3 (additive): some engines carry the deadline in meta.
+    let deadlineAt: String?
+    let durationSeconds: Int?
+}
+
+// MARK: - Integrity Telemetry (Wave 3)
+
+/// Snapshot body for POST /api/v2/me/assessments/sessions/:sessionId/integrity.
+/// Cumulative (monotonic) counters — server clamps to max seen. Fields are
+/// optional so a surface with no text input (MCQ / interview) omits `pasteCount`.
+struct PlacementIntegritySnapshot: Codable {
+    let appBackgroundedCount: Int?
+    let focusLossSeconds: Int?
+    let pasteCount: Int?
+}
+
+struct PlacementIntegrityResult: Codable {
+    let integritySignals: PlacementIntegritySignals?
+}
+
+struct PlacementIntegritySignals: Codable {
+    let flagged: Bool?
 }
 
 // MARK: - Sync Result
@@ -168,6 +206,21 @@ final class PlacementsAssessmentsApi {
         let resp: V2APIResponse<AssessmentSyncResult> = try await V2APIClient.shared.post(
             "/me/assessments/sessions/\(sessionId)/sync",
             body: _EmptyBody()
+        )
+        return resp.data
+    }
+
+    // POST /api/v2/me/assessments/sessions/:sessionId/integrity
+    // Idempotent cumulative snapshot of integrity counters. Best-effort:
+    // callers wrap in `try?` — a 409 (NOT_IN_PROGRESS) once terminal is expected.
+    @discardableResult
+    func postIntegritySnapshot(
+        sessionId: String,
+        snapshot: PlacementIntegritySnapshot
+    ) async throws -> PlacementIntegrityResult {
+        let resp: V2APIResponse<PlacementIntegrityResult> = try await V2APIClient.shared.post(
+            "/me/assessments/sessions/\(sessionId)/integrity",
+            body: snapshot
         )
         return resp.data
     }

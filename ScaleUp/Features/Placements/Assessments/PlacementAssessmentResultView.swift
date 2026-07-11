@@ -125,8 +125,66 @@ struct PlacementAssessmentResultView: View {
 
     // MARK: - Score
 
+    /// Wave 3: not enough interview evidence to produce a grade.
+    private var isInsufficient: Bool { result?.gradeStatus == "insufficient" }
+    /// Wave 3: score is being human-reviewed before it's final.
+    private var needsReview: Bool { result?.needsReview == true }
+
+    @ViewBuilder
     private var scoreSection: some View {
+        if isInsufficient {
+            insufficientSection
+        } else {
+            gradedScoreSection
+        }
+    }
+
+    /// Shown instead of a score when there isn't enough interview evidence.
+    private var insufficientSection: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.fill.questionmark")
+                .font(.system(size: 34))
+                .foregroundStyle(ColorTokens.textSecondary)
+            Text("Not enough interview evidence to grade")
+                .font(V2Theme.h3)
+                .foregroundStyle(ColorTokens.textPrimary)
+                .multilineTextAlignment(.center)
+            Text("Contact your placement office.")
+                .font(V2Theme.small)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .multilineTextAlignment(.center)
+            VStack(spacing: 2) {
+                Text(row.assessment.title)
+                    .font(V2Theme.small)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                    .multilineTextAlignment(.center)
+                Text(row.assessment.type.uppercased())
+                    .font(V2Theme.tiny)
+                    .foregroundStyle(ColorTokens.textTertiary)
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(20)
+        .background(ColorTokens.surfaceElevated)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var gradedScoreSection: some View {
         VStack(spacing: 18) {
+            if needsReview {
+                HStack(spacing: 6) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Score under review")
+                        .font(V2Theme.small)
+                }
+                .foregroundStyle(ColorTokens.background)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(ColorTokens.gold))
+            }
+
             // Score ring + integrity
             HStack(spacing: 28) {
                 if let score = result?.score {

@@ -108,6 +108,14 @@ struct PlacementsAssessmentsView: View {
                         showResultForSession(id: start.assessmentSessionId)
                     }
                 }
+                // Wave 3: integrity telemetry + deadline countdown, layered on
+                // the shared MCQ take surface. sessionId threads from the start
+                // payload; D2C quiz launches never attach this.
+                .placementTakeInstrumentation(
+                    sessionId: start.assessmentSessionId,
+                    deadlineAt: start.effectiveDeadlineAt,
+                    onTimeUp: { handleTimeUp(assessmentSessionId: start.assessmentSessionId) }
+                )
             } else {
                 VStack(spacing: 16) {
                     Text("MCQ assessment is not configured yet.")
@@ -142,6 +150,12 @@ struct PlacementsAssessmentsView: View {
             .environment(v2Nav)
             .environment(taskRouter)
             .environment(appState)
+            // Wave 3: same instrumentation for the placement interview take.
+            .placementTakeInstrumentation(
+                sessionId: start.assessmentSessionId,
+                deadlineAt: start.effectiveDeadlineAt,
+                onTimeUp: { handleTimeUp(assessmentSessionId: start.assessmentSessionId) }
+            )
         }
         // Capstone sheet
         .sheet(item: Binding(
@@ -309,6 +323,23 @@ struct PlacementsAssessmentsView: View {
         return try? await api.syncSession(assessmentSessionId)
     }
 
+    /// Deadline reached on a take surface. Tear down the take sheet, sync the
+    /// session (server has already auto-submitted/expired), then surface the
+    /// result — immediately if graded, else via the grade poll. Works for both
+    /// the (synchronous) MCQ path and the (async-graded) interview path.
+    private func handleTimeUp(assessmentSessionId: String) {
+        activeStart = nil
+        Task {
+            let result = await sync(assessmentSessionId: assessmentSessionId)
+            await load()
+            if let status = result?.status, status == "graded" {
+                showResultForSession(id: assessmentSessionId)
+            } else {
+                startGradePoll(assessmentSessionId: assessmentSessionId)
+            }
+        }
+    }
+
     // MARK: - Submitted-not-graded background poll
 
     /// Polls listAssessments every 20 s up to 5 min until any session shows
@@ -348,6 +379,13 @@ private struct AssessmentRowCard: View {
     private var statusLabel: String {
         switch row.session?.status {
         case "graded":
+            // Wave 3: review / insufficient-evidence override the score line.
+            if row.session?.result?.gradeStatus == "insufficient" {
+                return "Not enough evidence to grade"
+            }
+            if row.session?.result?.needsReview == true {
+                return "Score under review"
+            }
             if let score = row.session?.result?.score {
                 return "Graded — \(Int(score.rounded()))%"
             }
@@ -355,14 +393,17 @@ private struct AssessmentRowCard: View {
         case "submitted":   return "Submitted — grading…"
         case "in_progress": return "In progress"
         case "scheduled":   return "Not started"
-        case "expired":     return "Expired"
+        case "expired":     return "Time expired"
         default:            return "Not started"
         }
     }
 
     private var statusColor: Color {
         switch row.session?.status {
-        case "graded":      return ColorTokens.success
+        case "graded":
+            if row.session?.result?.gradeStatus == "insufficient" { return ColorTokens.textTertiary }
+            if row.session?.result?.needsReview == true { return ColorTokens.gold }
+            return ColorTokens.success
         case "submitted":   return ColorTokens.gold
         case "in_progress": return .orange
         case "expired":     return ColorTokens.textTertiary
