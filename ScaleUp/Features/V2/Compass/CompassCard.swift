@@ -14,6 +14,7 @@ enum CompassCardPayload {
     case weakTopics([CompassWeakTopic])
     case recentActivity([CompassActivityItem])
     case tutoringResult(CompassTutoringResultPayload)
+    case agentProposal(CompassAgentProposalPayload)
     case unknown
 }
 
@@ -37,6 +38,7 @@ struct CompassCard: Codable, Identifiable {
         case "weak_topics":           payload = .weakTopics((try c.decode(WeakTopicsWrapper.self, forKey: .payload)).topics)
         case "recent_activity":       payload = .recentActivity((try c.decode(RecentActivityWrapper.self, forKey: .payload)).items)
         case "tutoring_result":       payload = .tutoringResult(try c.decode(CompassTutoringResultPayload.self, forKey: .payload))
+        case "agent_proposal":        payload = .agentProposal(try c.decode(CompassAgentProposalPayload.self, forKey: .payload))
         default:                      payload = .unknown
         }
     }
@@ -51,6 +53,7 @@ struct CompassCard: Codable, Identifiable {
         case .weakTopics(let t):      try c.encode(WeakTopicsWrapper(topics: t), forKey: .payload)
         case .recentActivity(let i):  try c.encode(RecentActivityWrapper(items: i), forKey: .payload)
         case .tutoringResult(let p):  try c.encode(p, forKey: .payload)
+        case .agentProposal(let p):   try c.encode(p, forKey: .payload)
         case .unknown:                try c.encodeNil(forKey: .payload)
         }
     }
@@ -98,4 +101,28 @@ struct CompassTutoringResultPayload: Codable {
     let beforeScore: Double?
     let afterScore: Double?
     let delta: Double?
+}
+
+// MARK: - Agent proposal (agentic layer #2, Compass Actions)
+
+/// `{ decisionId, title, summary, consequence, ops }` — a pending
+/// AgentDecision proposing a plan change. Never applied server-side until
+/// the user responds via POST /v2/agent/decisions/{decisionId}/respond.
+struct CompassAgentProposalPayload: Codable {
+    let decisionId: String
+    let title: String
+    let summary: String?
+    let consequence: String?
+    let ops: [CompassAgentProposalOp]
+}
+
+/// Whitelisted ops mirrored from compassProposalTools.js: `set_task_status`
+/// (taskId + status) and `reset_skipped` (no extra fields).
+struct CompassAgentProposalOp: Codable, Identifiable {
+    let id = UUID()
+    let op: String
+    let taskId: String?
+    let status: String?
+
+    private enum CodingKeys: String, CodingKey { case op, taskId, status }
 }

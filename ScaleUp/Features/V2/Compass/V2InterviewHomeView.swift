@@ -14,6 +14,18 @@ struct V2InterviewHomeView: View {
     @State private var error: String?
     @State private var presentedSessionId: String?
 
+    /// Agentic layer #4 (flag `interview_coach`) — probed independently of
+    /// session history so a 404 (flag off) only hides this one card instead
+    /// of failing the whole screen.
+    private enum ProgramProbe {
+        case loading
+        case unavailable
+        case none
+        case active(InterviewProgram)
+    }
+    @State private var programProbe: ProgramProbe = .loading
+    @State private var showProgramSheet = false
+
     private let service = InterviewService()
 
     private struct IdentifiedString: Identifiable, Hashable {
@@ -38,6 +50,7 @@ struct V2InterviewHomeView: View {
                             .padding(.vertical, 60)
                     } else {
                         intro
+                        programEntryCard
                         if let p = inProgress { inProgressCard(p) }
                         if !history.isEmpty { historySection }
                         if inProgress == nil && history.isEmpty { emptyState }
@@ -63,11 +76,95 @@ struct V2InterviewHomeView: View {
             )) { wrap in
                 V2InterviewSessionLauncher(sessionId: wrap.value)
             }
+            .sheet(isPresented: $showProgramSheet) {
+                InterviewProgramView(
+                    onClose: { showProgramSheet = false },
+                    onStartInterview: {
+                        showProgramSheet = false
+                        onClose()
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            onStartNew()
+                        }
+                    }
+                )
+            }
         }
         .task { await load() }
+        .task { await loadProgramProbe() }
     }
 
     // MARK: - Sections
+
+    /// "Start a program" / "Your program" — agentic layer #4 entry point.
+    /// Hidden entirely while loading or when the backend 404s (flag off).
+    @ViewBuilder
+    private var programEntryCard: some View {
+        switch programProbe {
+        case .loading, .unavailable:
+            EmptyView()
+        case .none:
+            Button {
+                showProgramSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 32, height: 32)
+                        .background(ColorTokens.gold.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Start a program")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text("A coached multi-week plan for one target role")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(12)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        case .active(let program):
+            Button {
+                showProgramSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 32, height: 32)
+                        .background(ColorTokens.gold.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your program")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text("Week \(program.weekStrip.current) of \(program.weekStrip.total)\(program.target.role.map { " \u{00B7} \($0)" } ?? "")")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Text("Open \u{2192}")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .padding(12)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+    }
 
     private var intro: some View {
         Text("Mock interviews — voice or text, scored with feedback. Stale sessions are auto-cleared.")
@@ -208,6 +305,28 @@ struct V2InterviewHomeView: View {
             self.error = "Couldn't load your interviews."
         }
         isLoading = false
+    }
+
+    /// Probes GET /interview-program independently of session history.
+    /// Degrades invisibly on 404 (flag off) — this card simply doesn't
+    /// render, the rest of the screen is unaffected. Any OTHER error also
+    /// hides the card here (keep the hub clean) but is logged via
+    /// `trackAgenticAPIError` so a real backend regression isn't silent —
+    /// InterviewProgramView (the full screen) surfaces those with a Retry
+    /// state instead of "not available".
+    private func loadProgramProbe() async {
+        do {
+            if let program = try await InterviewProgramService.fetch() {
+                programProbe = .active(program)
+            } else {
+                programProbe = .none
+            }
+        } catch V2APIError.httpError(404, _) {
+            programProbe = .unavailable
+        } catch {
+            trackAgenticAPIError(error, endpoint: "/interview-program")
+            programProbe = .unavailable
+        }
     }
 
     private func typeLabel(_ t: InterviewType) -> String {

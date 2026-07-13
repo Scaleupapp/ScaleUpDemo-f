@@ -213,3 +213,32 @@ enum V2APIError: Error {
     /// HTTP 4xx/5xx with the raw response body for error detail extraction.
     case httpError(Int, Data)
 }
+
+// MARK: - Agentic-layer error tracking
+//
+// InterviewProgramService.fetch() / ProofJourneyService.fetch() (and the
+// full-screen views that reload the same endpoints) treat HTTP 404 as
+// "feature flag off" and degrade silently — that's correct. Any OTHER error
+// (401/500/network) must NOT be swallowed the same way, or a real backend
+// regression would look identical to a disabled feature. Callers
+// pattern-match `V2APIError.httpError(404, _)` for the flag-off case and
+// fall through to this helper for everything else, reusing the same
+// `error_encountered` analytics event APIClient.trackError fires for v1
+// endpoints.
+@MainActor
+func trackAgenticAPIError(_ error: Error, endpoint: String) {
+    let code: Int
+    let message: String
+    switch error {
+    case V2APIError.httpError(let status, _):
+        code = status
+        message = "http_error"
+    case V2APIError.serverError(let status):
+        code = status
+        message = "server_error"
+    default:
+        code = 0
+        message = String(describing: error)
+    }
+    AnalyticsService.shared.track(.errorEncountered(endpoint: endpoint, code: code, message: message))
+}
