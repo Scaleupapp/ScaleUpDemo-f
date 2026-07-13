@@ -27,6 +27,17 @@ struct V2CodingHubView: View {
 
     @State private var segment: Segment
 
+    /// Agentic layer #8 (flag `proof_builder`) — probed independently of
+    /// the segment content so a 404 (flag off) only hides this one card.
+    private enum ProofProbe {
+        case loading
+        case unavailable
+        case none
+        case active(ProofJourney)
+    }
+    @State private var proofProbe: ProofProbe = .loading
+    @State private var showProofSheet = false
+
     init(onClose: @escaping () -> Void = {}, showsCloseButton: Bool = true, initialSegment: Segment = .practice) {
         self.onClose = onClose
         self.showsCloseButton = showsCloseButton
@@ -37,6 +48,10 @@ struct V2CodingHubView: View {
     // sheet) provides it, so we never nest stacks.
     var body: some View {
         VStack(spacing: 0) {
+            proofEntryCard
+                .padding(.horizontal, V2Theme.pad)
+                .padding(.top, 10)
+
             Picker("Section", selection: $segment) {
                 ForEach(Segment.allCases) { Text($0.rawValue).tag($0) }
             }
@@ -70,6 +85,93 @@ struct V2CodingHubView: View {
                     Button("Close", action: onClose)
                 }
             }
+        }
+        .task { await loadProofProbe() }
+        .sheet(isPresented: $showProofSheet) {
+            ProofJourneyView(onClose: { showProofSheet = false })
+        }
+    }
+
+    /// "Prove it" / "Your proof" — agentic layer #8 entry point. Hidden
+    /// entirely while loading or when the backend 404s (flag off).
+    @ViewBuilder
+    private var proofEntryCard: some View {
+        switch proofProbe {
+        case .loading, .unavailable:
+            EmptyView()
+        case .none:
+            Button {
+                showProofSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 32, height: 32)
+                        .background(ColorTokens.gold.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Turn a JD into a proof")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text("Paste a job description → graded capstone → shareable proof page")
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10))
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                .padding(12)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        case .active(let journey):
+            Button {
+                showProofSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 13))
+                        .foregroundStyle(ColorTokens.gold)
+                        .frame(width: 32, height: 32)
+                        .background(ColorTokens.gold.opacity(0.15))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Your proof")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(ColorTokens.textPrimary)
+                        Text(journey.status.replacingOccurrences(of: "_", with: " ").capitalized)
+                            .font(.system(size: 10))
+                            .foregroundStyle(ColorTokens.textTertiary)
+                    }
+                    Spacer()
+                    Text("Open \u{2192}")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ColorTokens.gold)
+                }
+                .padding(12)
+                .background(ColorTokens.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(ColorTokens.gold.opacity(0.3), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func loadProofProbe() async {
+        do {
+            if let journey = try await ProofJourneyService.fetch() {
+                proofProbe = .active(journey)
+            } else {
+                proofProbe = .none
+            }
+        } catch {
+            proofProbe = .unavailable
         }
     }
 
