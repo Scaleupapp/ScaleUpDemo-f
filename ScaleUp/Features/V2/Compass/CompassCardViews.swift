@@ -11,6 +11,7 @@ struct CompassCardView: View {
         case .weakTopics(let topics):    CompassWeakTopicsCard(topics: topics)
         case .recentActivity(let items): CompassRecentActivityCard(items: items)
         case .tutoringResult(let p):     CompassTutoringResultCard(payload: p)
+        case .agentProposal(let p):      CompassAgentProposalCard(payload: p)
         case .unknown:                   EmptyView()
         }
     }
@@ -145,5 +146,145 @@ struct CompassTutoringResultCard: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Agent proposal card (agentic layer #2, Compass Actions)
+
+/// Renders a pending AgentDecision as an actionable card: title, summary,
+/// consequence, ops as diff rows, and Apply/Dismiss buttons that resolve the
+/// decision via POST /v2/agent/decisions/{id}/respond. Collapses into a
+/// compact confirmation state on success (or 409 — already resolved).
+struct CompassAgentProposalCard: View {
+    let payload: CompassAgentProposalPayload
+
+    private enum Resolution { case accepted, rejected }
+
+    @State private var resolution: Resolution?
+    /// Non-nil while a respond() call for that response value is in flight.
+    @State private var submittingResponse: String?
+    @State private var errorMessage: String?
+
+    var body: some View {
+        CardShell(title: "Agent proposal", systemImage: "sparkles") {
+            if let resolution {
+                resolvedRow(resolution)
+            } else {
+                Text(payload.title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(ColorTokens.textPrimary)
+                if let summary = payload.summary, !summary.isEmpty {
+                    Text(summary)
+                        .font(.caption)
+                        .foregroundStyle(ColorTokens.textSecondary)
+                }
+                if let consequence = payload.consequence, !consequence.isEmpty {
+                    Text(consequence)
+                        .font(.caption)
+                        .foregroundStyle(ColorTokens.textTertiary)
+                }
+                if !payload.ops.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(payload.ops) { op in diffRow(op) }
+                    }
+                    .padding(.top, 2)
+                }
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.caption2)
+                        .foregroundStyle(ColorTokens.error)
+                }
+                actionButtons
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func diffRow(_ op: CompassAgentProposalOp) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Text("\u{2022}").foregroundStyle(ColorTokens.gold)
+            Text(diffLabel(op)).font(.caption).foregroundStyle(ColorTokens.textSecondary)
+        }
+    }
+
+    private func diffLabel(_ op: CompassAgentProposalOp) -> String {
+        switch op.op {
+        case "set_task_status":
+            let statusLabel = (op.status ?? "pending").capitalized
+            let taskLabel = op.taskId.map { "Task \($0.suffix(6))" } ?? "A task"
+            return "\(taskLabel) \u{2192} \(statusLabel)"
+        case "reset_skipped":
+            return "Restore every skipped task"
+        default:
+            return op.op.replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    private var actionButtons: some View {
+        HStack(spacing: 10) {
+            Button {
+                Task { await respond("accepted") }
+            } label: {
+                HStack(spacing: 6) {
+                    if submittingResponse == "accepted" {
+                        ProgressView().tint(ColorTokens.background)
+                    }
+                    Text("Apply changes")
+                }
+                .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .foregroundStyle(ColorTokens.background)
+            .background(ColorTokens.gold)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .disabled(submittingResponse != nil)
+
+            Button {
+                Task { await respond("rejected") }
+            } label: {
+                HStack(spacing: 6) {
+                    if submittingResponse == "rejected" {
+                        ProgressView().tint(ColorTokens.textSecondary)
+                    }
+                    Text("Dismiss")
+                }
+                .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+            }
+            .foregroundStyle(ColorTokens.textSecondary)
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(ColorTokens.textTertiary.opacity(0.35), lineWidth: 1))
+            .disabled(submittingResponse != nil)
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+    }
+
+    private func resolvedRow(_ resolution: Resolution) -> some View {
+        Text(resolution == .accepted ? "Applied \u{2713}" : "Dismissed")
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(resolution == .accepted ? ColorTokens.textPrimary : ColorTokens.textSecondary)
+    }
+
+    private struct RespondBody: Codable { let response: String }
+    private struct RespondData: Codable { let decisionId: String; let status: String; let applied: Bool }
+
+    private func respond(_ response: String) async {
+        errorMessage = nil
+        submittingResponse = response
+        do {
+            let _: V2APIResponse<RespondData> = try await V2APIClient.shared.post(
+                "/agent/decisions/\(payload.decisionId)/respond",
+                body: RespondBody(response: response)
+            )
+            resolution = response == "accepted" ? .accepted : .rejected
+        } catch V2APIError.httpError(let status, _) where status == 409 {
+            // Already resolved server-side — treat as success and collapse.
+            resolution = response == "accepted" ? .accepted : .rejected
+        } catch {
+            errorMessage = "Couldn't \(response == "accepted" ? "apply" : "dismiss") — try again."
+        }
+        submittingResponse = nil
     }
 }
