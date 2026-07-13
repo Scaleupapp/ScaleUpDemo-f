@@ -9,9 +9,12 @@ struct ProofJourneyView: View {
 
     private enum LoadState {
         case loading
-        /// 404 / network error surfaced while the sheet was already open —
-        /// degrade quietly rather than showing a scary error screen.
+        /// 404 — `proof_builder` flag off, surfaced while the sheet was
+        /// already open. Degrade quietly rather than showing an error screen.
         case unavailable
+        /// Any OTHER error (401/500/network) — a real regression. Unlike
+        /// `.unavailable`, this is visible and recoverable via Retry.
+        case error
         case noJourney
         case journey(ProofJourney)
     }
@@ -42,6 +45,8 @@ struct ProofJourneyView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .unavailable:
                     unavailableState
+                case .error:
+                    errorState
                 case .noJourney:
                     createForm
                 case .journey(let journey):
@@ -77,8 +82,11 @@ struct ProofJourneyView: View {
             } else {
                 loadState = .noJourney
             }
-        } catch {
+        } catch V2APIError.httpError(404, _) {
             if !silent { loadState = .unavailable }
+        } catch {
+            trackAgenticAPIError(error, endpoint: "/proof-journey")
+            if !silent { loadState = .error }
         }
     }
 
@@ -100,6 +108,15 @@ struct ProofJourneyView: View {
                 .font(V2Theme.small.weight(.semibold))
                 .foregroundStyle(ColorTokens.gold)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var errorState: some View {
+        ErrorStateView(
+            message: "Couldn't load your proof journey. Check your connection and try again.",
+            retryLabel: "Try Again",
+            onRetry: { Task { await load() } }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 

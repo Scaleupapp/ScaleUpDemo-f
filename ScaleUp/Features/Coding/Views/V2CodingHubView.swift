@@ -163,6 +163,11 @@ struct V2CodingHubView: View {
         }
     }
 
+    /// Degrades invisibly on 404 (flag off) — this card simply doesn't
+    /// render. Any OTHER error also hides the card here (keep the hub
+    /// clean) but is logged via `trackAgenticAPIError` so a real backend
+    /// regression isn't silent — ProofJourneyView (the full screen)
+    /// surfaces those with a Retry state instead of "not available".
     private func loadProofProbe() async {
         do {
             if let journey = try await ProofJourneyService.fetch() {
@@ -170,7 +175,10 @@ struct V2CodingHubView: View {
             } else {
                 proofProbe = .none
             }
+        } catch V2APIError.httpError(404, _) {
+            proofProbe = .unavailable
         } catch {
+            trackAgenticAPIError(error, endpoint: "/proof-journey")
             proofProbe = .unavailable
         }
     }

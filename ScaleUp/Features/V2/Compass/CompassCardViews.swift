@@ -223,6 +223,13 @@ struct CompassAgentProposalCard: View {
     private var actionButtons: some View {
         HStack(spacing: 10) {
             Button {
+                // Set the in-flight flag synchronously, before the Task is
+                // even scheduled — a fast double-tap can fire this closure
+                // twice before an async Task body gets to run, which would
+                // otherwise let both taps race past the (now-stale)
+                // `submittingResponse == nil` check and POST twice.
+                guard submittingResponse == nil else { return }
+                submittingResponse = "accepted"
                 Task { await respond("accepted") }
             } label: {
                 HStack(spacing: 6) {
@@ -241,6 +248,8 @@ struct CompassAgentProposalCard: View {
             .disabled(submittingResponse != nil)
 
             Button {
+                guard submittingResponse == nil else { return }
+                submittingResponse = "rejected"
                 Task { await respond("rejected") }
             } label: {
                 HStack(spacing: 6) {
@@ -271,8 +280,9 @@ struct CompassAgentProposalCard: View {
     private struct RespondData: Codable { let decisionId: String; let status: String; let applied: Bool }
 
     private func respond(_ response: String) async {
+        // `submittingResponse` is already set by the Button action (before
+        // this Task was even scheduled) so double-taps can't race past it.
         errorMessage = nil
-        submittingResponse = response
         do {
             let _: V2APIResponse<RespondData> = try await V2APIClient.shared.post(
                 "/agent/decisions/\(payload.decisionId)/respond",

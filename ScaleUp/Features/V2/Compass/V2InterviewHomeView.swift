@@ -308,8 +308,12 @@ struct V2InterviewHomeView: View {
     }
 
     /// Probes GET /interview-program independently of session history.
-    /// Degrades invisibly on 404 (flag off) or any other error — this card
-    /// simply doesn't render, the rest of the screen is unaffected.
+    /// Degrades invisibly on 404 (flag off) — this card simply doesn't
+    /// render, the rest of the screen is unaffected. Any OTHER error also
+    /// hides the card here (keep the hub clean) but is logged via
+    /// `trackAgenticAPIError` so a real backend regression isn't silent —
+    /// InterviewProgramView (the full screen) surfaces those with a Retry
+    /// state instead of "not available".
     private func loadProgramProbe() async {
         do {
             if let program = try await InterviewProgramService.fetch() {
@@ -317,7 +321,10 @@ struct V2InterviewHomeView: View {
             } else {
                 programProbe = .none
             }
+        } catch V2APIError.httpError(404, _) {
+            programProbe = .unavailable
         } catch {
+            trackAgenticAPIError(error, endpoint: "/interview-program")
             programProbe = .unavailable
         }
     }

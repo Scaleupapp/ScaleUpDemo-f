@@ -17,9 +17,12 @@ struct InterviewProgramView: View {
 
     private enum LoadState {
         case loading
-        /// 404 / network error surfaced while the sheet was already open —
-        /// degrade quietly rather than showing a scary error screen.
+        /// 404 — `interview_coach` flag off, surfaced while the sheet was
+        /// already open. Degrade quietly rather than showing an error screen.
         case unavailable
+        /// Any OTHER error (401/500/network) — a real regression. Unlike
+        /// `.unavailable`, this is visible and recoverable via Retry.
+        case error
         case noProgram
         case active(InterviewProgram)
     }
@@ -46,6 +49,8 @@ struct InterviewProgramView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 case .unavailable:
                     unavailableState
+                case .error:
+                    errorState
                 case .noProgram:
                     createForm
                 case .active(let program):
@@ -74,8 +79,11 @@ struct InterviewProgramView: View {
             } else {
                 loadState = .noProgram
             }
-        } catch {
+        } catch V2APIError.httpError(404, _) {
             loadState = .unavailable
+        } catch {
+            trackAgenticAPIError(error, endpoint: "/interview-program")
+            loadState = .error
         }
     }
 
@@ -88,6 +96,15 @@ struct InterviewProgramView: View {
                 .font(V2Theme.small.weight(.semibold))
                 .foregroundStyle(ColorTokens.gold)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var errorState: some View {
+        ErrorStateView(
+            message: "Couldn't load your interview program. Check your connection and try again.",
+            retryLabel: "Try Again",
+            onRetry: { Task { await load() } }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
